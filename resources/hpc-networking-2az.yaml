@@ -1,0 +1,370 @@
+AWSTemplateFormatVersion: '2010-09-09'
+Description: HPC-Networking-2AZ
+
+Parameters:
+  CidrBlock:
+    AllowedPattern: '((\d{1,3})\.){3}\d{1,3}/\d{1,2}'
+    Default: 10.3.0.0/16
+    Description: VPC CIDR Block (eg 10.3.0.0/16)
+    Type: String
+  CidrPublicSubnet01:
+    AllowedPattern: '((\d{1,3})\.){3}\d{1,3}/\d{1,2}'
+    Default: 10.3.128.0/20
+    Description: VPC CIDR Block for the Public Subnet A (eg 10.3.128.0/20)
+    Type: String
+  CidrPublicSubnet02:
+    AllowedPattern: '((\d{1,3})\.){3}\d{1,3}/\d{1,2}'
+    Default: 10.3.144.0/20
+    Description: VPC CIDR Block for the Public Subnet B (eg 10.3.144.0/20)
+    Type: String
+  CidrPrivateSubnet01:
+    AllowedPattern: '((\d{1,3})\.){3}\d{1,3}/\d{1,2}'
+    Default: 10.3.0.0/18
+    Description: VPC CIDR Block for the Private Subnet A (eg 10.3.1.0/18)
+    Type: String
+  CidrPrivateSubnet02:
+    AllowedPattern: '((\d{1,3})\.){3}\d{1,3}/\d{1,2}'
+    Default: 10.3.64.0/18
+    Description: VPC CIDR Block for the Private Subnet B (eg 10.3.64.0/18)
+    Type: String
+
+Mappings: 
+  RegionMap: 
+    us-east-1:
+      ZoneId1: use1-az6
+      ZoneId2: use1-az4
+    us-east-2:
+      ZoneId1: use2-az2
+      ZoneId2: use2-az3
+    us-west-1:
+      ZoneId1: usw1-az1
+      ZoneId2: usw1-az3
+    us-west-2:
+      ZoneId1: usw2-az1
+      ZoneId2: usw2-az2
+    eu-central-1:
+      ZoneId1: euc1-az3
+      ZoneId2: euc1-az2
+    eu-west-1:
+      ZoneId1: euw1-az1
+      ZoneId2: euw1-az2
+    eu-north-1:
+      ZoneId1: eun1-az2
+      ZoneId2: eun1-az1
+    ca-central-1:
+      ZoneId1: cac1-az2
+      ZoneId2: cac1-az1
+    eu-south-1:
+      ZoneId1: eus1-az2
+      ZoneId2: eus1-az1
+    ap-east-1:
+      ZoneId1: ape1-az3
+      ZoneId2: ape1-az2
+    ap-northeast-1:
+      ZoneId1: apne1-az4
+      ZoneId2: apne1-az1
+    ap-northeast-2:
+      ZoneId1: apne2-az1
+      ZoneId2: apne2-az3
+    ap-south-1:
+      ZoneId1: aps1-az2
+      ZoneId2: aps1-az3
+
+Resources:
+
+  VPC:
+    Type: AWS::EC2::VPC
+    Properties:
+      CidrBlock: !Ref CidrBlock
+      EnableDnsHostnames: true
+      EnableDnsSupport: true
+      Tags:
+        - Key: "Name"
+          Value: !Sub '${AWS::StackName}-HPC-VPC'
+
+  PublicSubnet01:
+    Type: AWS::EC2::Subnet
+    Properties:
+      VpcId: !Ref VPC
+      CidrBlock: !Ref CidrPublicSubnet01
+      AvailabilityZone: !GetAtt AvailabiltyZone1.ZoneName
+      MapPublicIpOnLaunch: true
+      Tags:
+      - Key: Name
+        Value: !Sub '${AWS::StackName}-Public-Subnet01'
+
+  PublicSubnet02:
+    Type: AWS::EC2::Subnet
+    Properties:
+      VpcId: !Ref VPC
+      CidrBlock: !Ref CidrPublicSubnet02
+      AvailabilityZone: !GetAtt AvailabiltyZone2.ZoneName
+      MapPublicIpOnLaunch: true
+      Tags:
+      - Key: Name
+        Value: !Sub '${AWS::StackName}-Public-Subnet02'
+
+  InternetGateway:
+    Type: AWS::EC2::InternetGateway
+
+  AttachGateway:
+    Type: AWS::EC2::VPCGatewayAttachment
+    Properties:
+      VpcId: !Ref VPC
+      InternetGatewayId: !Ref InternetGateway
+
+  PublicRouteTable:
+    Type: AWS::EC2::RouteTable
+    Properties:
+      VpcId: !Ref VPC
+      Tags:
+      - Key: Name
+        Value: !Sub '${AWS::StackName}-Public-Route'
+  PublicRoute1:
+    Type: AWS::EC2::Route
+    Properties:
+      RouteTableId: !Ref PublicRouteTable
+      DestinationCidrBlock: 0.0.0.0/0
+      GatewayId: !Ref InternetGateway
+  
+  PublicSubnet01RouteTable01ssociation:
+    Type: AWS::EC2::SubnetRouteTableAssociation
+    Properties:
+      SubnetId: !Ref PublicSubnet01
+      RouteTableId: !Ref PublicRouteTable
+
+  PublicSubnet02RouteTable01ssociation:
+    Type: AWS::EC2::SubnetRouteTableAssociation
+    Properties:
+      SubnetId: !Ref PublicSubnet02
+      RouteTableId: !Ref PublicRouteTable
+
+  PrivateSubnet01:
+    Type: AWS::EC2::Subnet
+    Properties:
+      VpcId: !Ref VPC
+      AvailabilityZone: !GetAtt AvailabiltyZone1.ZoneName
+      CidrBlock: !Ref CidrPrivateSubnet01
+      MapPublicIpOnLaunch: false
+      Tags:
+      - Key: Name
+        Value: !Sub '${AWS::StackName}-Private-Subnet01'
+  
+  PrivateSubnet02:
+    Type: AWS::EC2::Subnet
+    Properties:
+      VpcId: !Ref VPC
+      AvailabilityZone: !GetAtt AvailabiltyZone2.ZoneName
+      CidrBlock: !Ref CidrPrivateSubnet02
+      MapPublicIpOnLaunch: false
+      Tags:
+      - Key: Name
+        Value: !Sub '${AWS::StackName}-Private-Subnet02'
+
+  NatGateway01EIP:
+    Type: AWS::EC2::EIP
+    DependsOn: AttachGateway
+    Properties:
+      Domain: vpc
+      
+  NatGateway02EIP:
+    Type: AWS::EC2::EIP
+    DependsOn: AttachGateway
+    Properties:
+      Domain: vpc
+
+  NatGateway01:
+    Type: AWS::EC2::NatGateway
+    Properties:
+      AllocationId: !GetAtt NatGateway01EIP.AllocationId
+      SubnetId: !Ref PublicSubnet01
+
+  NatGateway02:
+    Type: AWS::EC2::NatGateway
+    Properties:
+      AllocationId: !GetAtt NatGateway02EIP.AllocationId
+      SubnetId: !Ref PublicSubnet02
+
+  PrivateRouteTable01:
+    Type: AWS::EC2::RouteTable
+    Properties:
+      VpcId: !Ref VPC
+      Tags:
+        - Key: Name
+          Value: !Sub '${AWS::StackName}-Private-Route-01'
+  
+  PrivateRouteTable02:
+    Type: AWS::EC2::RouteTable
+    Properties:
+      VpcId: !Ref VPC
+      Tags:
+        - Key: Name
+          Value: !Sub '${AWS::StackName}-Private-Route-02'
+
+  DefaultPrivateRoute01:
+    Type: AWS::EC2::Route
+    Properties:
+      RouteTableId: !Ref PrivateRouteTable01
+      DestinationCidrBlock: 0.0.0.0/0
+      NatGatewayId: !Ref NatGateway01
+      
+  DefaultPrivateRoute02:
+    Type: AWS::EC2::Route
+    Properties:
+      RouteTableId: !Ref PrivateRouteTable02
+      DestinationCidrBlock: 0.0.0.0/0
+      NatGatewayId: !Ref NatGateway02
+
+  PrivateSubnet01RouteTable01ssociation:
+    Type: AWS::EC2::SubnetRouteTableAssociation
+    Properties:
+      RouteTableId: !Ref PrivateRouteTable01
+      SubnetId: !Ref PrivateSubnet01
+      
+  PrivateSubnet02RouteTable01ssociation:
+    Type: AWS::EC2::SubnetRouteTableAssociation
+    Properties:
+      RouteTableId: !Ref PrivateRouteTable02
+      SubnetId: !Ref PrivateSubnet02
+
+  AvailabiltyZone1:
+    Type: Custom::AvailabiltyZone
+    DependsOn: LogGroupGetAZLambdaFunction
+    Properties:
+      ServiceToken: !GetAtt GetAZLambdaFunction.Arn
+      ZoneId: !FindInMap [RegionMap, !Ref "AWS::Region", ZoneId1]
+
+  AvailabiltyZone2:
+    Type: Custom::AvailabiltyZone
+    DependsOn: LogGroupGetAZLambdaFunction
+    Properties:
+      ServiceToken: !GetAtt GetAZLambdaFunction.Arn
+      ZoneId: !FindInMap [RegionMap, !Ref "AWS::Region", ZoneId2]
+
+  LogGroupGetAZLambdaFunction:
+    Type: AWS::Logs::LogGroup
+    DeletionPolicy: Delete
+    Properties:
+      LogGroupName: !Sub /aws/lambda/${GetAZLambdaFunction}
+      RetentionInDays: 7
+
+  GetAZLambdaFunction:
+    Type: AWS::Lambda::Function
+    Properties:
+      Description: GetAZLambdaFunction
+      Timeout: 60
+      Runtime: python3.7
+      Handler: index.handler
+      Role: !GetAtt GetAZLambdaRole.Arn
+      Code:
+        ZipFile: |
+          import cfnresponse
+          from json import dumps
+          from boto3 import client
+          EC2 = client('ec2')
+          def handler(event, context):
+              if event['RequestType'] in ('Create', 'Update'):
+                  print(dumps(event, default=str))
+                  data = {}
+                  try:
+                      response = EC2.describe_availability_zones(
+                          Filters=[{'Name': 'zone-id', 'Values': [event['ResourceProperties']['ZoneId']]}]
+                      )
+                      print(dumps(response, default=str))
+                      data['ZoneName'] = response['AvailabilityZones'][0]['ZoneName']
+                  except Exception as error:
+                      cfnresponse.send(event, context, cfnresponse.FAILED, {}, reason=error)
+                  finally:
+                      cfnresponse.send(event, context, cfnresponse.SUCCESS, data)
+              else:
+                  cfnresponse.send(event, context, cfnresponse.SUCCESS, {})
+      Tags:
+        - Key: Name
+          Value: !Sub ${AWS::StackName}-GetAZLambdaFunction
+
+  GetAZLambdaRole:
+    Type: AWS::IAM::Role
+    Properties:
+      Path: /
+      Description: GetAZLambdaFunction
+      AssumeRolePolicyDocument:
+        Version: '2012-10-17'
+        Statement:
+          - Effect: Allow
+            Action:
+              - sts:AssumeRole
+            Principal:
+              Service:
+                - !Sub 'lambda.${AWS::URLSuffix}'
+      ManagedPolicyArns:
+        - !Sub 'arn:${AWS::Partition}:iam::aws:policy/service-role/AWSLambdaBasicExecutionRole'
+      Policies:
+        - PolicyName: GetAZLambdaFunction
+          PolicyDocument:
+            Version: '2012-10-17'
+            Statement:
+              - Sid: ec2
+                Effect: Allow
+                Action:
+                  - ec2:DescribeAvailabilityZones
+                Resource:
+                  - '*'
+      Tags:
+        - Key: Name
+          Value: !Sub ${AWS::StackName}-GetAZLambdaFunction
+
+  S3Endpoint:
+    Type: 'AWS::EC2::VPCEndpoint'
+    Properties:
+      VpcEndpointType: 'Gateway'
+      ServiceName: !Sub 'com.amazonaws.${AWS::Region}.s3'
+      RouteTableIds:
+        - !Ref PublicRouteTable
+        - !Ref PrivateRouteTable01
+        - !Ref PrivateRouteTable02
+      VpcId: !Ref VPC
+
+  localSG:
+    Type: AWS::EC2::SecurityGroup
+    Properties:
+        GroupDescription: Allow all traffic from resources in VPC
+        VpcId:
+          Ref: VPC
+        SecurityGroupIngress:
+        - IpProtocol: -1
+          CidrIp: !Ref CidrBlock
+        SecurityGroupEgress:
+        - IpProtocol: -1
+          CidrIp: !Ref CidrBlock
+
+Outputs:
+  VPC:
+    Description: The ID of the VPC
+    Value: !Ref VPC
+    Export:
+      Name: !Sub "${AWS::StackName}-VPC"
+  PrivateSubnet01:
+    Description: The ID of the PrivateSubnet01
+    Value: !Ref PrivateSubnet01
+    Export:
+      Name: !Sub "${AWS::StackName}-PrivateSubnet01"
+  PrivateSubnet02:
+    Description: The ID of the PrivateSubnet02
+    Value: !Ref PrivateSubnet02
+    Export:
+      Name: !Sub "${AWS::StackName}-PrivateSubnet02"
+  PublicSubnet01:
+    Description: The ID of the PublicSubnet01
+    Value: !Ref PublicSubnet01
+    Export:
+      Name: !Sub "${AWS::StackName}-PublicSubnet01"
+  PublicSubnet02:
+    Description: The ID of the PublicSubnet02
+    Value: !Ref PublicSubnet02
+    Export:
+      Name: !Sub "${AWS::StackName}-PublicSubnet02"
+  localSG:
+    Description: The ID of the localSG
+    Value: !Ref localSG
+    Export:
+      Name: !Sub "${AWS::StackName}-localSG"

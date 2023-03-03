@@ -1,0 +1,805 @@
+Parameters:
+  AdminUserEmail:
+    Description: Email address of administrative user to setup by default (only with new Cognito instances).
+    Type: String
+    Default: ''
+  PublicEcrImageUri:
+    Description: When specified, the URI of the Docker image for the Lambda of the ParallelCluster UI container
+    Type: String
+    Default: public.ecr.aws/pcm/parallelcluster-ui:2023.02
+  UserPoolId:
+    Description: UserPoolId of a previously deployed PCUI Cognito User Pool. Leave blank to create a new one.
+    Type: String
+    Default: ''
+  UserPoolAuthDomain:
+    Description: UserPoolAuthDomain of a previously deployed PCUI Cognito User Pool. Leave blank to create a new one.
+    Type: String
+    Default: ''
+  SNSRole:
+    Description: SNSRole ARN of a previously deployed PCUI Cognito Stack. Leave blank to create a new one.
+    Type: String
+    Default: ''
+  Version:
+    Description: Version of AWS ParallelCluster to deploy
+    Type: String
+    Default: 3.5.0
+  ImageBuilderVpcId:
+    Description: (Optional) Select the VPC to use for building the container images. If not selected, default VPC will be used.
+    Type: String
+    Default: ''
+  ImageBuilderSubnetId:
+    Description: (Optional) Select the subnet to use for building the container images. If not selected, Subnet in the default VPC will be used.
+    Type: String
+    Default: ''
+  InfrastructureBucket:
+    Description: (Optional) S3 bucket where CloudFormation files are stored. Change this parameter only when testing changes made to the infrastructure itself.
+    Type: String
+    Default: ''
+
+Metadata:
+  AWS::CloudFormation::Interface:
+    ParameterGroups:
+      - Label: 
+          default: Admin User (only with new Cognito instances)
+        Parameters: 
+          - AdminUserEmail
+      - Label:
+          default: (Optional) External PCUI Cognito
+        Parameters:
+          - UserPoolId
+          - UserPoolAuthDomain
+          - SNSRole
+      - Label:
+          default: (Optional) ParallelCluster API
+        Parameters:
+          - Version
+          - PublicEcrImageUri
+    ParameterLabels:
+      AdminUserEmail:
+        default: Admin's Email
+      UserPoolId:
+        default: UserPoolId from a previously deployed PCUI
+      UserPoolAuthDomain:
+        default: UserPoolAuthDomain from a previously deployed PCUI
+      SNSRole:
+        default: SNSRole ARN from a previously deployed PCUI
+
+Conditions:
+  NonDefaultVpc:
+    Fn::And:
+      - !Not [!Equals [!Ref ImageBuilderVpcId, ""]]
+      - !Not [!Equals [!Ref ImageBuilderSubnetId, ""]]
+  HasDefaultInfrastructure: !Equals [!Ref InfrastructureBucket, '']
+  UseExistingCognito:
+    !And
+      - !Not [!Equals [!Ref UserPoolId, ""]]
+      - !Not [!Equals [!Ref UserPoolAuthDomain, ""]]
+      - !Not [!Equals [!Ref SNSRole, ""]]
+  UseNewCognito:
+    !Not [ Condition: UseExistingCognito]
+
+Mappings:
+  ParallelClusterUI:
+    Constants:
+      Version: 2023.02 # format YYYY.MM[.REVISION]
+      ShortVersion: 2023.02 # format YYYY.MM
+
+Resources:
+
+  Cognito:
+    Condition: UseNewCognito
+    Type: AWS::CloudFormation::Stack
+    DeletionPolicy: Retain
+    Properties:
+      Parameters:
+        AdminUserEmail: !Ref AdminUserEmail
+      TemplateURL: !Sub 
+        - '${Bucket}/parallelcluster-ui-cognito.yaml'
+        - Bucket: !If 
+          - HasDefaultInfrastructure
+          - https://parallelcluster-ui-release-artifacts-us-east-1.s3.us-east-1.amazonaws.com
+          - !Sub ${InfrastructureBucket}
+
+      TimeoutInMinutes: 10
+
+  ParallelClusterApi:
+    Type: AWS::CloudFormation::Stack
+    Properties:
+      Parameters:
+        ApiDefinitionS3Uri: !Sub s3://${AWS::Region}-aws-parallelcluster/parallelcluster/${Version}/api/ParallelCluster.openapi.yaml
+        CreateApiUserRole: False
+        EnableIamAdminAccess: True
+        PublicEcrImageUri: !Sub public.ecr.aws/parallelcluster/pcluster-api:${Version}
+        ImageBuilderSubnetId:
+          Fn::If:
+            - NonDefaultVpc
+            - !Ref ImageBuilderSubnetId
+            - !Ref AWS::NoValue
+        ImageBuilderVpcId:
+          Fn::If:
+            - NonDefaultVpc
+            - !Ref ImageBuilderVpcId
+            - !Ref AWS::NoValue
+      TemplateURL: !Sub https://${AWS::Region}-aws-parallelcluster.s3.${AWS::Region}.amazonaws.com/parallelcluster/${Version}/api/parallelcluster-api.yaml
+      TimeoutInMinutes: 30
+
+  SSMDefaultUser:
+    Type: AWS::CloudFormation::Stack
+    Properties:
+      TemplateURL: !Sub 
+        - '${Bucket}/SSMSessionProfile-cfn.yaml'
+        - Bucket: !If 
+          - HasDefaultInfrastructure
+          - https://parallelcluster-ui-release-artifacts-us-east-1.s3.us-east-1.amazonaws.com
+          - !Sub ${InfrastructureBucket}
+      TimeoutInMinutes: 30
+
+  ParallelClusterUIFunction:
+    Type: AWS::Lambda::Function
+    Properties:
+      Role: !GetAtt ParallelClusterUIUserRole.Arn
+      PackageType: Image
+      MemorySize: 512
+      Timeout: 30
+      Tags:
+        - Key: 'parallelcluster:ui:version'
+          Value: !FindInMap [ ParallelClusterUI, Constants, Version ]
+      TracingConfig:
+        Mode: Active
+      Environment:
+        Variables:
+          API_BASE_URL: !GetAtt [ ParallelClusterApi, Outputs.ParallelClusterApiInvokeUrl ]
+          API_VERSION: !Ref Version
+          SITE_URL: !Sub
+           - https://${Api}.execute-api.${AWS::Region}.${AWS::URLSuffix}
+           - Api: !Ref ApiGateway
+          AUTH_PATH: !If [ UseExistingCognito, !Ref UserPoolAuthDomain, !GetAtt [ Cognito, Outputs.UserPoolAuthDomain ]]
+          SECRET_ID: !GetAtt UserPoolClientSecret.SecretName
+          AUDIENCE: !Ref CognitoAppClient
+          OIDC_PROVIDER: 'Cognito'
+      FunctionName: !Sub
+        - ParallelClusterUIFunction-${StackIdSuffix}
+        - { StackIdSuffix: !Select [2, !Split ['/', !Ref 'AWS::StackId']] }
+      Code:
+        ImageUri: !Sub
+          - ${AWS::AccountId}.dkr.ecr.${AWS::Region}.${AWS::URLSuffix}/${Repository}:${Version}
+          - Repository: !Ref PrivateEcrRepository
+            Version: !Join
+              - '-'
+              - [!Select [2, !Split ['/', !Ref EcrImage]], !Select [3, !Split ['/', !Ref EcrImage]]]
+
+  ApiGateway:
+    Type: AWS::ApiGatewayV2::Api
+    Properties:
+      Name: ParallelClusterUI
+      Description: ParallelClusterUI Lambda Proxy
+      ProtocolType: HTTP
+      Tags:
+        'parallelcluster:ui:version': !FindInMap [ParallelClusterUI, Constants, Version]
+
+  ApiGatewayRoute:
+    Type: AWS::ApiGatewayV2::Route
+    Properties:
+      ApiId: !Ref ApiGateway
+      RouteKey: $default
+      Target: !Sub
+        - 'integrations/${IntegrationId}'
+        - { IntegrationId: !Ref ApiGatewayIntegration }
+
+  ApiGatewayIntegration:
+    Type: AWS::ApiGatewayV2::Integration
+    Properties:
+      ApiId: !Ref ApiGateway
+      Description: 'ANY integration'
+      IntegrationType: AWS_PROXY
+      IntegrationUri: !Sub
+        - arn:${AWS::Partition}:apigateway:${AWS::Region}:lambda:path/2015-03-31/functions/arn:${AWS::Partition}:lambda:${AWS::Region}:${AWS::AccountId}:function:ParallelClusterUIFunction-${StackIdSuffix}/invocations
+        - { StackIdSuffix: !Select [2, !Split ['/', !Ref 'AWS::StackId']] }
+      PayloadFormatVersion: 2.0
+      TimeoutInMillis: 30000
+
+  ApiGatewayAccessLog:
+    Type: AWS::Logs::LogGroup
+    Properties:
+      RetentionInDays: 90
+
+  ApiGatewayStage:
+    Type: AWS::ApiGatewayV2::Stage
+    Properties: 
+      AccessLogSettings: 
+        DestinationArn: !GetAtt ApiGatewayAccessLog.Arn
+        Format: '{ "requestId":"$context.requestId", "ip": "$context.identity.sourceIp", "requestTime":"$context.requestTime", "httpMethod":"$context.httpMethod","path":"$context.path", "status":"$context.status","protocol":"$context.protocol", "responseLength":"$context.responseLength" }'
+      ApiId: !Ref ApiGateway
+      StageName: $default
+      AutoDeploy: True
+      DefaultRouteSettings:
+        ThrottlingBurstLimit: 50 
+        ThrottlingRateLimit: 100
+
+  CognitoAppClient:
+    Type: AWS::Cognito::UserPoolClient
+    Properties:
+      GenerateSecret: true
+      AllowedOAuthFlows:
+        - code
+      AllowedOAuthFlowsUserPoolClient: true
+      AllowedOAuthScopes:
+        - email
+        - openid
+      ExplicitAuthFlows:
+        - ALLOW_REFRESH_TOKEN_AUTH
+      CallbackURLs:
+        - !Sub
+          - https://${Api}.execute-api.${AWS::Region}.${AWS::URLSuffix}/login
+          - Api: !Ref ApiGateway
+      SupportedIdentityProviders:
+        - COGNITO
+      UserPoolId: !If [ UseExistingCognito, !Ref UserPoolId, !GetAtt [ Cognito, Outputs.UserPoolId ]]
+      PreventUserExistenceErrors: ENABLED
+      RefreshTokenValidity: 7
+      AccessTokenValidity: 10
+      IdTokenValidity: 10
+      TokenValidityUnits:
+        AccessToken: "minutes"
+        IdToken: "minutes"
+
+  UserPoolClientSecret:
+    Type: Custom::UserPoolClientSecret
+    Properties:
+      ServiceToken: !GetAtt UserPoolClientSecretFunction.Arn
+      UserPoolId: !If [ UseExistingCognito, !Ref UserPoolId, !GetAtt [ Cognito, Outputs.UserPoolId ]]
+      AppClientId: !Ref CognitoAppClient
+
+  UserPoolClientSecretFunction:
+    Type: AWS::Lambda::Function
+    Properties:
+      Handler: index.handler
+      Runtime: python3.9
+      MemorySize: 128
+      Timeout: 20
+      TracingConfig:
+        Mode: Active
+      Role: !GetAtt UserPoolClientSecretRole.Arn
+      Code:
+        ZipFile: |
+          import cfnresponse
+          import boto3
+          import random
+          import string
+          import json
+
+          cognito = boto3.client("cognito-idp")
+          secretsmanager = boto3.client("secretsmanager")
+
+          def generate_secret(stack_name, resource_id):
+              alnum = string.ascii_uppercase + string.digits
+              return f"{stack_name}-{resource_id}-" + "".join(random.choice(alnum) for _ in range(12))
+
+          def handler(event, context):
+              print(event)
+              print("boto version {}".format(boto3.__version__))
+
+              stack_name = event["StackId"].split("/")[1]
+              user_pool_id = event["ResourceProperties"]["UserPoolId"]
+              app_client_id = event["ResourceProperties"]["AppClientId"]
+              logical_resource_id = event["LogicalResourceId"]
+
+              response_data = {}
+              reason = None
+              response_status = cfnresponse.SUCCESS
+              try:
+                  if event["RequestType"] == "Create":
+                      response_data["Message"] = "Resource creation successful!"
+
+                      user_pool_client = cognito.describe_user_pool_client(UserPoolId=user_pool_id, ClientId=app_client_id)
+                      client_secret = user_pool_client["UserPoolClient"]["ClientSecret"]
+                      secret_name = generate_secret(stack_name, logical_resource_id)
+
+                      secret = json.dumps({"userPoolId": user_pool_id, "clientId": app_client_id, "clientSecret": client_secret})
+
+                      resp = secretsmanager.create_secret(
+                          Name=secret_name,
+                          Description=f"Client Secret for {app_client_id} / user pool {user_pool_id}",
+                          SecretString=secret,
+                          Tags=[
+                              {"Key": "custom:cloudformation:stack-name", "Value": stack_name},
+                              {"Key": "custom:cloudformation:logical-id", "Value": logical_resource_id},
+                          ],
+                      )
+                      response_data = {"SecretArn": resp["ARN"], "SecretName": resp["Name"], "SecretVersionId": resp["VersionId"]}
+
+                  elif event["RequestType"] == "Update":
+                      user_pool_client = cognito.describe_user_pool_client(UserPoolId=user_pool_id, ClientId=app_client_id)
+                      client_secret = user_pool_client["UserPoolClient"]["ClientSecret"]
+                      secret_name = event["PhysicalResourceId"]
+                      secret = json.dumps({"userPoolId": user_pool_id, "clientId": app_client_id, "clientSecret": client_secret})
+                      resp = secretsmanager.update_secret(
+                          SecretId=secret_name,
+                          Description=f"Client Secret for {app_client_id} / user pool {user_pool_id}",
+                          SecretString=secret,
+                      )
+                      response_data = {"SecretArn": resp["ARN"], "SecretName": resp["Name"], "SecretVersionId": resp["VersionId"]}
+
+                  else:
+                      secret_name = event["PhysicalResourceId"]
+                      resp = secretsmanager.delete_secret(SecretId=secret_name, ForceDeleteWithoutRecovery=True)
+                      response_data = {"SecretArn": resp["ARN"], "SecretName": resp["Name"]}
+
+              except Exception as exception:
+                  response_status = cfnresponse.FAILED
+                  reason = "Failed {}: {}".format(event["RequestType"], exception)
+
+              cfnresponse.send(event, context, response_status, response_data, secret_name, reason)
+
+  UserPoolClientSecretRole:
+    Type: AWS::IAM::Role
+    Properties:
+      AssumeRolePolicyDocument:
+        Version: 2012-10-17
+        Statement:
+          - Effect: Allow
+            Principal:
+              Service: lambda.amazonaws.com
+            Action:
+              - 'sts:AssumeRole'
+      Policies:
+        - PolicyName: CognitoPermissions
+          PolicyDocument:
+            Version: 2012-10-17
+            Statement:
+              - Effect: Allow
+                Action:
+                  - cognito-idp:DescribeUserPoolClient
+                Resource:
+                  - !Sub
+                    - arn:${AWS::Partition}:cognito-idp:${AWS::Region}:${AWS::AccountId}:userpool/${UserPoolId}
+                    - { UserPoolId: !If [UseExistingCognito, !Ref UserPoolId, !GetAtt [ Cognito, Outputs.UserPoolId ]]}
+        - PolicyName: SecretsManagerPermissions
+          PolicyDocument:
+            Version: 2012-10-17
+            Statement:
+              - Effect: Allow
+                Action:
+                  - secretsmanager:CreateSecret
+                  - secretsmanager:TagResource
+                  - secretsmanager:UpdateSecret
+                  - secretsmanager:DeleteSecret
+                Resource:
+                  - !Sub arn:${AWS::Partition}:secretsmanager:${AWS::Region}:${AWS::AccountId}:secret:${AWS::StackName}*
+
+  PrivateEcrRepository:
+    DependsOn: ParallelClusterApi
+    Type: AWS::ECR::Repository
+    Properties:
+      RepositoryName: !Sub
+        - 'parallelcluster-ui-${StackIdSuffix}'
+        - { StackIdSuffix: !Select [2, !Split ['/', !Ref 'AWS::StackId']] }
+
+  ImageBuilderInstanceRole:
+    Type: AWS::IAM::Role
+    Properties:
+      ManagedPolicyArns:
+        - !Sub arn:${AWS::Partition}:iam::aws:policy/AmazonSSMManagedInstanceCore
+        - !Sub arn:${AWS::Partition}:iam::aws:policy/EC2InstanceProfileForImageBuilderECRContainerBuilds
+      AssumeRolePolicyDocument:
+        Statement:
+          - Action:
+              - sts:AssumeRole
+            Effect: Allow
+            Principal:
+              Service:
+                - !Sub ec2.${AWS::URLSuffix}
+        Version: '2012-10-17'
+      Path: /executionServiceEC2Role/
+
+  ImageBuilderInstanceProfile:
+    Type: AWS::IAM::InstanceProfile
+    Properties:
+      Path: /executionServiceEC2Role/
+      Roles:
+        - !Ref ImageBuilderInstanceRole
+
+  InfrastructureConfigurationSecurityGroup:
+    Condition: NonDefaultVpc
+    Type: AWS::EC2::SecurityGroup
+    Properties:
+      VpcId: !Ref ImageBuilderVpcId
+      GroupDescription: Parallel cluster image builder security group
+
+  InfrastructureConfiguration:
+    Type: AWS::ImageBuilder::InfrastructureConfiguration
+    Properties:
+      Name: !Sub
+        - ParallelClusterUIImageBuilderInfrastructureConfiguration-${Version}-${StackIdSuffix}
+        - { Version: !Join ['_', !Split ['.', !FindInMap [ParallelClusterUI, Constants, Version]]], StackIdSuffix: !Select [2, !Split ['/', !Ref 'AWS::StackId']] }
+      InstanceProfileName: !Ref ImageBuilderInstanceProfile
+      TerminateInstanceOnFailure: true
+      SubnetId:
+        Fn::If:
+          - NonDefaultVpc
+          - !Ref ImageBuilderSubnetId
+          - !Ref AWS::NoValue
+      SecurityGroupIds:
+        Fn::If:
+          - NonDefaultVpc
+          - [!Ref InfrastructureConfigurationSecurityGroup]
+          - !Ref AWS::NoValue
+      InstanceMetadataOptions:
+        HttpTokens: required
+
+  EcrImageRecipe:
+    Type: AWS::ImageBuilder::ContainerRecipe
+    Properties:
+      Components:
+        - ComponentArn: !Sub arn:${AWS::Partition}:imagebuilder:${AWS::Region}:aws:component/update-linux/x.x.x
+      ContainerType: DOCKER
+      Name: !Sub
+        - 'parallelcluster-ui-${Version}-${StackIdSuffix}'
+        - { Version: !Join ['_', !Split ['.', !FindInMap [ParallelClusterUI, Constants, Version]]], StackIdSuffix: !Select [2, !Split ['/', !Ref 'AWS::StackId']] }
+      Version: !Join [".", [ !FindInMap [ParallelClusterUI, Constants, ShortVersion], "00"]]
+      ParentImage: !Ref PublicEcrImageUri
+      PlatformOverride: Linux
+      TargetRepository:
+        Service: ECR
+        RepositoryName: !Ref PrivateEcrRepository
+      DockerfileTemplateData: 'FROM {{{ imagebuilder:parentImage }}}'
+      WorkingDirectory: '/tmp'
+
+  EcrImage:
+    Type: AWS::ImageBuilder::Image
+    Properties:
+      ContainerRecipeArn: !Ref EcrImageRecipe
+      EnhancedImageMetadataEnabled: true
+      InfrastructureConfigurationArn: !Ref InfrastructureConfiguration
+      ImageTestsConfiguration:
+        ImageTestsEnabled: false
+
+  EcrImagePipeline:
+    Type: AWS::ImageBuilder::ImagePipeline
+    Properties:
+      Name: !Sub
+        - 'EcrImagePipeline-${Version}-${StackIdSuffix}'
+        - { Version: !Join ['_', !Split ['.', !FindInMap [ParallelClusterUI, Constants, Version]]], StackIdSuffix: !Select [2, !Split ['/', !Ref 'AWS::StackId']] }
+      Status: ENABLED
+      ContainerRecipeArn: !Ref EcrImageRecipe
+      InfrastructureConfigurationArn: !Ref InfrastructureConfiguration
+      ImageTestsConfiguration:
+        ImageTestsEnabled: false
+
+  EcrImageDeletionLambda:
+    Type: AWS::Lambda::Function
+    Properties:
+      MemorySize: 128
+      Code:
+        ZipFile: |
+          import cfnresponse
+          import boto3
+          import random
+          import string
+
+          ecr = boto3.client('ecr')
+          imagebuilder = boto3.client('imagebuilder')
+
+          def get_image_ids(repository_name, version):
+              image_digests = set()
+              paginator = ecr.get_paginator('list_images')
+              response_iterator = paginator.paginate(repositoryName=repository_name, filter={'tagStatus': 'TAGGED'})
+              for response in response_iterator:
+                  image_digests.update([image_id['imageDigest'] for image_id in response['imageIds'] if f"{version}-" in image_id['imageTag']])
+              return list({'imageDigest': image_digest} for image_digest in image_digests)
+
+          def get_imagebuilder_images(ecr_image_pipeline_arn):
+              response = imagebuilder.list_image_pipeline_images(imagePipelineArn=ecr_image_pipeline_arn)
+              images = [image['arn'] for image in response['imageSummaryList']]
+              while 'nextToken' in response:
+                  response = imagebuilder.list_image_pipeline_images(imagePipelineArn=ecr_image_pipeline_arn, nextToken=response['nextToken'])
+                  images.extend([image['arn'] for image in response['imageSummaryList']])
+              return images
+
+          def create_physical_resource_id():
+              alnum = string.ascii_uppercase + string.ascii_lowercase + string.digits
+              return ''.join(random.choice(alnum) for _ in range(16))
+
+          def handler(event, context):
+              print(event)
+              print('boto version {}'.format(boto3.__version__))
+
+              response_data = {}
+              reason = None
+              response_status = cfnresponse.SUCCESS
+
+              if event['RequestType'] == 'Create':
+                  response_data['Message'] = 'Resource creation successful!'
+                  physical_resource_id = create_physical_resource_id()
+              else:
+                  physical_resource_id = event['PhysicalResourceId']
+
+              if event['RequestType'] == 'Update' or event['RequestType'] == 'Delete':
+                  try:
+                      resource_key = 'OldResourceProperties' if 'OldResourceProperties' in event else 'ResourceProperties'
+                      ecr_repository_name = event[resource_key]['EcrRepositoryName']
+                      ecr_image_pipeline_arn = event[resource_key]['EcrImagePipelineArn']
+                      version = event[resource_key]['Version']
+
+                      image_ids = get_image_ids(ecr_repository_name, version)
+                      if image_ids:
+                          ecr.batch_delete_image(repositoryName=ecr_repository_name, imageIds=image_ids)
+                          reason = 'Image deletion successful!'
+                      else:
+                          reason = 'No image found, considering image deletion successful'
+
+                      for imagebuilder_image in get_imagebuilder_images(ecr_image_pipeline_arn):
+                          imagebuilder.delete_image(imageBuildVersionArn=imagebuilder_image)
+
+                  except ecr.exceptions.RepositoryNotFoundException:
+                      reason = 'Repository was not found, considering image deletion successfull'
+                  except Exception as exception:
+                      response_status = cfnresponse.FAILED
+                      reason = 'Failed image deletion with error: {}'.format(exception)
+
+              cfnresponse.send(event, context, response_status, response_data, physical_resource_id, reason)
+
+      Handler: index.handler
+      Runtime: python3.7
+      Role: !GetAtt EcrImageDeletionLambdaRole.Arn
+
+  EcrImageDeletionLambdaLogGroup:
+    Type: AWS::Logs::LogGroup
+    Properties:
+      LogGroupName: !Sub /aws/lambda/${EcrImageDeletionLambda}
+
+  EcrImageDeletionLambdaRole:
+    Type: AWS::IAM::Role
+    Properties:
+      AssumeRolePolicyDocument:
+        Version: 2012-10-17
+        Statement:
+          - Effect: Allow
+            Principal:
+              Service: lambda.amazonaws.com
+            Action:
+              - 'sts:AssumeRole'
+      Policies:
+        - PolicyName: LoggingPolicy
+          PolicyDocument:
+            Version: 2012-10-17
+            Statement:
+              - Effect: Allow
+                Action:
+                  - logs:CreateLogStream
+                  - logs:PutLogEvents
+                Resource: !Sub arn:${AWS::Partition}:logs:*:*:*
+        - PolicyName: BatchDeletePolicy
+          PolicyDocument:
+            Version: 2012-10-17
+            Statement:
+              - Effect: Allow
+                Action:
+                  - ecr:BatchDeleteImage
+                  - ecr:ListImages
+                Resource: !GetAtt PrivateEcrRepository.Arn
+              - Effect: Allow
+                Action:
+                  - imagebuilder:ListImagePipelineImages
+                Resource: !Sub
+                  - arn:${AWS::Partition}:imagebuilder:${AWS::Region}:${AWS::AccountId}:image-pipeline/ecrimagepipeline-*${StackIdSuffix}*
+                  - { StackIdSuffix: !Select [2, !Split ['/', !Ref 'AWS::StackId']] }
+              - Effect: Allow
+                Action:
+                  - imagebuilder:DeleteImage
+                Resource: !Sub
+                  - arn:${AWS::Partition}:imagebuilder:${AWS::Region}:${AWS::AccountId}:image/*${StackIdSuffix}*
+                  - { StackIdSuffix: !Select [2, !Split ['/', !Ref 'AWS::StackId']] }
+
+  EcrImagesRemover:
+    Type: Custom::EcrImagesRemover
+    Properties:
+      ServiceToken: !GetAtt EcrImageDeletionLambda.Arn
+      EcrRepositoryName: !Ref PrivateEcrRepository
+      Version: !FindInMap [ParallelClusterUI, Constants, ShortVersion]
+      EcrImagePipelineArn: !GetAtt EcrImagePipeline.Arn
+
+  ParallelClusterUILambdaLogGroup:
+    Type: AWS::Logs::LogGroup
+    Properties:
+      LogGroupName: !Sub /aws/lambda/${ParallelClusterUIFunction}
+      RetentionInDays: 90
+
+
+  ParallelClusterUIUserRole:
+    Type: AWS::IAM::Role
+    Properties:
+      AssumeRolePolicyDocument:
+        Statement:
+          - Effect: Allow
+            Action: sts:AssumeRole
+            Principal:
+              Service: lambda.amazonaws.com
+      ManagedPolicyArns:
+        # Required for Lambda logging and XRay
+        - !Sub arn:${AWS::Partition}:iam::aws:policy/AWSXRayDaemonWriteAccess
+        - !Sub arn:${AWS::Partition}:iam::aws:policy/service-role/AWSLambdaBasicExecutionRole
+        # Access to the ParllelCluster API
+        - !Ref ParallelClusterApiGatewayInvoke
+        # Required to run ParallelClusterUI functionalities
+        - !Ref CognitoPolicy
+        - !Ref EC2Policy
+        - !Ref DescribeFsxPolicy
+        - !Ref DescribeEfsPolicy
+        - !Ref PricingPolicy
+        - !Ref SsmSendPolicy
+        - !Ref SsmGetCommandInvocationPolicy
+
+
+  ParallelClusterUIApiGatewayInvoke:
+    Type: AWS::Lambda::Permission
+    Properties:
+      Action: lambda:InvokeFunction
+      FunctionName: !GetAtt ParallelClusterUIFunction.Arn
+      Principal: apigateway.amazonaws.com
+      SourceArn: !Sub
+        - arn:${AWS::Partition}:execute-api:${AWS::Region}:${AWS::AccountId}:${ApiGateway}/*
+        - { ApiGateway: !Ref ApiGateway }
+
+  ParallelClusterApiGatewayInvoke:
+    Type: AWS::IAM::ManagedPolicy
+    Properties:
+      PolicyDocument:
+        Version: '2012-10-17'
+        Statement:
+          - Action:
+              - execute-api:Invoke
+            Effect: Allow
+            Resource: !Sub
+              - arn:${AWS::Partition}:execute-api:${AWS::Region}:${AWS::AccountId}:${PCApiGateway}/*/*
+              - { PCApiGateway: !Select [2, !Split ['/', !Select [0, !Split ['.', !GetAtt [ ParallelClusterApi, Outputs.ParallelClusterApiInvokeUrl ]]]]] }
+
+  CognitoPolicy:
+    Type: AWS::IAM::ManagedPolicy
+    Properties:
+      PolicyDocument:
+        Version: '2012-10-17'
+        Statement:
+          - Action:
+            - cognito-idp:AdminRemoveUserFromGroup
+            - cognito-idp:AdminAddUserToGroup
+            - cognito-idp:AdminListGroupsForUser
+            - cognito-idp:ListUsers
+            - cognito-idp:AdminCreateUser
+            - cognito-idp:AdminDeleteUser
+            Resource: !Sub
+              - arn:${AWS::Partition}:cognito-idp:${AWS::Region}:${AWS::AccountId}:userpool/${UserPoolId}
+              - { UserPoolId: !If [UseExistingCognito, !Ref UserPoolId, !GetAtt [ Cognito, Outputs.UserPoolId ]]}
+            Effect: Allow
+            Sid: CognitoPolicy
+          - Action:
+            - secretsmanager:GetSecretValue
+            Resource:
+              - !GetAtt UserPoolClientSecret.SecretArn
+            Effect: Allow
+            Sid: SecretsRole
+
+  EC2Policy:
+    Type: AWS::IAM::ManagedPolicy
+    Properties:
+      PolicyDocument:
+        Version: '2012-10-17'
+        Statement:
+          - Action:
+            - ec2:DescribeSecurityGroups
+            - ec2:DescribeVpcs
+            - ec2:DescribeInstanceTypes
+            - ec2:DescribeSubnets
+            - ec2:DescribeKeyPairs
+            Resource:
+              - '*'
+            Effect: Allow
+            Sid: EC2Policy
+          - Action:
+            - ec2:StartInstances
+            - ec2:StopInstances
+            Resource:
+              - !Sub arn:${AWS::Partition}:ec2:*:${AWS::AccountId}:instance/*
+            Condition:
+              StringLike:
+                ec2:ResourceTag/parallelcluster:version: "*"
+            Effect: Allow
+            Sid: EC2ManagePolicy
+
+  DescribeFsxPolicy:
+    Type: AWS::IAM::ManagedPolicy
+    Properties:
+      PolicyDocument:
+        Version: '2012-10-17'
+        Statement:
+          - Action:
+              - fsx:DescribeFileSystems
+              - fsx:DescribeVolumes
+            Resource:
+              - !Sub arn:${AWS::Partition}:fsx:*:${AWS::AccountId}:volume/*
+              - !Sub arn:${AWS::Partition}:fsx:*:${AWS::AccountId}:file-system/*
+            Effect: Allow
+            Sid: FsxPolicy
+
+  DescribeEfsPolicy:
+    Type: AWS::IAM::ManagedPolicy
+    Properties:
+      PolicyDocument:
+        Version: '2012-10-17'
+        Statement:
+          - Action:
+              - elasticfilesystem:DescribeFileSystems
+            Resource:
+              - !Sub arn:${AWS::Partition}:elasticfilesystem:*:${AWS::AccountId}:file-system/*
+            Effect: Allow
+            Sid: EfsPolicy
+
+  PricingPolicy:
+    Type: AWS::IAM::ManagedPolicy
+    Properties:
+      PolicyDocument:
+        Version: '2012-10-17'
+        Statement:
+          - Action:
+              - pricing:GetProducts
+            Resource:
+              - '*'
+            Effect: Allow
+            Sid: PricingPolicy
+
+  SsmSendPolicy:
+    Type: AWS::IAM::ManagedPolicy
+    Properties:
+      PolicyDocument:
+        Version: '2012-10-17'
+        Statement:
+          - Action:
+              - ssm:SendCommand
+            Resource:
+              - !Sub arn:${AWS::Partition}:ec2:*:${AWS::AccountId}:instance/*
+            Effect: Allow
+            Sid: SsmSendPolicyInstance
+            Condition:
+              StringLike:
+                ssm:resourceTag/parallelcluster:version: "*"
+          - Action:
+            - ssm:SendCommand
+            Resource:
+              - !Sub arn:${AWS::Partition}:ssm:*::document/AWS-RunShellScript
+            Effect: Allow
+            Sid: SsmSendPolicyCommand
+
+  SsmGetCommandInvocationPolicy:
+    Type: AWS::IAM::ManagedPolicy
+    Properties:
+      PolicyDocument:
+        Version: '2012-10-17'
+        Statement:
+          - Action:
+            - ssm:GetCommandInvocation
+            Resource:
+              - '*'
+            Effect: Allow
+            Sid: SsmGetCommandInvocationPolicy
+
+
+Outputs:
+  ParallelClusterUILambdaArn:
+    Description: 'ARN of the ParallelCluster UI Lambda function'
+    Value: !GetAtt ParallelClusterUIFunction.Arn
+  ParallelClusterUIUrl:
+    Description: 'Url to reach the ParallelCluster UI Site.'
+    Export:
+      Name: !Sub ${AWS::StackName}-ParallelClusterUISite
+    Value: !Sub
+      - https://${Api}.execute-api.${AWS::Region}.${AWS::URLSuffix}
+      - Api: !Ref ApiGateway
+  AppClientId:
+    Description: The id of the Cognito app client
+    Value: !Ref CognitoAppClient
+  UserPoolClientSecretArn:
+    Description: The app client secret ARN for ParallelCluster UI.
+    Value: !GetAtt UserPoolClientSecret.SecretArn
+  UserPoolClientSecretName:
+    Description: The app client secret name for ParallelCluster UI.
+    Value: !GetAtt UserPoolClientSecret.SecretName
