@@ -122,4 +122,5 @@ Resources:
             StorageType: FsxLustre
             MountDir: /shared
             FsxLustreSettings:
-              FileSystemId: !Ref FSxL
+              FileSystemId: !GetAtt [ FSxL , Outputs.FSxLustreFilesystemId ]
+              
