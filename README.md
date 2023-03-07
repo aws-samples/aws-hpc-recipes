@@ -56,9 +56,11 @@ This repository will demonstrate one-shot creation of complex HPC architectures 
 * ParallelCluster with non-managed FSx and EFS storage
 * ParallelCluster with Budgets + Billing Alerts
 
+I expect this will (eventually) be helpful for tutorials and workshops, as well as for production-reaady deployments. 
+
 ## Using
 
-Deploy resources in the `resources/` directory using CloudFormation. 
+Deploy resources in the `resources/` directory using CloudFormation. Cluster templates currently have the prefix `pcluster-`.
 
 ## Developing
 
