@@ -18,11 +18,6 @@ Parameters:
     Type: String
     Default: mycluster
 
-  AvailabilityZone:
-    Description: Availability zone where instances will be launched
-    Type: AWS::EC2::AvailabilityZone::Name
-    Default: us-east-2a
-
   ComputeInstanceMax:
     Description: Maximum number of compute instances
     Type: Number
@@ -66,10 +61,10 @@ Resources:
         AdminPasswordSecretString: 3FL0FjRpRojg281S!
         MinCapacity: 1
         MaxCapacity: 2
-        Vpc: !GetAtt [ PclusterVpc , Outputs.VPC ]
+        Vpc: !GetAtt [ PclusterVpc , Outputs.VpcId ]
         # TODO - Test if these can be the private subnets
-        DatabaseClusterSubnetOne: !GetAtt [ PclusterVpc ,Outputs.PublicSubnetA ]
-        DatabaseClusterSubnetTwo: !GetAtt [ PclusterVpc ,Outputs.PublicSubnetB ]
+        DatabaseClusterSubnetOne: !GetAtt [ PclusterVpc ,Outputs.PublicSubnetId ]
+        DatabaseClusterSubnetTwo: !GetAtt [ PclusterVpc ,Outputs.PublicSubnetId2 ]
       TemplateURL: !Sub
         - https://cfn3-dev-mwvaughn.s3.${Region}.amazonaws.com/resources/serverless-database.yaml
         - { Bucket: !Ref SourceBucket, Region: !Ref AWS::Region }
@@ -85,7 +80,7 @@ Resources:
         CidrPrivateSubnetA: 10.3.0.0/18
         CidrPrivateSubnetB: 10.3.64.0/18
       TemplateURL: !Sub
-        - https://cfn3-dev-mwvaughn.s3.${Region}.amazonaws.com/resources/hpc-networking.yaml
+        - https://cfn3-dev-mwvaughn.s3.${Region}.amazonaws.com/resources/hpc-networking-hpcdk.yaml
         - { Bucket: !Ref SourceBucket, Region: !Ref AWS::Region }
       TimeoutInMinutes: 10
 
@@ -100,7 +95,7 @@ Resources:
         HeadNode:
           InstanceType: t2.large
           Networking:
-            SubnetId: !GetAtt [ PclusterVpc , Outputs.PublicSubnetA ]
+            SubnetId: !GetAtt [ PclusterVpc , Outputs.PublicSubnetId ]
             AdditionalSecurityGroups:
               - !GetAtt [ PclusterAcctDatabase , Outputs.DatabaseClientSecurityGroup ]
           Ssh:
@@ -126,5 +121,5 @@ Resources:
               MaxCount: !Ref ComputeInstanceMax
             Networking:
               SubnetIds:
-              - !GetAtt [ PclusterVpc , Outputs.PublicSubnetA ]
-              - !GetAtt [ PclusterVpc , Outputs.PublicSubnetB ]
+              - !GetAtt [ PclusterVpc , Outputs.PublicSubnetId ]
+              - !GetAtt [ PclusterVpc , Outputs.PublicSubnetId2 ]
