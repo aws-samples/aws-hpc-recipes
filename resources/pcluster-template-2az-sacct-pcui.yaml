@@ -1,0 +1,147 @@
+AWSTemplateFormatVersion: '2010-09-09'
+Description: >
+  AWS ParallelCluster CloudFormation Template
+
+Parameters:
+  ParallelClusterVersion:
+    Description: The version of AWS ParallelCluster to use
+    Type: String
+    Default: 3.5.0
+
+  SourceBucket:
+    Description: Bucket to pull templates from
+    Type: String
+    Default: aws-parallelcluster-dev-cgruenwa
+
+  ClusterName:
+    Description: Name of cluster. Note this must be different than the stack name.
+    Type: String
+    Default: mycluster
+
+  AvailabilityZone:
+    Description: Availability zone where instances will be launched
+    Type: AWS::EC2::AvailabilityZone::Name
+    Default: us-east-2a
+
+  ComputeInstanceMax:
+    Description: Maximum number of compute instances
+    Type: Number
+    Default: 10
+
+  KeyName:
+    Description: KeyPair to login to the head node
+    Type: AWS::EC2::KeyPair::KeyName
+
+  OS:
+    Type: String
+    Default: alinux2
+    AllowedValues:
+      - alinux2
+      - centos7
+      - ubuntu1804
+      - ubuntu2004
+    Description: Enter alinux2, centos7, ubuntu1804 or ubuntu2004. Default is alinux2.
+
+Resources:
+
+  PclusterCfn:
+    Type: AWS::CloudFormation::Stack
+    Properties:
+      Parameters:
+        ParallelClusterVersion: !Ref ParallelClusterVersion
+        SourceBucket: !Ref SourceBucket
+      TemplateURL: !Sub
+        - https://${Bucket}.s3.${Region}.amazonaws.com/pcluster-cfn.yaml
+        - { Bucket: !Ref SourceBucket, Region: !Ref AWS::Region }
+      TimeoutInMinutes: 10
+
+  PclusterVpc:
+    Type: AWS::CloudFormation::Stack
+    Properties:
+      Parameters:
+        CidrBlock: 10.3.0.0/16
+        CidrPublicSubnetA: 10.3.128.0/20
+        CidrPublicSubnetB: 10.3.144.0/20
+        CidrPrivateSubnetA: 10.3.0.0/18
+        CidrPrivateSubnetB: 10.3.64.0/18
+      TemplateURL: !Sub
+        - https://cfn3-dev-mwvaughn.s3.${Region}.amazonaws.com/resources/hpc-networking.yaml
+        - { Bucket: !Ref SourceBucket, Region: !Ref AWS::Region }
+      TimeoutInMinutes: 10
+
+  # TODO - Expose params in parent stack 
+  PclusterAcctDatabase:
+    Type: AWS::CloudFormation::Stack
+    Properties:
+      Parameters:
+        ClusterName: !Join [ "-", [ 'sacct', 'db', !Ref ClusterName ] ]
+        ClusterAdmin: dbadmin
+        # TODO - remove this hardcoded credential
+        AdminPasswordSecretString: 3FL0FjRpRojg281S!
+        MinCapacity: 1
+        MaxCapacity: 2
+        Vpc: !GetAtt [ PclusterVpc , Outputs.VPC ]
+        # TODO - Test if these can be the private subnets
+        DatabaseClusterSubnetOne: !GetAtt [ PclusterVpc ,Outputs.PublicSubnetA ]
+        DatabaseClusterSubnetTwo: !GetAtt [ PclusterVpc ,Outputs.PublicSubnetB ]
+      TemplateURL: !Sub
+        - https://cfn3-dev-mwvaughn.s3.${Region}.amazonaws.com/resources/serverless-database.yaml
+        - { Bucket: !Ref SourceBucket, Region: !Ref AWS::Region }
+      TimeoutInMinutes: 60  
+
+  # TODO - Expose params in parent stack 
+  PclusterUI:
+    Type: AWS::CloudFormation::Stack
+    Properties:
+      Parameters:
+          # TODO - remove this hardcoded value
+        AdminUserEmail: mwvaughn@amazon.com
+        Version: !Ref ParallelClusterVersion
+        ImageBuilderVpcId: !GetAtt [ PclusterVpc , Outputs.VPC ]
+        ImageBuilderSubnetId: !GetAtt [ PclusterVpc ,Outputs.PublicSubnetA ]
+      TemplateURL: !Sub
+        - https://cfn3-dev-mwvaughn.s3.${Region}.amazonaws.com/resources/parallelcluster-ui.yaml
+        - { Bucket: !Ref SourceBucket, Region: !Ref AWS::Region }
+      TimeoutInMinutes: 30  
+
+  PclusterCluster:
+    Type: Custom::PclusterCluster
+    Properties:
+      ServiceToken: !GetAtt [ PclusterCfn , Outputs.Function ]
+      ClusterName: !Ref ClusterName
+      ClusterConfiguration:
+        Image:
+          Os: !Ref OS
+        HeadNode:
+          InstanceType: t2.large
+          Networking:
+            SubnetId: !GetAtt [ PclusterVpc , Outputs.PublicSubnetA ]
+            AdditionalSecurityGroups:
+              - !GetAtt [ PclusterAcctDatabase , Outputs.DatabaseClientSecurityGroup ]
+          Ssh:
+            KeyName: !Ref KeyName
+          Iam:
+            AdditionalIamPolicies:
+            - Policy: arn:aws:iam::aws:policy/AmazonSSMManagedInstanceCore
+        Scheduling:
+          Scheduler: slurm
+          SlurmSettings:
+            Database:
+              Uri: !GetAtt [ PclusterAcctDatabase , Outputs.DatabaseHost ]
+              UserName: !GetAtt [ PclusterAcctDatabase , Outputs.DatabaseAdminUser ]
+              PasswordSecretArn: !GetAtt [ PclusterAcctDatabase , Outputs.DatabaseSecretArn ]
+          SlurmQueues:
+          - Name: queue0
+            ComputeResources:
+            - Name: queue0-i0
+              Instances:
+              - InstanceType: t2.medium
+              - InstanceType: t3.small
+              MinCount: 0
+              MaxCount: !Ref ComputeInstanceMax
+            Networking:
+              SubnetIds:
+              - !GetAtt [ PclusterVpc , Outputs.PublicSubnetA ]
+              - !GetAtt [ PclusterVpc , Outputs.PublicSubnetB ]
+
+
