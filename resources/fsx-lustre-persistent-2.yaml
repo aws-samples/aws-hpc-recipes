@@ -2,10 +2,10 @@ AWSTemplateFormatVersion: '2010-09-09'
 Description: Creates an FSxL filesystem and the Security Group needed for use with ParallelCluster
 
 Parameters:
-  Vpc:
+  VpcId:
     Description: VPC ID
     Type: AWS::EC2::VPC::Id
-  Subnet:
+  SubnetId:
     Description: Subnet
     Type: AWS::EC2::Subnet::Id
 
@@ -155,15 +155,15 @@ Resources:
     Type: Custom::VpcInfo
     Properties:
       ServiceToken: !GetAtt GetAttFromParam.Arn
-      NameFilter: !Ref Vpc
+      NameFilter: !Ref VpcId
 
   # Security group
   FSxLsecurityGroup:
     Type: AWS::EC2::SecurityGroup
     Properties: 
       GroupDescription: Allow FSx for Lustre to mount to ParallelCluster
-      GroupName: FSx Lustre Cfn
-      VpcId: !Ref Vpc
+      GroupName: !Sub "${AWS::StackName}-FSx Lustre Cfn"
+      VpcId: !Ref VpcId
       SecurityGroupIngress:
         - IpProtocol: tcp
           FromPort: 988
@@ -181,7 +181,7 @@ Resources:
       SecurityGroupIds:
         - !GetAtt FSxLsecurityGroup.GroupId
       SubnetIds:
-        - !Ref Subnet
+        - !Ref SubnetId
       LustreConfiguration:
         DataCompressionType: LZ4
         DeploymentType: PERSISTENT_2
