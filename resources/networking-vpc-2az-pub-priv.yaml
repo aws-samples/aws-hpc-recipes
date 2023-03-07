@@ -1,5 +1,5 @@
 AWSTemplateFormatVersion: '2010-09-09'
-Description: HPC-Networking
+Description: HPC networking stack adapted from 1clickhpc. Builds a VPC with subets in two AZs.
 
 Parameters:
   CidrBlock:

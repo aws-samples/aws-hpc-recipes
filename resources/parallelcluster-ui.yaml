@@ -1,3 +1,6 @@
+AWSTemplateFormatVersion: '2010-09-09'
+Description: ParallelCluster UI Deployment
+
 Parameters:
   AdminUserEmail:
     Description: Email address of administrative user to setup by default (only with new Cognito instances).

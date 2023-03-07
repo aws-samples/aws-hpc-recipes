@@ -1,5 +1,5 @@
 AWSTemplateFormatVersion: '2010-09-09'
-Description: FSxL-with-Secgroup
+Description: Creates an FSxL filesystem and the Security Group needed for use with ParallelCluster
 
 Parameters:
   Vpc:

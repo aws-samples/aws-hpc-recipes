@@ -1,6 +1,6 @@
 AWSTemplateFormatVersion: '2010-09-09'
 Description: >
-  AWS ParallelCluster CloudFormation Template
+  Example AWS ParallelCluster CloudFormation Template
 
 Parameters:
   ParallelClusterVersion:

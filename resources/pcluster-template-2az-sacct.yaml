@@ -1,6 +1,6 @@
 AWSTemplateFormatVersion: '2010-09-09'
 Description: >
-  AWS ParallelCluster CloudFormation Template
+  AWS ParallelCluster on 2 availability zones with Slurm accounting provisioned and enabled
 
 Parameters:
   ParallelClusterVersion:
