@@ -1,0 +1,22 @@
+---
+# The namespace of the recipe. Can be company/brand/organization or functional namespace. May only contain alphanumeric lowercase characters and underscores.
+namespace: aws
+# The name of the recipe. This has the same character requirements as namespace.
+name: slurm_accounting_db_aurora
+# The version of the recipe. Must be compatible with semantic versioning.
+version: "1.0.0"
+# A short summary description of the recipe
+description: Set up an Amazon Aurora database that can support Slurm accounting
+# The path to the README for the recipe relative to its root
+readme: README.md
+# Optional URL for external documentation
+documentation: 
+# Optional URL for a homepage
+homepage:
+# A list of recipe content authors
+authors:
+  - AWS HPC Engineering
+# A list of tags you want to associate with the collection for indexing/searching. Tags have the same character requirements as namespace.
+tags:
+# A list of file glob-like patterns used to filter any files or directories that should not be included in the S3 release. 
+build_ignore: []

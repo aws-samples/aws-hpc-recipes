@@ -1,0 +1,268 @@
+AWSTemplateFormatVersion: "2010-09-09"
+Transform: AWS::Serverless-2016-10-31
+Parameters:
+  EBSVolumeSize:
+    Description: "Size of EBS Volume (in GiB). Must be greater than 10 GiB."
+    Type: Number
+    Default: 25
+    MinValue: 11
+    MaxValue: 16384
+
+Resources:
+  NitroEnclavesCloud9Environment:
+    DependsOn: Cloud9SSMRole
+    Type: AWS::Cloud9::EnvironmentEC2
+    Properties:
+      AutomaticStopTimeMinutes: 30
+      ConnectionType: CONNECT_SSM
+      Description: Development environment for the Nitro Enclaves workshop
+      ImageId: amazonlinux-2-x86_64
+      InstanceType: m5.xlarge
+      Name: Nitro Enclaves Workshop
+      #Uncomment below for Event Engine only
+      #OwnerArn: !Sub arn:${AWS::Partition}:sts::${AWS::AccountId}:assumed-role/TeamRole/MasterKey
+
+  Cloud9SSMRole:
+    Type: Custom::Cloud9SSMRole
+    Properties:
+      ServiceToken: !GetAtt Cloud9SSMRoleFunction.Arn
+
+  Cloud9SSMRoleFunction:
+    Type: AWS::Serverless::Function
+    Properties:
+      InlineCode: !Sub |
+        import boto3
+        import cfnresponse
+        iam_client = boto3.client('iam')
+
+        def create_role():
+            role_name = 'AWSCloud9SSMAccessRole'
+            instance_profile_name = 'AWSCloud9SSMInstanceProfile'
+            iam = boto3.resource('iam')
+            role = iam.Role(role_name)
+            role_exists = False
+            try:
+                role.role_id
+                print(f"{role_name} exists.")
+                role_exists = True
+            except:
+                print(f"{role_name} not found.")
+                role_exists = False
+
+            if not role_exists:
+                try:
+                    print(f"Creating {role_name} role.")
+                    create_role_response = iam_client.create_role(
+                        Path='/service-role/',
+                        RoleName=role_name,
+                        AssumeRolePolicyDocument='{"Version": "2012-10-17","Statement": [{"Effect": "Allow", "Principal":{"Service": ["cloud9.${AWS::URLSuffix}", "ec2.${AWS::URLSuffix}"]},"Action": ["sts:AssumeRole"]}]}'
+                    )
+                    waiter = iam_client.get_waiter('role_exists')
+                    waiter.wait(RoleName=create_role_response['Role']['RoleName'],WaiterConfig={'Delay': 1,'MaxAttempts':120})
+                    role_exists = True
+                except Exception as e:
+                    print(e)
+                    return role_exists
+            iam_client.attach_role_policy(
+                RoleName=role.role_name,
+                PolicyArn='arn:${AWS::Partition}:iam::aws:policy/AWSCloud9SSMInstanceProfile'
+            )
+            iam_client.attach_role_policy(
+                RoleName=role.role_name,
+                PolicyArn='arn:${AWS::Partition}:iam::aws:policy/AmazonSSMManagedInstanceCore'
+            )
+
+            instance_profile = iam.InstanceProfile(instance_profile_name)
+            ip_exists = False
+            try:
+                instance_profile.instance_profile_id
+                print(f"{instance_profile_name} exists.")
+                ip_exists = True
+            except:
+                print(f"{instance_profile_name} not found.")
+                ip_exists = False
+            
+            if not ip_exists:
+                try:
+                    print(f"Creating {instance_profile_name} instance profile.")
+                    create_instance_profile_response = iam_client.create_instance_profile(
+                        InstanceProfileName=instance_profile_name,
+                        Path='/cloud9/'
+                    )
+                    waiter = iam_client.get_waiter('instance_profile_exists')
+                    waiter.wait(InstanceProfileName=create_instance_profile_response['InstanceProfile']['InstanceProfileName'],WaiterConfig={'Delay': 1,'MaxAttempts': 120})
+                    ip_exists = True
+                except Exception as e:
+                    print(e)
+                    return ip_exists
+            if len(instance_profile.roles) < 1:
+                iam_client.add_role_to_instance_profile(
+                    InstanceProfileName=instance_profile.instance_profile_name,
+                    RoleName=role.role_name
+                )
+
+            return role_exists and ip_exists 
+
+        def lambda_handler(event, context):
+            print(event)
+
+            success = False
+            if event['RequestType'] == 'Create':
+                success = create_role()
+            else:
+                success = True
+
+            if success:
+                cfnresponse.send(event, context, cfnresponse.SUCCESS, {}, event["RequestId"])
+            else:
+                cfnresponse.send(event, context, cfnresponse.FAILED, {}, event["RequestId"])
+      Handler: index.lambda_handler
+      Runtime: python3.8
+      Timeout: 300
+      Policies:
+      - Statement:
+        - Effect: Allow
+          Action:
+          - iam:CreateRole
+          - iam:GetRole
+          - iam:AttachRolePolicy
+          - iam:PassRole
+          - iam:DeleteRole
+          Resource: !Sub arn:${AWS::Partition}:iam::${AWS::AccountId}:role/service-role/AWSCloud9SSMAccessRole
+        - Effect: Allow
+          Action:
+          - iam:CreateInstanceProfile
+          - iam:GetInstanceProfile
+          - iam:AddRoleToInstanceProfile
+          - iam:DeleteInstanceProfile
+          Resource: !Sub arn:${AWS::Partition}:iam::${AWS::AccountId}:instance-profile/cloud9/AWSCloud9SSMInstanceProfile
+
+  UpdateC9Env:
+    Type: Custom::UpdateC9Env
+    DependsOn: NitroEnclavesCloud9Environment
+    Properties:
+      ServiceToken: !GetAtt UpdateC9EnvFunction.Arn
+
+  UpdateC9EnvFunction:
+    Type: AWS::Serverless::Function
+    Properties:
+      InlineCode: !Sub |
+        import boto3
+        import cfnresponse
+        import os
+        import time
+        ssm_client = boto3.client('ssm')
+        ec2_client = boto3.client('ec2')
+        ec2 = boto3.resource('ec2')
+
+        def get_commands():
+            return f"""
+        #TODO: usermod being executed manually during Nitro CLI install
+        #sudo groupadd -f ne
+        #sudo usermod -aG ne ec2-user
+        sudo yum update --security -y
+        sudo growpart /dev/nvme0n1 1
+        sudo xfs_growfs /dev/nvme0n1p1
+        echo "export AWS_DEFAULT_REGION=${AWS::Region}" >> /home/ec2-user/.bash_profile
+        """
+
+        def enable_enclave(instance_id):
+            try:
+                print(f"Stopping instance {instance_id}")
+                ec2_client.stop_instances(InstanceIds=[instance_id])
+                waiter = ec2_client.get_waiter('instance_stopped')
+                waiter.wait(InstanceIds=[instance_id])
+                print(f"Enabling Nitro Enclaves on {instance_id}")
+                ec2_client.modify_instance_attribute(InstanceId=instance_id, Attribute='enclaveOptions', Value='true')
+                print(f"Starting instance {instance_id}")
+                ec2_client.start_instances(InstanceIds=[instance_id])
+                waiter = ec2_client.get_waiter('instance_running')
+                waiter.wait(InstanceIds=[instance_id])
+                return True
+            except Exception as e:
+                print(e)
+                return False
+
+        def resize_volume(instance_id):
+            volume_size = int(os.environ.get('VolumeSize'))
+            commands = get_commands()
+            send_command_response = None
+
+            try:
+                print(f"Getting instance and volume information for {instance_id}")
+                instance = ec2.Instance(instance_id)
+                volume_id = instance.block_device_mappings[0]['Ebs']['VolumeId']
+                print(f"Found volume {volume_id}")
+                print(f"Resizing volume {volume_id} to {volume_size} GiB")
+                ec2_client.modify_volume(VolumeId=volume_id, Size=volume_size)
+                print("Waiting for resize to complete")
+                volume_modifications = ec2_client.describe_volumes_modifications(VolumeIds=[volume_id])
+                while volume_modifications['VolumesModifications'][0]['ModificationState'] not in ['optimizing', 'completed']:
+                    time.sleep(1)
+                    volume_modifications = ec2_client.describe_volumes_modifications(VolumeIds=[volume_id])
+                print("Resize complete")
+                print("Waiting for instance status OK")
+                waiter = ec2_client.get_waiter('instance_status_ok')
+                waiter.wait(InstanceIds=[instance_id])
+                print("Sending commands to grow partition and filesystem, plus other things")
+                send_command_response = ssm_client.send_command(
+                    InstanceIds=[instance_id],
+                    DocumentName='AWS-RunShellScript',
+                    Parameters={'commands': commands.split('\n')},
+                    CloudWatchOutputConfig={
+                        'CloudWatchLogGroupName': f'ssm-output-{instance_id}',
+                        'CloudWatchOutputEnabled': True
+                    }
+                )
+                #TODO: SSM is eventually consistent on send command
+                #print("Waiting for send command to complete")
+                #waiter = ssm_client.get_waiter('command_executed')
+                #waiter.wait(CommandId=send_command_response['Command']['CommandId'], InstanceId=instance_id)
+                print("Send command complete")
+                return True
+            except Exception as e:
+                print(e)
+                if send_command_reponse:
+                    print(send_command_response)
+                return False
+
+
+        def lambda_handler(event, context):
+            print(event)
+            environment_id = os.environ.get('EnvironmentID')
+            response = ec2_client.describe_instances(Filters=[{'Name': 'tag:aws:cloud9:environment','Values': [environment_id]}])
+            instance_id = response['Reservations'][0]['Instances'][0]['InstanceId']
+
+            success = False
+            if event['RequestType'] == 'Create':
+                success = enable_enclave(instance_id)
+                if success:
+                    success = resize_volume(instance_id)
+            else:
+                success = True
+
+            if success:
+                cfnresponse.send(event, context, cfnresponse.SUCCESS, {}, event["RequestId"])
+            else:
+                cfnresponse.send(event, context, cfnresponse.FAILED, {}, event["RequestId"])
+      Handler: index.lambda_handler
+      Runtime: python3.8
+      Timeout: 600
+      Environment:
+        Variables:
+          EnvironmentID: !Ref NitroEnclavesCloud9Environment
+          VolumeSize: !Ref EBSVolumeSize
+      Policies:
+      - Statement:
+        - Effect: Allow
+          Action:
+          - ec2:DescribeInstances
+          - ec2:DescribeInstanceStatus
+          - ec2:StopInstances
+          - ec2:StartInstances
+          - ec2:ModifyInstanceAttribute
+          - ec2:ModifyVolume
+          - ec2:DescribeVolumesModifications
+          - ssm:SendCommand
+          - ssm:GetCommandInvocation
+          Resource: "*"

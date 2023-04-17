@@ -1,0 +1,17 @@
+# Target rules
+all: build
+	@echo "Building {{name}}"
+
+build: assets
+
+assets:
+	@echo "Build assets for {{name}}"
+
+run: build
+	@echo "Run assets for {{name}}"
+
+test: build
+
+clean:
+
+clobber: clean

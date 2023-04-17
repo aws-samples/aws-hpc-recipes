@@ -1,0 +1,27 @@
+---
+# The functional namespace of the recipe. May only contain alphanumeric lowercase characters and underscores.
+namespace: {{namespace}}
+# The name of the recipe. This has the same character requirements as namespace.
+name: {{name}}
+# The version of the recipe. Must be compatible with semantic versioning.
+version: "{{version}}"
+# A short summary description of the recipe
+description: {{description}}
+# The path to the README for the recipe relative to its root
+readme: README.md
+# Optional URL for external documentation
+documentation: 
+# Optional URL for a homepage
+homepage:
+# A list of recipe content authors
+authors:
+{% for a in authors %}  - {{a}}
+{% endfor -%}
+# A list of tags you want to associate with the collection for indexing/searching. Tags have the same character requirements as namespace.
+tags:
+{% for t in tags %}  - {{t}}
+{% endfor -%}
+# A list of file glob-like patterns used to filter any files or directories that should not be included in the S3 release. 
+build_ignore: []
+# Support level
+level: community
