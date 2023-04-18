@@ -8,7 +8,7 @@ The AWS HPC Engineering Team and approved contributors provide and maintain reci
 
 ## The recipe library
 
-All recipes are in the `recipes` folder. Each recipe has its own documentation that builds on the general documentation provided here. 
+All recipes are in namespaced directories under the [`recipes`](/recipes/) folder. Each recipe has its own documentation that builds on the general documentation provided here. 
 
 ## Contributing
 
