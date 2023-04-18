@@ -58,3 +58,9 @@ deploy:
 	@aws --profile ${PROFILE} s3 sync --delete --acl public-read \
 		--exclude "*" --include "*/assets/*" --exclude "*/.gitkeep" \
 		recipes s3://${S3_BUCKET}/${RELEASE_TAG}/recipes/;\
+
+set_version:
+	$(eval RELEASE_TAG := $(shell git describe))
+	@echo ${RELEASE_TAG}
+
+release: set_version deploy
