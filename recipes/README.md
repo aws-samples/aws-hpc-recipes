@@ -13,8 +13,9 @@ HPCDK recipe assets are available via three paths:
 
 #### slurm_accounting_db_aurora ![meep](https://img.shields.io/badge/-core-%23146EB4) ![meep](https://img.shields.io/badge/-rds-%23FF9900) ![meep](https://img.shields.io/badge/-cloudformation-%23FF9900)
 
-* **About**: Set up an Amazon Aurora database that can support Slurm accounting (version 1.0.0).
+* **About**: Set up an Amazon Aurora database that can support Slurm accounting.
 * **Usage**: [README.md](recipes/db/slurm_accounting_db_aurora/README.md)
+* **Version**: 1.0.0
 
 ### env: User environment
 
