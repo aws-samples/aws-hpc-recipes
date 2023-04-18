@@ -19,6 +19,18 @@ HPCDK recipe assets are available via three paths:
 
 ### env: User environment
 
+#### lmod ![meep](https://img.shields.io/badge/-community-%2300a8e1) ![meep](https://img.shields.io/badge/-experimental-%23d9534f) ![meep](https://img.shields.io/badge/-parallelcluster-%23FF9900)
+
+* **About**: Install Lmod alongside Environment modules.
+* **Usage**: [README.md](recipes/env/lmod/README.md)
+* **Version**: 1.0.0
+
+#### spack ![meep](https://img.shields.io/badge/-community-%2300a8e1) ![meep](https://img.shields.io/badge/-parallelcluster-%23FF9900)
+
+* **About**: Install and configure Spack on shared storage.
+* **Usage**: [README.md](recipes/env/lmod/README.md)
+* **Version**: 1.0.0
+
 ### iam: Identity Access and Management
 
 ### ide: IDEs and GUIs
