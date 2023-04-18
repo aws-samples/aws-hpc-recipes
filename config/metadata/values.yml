@@ -1,24 +1,25 @@
 ---
 # List of namespaces
 namespace:
-  - ad: Active Directory
-  - aws: General AWS
-  - db: Databases
-  - env: User environment
-  - iam: Identity Access and Management
-  - net: Networking
-  - pcluster: AWS ParallelCluster
-  - scheduler: HPC scheduler
-  - storage: Storage
+  ad: Active Directory
+  aws: General AWS
+  db: Databases
+  env: User environment
+  iam: Identity Access and Management
+  ide: IDEs and GUIs
+  net: Networking
+  pcluster: AWS ParallelCluster
+  scheduler: HPC scheduler
+  storage: Storage
 # List of default tags
 tags:
-   - alinux2
-   - centos7
-   - rhel8
-   - ubuntu1804
-   - ubuntu2004
-   - experimental
-   - tested
+  alinux2
+  centos7
+  rhel8
+  ubuntu1804
+  ubuntu2004
+  experimental
+  tested
 levels:
-  - core
-  - community
+  core
+  community

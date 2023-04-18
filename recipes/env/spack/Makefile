@@ -1,0 +1,21 @@
+# Target rules
+all: build
+	@echo "Building spack"
+
+build: assets
+
+assets: assets/postinstall.sh
+	@echo "Build assets for spack"
+
+assets/postinstall.sh:
+	curl -skL -o assets/postinstall.sh https://raw.githubusercontent.com/spack/spack-configs/main/AWS/parallelcluster/postinstall.sh
+
+run: build
+	@echo "Run assets for spack"
+
+test: build
+
+clean:
+	rm -rf assets/*
+
+clobber: clean

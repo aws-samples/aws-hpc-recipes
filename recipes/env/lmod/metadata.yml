@@ -1,12 +1,12 @@
 ---
-# The namespace of the recipe. Can be company/brand/organization or functional namespace. May only contain alphanumeric lowercase characters and underscores.
-namespace: aws
+# The functional namespace of the recipe. May only contain alphanumeric lowercase characters and underscores.
+namespace: env
 # The name of the recipe. This has the same character requirements as namespace.
-name: parallelcluster_ui
+name: lmod
 # The version of the recipe. Must be compatible with semantic versioning.
-version: "3.6.0"
+version: "1.0.0"
 # A short summary description of the recipe
-description: Installs PCUI in the customers account
+description: Install Lmod alongside Environment modules
 # The path to the README for the recipe relative to its root
 readme: README.md
 # Optional URL for external documentation
@@ -15,10 +15,11 @@ documentation:
 homepage:
 # A list of recipe content authors
 authors:
-  - AWS HPC Engineering
+  - Matt Vaughn <mwvaughn@amazon.com>
 # A list of tags you want to associate with the collection for indexing/searching. Tags have the same character requirements as namespace.
 tags:
+  - experimental
 # A list of file glob-like patterns used to filter any files or directories that should not be included in the S3 release. 
 build_ignore: []
 # Support level
-level: core
+level: community

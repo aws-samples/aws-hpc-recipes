@@ -12,9 +12,9 @@ from pathlib import Path
 
 SCRIPTS = Path(__file__).resolve().parent
 REPO = SCRIPTS.parent
-TEMPLATES = Path.joinpath(REPO, "templates", "recipe")
+CONFIG = Path.joinpath(REPO, "config", "metadata", "values.yml")
 RECIPES = Path.joinpath(REPO, "recipes")
-
+TEMPLATES = Path.joinpath(REPO, "templates", "recipe")
 
 def slugify(s):
     # Simple slugify strings to path safe values
@@ -96,6 +96,9 @@ def process_tags(tags_string):
         tags = [slugify(t.strip()) for t in tags_string.split(",")]
     else:
         tags = []
+    # Automatically tag new recipes as experimental
+    if ["experimental"] not in tags:
+        tags.append("experimental")
     return tags
 
 
@@ -129,21 +132,32 @@ def gitkeep(path):
     with open(os.path.join(path, ".gitkeep"), "w") as fp:
         pass
 
+def load_config(path):
+    with open(path, 'r') as file:
+        config = yaml.safe_load(file)
+        return config
 
 def main():
+
+    # Load metadata config
+    config = load_config(CONFIG)
 
     # User inputs
     #
     data = {}
+
+    data["namespace"] = process_namespace(prompt("Namespace", "aws"))
+    print(config['namespace'].keys())
+    if data["namespace"] not in config['namespace'].keys():
+        raise ValueError(f"Unknown namespace")
+
     data["name"] = process_recipe_name(
         prompt("Recipe name [a-z_]+", None, allow_empty=False)
     )
     # Validate destination directory before accepting any more user input
-    dest_dir = Path.joinpath(RECIPES, data["name"])
-    print(dest_dir)
+    dest_dir = Path.joinpath(RECIPES, data["namespace"], data["name"])
     if Path(dest_dir).exists():
         raise ValueError(f"A recipe named '{data['name']}' exists")
-    data["description"] = prompt("Short description")
     data["version"] = process_version(
         prompt(
             "Version (must be compatible with semantic versioning)",
@@ -151,7 +165,9 @@ def main():
             allow_empty=False,
         )
     )
-    data["namespace"] = process_namespace(prompt("Namespace", "aws"))
+
+    data["description"] = prompt("Short description")
+
     data["authors"] = process_authors(
         prompt(
             "Author (comma-separated values for multiple)",
