@@ -19,7 +19,14 @@ tags:
   ubuntu1804
   ubuntu2004
   experimental
-  tested
-levels:
   core
   community
+  parallelcluster
+  batch
+  fsx
+  cloudformation
+  cloudwatch
+  s3
+  cloud9
+  efs
+  ebs
