@@ -1,0 +1,236 @@
+AWSTemplateFormatVersion: '2010-09-09'
+Description: Creates an FSx for OpenZFS filesystem plus the Security Group needed for use with ParallelCluster
+
+Parameters:
+  VpcId:
+    Description: VPC ID
+    Type: AWS::EC2::VPC::Id
+  SubnetId:
+    Description: Subnet
+    Type: AWS::EC2::Subnet::Id
+  Capacity:
+    Description: Storage capacity (GiB)
+    Type: Number
+    Default: 64
+  Compression:
+    Description: Data compression type
+    Type: String
+    AllowedValues:
+      - "LZ4"
+      - "NONE"
+    Default: "LZ4"
+
+Resources:
+
+  LambdaExecutionRole:
+    Type: AWS::IAM::Role
+    Properties:
+      AssumeRolePolicyDocument:
+        Version: '2012-10-17'
+        Statement:
+        - Effect: Allow
+          Principal:
+            Service:
+            - lambda.amazonaws.com
+          Action:
+          - sts:AssumeRole
+      Path: "/"
+      Policies:
+      - PolicyName: root
+        PolicyDocument:
+          Version: '2012-10-17'
+          Statement:
+          - Effect: Allow
+            Action:
+            - logs:CreateLogGroup
+            - logs:CreateLogStream
+            - logs:PutLogEvents
+            Resource: arn:aws:logs:*:*:*
+          - Effect: Allow
+            Action:
+            - ec2:DescribeSubnets
+            - ec2:DescribeVpcs
+            Resource: "*"
+
+  GetAttFromParam:
+    Type: AWS::Lambda::Function
+    Properties: 
+      Description: Look up info from a VPC or subnet ID 
+      Handler: index.handler
+      MemorySize: 128
+      Role: !GetAtt LambdaExecutionRole.Arn
+      Runtime: "python3.9"
+      Timeout: 30
+      Code:
+        ZipFile: |
+          import json
+          import boto3
+          import cfnresponse
+          import logging
+          
+          def handler(event, context):
+            logger = logging.getLogger()
+            logger.setLevel(logging.INFO)
+            
+            # initialize our responses, assume failure by default
+            
+            response_data = {}
+            response_status = cfnresponse.FAILED
+            
+            logger.info('Received event: {}'.format(json.dumps(event)))
+            
+            if event['RequestType'] == 'Delete':
+              response_status = cfnresponse.SUCCESS
+              cfnresponse.send(event, context, response_status, response_data)
+            
+            try:
+              ec2=boto3.client('ec2')
+            except Exception as e:
+              logger.info('boto3.client failure: {}'.format(e))
+              cfnresponse.send(event, context, response_status, response_data)
+            
+            name_filter = event['ResourceProperties']['NameFilter']
+            name_filter_parts = name_filter.split('-')
+            resource_type=name_filter_parts[0]
+            
+            if resource_type == "vpc":
+              try:
+                vpcs=ec2.describe_vpcs(VpcIds=[name_filter])
+              except Exception as e:
+                logger.info('ec2.describe_vpcs failure: {}'.format(e))
+                cfnresponse.send(event, context, response_status, response_data)
+              
+              number_of_vpcs = len(vpcs['Vpcs'])
+              logger.info('number of vpcs returned: {}'.format(number_of_vpcs))
+              
+              if number_of_vpcs == 1:
+                CidrBlock = vpcs['Vpcs'][0]['CidrBlock']
+                response_data['CidrBlock'] = CidrBlock
+                logger.info('vpc CidrBlock {}'.format(CidrBlock))
+                response_status = cfnresponse.SUCCESS
+                cfnresponse.send(event, context, response_status, response_data)
+              
+              elif number_of_vpcs == 0:
+                logger.info('no matching vpcs for filter {}'.format(name_filter))
+                cfnresponse.send(event, context, response_status, response_data)
+              
+              else:
+                logger.info('multiple matching vpcs for filter {}'.format(name_filter))
+                cfnresponse.send(event, context, response_status, response_data)
+              
+            elif resource_type == "subnet":
+              try:
+                subnets = ec2.describe_subnets(SubnetIds=[name_filter])
+              except Exception as e:
+                logger.info('ec2.describe_subnets failure: {}'.format(e))
+                cfnresponse.send(event, context, response_status, response_data)
+              
+              number_of_subnets = len(subnets['Subnets'])
+              logger.info('number of subnets returned: {}'.format(number_of_subnets))
+              
+              if number_of_subnets == 1:
+                CidrBlock = subnets['Subnets'][0]['CidrBlock']
+                VpcId = subnets['Subnets'][0]['VpcId']
+                AvailabilityZone = subnets['Subnets'][0]['AvailabilityZone']
+                response_data['AvailabilityZone'] = AvailabilityZone
+                response_data['CidrBlock'] = CidrBlock
+                response_data['VpcId'] = VpcId
+                
+                logger.info('subnet AvailabilityZone {}'.format(AvailabilityZone))
+                logger.info('subnet CidrBlock {}'.format(CidrBlock))
+                logger.info('subnet VpcId {}'.format(VpcId))
+                
+                response_status = cfnresponse.SUCCESS
+                cfnresponse.send(event, context, response_status, response_data)
+                
+              elif number_of_subnets == 0:
+                logger.info('no matching subnet for filter {}'.format(name_filter))
+                cfnresponse.send(event, context, response_status, response_data)
+                
+              else:
+                logger.info('multiple matching subnets for filter {}'.format(name_filter))
+                cfnresponse.send(event, context, response_status, response_data)
+              
+            else:
+              logger.info('invalid resource type {}'.resource_type)
+              cfnresponse.send(event, context, response_status, response_data)
+
+# VpcInfo - Lambda-backed resource for looking up an Amazon VPC
+#
+# Parameters
+#
+# ServiceToken - a pointer to the AWS Lambda function
+# NameFilter - the VPC parameter which serves as a filter
+
+  VpcInfo:
+    Type: Custom::VpcInfo
+    Properties:
+      ServiceToken: !GetAtt GetAttFromParam.Arn
+      NameFilter: !Ref VpcId
+
+  # Security group
+  FSxZsecurityGroup:
+    Type: AWS::EC2::SecurityGroup
+    Properties: 
+      GroupDescription: Allow FSx for OpenZFS to mount to ParallelCluster
+      GroupName: !Sub "${AWS::StackName}-FSx OpenZFS Cfn"
+      VpcId: !Ref VpcId
+      SecurityGroupIngress:
+        - IpProtocol: tcp
+          FromPort: 111
+          ToPort: 111
+          CidrIp: !GetAtt VpcInfo.CidrBlock
+          Description: Remote procedure call for NFS
+        - IpProtocol: udp
+          FromPort: 111
+          ToPort: 111
+          CidrIp: !GetAtt VpcInfo.CidrBlock
+          Description: Remote procedure call for NFS
+        - IpProtocol: tcp
+          FromPort: 2049
+          ToPort: 2049
+          CidrIp: !GetAtt VpcInfo.CidrBlock
+          Description: NFS server daemon
+        - IpProtocol: udp
+          FromPort: 2049
+          ToPort: 2049
+          CidrIp: !GetAtt VpcInfo.CidrBlock
+          Description: NFS server daemon
+        - IpProtocol: tcp
+          FromPort: 20001
+          ToPort: 20003
+          CidrIp: !GetAtt VpcInfo.CidrBlock
+          Description: NFS mount, status monitor, and lock daemon
+        - IpProtocol: udp
+          FromPort: 20001
+          ToPort: 20003
+          CidrIp: !GetAtt VpcInfo.CidrBlock
+          Description: NFS mount, status monitor, and lock daemon
+
+  FSxZFilesystem:
+    Type: AWS::FSx::FileSystem
+    Properties:
+      FileSystemType: OPENZFS
+      StorageType: SSD
+      StorageCapacity: !Ref Capacity
+      SecurityGroupIds:
+        - !GetAtt FSxZsecurityGroup.GroupId
+      SubnetIds:
+        - !Ref SubnetId
+      OpenZFSConfiguration:
+        DeploymentType: SINGLE_AZ_1
+        ThroughputCapacity: 64
+        RootVolumeConfiguration:
+          DataCompressionType: !Ref Compression
+          NfsExports:
+            - ClientConfigurations:
+                - Clients: "*"
+                  Options: ["rw", "no_root_squash"]
+
+Outputs:
+  FSxZustreFilesystemId:
+    Description: The ID of the FSxZ filesystem that has been created
+    Value: !Ref FSxZFilesystem
+  FSxZustreSecurityGroupId:
+    Description: The ID of the security group allowing access to FSxZ filesystem
+    Value: !Ref FSxZsecurityGroup
