@@ -146,8 +146,8 @@ def main():
     #
     data = {}
 
+    print("Namespaces: " + ",".join(config['namespace'].keys()))
     data["namespace"] = process_namespace(prompt("Namespace", "aws"))
-    print(config['namespace'].keys())
     if data["namespace"] not in config['namespace'].keys():
         raise ValueError(f"Unknown namespace")
 

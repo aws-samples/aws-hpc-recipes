@@ -40,16 +40,13 @@ Parameters:
     Type: AWS::EC2::KeyPair::KeyName
   Vpc:
     Description: VPC ID to create the Directory Service in.
-    Type: String
-    Default: ""
+    Type: AWS::EC2::VPC::Id
   PrivateSubnetOne:
     Description: Subnet ID of the first private subnet. 
-    Type: String
-    Default: ""
+    Type: AWS::EC2::Subnet::Id
   PrivateSubnetTwo:
     Description: Subnet ID of the second private subnet.
-    Type: String
-    Default: ""
+    Type: AWS::EC2::Subnet::Id
   AdminNodeAmiId:
     Description: AMI for the Admin Node
     Type: 'AWS::SSM::Parameter::Value<AWS::EC2::Image::Id>'
@@ -890,8 +887,5 @@ Outputs:
     Value: !Sub ldaps://${DomainName}
   DomainCertificateSecretReadPolicy:
     Value: !Ref DomainCertificateSecretReadPolicy
-  AdDomainAdminNodePublicIp:
-    Value: !GetAtt AdDomainAdminNode.PublicIp
-  AdDomainAdminNodeDnsName:
-    Value: !GetAtt AdDomainAdminNode.PublicDnsName
-  
+  DirectoryId:
+    Value: !Ref Directory

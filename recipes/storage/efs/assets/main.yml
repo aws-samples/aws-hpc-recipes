@@ -3,7 +3,7 @@ Parameters:
     Description: Vpc ID
     Type: AWS::EC2::VPC::Id
   SubnetIds:
-    Description: Choose Three Subnets in Different AZ
+    Description: Choose Two Subnets in Different AZ
     Type: List<AWS::EC2::Subnet::Id>
 
 Resources:
@@ -192,13 +192,7 @@ Resources:
               - !Ref EfsSecurityGroup
          SubnetId: !Select [ 1, !Ref SubnetIds ]
 
-  EfsMountTarget3:
-    Type: AWS::EFS::MountTarget
-    Properties:
-         FileSystemId: !Ref EfsFilesystem
-         SecurityGroups:
-              - !Ref EfsSecurityGroup
-         SubnetId: !Select [ 2, !Ref SubnetIds ]
+
 
 Outputs:
   EFSFilesystemId:
