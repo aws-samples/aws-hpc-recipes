@@ -1,9 +1,9 @@
 ---
 # List of namespaces
 namespace:
-  ad: Active Directory
-  aws: General AWS
-  db: Databases
+  aws: General AWS (default)
+  db: Database management
+  dir: Directory services
   env: User environment
   iam: Identity Access and Management
   ide: IDEs and GUIs
@@ -13,14 +13,14 @@ namespace:
   storage: Storage
 # List of default tags
 tags:
+  core
+  community
+  experimental
   alinux2
   centos7
   rhel8
   ubuntu1804
   ubuntu2004
-  experimental
-  core
-  community
   parallelcluster
   batch
   fsx
