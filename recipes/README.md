@@ -20,7 +20,7 @@ Generally, use `main` for the version, unless you need to pin to a specific HPCD
 
 ### dir: Directory services
 
-#### demo_managed_ad ![tag](https://img.shields.io/badge/-experimental-%23D9534F 
+#### demo_managed_ad ![tag](https://img.shields.io/badge/-experimental-%23D9534F) 
 
 * **About**: Stand up a simple AWS Managed Microsoft AD
 * **Authors**: Matt Vaughn <mwvaughn@amazon.com>
@@ -29,13 +29,13 @@ Generally, use `main` for the version, unless you need to pin to a specific HPCD
 
 ### env: User environment
 
-#### lmod ![tag](https://img.shields.io/badge/-experimental-%23D9534F 
+#### lmod ![tag](https://img.shields.io/badge/-experimental-%23D9534F) 
 
 * **About**: Install Lmod alongside Environment modules
 * **Authors**: Matt Vaughn <mwvaughn@amazon.com>
 * **Usage**: [README.md](recipes/env/lmod/README.md)
 
-#### spack ![tag](https://img.shields.io/badge/-experimental-%23D9534F 
+#### spack ![tag](https://img.shields.io/badge/-experimental-%23D9534F) 
 
 * **About**: Install and configure Spack on shared storage
 * **Authors**: Matt Vaughn <mwvaughn@amazon.com>
@@ -113,19 +113,19 @@ Generally, use `main` for the version, unless you need to pin to a specific HPCD
 *There are currently no recipes in this namespace.*
 ### storage: Storage
 
-#### fsxl_secgroup ![tag](https://img.shields.io/badge/-fsxl-%23AAB7B8 ![tag](https://img.shields.io/badge/-hpc-%23AAB7B8 ![tag](https://img.shields.io/badge/-parallelcluster-%23FF9900 
+#### fsxl_secgroup ![tag](https://img.shields.io/badge/-fsxl-%23AAB7B8) ![tag](https://img.shields.io/badge/-hpc-%23AAB7B8) ![tag](https://img.shields.io/badge/-parallelcluster-%23FF9900) 
 
 * **About**: Creates an FSxL filesystem and the Security Group needed for use with ParallelCluster
 * **Authors**: Matt Vaughn <mwvaughn@amazon.com>
 * **Usage**: [README.md](recipes/aws/fsxl_secgroup/README.md)
 
-#### fsx_openzfs ![tag](https://img.shields.io/badge/-experimental-%23D9534F 
+#### fsx_openzfs ![tag](https://img.shields.io/badge/-experimental-%23D9534F) 
 
 * **About**: Provision an FSx for OpenZFS filesystem for Pcluster
 * **Authors**: Matt Vaughn <mwvaughn@amazon.com>
 * **Usage**: [README.md](recipes/storage/fsx_openzfs/README.md)
 
-#### efs ![tag](https://img.shields.io/badge/-experimental-%23D9534F 
+#### efs ![tag](https://img.shields.io/badge/-experimental-%23D9534F) 
 
 * **About**: Provision an Amazon EFS filesystem
 * **Authors**: Matt Vaughn <mwvaughn@amazon.com>
