@@ -53,14 +53,17 @@ clean: tidy $(addsuffix .ph_clean,$(PROJECTS))
 clobber: clean $(addsuffix .ph_clobber,$(PROJECTS))
 
 .PHONY: deploy
-
 deploy:
 	@aws --profile ${PROFILE} s3 sync --delete --acl public-read \
 		--exclude "*" --include "*/assets/*" --exclude "*/.gitkeep" \
 		recipes s3://${S3_BUCKET}/${RELEASE_TAG}/recipes/;\
 
+.PHONY: readme
+readme:
+	python -m scripts.render_readme
+
 set_version:
 	$(eval RELEASE_TAG := $(shell git describe))
 	@echo ${RELEASE_TAG}
 
-release: set_version deploy
+release: set_version readme deploy

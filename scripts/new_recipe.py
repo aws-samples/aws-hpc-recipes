@@ -11,11 +11,11 @@ from pathlib import Path
 
 from . import utils
 
-SCRIPTS = Path(__file__).resolve().parent
-REPO = SCRIPTS.parent
-CONFIG = Path.joinpath(REPO, "config", "metadata", "values.yml")
-RECIPES = Path.joinpath(REPO, "recipes")
-TEMPLATES = Path.joinpath(REPO, "templates", "recipe")
+# SCRIPTS = Path(__file__).resolve().parent
+# REPO = SCRIPTS.parent
+# CONFIG = Path.joinpath(REPO, "config", "metadata", "values.yml")
+# RECIPES = Path.joinpath(REPO, "recipes")
+# TEMPLATES = Path.joinpath(REPO, "templates", "recipe")
 
 def slugify(s):
     # Simple slugify strings to path safe values
@@ -186,7 +186,7 @@ def main():
         gitkeep(sub_dir)
 
     # Write files
-    environment = Environment(loader=FileSystemLoader(TEMPLATES) autoescape=select_autoescape())
+    environment = Environment(loader=FileSystemLoader(utils.TEMPLATES), autoescape=select_autoescape())
     for fname in ["README.md", "metadata.yml", "Makefile"]:
         template = environment.get_template(fname + ".j2")
         content = template.render(**data)
