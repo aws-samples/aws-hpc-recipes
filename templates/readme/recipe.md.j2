@@ -1,0 +1,8 @@
+{% for recipe in ns_data.recipes -%}
+#### {{ recipe.name }} ![meep](https://img.shields.io/badge/-core-%23146EB4) ![meep](https://img.shields.io/badge/-rds-%23FF9900) ![meep](https://img.shields.io/badge/-cloudformation-%23FF9900)
+
+* **About**: {{ recipe.description }}
+* **Authors**: {% for author in recipe.authors %}{{ author }}{{ ", " if not loop.last }}{%- endfor %}
+* **Usage**: [README.md](recipes/{{ recipe.namespace }}/{{ recipe.name }}/README.md)
+* **Version**:  {{ recipe.version }}
+{% endfor %}

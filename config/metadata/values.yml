@@ -13,20 +13,30 @@ namespace:
   storage: Storage
 # List of default tags
 tags:
-  core
-  community
-  experimental
-  alinux2
-  centos7
-  rhel8
-  ubuntu1804
-  ubuntu2004
-  parallelcluster
-  batch
-  fsx
-  cloudformation
-  cloudwatch
-  s3
-  cloud9
-  efs
-  ebs
+  - core: blue
+  - community: grey
+  - experimental: red
+  - alinux2: orange
+  - centos7: orange
+  - rhel8: orange
+  - ubuntu1804: orange
+  - ubuntu2004: orange
+  - parallelcluster: orange
+  - batch: green
+  - fsx: green
+  - cloudformation: green
+  - cloudwatch: green
+  - s3: green
+  - cloud9: green
+  - efs: green
+  - ebs: green
+# Tag colors
+colors:
+  - blue: 146EB4
+  - orange: FF9900
+  - red: D9534F
+  - yellow: F7DC6F
+  - green: 7DCEA0
+  - grey: AAB7B8
+  - black: 17202A
+  - white: F8F9F9

@@ -10,6 +10,8 @@ from jinja2 import Environment
 from jinja2 import FileSystemLoader
 from pathlib import Path
 
+from . import utils
+
 SCRIPTS = Path(__file__).resolve().parent
 REPO = SCRIPTS.parent
 CONFIG = Path.joinpath(REPO, "config", "metadata", "values.yml")
@@ -132,15 +134,10 @@ def gitkeep(path):
     with open(os.path.join(path, ".gitkeep"), "w") as fp:
         pass
 
-def load_config(path):
-    with open(path, 'r') as file:
-        config = yaml.safe_load(file)
-        return config
-
 def main():
 
     # Load metadata config
-    config = load_config(CONFIG)
+    config = utils.load_config()
 
     # User inputs
     #
