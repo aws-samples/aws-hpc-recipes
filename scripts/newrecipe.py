@@ -6,8 +6,7 @@ import subprocess
 import sys
 import yaml
 
-from jinja2 import Environment
-from jinja2 import FileSystemLoader
+from jinja2 import Environment, FileSystemLoader, select_autoescape
 from pathlib import Path
 
 from . import utils
@@ -187,7 +186,7 @@ def main():
         gitkeep(sub_dir)
 
     # Write files
-    environment = Environment(loader=FileSystemLoader(TEMPLATES))
+    environment = Environment(loader=FileSystemLoader(TEMPLATES) autoescape=select_autoescape())
     for fname in ["README.md", "metadata.yml", "Makefile"]:
         template = environment.get_template(fname + ".j2")
         content = template.render(**data)

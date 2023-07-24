@@ -1,8 +1,12 @@
+{% if ns_data.recipes|length > 0 %}
 {% for recipe in ns_data.recipes -%}
-#### {{ recipe.name }} ![meep](https://img.shields.io/badge/-core-%23146EB4) ![meep](https://img.shields.io/badge/-rds-%23FF9900) ![meep](https://img.shields.io/badge/-cloudformation-%23FF9900)
+#### {{ recipe.name }} {% if recipe.tags %}{% for tag in recipe.tags -%}![tag](https://img.shields.io/badge/-{{ tag }}-%23{{ colors.get(tags.get(tag, 'grey')) }} {% endfor %}{% endif %}
 
 * **About**: {{ recipe.description }}
 * **Authors**: {% for author in recipe.authors %}{{ author }}{{ ", " if not loop.last }}{%- endfor %}
-* **Usage**: [README.md](recipes/{{ recipe.namespace }}/{{ recipe.name }}/README.md)
-* **Version**:  {{ recipe.version }}
+* **Usage**: [{{ recipe.readme }}](recipes/{{ recipe.namespace }}/{{ recipe.name }}/{{ recipe.readme }})
+
 {% endfor %}
+{% else %}
+*There are currently no recipes in this namespace.*
+{% endif -%}

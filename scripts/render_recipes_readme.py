@@ -1,26 +1,16 @@
-from jinja2 import Environment
-from jinja2 import FileSystemLoader
+from jinja2 import Environment, FileSystemLoader, select_autoescape
 from pathlib import Path
 
 from . import utils
-
-def shield_image_url(name=None, color=None):
-    # Returns a shields.io image URL for a name/hex color combination. Used to render tags.
-    #
-    # Reference - https://img.shields.io/badge/-core-%23146EB4
-    if name is None:
-        name = "button"
-    if color is None:
-        color = "CCCCCC"
-    return f"https://img.shields.io/badge/-{name}-%23{color}"
-
 
 def main():
     # Load metadata config
     config = utils.load_config()
     data = {
         "repo_name": "HPCDK",
-        "namespaces": {}
+        "namespaces": {},
+        "colors": config['colors'],
+        "tags": config['tags']
     }
     
     # Iterate through namespaces
@@ -35,11 +25,12 @@ def main():
                 data["namespaces"][dir]["recipes"].append(config)
 
     # Render file
-    environment = Environment(loader=FileSystemLoader(utils.RECIPES_README_TEMPLATES))
+    environment = Environment(loader=FileSystemLoader(utils.RECIPES_README_TEMPLATES), autoescape=select_autoescape())
     template = environment.get_template("README.md.j2")
     content = template.render(**data)
-    print(content)
-
+    dest_filename = utils.RECIPES_README_DESTINTAION
+    with open(dest_filename, mode="w", encoding="utf-8") as rendered_file:
+        rendered_file.write(content)
 
 if __name__ == "__main__":
     main()
