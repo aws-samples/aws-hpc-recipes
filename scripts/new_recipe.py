@@ -6,15 +6,16 @@ import subprocess
 import sys
 import yaml
 
-from jinja2 import Environment
-from jinja2 import FileSystemLoader
+from jinja2 import Environment, FileSystemLoader, select_autoescape
 from pathlib import Path
 
-SCRIPTS = Path(__file__).resolve().parent
-REPO = SCRIPTS.parent
-CONFIG = Path.joinpath(REPO, "config", "metadata", "values.yml")
-RECIPES = Path.joinpath(REPO, "recipes")
-TEMPLATES = Path.joinpath(REPO, "templates", "recipe")
+from . import utils
+
+# SCRIPTS = Path(__file__).resolve().parent
+# REPO = SCRIPTS.parent
+# CONFIG = Path.joinpath(REPO, "config", "metadata", "values.yml")
+# RECIPES = Path.joinpath(REPO, "recipes")
+# TEMPLATES = Path.joinpath(REPO, "templates", "recipe")
 
 def slugify(s):
     # Simple slugify strings to path safe values
@@ -132,15 +133,10 @@ def gitkeep(path):
     with open(os.path.join(path, ".gitkeep"), "w") as fp:
         pass
 
-def load_config(path):
-    with open(path, 'r') as file:
-        config = yaml.safe_load(file)
-        return config
-
 def main():
 
     # Load metadata config
-    config = load_config(CONFIG)
+    config = utils.load_config()
 
     # User inputs
     #
@@ -190,7 +186,7 @@ def main():
         gitkeep(sub_dir)
 
     # Write files
-    environment = Environment(loader=FileSystemLoader(TEMPLATES))
+    environment = Environment(loader=FileSystemLoader(utils.TEMPLATES), autoescape=select_autoescape())
     for fname in ["README.md", "metadata.yml", "Makefile"]:
         template = environment.get_template(fname + ".j2")
         content = template.render(**data)
