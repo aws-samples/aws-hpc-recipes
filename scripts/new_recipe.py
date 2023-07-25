@@ -151,18 +151,21 @@ def main():
         prompt("Recipe name [a-z_]+", None, allow_empty=False)
     )
     # Validate destination directory before accepting any more user input
-    dest_dir = Path.joinpath(RECIPES, data["namespace"], data["name"])
+    dest_dir = Path.joinpath(utils.RECIPES, data["namespace"], data["name"])
     if Path(dest_dir).exists():
         raise ValueError(f"A recipe named '{data['name']}' exists")
-    data["version"] = process_version(
-        prompt(
-            "Version (must be compatible with semantic versioning)",
-            default="1.0.0",
-            allow_empty=False,
-        )
-    )
 
-    data["description"] = prompt("Short description")
+    # TODO - add version support back later if we establish a need for them
+    # data["version"] = process_version(
+    #     prompt(
+    #         "Version (must be compatible with semantic versioning)",
+    #         default="1.0.0",
+    #         allow_empty=False,
+    #     )
+    # )
+    data["version"] = "1.0.0"
+
+    data["description"] = prompt("Short description", allow_empty=False)
 
     data["authors"] = process_authors(
         prompt(
