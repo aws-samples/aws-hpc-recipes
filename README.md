@@ -10,13 +10,13 @@ The AWS HPC Team provides and maintains recipes tagged with `core`. The core rec
 
 Recipes are in namespaced directories under the [`recipes`](/recipes/) folder. We generate the README file in that folder from the list of active recipes to provide a simple discovery interface. 
 
-## Getting started
+## Getting started using HPCDK recipes
 
 TBD
 
 ## Contributing
 
-We encourage you to contribute to HPCDK! Read up on our [contribution process and guidelines](CONTRIBUTING.md) and share your best ideas with the HPC community. 
+We encourage you to contribute to HPCDK! Read up on our [contribution process and guidelines](CONTRIBUTING.md) and share your best ideas with the HPC community. Then, head to **[Get Started Building for HPCDK](docs/start.md)** to begin. 
 
 ## Additional Resources
 
