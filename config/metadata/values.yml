@@ -30,6 +30,7 @@ tags:
   cloud9: green
   efs: green
   ebs: green
+  rds: green
 # Hex codes for each color
 colors:
   blue: 146EB4

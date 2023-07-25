@@ -1,6 +1,4 @@
 ---
-# The functional namespace of the recipe. May only contain alphanumeric lowercase characters and underscores.
-namespace: {{namespace}}
 # The name of the recipe. This has the same character requirements as namespace.
 name: {{name}}
 # The version of the recipe. Must be compatible with semantic versioning.
@@ -23,4 +21,3 @@ tags:
 {% endfor -%}
 # A list of file glob-like patterns used to filter any files or directories that should not be included in the S3 release. 
 build_ignore: []
-
