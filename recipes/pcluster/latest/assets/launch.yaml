@@ -6,7 +6,7 @@ Parameters:
   ParallelClusterVersion:
     Description: The version of AWS ParallelCluster to use
     Type: String
-    Default: 3.5.1
+    Default: 3.6.1
 
   SourceBucket:
     Description: Bucket to pull templates from

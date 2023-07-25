@@ -71,41 +71,41 @@ Generally, use `main` for the version, unless you need to pin to a specific HPCD
 
 ### pcluster: AWS ParallelCluster
 
-#### parallelcluster_ui 
+#### parallelcluster_ui ![tag](https://img.shields.io/badge/-core-%23146EB4) ![tag](https://img.shields.io/badge/-parallelcluster-%23FF9900) 
 
-* **About**: Installs PCUI in the customers account
+* **About**: Deploy AWS ParallelCluster UI in your customer account.
 * **Authors**: AWS HPC Engineering
-* **Usage**: [README.md](recipes/aws/parallelcluster_ui/README.md)
+* **Usage**: [README.md](recipes//parallelcluster_ui/README.md)
 
-#### pcluster_2az_sacct 
+#### pcluster_2az ![tag](https://img.shields.io/badge/-core-%23146EB4) ![tag](https://img.shields.io/badge/-experimental-%23D9534F) ![tag](https://img.shields.io/badge/-parallelcluster-%23FF9900) 
 
-* **About**: Launch ParallelCluster supporting 2 AZ and Slurm accounting.
+* **About**: Deploy AWS ParallelCluster with a queue that leverages two availability zones for extra capacity.
 * **Authors**: Matt Vaughn <mwvaughn@amazon.com>
-* **Usage**: [README.md](recipes/aws/pcluster_2az_sacct/README.md)
+* **Usage**: [README.md](recipes//pcluster_2az/README.md)
 
-#### pcluster_2az 
+#### latest ![tag](https://img.shields.io/badge/-core-%23146EB4) ![tag](https://img.shields.io/badge/-parallelcluster-%23FF9900) 
 
-* **About**: ParallelCluster supporting 2 AZ
+* **About**: 1-click AWS ParallelCluster 3.6.1 with support for network provisioning.
+* **Authors**: Matt Vaughn <mwvaughn@amazon.com>, AWS HPC Engineering
+* **Usage**: [README.md](recipes//latest/README.md)
+
+#### pcluster_sacct_pcui ![tag](https://img.shields.io/badge/-core-%23146EB4) ![tag](https://img.shields.io/badge/-parallelcluster-%23FF9900) ![tag](https://img.shields.io/badge/-rds-%237DCEA0) 
+
+* **About**: Launch AWS ParallelCluster with Slurm accounting, managed by the ParallelCluster UI.
 * **Authors**: Matt Vaughn <mwvaughn@amazon.com>
-* **Usage**: [README.md](recipes/aws/pcluster_2az/README.md)
+* **Usage**: [README.md](recipes//pcluster_sacct_pcui/README.md)
 
-#### pcluster_2az_fsxl_scratch 
+#### pcluster_lustre_scratch ![tag](https://img.shields.io/badge/-core-%23146EB4) ![tag](https://img.shields.io/badge/-experimental-%23D9534F) ![tag](https://img.shields.io/badge/-parallelcluster-%23FF9900) ![tag](https://img.shields.io/badge/-fsx-%237DCEA0) ![tag](https://img.shields.io/badge/-lustre-%23AAB7B8) 
 
-* **About**: ParallelCluster supporting 2 AZ with FSxLustre SCRATCH volume
+* **About**: Deploy AWS ParallelCluster with an Amazon FSx for Lustre scratch volume
 * **Authors**: Matt Vaughn <mwvaughn@amazon.com>
-* **Usage**: [README.md](recipes/aws/pcluster_2az_fsxl_scratch/README.md)
+* **Usage**: [README.md](recipes//pcluster_lustre_scratch/README.md)
 
-#### pcluster 
+#### pcluster_sacct ![tag](https://img.shields.io/badge/-core-%23146EB4) ![tag](https://img.shields.io/badge/-parallelcluster-%23FF9900) ![tag](https://img.shields.io/badge/-rds-%237DCEA0) 
 
-* **About**: 1-click Pcluster with network provisioning support.
+* **About**: Launch AWS ParallelCluster with support for Slurm accounting.
 * **Authors**: Matt Vaughn <mwvaughn@amazon.com>
-* **Usage**: [README.md](recipes/aws/pcluster/README.md)
-
-#### pcluster_2az_sacct_pcui 
-
-* **About**: ParallelCluster supporting 2 AZ and Slurm accounting, managed by PCUI.
-* **Authors**: Matt Vaughn <mwvaughn@amazon.com>
-* **Usage**: [README.md](recipes/aws/pcluster_2az_sacct_pcui/README.md)
+* **Usage**: [README.md](recipes//pcluster_sacct/README.md)
 
 
 ### scheduler: HPC scheduler

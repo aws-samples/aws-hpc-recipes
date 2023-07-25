@@ -1,12 +1,10 @@
 ---
-# The namespace of the recipe. Can be company/brand/organization or functional namespace. May only contain alphanumeric lowercase characters and underscores.
-namespace: aws
 # The name of the recipe. This has the same character requirements as namespace.
 name: pcluster_2az
 # The version of the recipe. Must be compatible with semantic versioning.
 version: "1.0.0"
 # A short summary description of the recipe
-description: ParallelCluster supporting 2 AZ
+description: Deploy AWS ParallelCluster with a queue that leverages two availability zones for extra capacity.
 # The path to the README for the recipe relative to its root
 readme: README.md
 # Optional URL for external documentation
@@ -18,7 +16,8 @@ authors:
   - Matt Vaughn <mwvaughn@amazon.com>
 # A list of tags you want to associate with the collection for indexing/searching. Tags have the same character requirements as namespace.
 tags:
+  - core
+  - experimental
+  - parallelcluster
 # A list of file glob-like patterns used to filter any files or directories that should not be included in the S3 release. 
 build_ignore: []
-# Support level
-level: core
