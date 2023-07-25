@@ -11,35 +11,35 @@ Generally, use `main` for the version, unless you need to pin to a specific HPCD
 *There are currently no recipes in this namespace.*
 ### db: Database management
 
-#### slurm_accounting_db_aurora 
+#### slurm_accounting_db ![tag](https://img.shields.io/badge/-core-%23146EB4) ![tag](https://img.shields.io/badge/-rds-%237DCEA0) ![tag](https://img.shields.io/badge/-parallelcluster-%23FF9900) 
 
-* **About**: Set up an Amazon Aurora database that can support Slurm accounting
+* **About**: Set up a replicated Amazon Aurora database that can support Slurm accounting.
 * **Authors**: AWS HPC Engineering
-* **Usage**: [README.md](recipes/aws/slurm_accounting_db_aurora/README.md)
+* **Usage**: [README.md](recipes//slurm_accounting_db/README.md)
 
 
 ### dir: Directory services
 
-#### demo_managed_ad ![tag](https://img.shields.io/badge/-experimental-%23D9534F) 
+#### demo_managed_ad ![tag](https://img.shields.io/badge/-experimental-%23D9534F) ![tag](https://img.shields.io/badge/-core-%23146EB4) 
 
-* **About**: Stand up a simple AWS Managed Microsoft AD
+* **About**: Stand up a basic AWS Managed Microsoft AD for use with AWS ParallelCluster.
 * **Authors**: Matt Vaughn <mwvaughn@amazon.com>
-* **Usage**: [README.md](recipes/ad/demo_managed_ad/README.md)
+* **Usage**: [README.md](recipes//demo_managed_ad/README.md)
 
 
 ### env: User environment
 
-#### lmod ![tag](https://img.shields.io/badge/-experimental-%23D9534F) 
+#### lmod ![tag](https://img.shields.io/badge/-experimental-%23D9534F) ![tag](https://img.shields.io/badge/-community-%2317202A) 
 
 * **About**: Install Lmod alongside Environment modules
 * **Authors**: Matt Vaughn <mwvaughn@amazon.com>
-* **Usage**: [README.md](recipes/env/lmod/README.md)
+* **Usage**: [README.md](recipes//lmod/README.md)
 
-#### spack ![tag](https://img.shields.io/badge/-experimental-%23D9534F) 
+#### spack ![tag](https://img.shields.io/badge/-experimental-%23D9534F) ![tag](https://img.shields.io/badge/-community-%2317202A) 
 
 * **About**: Install and configure Spack on shared storage
 * **Authors**: Matt Vaughn <mwvaughn@amazon.com>
-* **Usage**: [README.md](recipes/env/spack/README.md)
+* **Usage**: [README.md](recipes//spack/README.md)
 
 
 ### iam: Identity Access and Management
@@ -47,26 +47,26 @@ Generally, use `main` for the version, unless you need to pin to a specific HPCD
 *There are currently no recipes in this namespace.*
 ### ide: IDEs and GUIs
 
-#### cloud9 
+#### cloud9 ![tag](https://img.shields.io/badge/-core-%23146EB4) ![tag](https://img.shields.io/badge/-experimental-%23D9534F) 
 
 * **About**: Cloud9 environment for working with HPC resources
 * **Authors**: Matt Vaughn <mwvaughn@amazon.com>
-* **Usage**: [README.md](recipes/aws/cloud9/README.md)
+* **Usage**: [README.md](recipes//cloud9/README.md)
 
 
 ### net: Networking
 
-#### hpc_networking 
+#### hpc_networking ![tag](https://img.shields.io/badge/-core-%23146EB4) 
 
-* **About**: Default HPC networking stacks from the ParallelCluster development team
+* **About**: Default HPC networking stacks from the AWS ParallelCluster development team
+* **Authors**: AWS HPC Engineering
+* **Usage**: [README.md](recipes//hpc_networking/README.md)
+
+#### hpc_networking_2az ![tag](https://img.shields.io/badge/-core-%23146EB4) ![tag](https://img.shields.io/badge/-experimental-%23D9534F) 
+
+* **About**: HPC networking with support for two Availability Zones.
 * **Authors**: Matt Vaughn <mwvaughn@amazon.com>
-* **Usage**: [README.md](recipes/aws/hpc_networking/README.md)
-
-#### hpc_networking_2az 
-
-* **About**: HPC networking with support for two AZs
-* **Authors**: Matt Vaughn <mwvaughn@amazon.com>
-* **Usage**: [README.md](recipes/aws/hpc_networking_2az/README.md)
+* **Usage**: [README.md](recipes//hpc_networking_2az/README.md)
 
 
 ### pcluster: AWS ParallelCluster
@@ -113,22 +113,22 @@ Generally, use `main` for the version, unless you need to pin to a specific HPCD
 *There are currently no recipes in this namespace.*
 ### storage: Storage
 
-#### fsxl_secgroup ![tag](https://img.shields.io/badge/-fsxl-%23AAB7B8) ![tag](https://img.shields.io/badge/-hpc-%23AAB7B8) ![tag](https://img.shields.io/badge/-parallelcluster-%23FF9900) 
+#### fsx_lustre ![tag](https://img.shields.io/badge/-core-%23146EB4) ![tag](https://img.shields.io/badge/-fsx-%237DCEA0) ![tag](https://img.shields.io/badge/-parallelcluster-%23FF9900) 
 
-* **About**: Creates an FSxL filesystem and the Security Group needed for use with ParallelCluster
+* **About**: Creates an FSxL filesystem and relevant security groups for use with ParallelCluster.
 * **Authors**: Matt Vaughn <mwvaughn@amazon.com>
-* **Usage**: [README.md](recipes/aws/fsxl_secgroup/README.md)
+* **Usage**: [README.md](recipes//fsx_lustre/README.md)
 
-#### fsx_openzfs ![tag](https://img.shields.io/badge/-experimental-%23D9534F) 
+#### simple_efs ![tag](https://img.shields.io/badge/-core-%23146EB4) ![tag](https://img.shields.io/badge/-experimental-%23D9534F) 
 
-* **About**: Provision an FSx for OpenZFS filesystem for Pcluster
+* **About**: Provision a basic Amazon EFS filesystem
 * **Authors**: Matt Vaughn <mwvaughn@amazon.com>
-* **Usage**: [README.md](recipes/storage/fsx_openzfs/README.md)
+* **Usage**: [README.md](recipes//simple_efs/README.md)
 
-#### efs ![tag](https://img.shields.io/badge/-experimental-%23D9534F) 
+#### fsx_openzfs ![tag](https://img.shields.io/badge/-community-%2317202A) ![tag](https://img.shields.io/badge/-experimental-%23D9534F) ![tag](https://img.shields.io/badge/-efs-%237DCEA0) 
 
-* **About**: Provision an Amazon EFS filesystem
+* **About**: Provision an FSx for OpenZFS filesystem and relevant security groups for use with ParallelCluster
 * **Authors**: Matt Vaughn <mwvaughn@amazon.com>
-* **Usage**: [README.md](recipes/storage/efs/README.md)
+* **Usage**: [README.md](recipes//fsx_openzfs/README.md)
 
 
