@@ -1,6 +1,4 @@
 ---
-# The functional namespace of the recipe. May only contain alphanumeric lowercase characters and underscores.
-namespace: env
 # The name of the recipe. This has the same character requirements as namespace.
 name: lmod
 # The version of the recipe. Must be compatible with semantic versioning.
@@ -19,7 +17,6 @@ authors:
 # A list of tags you want to associate with the collection for indexing/searching. Tags have the same character requirements as namespace.
 tags:
   - experimental
+  - community
 # A list of file glob-like patterns used to filter any files or directories that should not be included in the S3 release. 
 build_ignore: []
-# Support level
-level: community
