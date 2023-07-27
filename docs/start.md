@@ -47,7 +47,7 @@ If there are any tests you wish to include, even if they are manual scripts to r
 
 You can update your recipe's metadata by editing its `metadata.yml` file.
 
-If you would like to test your new recipe from an S3 deployment, you can do so using the project Makefile (see `[develop.md](./develop.md)`)
+If you would like to test your new recipe from an S3 deployment, you can do so using the project Makefile (see [develop.md](./develop.md))
 
 When you are ready to contribute your recipe to the main project, run some linting/validation processes on it. A few examples are provided in [linting](linting.md).
 
