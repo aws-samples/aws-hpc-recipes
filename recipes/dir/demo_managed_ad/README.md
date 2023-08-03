@@ -5,3 +5,5 @@
 Stand up a simple AWS Managed Microsoft AD
 
 ## Usage
+
+## Cost Estimate

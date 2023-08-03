@@ -5,3 +5,5 @@
 Launch ParallelCluster supporting 2 AZ and Slurm accounting.
 
 ## Usage
+
+## Cost Estimate

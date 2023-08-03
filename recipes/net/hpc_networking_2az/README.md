@@ -37,6 +37,9 @@ If you want to combine this stack with another, you can embed it as a nested sta
       TimeoutInMinutes: 10
 ```
 
+## Cost Estimate
+
 ## Acknowledgements
 
 This recipe is based on the networking stack in [1click-HPC](https://github.com/aws-samples/1click-hpc).
+

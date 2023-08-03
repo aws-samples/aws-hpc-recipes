@@ -5,3 +5,5 @@
 ParallelCluster supporting 2 AZ with FSxLustre SCRATCH volume
 
 ## Usage
+
+## Cost Estimate
