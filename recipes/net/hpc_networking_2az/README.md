@@ -13,6 +13,8 @@ Five values are required to parameterize this template:
 4. A CIDR block for the first private subnet. It must be in the same AZ as the *first* public subnet.
 5. A CIDR block for the second private subnet. It must be in the same AZ as the *second* public subnet.
 
+Note that all four subnet CIDR blocks must be within that of the VPC you create, and they cannnot overlap.
+
 You can quick-launch in the AWS CloudFormation Console: [![Launch](https://samdengler.github.io/cloudformation-launch-stack-button-svg/images/us-east-2.svg)](https://us-east-2.console.aws.amazon.com/cloudformation/home?region=us-east-2#/stacks/create/review?stackName=tutorial-networking&templateURL=https://cfn3-dev-mwvaughn.s3.us-east-2.amazonaws.com/main/recipes/net/hpc_networking_2az/assets/public-private.cfn.yml)
 
 You can also import the template into the AWS CloudFormation console. Navigate to the [AWS CloudFormation console](https://console.aws.amazon.com/cloudformation/home). Choose **Create stack**, then on the following page, make sure Amazon S3 URL is set as the Template URL. Enter the complete S3 URL for this recipe `https://cfn3-dev-mwvaughn.s3.us-east-2.amazonaws.com/main/recipes/net/hpc_networking_2az/assets/public-private.cfn.yml` and follow through the rest of the launch workflow.
