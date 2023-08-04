@@ -44,6 +44,10 @@ lint-test-job:   # This job also runs in the test stage.
 deploy-job:      # This job runs in the deploy stage.
   stage: deploy  # It only runs when *both* jobs in the test stage complete successfully.
   environment: production
+  image: registry.gitlab.com/gitlab-org/cloud-deploy/aws-base:latest
   script:
     - echo "Deploying application..."
     - echo "Application successfully deployed."
+    - aws s3 help
+    - pwd
+    - ls -alth
