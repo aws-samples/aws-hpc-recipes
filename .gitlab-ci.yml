@@ -46,8 +46,4 @@ deploy-job:      # This job runs in the deploy stage.
   environment: production
   image: registry.gitlab.com/gitlab-org/cloud-deploy/aws-base:latest
   script:
-    - echo "Deploying application..."
-    - echo "Application successfully deployed."
-    - aws s3 help
-    - pwd
-    - ls -alth
+    - make deploy
