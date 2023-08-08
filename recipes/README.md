@@ -56,11 +56,17 @@ Generally, use `main` for the version, unless you need to pin to a specific HPCD
 
 ### net: Networking
 
-#### hpc_networking ![tag](https://img.shields.io/badge/-core-%23146EB4) 
+#### simple ![tag](https://img.shields.io/badge/-core-%23146EB4) 
 
 * **About**: Default HPC networking stacks from the AWS ParallelCluster development team
 * **Authors**: AWS HPC Engineering
-* **Usage**: [README.md](recipes//hpc_networking/README.md)
+* **Usage**: [README.md](recipes//simple/README.md)
+
+#### hpc_large_scale ![tag](https://img.shields.io/badge/-experimental-%23D9534F) ![tag](https://img.shields.io/badge/-core-%23146EB4) 
+
+* **About**: Setup for large scale computations on AWS across multiple regions
+* **Authors**: Pierre-Yves Aquilanti <pierreya@amazon.com>, Matt Vaughn <mwvaughn@amazon.com>
+* **Usage**: [README.md](recipes//hpc_large_scale/README.md)
 
 #### hpc_networking_2az ![tag](https://img.shields.io/badge/-core-%23146EB4) ![tag](https://img.shields.io/badge/-experimental-%23D9534F) 
 
