@@ -1,6 +1,6 @@
 ---
 # The name of the recipe. This has the same character requirements as namespace.
-name: hpc_networking
+name: simple
 # The version of the recipe. Must be compatible with semantic versioning.
 version: "1.0.0"
 # A short summary description of the recipe
