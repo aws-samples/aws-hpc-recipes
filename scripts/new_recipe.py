@@ -142,10 +142,15 @@ def main():
     #
     data = {}
 
-    print("Namespaces: " + ",".join(config['namespace'].keys()))
+    print("Namespaces: " + ",".join(config["namespace"].keys()))
     data["namespace"] = process_namespace(prompt("Namespace", "aws"))
-    if data["namespace"] not in config['namespace'].keys():
+    if data["namespace"] not in config["namespace"].keys():
         raise ValueError(f"Unknown namespace")
+
+    print("Types: " + ",".join(config["types"].keys()))
+    data["type"] = process_namespace(prompt("Recipe type", "cloudformation"))
+    if data["type"] not in config["types"].keys():
+        raise ValueError(f"Unknown type")
 
     data["name"] = process_recipe_name(
         prompt("Recipe name [a-z_]+", None, allow_empty=False)

@@ -41,3 +41,10 @@ colors:
   black: 17202A
   white: F8F9F9
   grey: AAB7B8
+types:
+  cdk: AWS CDK project
+  cloudformation: AWS CloudFormation template
+  shell: Bash or other shell script
+  terraform: Hashicorp Terraform file
+  other: Unknown
+  
