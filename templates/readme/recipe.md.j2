@@ -4,7 +4,7 @@
 
 * **About**: {{ recipe.description }}
 * **Authors**: {% for author in recipe.authors %}{{ author }}{{ ", " if not loop.last }}{%- endfor %}
-* **Usage**: [{{ recipe.readme }}]({{ recipe.namespace }}/{{ recipe.name }}/{{ recipe.readme }})
+* **Usage**: [{{ recipe.readme }}]({{ ns_name }}/{{ recipe.name }}/{{ recipe.readme }})
 
 {% endfor %}
 {% else %}
