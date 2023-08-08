@@ -15,7 +15,7 @@ Generally, use `main` for the version, unless you need to pin to a specific HPCD
 
 * **About**: Set up a replicated Amazon Aurora database that can support Slurm accounting.
 * **Authors**: AWS HPC Engineering
-* **Usage**: [README.md](/slurm_accounting_db/README.md)
+* **Usage**: [README.md](.//slurm_accounting_db/README.md)
 
 
 ### dir: Directory services
@@ -24,7 +24,7 @@ Generally, use `main` for the version, unless you need to pin to a specific HPCD
 
 * **About**: Stand up a basic AWS Managed Microsoft AD for use with AWS ParallelCluster.
 * **Authors**: Matt Vaughn <mwvaughn@amazon.com>
-* **Usage**: [README.md](/demo_managed_ad/README.md)
+* **Usage**: [README.md](.//demo_managed_ad/README.md)
 
 
 ### env: User environment
@@ -33,13 +33,13 @@ Generally, use `main` for the version, unless you need to pin to a specific HPCD
 
 * **About**: Install Lmod alongside Environment modules
 * **Authors**: Matt Vaughn <mwvaughn@amazon.com>
-* **Usage**: [README.md](/lmod/README.md)
+* **Usage**: [README.md](.//lmod/README.md)
 
 #### spack ![tag](https://img.shields.io/badge/-experimental-%23D9534F) ![tag](https://img.shields.io/badge/-community-%2317202A) 
 
 * **About**: Install and configure Spack on shared storage
 * **Authors**: Matt Vaughn <mwvaughn@amazon.com>
-* **Usage**: [README.md](/spack/README.md)
+* **Usage**: [README.md](.//spack/README.md)
 
 
 ### iam: Identity Access and Management
@@ -51,7 +51,7 @@ Generally, use `main` for the version, unless you need to pin to a specific HPCD
 
 * **About**: Cloud9 environment for working with HPC resources
 * **Authors**: Matt Vaughn <mwvaughn@amazon.com>
-* **Usage**: [README.md](/cloud9/README.md)
+* **Usage**: [README.md](.//cloud9/README.md)
 
 
 ### net: Networking
@@ -60,19 +60,19 @@ Generally, use `main` for the version, unless you need to pin to a specific HPCD
 
 * **About**: Default HPC networking stacks from the AWS ParallelCluster development team
 * **Authors**: AWS HPC Engineering
-* **Usage**: [README.md](/simple/README.md)
+* **Usage**: [README.md](.//simple/README.md)
 
 #### hpc_large_scale ![tag](https://img.shields.io/badge/-experimental-%23D9534F) ![tag](https://img.shields.io/badge/-core-%23146EB4) 
 
 * **About**: Setup for large scale computations on AWS across multiple regions
 * **Authors**: Pierre-Yves Aquilanti <pierreya@amazon.com>, Matt Vaughn <mwvaughn@amazon.com>
-* **Usage**: [README.md](/hpc_large_scale/README.md)
+* **Usage**: [README.md](.//hpc_large_scale/README.md)
 
 #### hpc_networking_2az ![tag](https://img.shields.io/badge/-core-%23146EB4) ![tag](https://img.shields.io/badge/-experimental-%23D9534F) 
 
 * **About**: HPC networking with support for two Availability Zones.
 * **Authors**: Matt Vaughn <mwvaughn@amazon.com>
-* **Usage**: [README.md](/hpc_networking_2az/README.md)
+* **Usage**: [README.md](.//hpc_networking_2az/README.md)
 
 
 ### pcluster: AWS ParallelCluster
@@ -81,37 +81,37 @@ Generally, use `main` for the version, unless you need to pin to a specific HPCD
 
 * **About**: Deploy AWS ParallelCluster UI in your customer account.
 * **Authors**: AWS HPC Engineering
-* **Usage**: [README.md](/parallelcluster_ui/README.md)
+* **Usage**: [README.md](.//parallelcluster_ui/README.md)
 
 #### pcluster_2az ![tag](https://img.shields.io/badge/-core-%23146EB4) ![tag](https://img.shields.io/badge/-experimental-%23D9534F) ![tag](https://img.shields.io/badge/-parallelcluster-%23FF9900) 
 
 * **About**: Deploy AWS ParallelCluster with a queue that leverages two availability zones for extra capacity.
 * **Authors**: Matt Vaughn <mwvaughn@amazon.com>
-* **Usage**: [README.md](/pcluster_2az/README.md)
+* **Usage**: [README.md](.//pcluster_2az/README.md)
 
 #### latest ![tag](https://img.shields.io/badge/-core-%23146EB4) ![tag](https://img.shields.io/badge/-parallelcluster-%23FF9900) 
 
 * **About**: 1-click AWS ParallelCluster 3.6.1 with support for network provisioning.
 * **Authors**: Matt Vaughn <mwvaughn@amazon.com>, AWS HPC Engineering
-* **Usage**: [README.md](/latest/README.md)
+* **Usage**: [README.md](.//latest/README.md)
 
 #### pcluster_sacct_pcui ![tag](https://img.shields.io/badge/-core-%23146EB4) ![tag](https://img.shields.io/badge/-parallelcluster-%23FF9900) ![tag](https://img.shields.io/badge/-rds-%237DCEA0) 
 
 * **About**: Launch AWS ParallelCluster with Slurm accounting, managed by the ParallelCluster UI.
 * **Authors**: Matt Vaughn <mwvaughn@amazon.com>
-* **Usage**: [README.md](/pcluster_sacct_pcui/README.md)
+* **Usage**: [README.md](.//pcluster_sacct_pcui/README.md)
 
 #### pcluster_lustre_scratch ![tag](https://img.shields.io/badge/-core-%23146EB4) ![tag](https://img.shields.io/badge/-experimental-%23D9534F) ![tag](https://img.shields.io/badge/-parallelcluster-%23FF9900) ![tag](https://img.shields.io/badge/-fsx-%237DCEA0) ![tag](https://img.shields.io/badge/-lustre-%23AAB7B8) 
 
 * **About**: Deploy AWS ParallelCluster with an Amazon FSx for Lustre scratch volume
 * **Authors**: Matt Vaughn <mwvaughn@amazon.com>
-* **Usage**: [README.md](/pcluster_lustre_scratch/README.md)
+* **Usage**: [README.md](.//pcluster_lustre_scratch/README.md)
 
 #### pcluster_sacct ![tag](https://img.shields.io/badge/-core-%23146EB4) ![tag](https://img.shields.io/badge/-parallelcluster-%23FF9900) ![tag](https://img.shields.io/badge/-rds-%237DCEA0) 
 
 * **About**: Launch AWS ParallelCluster with support for Slurm accounting.
 * **Authors**: Matt Vaughn <mwvaughn@amazon.com>
-* **Usage**: [README.md](/pcluster_sacct/README.md)
+* **Usage**: [README.md](.//pcluster_sacct/README.md)
 
 
 ### scheduler: HPC scheduler
@@ -123,18 +123,18 @@ Generally, use `main` for the version, unless you need to pin to a specific HPCD
 
 * **About**: Creates an FSxL filesystem and relevant security groups for use with ParallelCluster.
 * **Authors**: Matt Vaughn <mwvaughn@amazon.com>
-* **Usage**: [README.md](/fsx_lustre/README.md)
+* **Usage**: [README.md](.//fsx_lustre/README.md)
 
 #### simple_efs ![tag](https://img.shields.io/badge/-core-%23146EB4) ![tag](https://img.shields.io/badge/-experimental-%23D9534F) 
 
 * **About**: Provision a basic Amazon EFS filesystem
 * **Authors**: Matt Vaughn <mwvaughn@amazon.com>
-* **Usage**: [README.md](/simple_efs/README.md)
+* **Usage**: [README.md](.//simple_efs/README.md)
 
 #### fsx_openzfs ![tag](https://img.shields.io/badge/-community-%2317202A) ![tag](https://img.shields.io/badge/-experimental-%23D9534F) ![tag](https://img.shields.io/badge/-efs-%237DCEA0) 
 
 * **About**: Provision an FSx for OpenZFS filesystem and relevant security groups for use with ParallelCluster
 * **Authors**: Matt Vaughn <mwvaughn@amazon.com>
-* **Usage**: [README.md](/fsx_openzfs/README.md)
+* **Usage**: [README.md](.//fsx_openzfs/README.md)
 
 
