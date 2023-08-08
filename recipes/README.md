@@ -16,7 +16,7 @@ Generally, use `main` for the version, unless you need to pin to a specific HPCD
 * **About**: Set up a replicated Amazon Aurora database that can support Slurm accounting.
 * **Authors**: AWS HPC Engineering
 * **Usage**: [README.md](db/slurm_accounting_db/README.md)
-
+* **Default**: [assets/serverless-database.yaml](https://hpcdk-on-aws.s3.us-east-2.amazonaws.com/main/recipes/db/slurm_accounting_db/assets/serverless-database.yaml)
 
 ### dir: Directory services
 
@@ -25,7 +25,7 @@ Generally, use `main` for the version, unless you need to pin to a specific HPCD
 * **About**: Stand up a basic AWS Managed Microsoft AD for use with AWS ParallelCluster.
 * **Authors**: Matt Vaughn <mwvaughn@amazon.com>
 * **Usage**: [README.md](dir/demo_managed_ad/README.md)
-
+* **Default**: [assets/main.yaml](https://hpcdk-on-aws.s3.us-east-2.amazonaws.com/main/recipes/dir/demo_managed_ad/assets/main.yaml)
 
 ### env: User environment
 
@@ -40,7 +40,7 @@ Generally, use `main` for the version, unless you need to pin to a specific HPCD
 * **About**: Install and configure Spack on shared storage
 * **Authors**: Matt Vaughn <mwvaughn@amazon.com>
 * **Usage**: [README.md](env/spack/README.md)
-
+* **Default**: [assets/postinstall.sh](https://hpcdk-on-aws.s3.us-east-2.amazonaws.com/main/recipes/env/spack/assets/postinstall.sh)
 
 ### iam: Identity Access and Management
 
@@ -52,7 +52,7 @@ Generally, use `main` for the version, unless you need to pin to a specific HPCD
 * **About**: Cloud9 environment for working with HPC resources
 * **Authors**: Matt Vaughn <mwvaughn@amazon.com>
 * **Usage**: [README.md](ide/cloud9/README.md)
-
+* **Default**: [assets/cloud9.yaml](https://hpcdk-on-aws.s3.us-east-2.amazonaws.com/main/recipes/ide/cloud9/assets/cloud9.yaml)
 
 ### net: Networking
 
@@ -61,19 +61,19 @@ Generally, use `main` for the version, unless you need to pin to a specific HPCD
 * **About**: Default HPC networking stacks from the AWS ParallelCluster development team
 * **Authors**: AWS HPC Engineering
 * **Usage**: [README.md](net/simple/README.md)
-
+* **Default**: [assets/public-private.cfn.json](https://hpcdk-on-aws.s3.us-east-2.amazonaws.com/main/recipes/net/simple/assets/public-private.cfn.json)
 #### hpc_large_scale ![tag](https://img.shields.io/badge/-experimental-%23D9534F) ![tag](https://img.shields.io/badge/-core-%23146EB4) 
 
 * **About**: Setup for large scale computations on AWS across multiple regions
 * **Authors**: Pierre-Yves Aquilanti <pierreya@amazon.com>, Matt Vaughn <mwvaughn@amazon.com>
 * **Usage**: [README.md](net/hpc_large_scale/README.md)
-
+* **Default**: [assets/main.yml](https://hpcdk-on-aws.s3.us-east-2.amazonaws.com/main/recipes/net/hpc_large_scale/assets/main.yml)
 #### hpc_networking_2az ![tag](https://img.shields.io/badge/-core-%23146EB4) ![tag](https://img.shields.io/badge/-experimental-%23D9534F) 
 
 * **About**: HPC networking with support for two Availability Zones.
 * **Authors**: Matt Vaughn <mwvaughn@amazon.com>
 * **Usage**: [README.md](net/hpc_networking_2az/README.md)
-
+* **Default**: [assets/public-private.cfn.yml](https://hpcdk-on-aws.s3.us-east-2.amazonaws.com/main/recipes/net/hpc_networking_2az/assets/public-private.cfn.yml)
 
 ### pcluster: AWS ParallelCluster
 
@@ -82,37 +82,37 @@ Generally, use `main` for the version, unless you need to pin to a specific HPCD
 * **About**: Deploy AWS ParallelCluster UI in your customer account.
 * **Authors**: AWS HPC Engineering
 * **Usage**: [README.md](pcluster/parallelcluster_ui/README.md)
-
+* **Default**: [assets/launch.yaml](https://hpcdk-on-aws.s3.us-east-2.amazonaws.com/main/recipes/pcluster/parallelcluster_ui/assets/launch.yaml)
 #### pcluster_2az ![tag](https://img.shields.io/badge/-core-%23146EB4) ![tag](https://img.shields.io/badge/-experimental-%23D9534F) ![tag](https://img.shields.io/badge/-parallelcluster-%23FF9900) 
 
 * **About**: Deploy AWS ParallelCluster with a queue that leverages two availability zones for extra capacity.
 * **Authors**: Matt Vaughn <mwvaughn@amazon.com>
 * **Usage**: [README.md](pcluster/pcluster_2az/README.md)
-
+* **Default**: [assets/launch.yaml](https://hpcdk-on-aws.s3.us-east-2.amazonaws.com/main/recipes/pcluster/pcluster_2az/assets/launch.yaml)
 #### latest ![tag](https://img.shields.io/badge/-core-%23146EB4) ![tag](https://img.shields.io/badge/-parallelcluster-%23FF9900) 
 
 * **About**: 1-click AWS ParallelCluster 3.6.1 with support for network provisioning.
 * **Authors**: Matt Vaughn <mwvaughn@amazon.com>, AWS HPC Engineering
 * **Usage**: [README.md](pcluster/latest/README.md)
-
+* **Default**: [assets/launch.yaml](https://hpcdk-on-aws.s3.us-east-2.amazonaws.com/main/recipes/pcluster/latest/assets/launch.yaml)
 #### pcluster_sacct_pcui ![tag](https://img.shields.io/badge/-core-%23146EB4) ![tag](https://img.shields.io/badge/-parallelcluster-%23FF9900) ![tag](https://img.shields.io/badge/-rds-%237DCEA0) 
 
 * **About**: Launch AWS ParallelCluster with Slurm accounting, managed by the ParallelCluster UI.
 * **Authors**: Matt Vaughn <mwvaughn@amazon.com>
 * **Usage**: [README.md](pcluster/pcluster_sacct_pcui/README.md)
-
+* **Default**: [assets/launch.yaml](https://hpcdk-on-aws.s3.us-east-2.amazonaws.com/main/recipes/pcluster/pcluster_sacct_pcui/assets/launch.yaml)
 #### pcluster_lustre_scratch ![tag](https://img.shields.io/badge/-core-%23146EB4) ![tag](https://img.shields.io/badge/-experimental-%23D9534F) ![tag](https://img.shields.io/badge/-parallelcluster-%23FF9900) ![tag](https://img.shields.io/badge/-fsx-%237DCEA0) ![tag](https://img.shields.io/badge/-lustre-%23AAB7B8) 
 
 * **About**: Deploy AWS ParallelCluster with an Amazon FSx for Lustre scratch volume
 * **Authors**: Matt Vaughn <mwvaughn@amazon.com>
 * **Usage**: [README.md](pcluster/pcluster_lustre_scratch/README.md)
-
+* **Default**: [assets/launch.yaml](https://hpcdk-on-aws.s3.us-east-2.amazonaws.com/main/recipes/pcluster/pcluster_lustre_scratch/assets/launch.yaml)
 #### pcluster_sacct ![tag](https://img.shields.io/badge/-core-%23146EB4) ![tag](https://img.shields.io/badge/-parallelcluster-%23FF9900) ![tag](https://img.shields.io/badge/-rds-%237DCEA0) 
 
 * **About**: Launch AWS ParallelCluster with support for Slurm accounting.
 * **Authors**: Matt Vaughn <mwvaughn@amazon.com>
 * **Usage**: [README.md](pcluster/pcluster_sacct/README.md)
-
+* **Default**: [assets/launch.yaml](https://hpcdk-on-aws.s3.us-east-2.amazonaws.com/main/recipes/pcluster/pcluster_sacct/assets/launch.yaml)
 
 ### scheduler: HPC scheduler
 
@@ -130,11 +130,11 @@ Generally, use `main` for the version, unless you need to pin to a specific HPCD
 * **About**: Provision a basic Amazon EFS filesystem
 * **Authors**: Matt Vaughn <mwvaughn@amazon.com>
 * **Usage**: [README.md](storage/simple_efs/README.md)
-
+* **Default**: [assets/main.yml](https://hpcdk-on-aws.s3.us-east-2.amazonaws.com/main/recipes/storage/simple_efs/assets/main.yml)
 #### fsx_openzfs ![tag](https://img.shields.io/badge/-community-%2317202A) ![tag](https://img.shields.io/badge/-experimental-%23D9534F) ![tag](https://img.shields.io/badge/-efs-%237DCEA0) 
 
 * **About**: Provision an FSx for OpenZFS filesystem and relevant security groups for use with ParallelCluster
 * **Authors**: Matt Vaughn <mwvaughn@amazon.com>
 * **Usage**: [README.md](storage/fsx_openzfs/README.md)
-
+* **Default**: [assets/main.yaml](https://hpcdk-on-aws.s3.us-east-2.amazonaws.com/main/recipes/storage/fsx_openzfs/assets/main.yaml)
 
