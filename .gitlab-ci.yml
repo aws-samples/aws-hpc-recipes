@@ -24,9 +24,11 @@ stages:          # List of stages for jobs, and their order of execution
 pre-job:
   stage: .pre
   script:
-    - yum install make
-    - yum install awscli
     - cat /etc/os-release
+    - apk add make
+    - apk add python3
+    - apk add py3-pip
+    - pip install -r requirements.txt
 
 build-job:       # This job runs in the build stage, which runs first.
   stage: build
