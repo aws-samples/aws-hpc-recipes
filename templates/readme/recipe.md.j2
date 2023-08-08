@@ -5,7 +5,7 @@
 * **About**: {{ recipe.description }}
 * **Authors**: {% for author in recipe.authors %}{{ author }}{{ ", " if not loop.last }}{%- endfor %}
 * **Usage**: [{{ recipe.readme }}]({{ ns_name }}/{{ recipe.name }}/{{ recipe.readme }})
-{% if recipe.default %}* **Default**: [{{ recipe.default }}](https://hpcdk-on-aws.s3.us-east-2.amazonaws.com/main/recipes/{{ ns_name }}/{{ recipe.name }}/{{ recipe.default }}){% endif %}
+{% if recipe.default %}* **Default**: [{{ recipe.default }}](https://cfn3-dev-mwvaughn.s3.us-east-2.amazonaws.com/main/recipes/{{ ns_name }}/{{ recipe.name }}/{{ recipe.default }}){% endif %}
 {% endfor %}
 {% else %}
 *There are currently no recipes in this namespace.*
