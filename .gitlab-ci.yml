@@ -21,14 +21,13 @@ stages:          # List of stages for jobs, and their order of execution
   - test
   - deploy
 
-pre-job:
-  stage: .pre
-  script:
-    - cat /etc/os-release
-    - apk add make
-    - apk add python3
-    - apk add py3-pip
-    - pip install -r requirements.txt
+# pre-job:
+#   stage: .pre
+#   script:
+#     - apk add make
+#     - apk add python3
+#     - apk add py3-pip
+#     - pip install -r requirements.txt
 
 build-job:       # This job runs in the build stage, which runs first.
   stage: build
@@ -43,15 +42,19 @@ unit-test-job:   # This job runs in the test stage.
     - sleep 60
     - echo "Code coverage is 90%"
 
-lint-test-job:   # This job also runs in the test stage.
-  stage: test    # It can run at the same time as unit-test-job (in parallel).
-  script:
-    - echo "Linting code... This will take about 10 seconds."
-    - sleep 10
-    - echo "No lint issues found."
+# lint-test-job:   # This job also runs in the test stage.
+#   stage: test    # It can run at the same time as unit-test-job (in parallel).
+#   script:
+#     - echo "Linting code... This will take about 10 seconds."
+#     - sleep 10
+#     - echo "No lint issues found."
 
 deploy-job:      # This job runs in the deploy stage.
   stage: deploy  # It only runs when *both* jobs in the test stage complete successfully.
   environment: production
   script:
+    - apk add make
+    - apk add python3
+    - apk add py3-pip
+    - pip install -r requirements.txt
     - make tidy
