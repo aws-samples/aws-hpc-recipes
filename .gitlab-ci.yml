@@ -21,6 +21,13 @@ stages:          # List of stages for jobs, and their order of execution
   - test
   - deploy
 
+pre-job:
+  stage: .pre
+  script:
+    - yum install make
+    - yum install awscli
+    - cat /etc/os-release
+
 build-job:       # This job runs in the build stage, which runs first.
   stage: build
   script:
@@ -44,6 +51,5 @@ lint-test-job:   # This job also runs in the test stage.
 deploy-job:      # This job runs in the deploy stage.
   stage: deploy  # It only runs when *both* jobs in the test stage complete successfully.
   environment: production
-  image: registry.gitlab.com/gitlab-org/cloud-deploy/aws-base:latest
   script:
-    - make deploy
+    - make tidy
