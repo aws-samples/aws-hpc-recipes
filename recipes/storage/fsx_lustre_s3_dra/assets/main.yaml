@@ -22,7 +22,7 @@ Parameters:
   DataRepositoryPath:
     Description: S3 bucket name to associate with the filesystem
     Type: String
-    Default: my-demo-s3-bucket
+    Default: s3://my-demo-s3-bucket
   FileSystemPath:
     Description: Path on FSx for Lustre Filesystem to sync with the data repository
     Type: String
