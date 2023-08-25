@@ -119,6 +119,12 @@ Generally, use `main` for the version, unless you need to pin to a specific HPCD
 *There are currently no recipes in this namespace.*
 ### storage: Storage
 
+#### fsx_lustre_s3_dra ![tag](https://img.shields.io/badge/-fsx-%237DCEA0) ![tag](https://img.shields.io/badge/-lustre-%23AAB7B8) ![tag](https://img.shields.io/badge/-s3-%237DCEA0) ![tag](https://img.shields.io/badge/-experimental-%23D9534F) 
+
+* **About**: Demonstrates an FSx for Lustre filesystem with an S3 data repository association
+* **Authors**: Matt Vaughn <mwvaughn@amazon.com>
+* **Usage**: [README.md](storage/fsx_lustre_s3_dra/README.md)
+
 #### fsx_lustre ![tag](https://img.shields.io/badge/-core-%23146EB4) ![tag](https://img.shields.io/badge/-fsx-%237DCEA0) ![tag](https://img.shields.io/badge/-parallelcluster-%23FF9900) 
 
 * **About**: Creates an FSxL filesystem and relevant security groups for use with ParallelCluster.
