@@ -162,6 +162,8 @@ Outputs:
   HeadNodeIp:
     Description: The Public IP address of the HeadNode
     Value: !GetAtt [ PclusterCluster, headNode.publicIpAddress ]
+    Export:
+      Name: !Sub ${AWS::StackName}-HeadNodeIp
   ValidationMessages:
     Description: Warnings from cluster create or update operations.
     Value: !GetAtt PclusterCluster.validationMessages
