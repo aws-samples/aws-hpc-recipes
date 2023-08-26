@@ -16,7 +16,7 @@ Metadata:
       - Label:
           default: Networking and Access
         Parameters:
-          - AvailabilityZone
+          - NetworkStackNameParameter
           - KeyName
           - AllowedIps
       - Label:
@@ -35,11 +35,6 @@ Parameters:
     Description: Name of cluster. Note this must be different than the stack name.
     Type: String
     Default: mycluster
-
-  AvailabilityZone:
-    Description: Availability zone where instances will be launched
-    Type: AWS::EC2::AvailabilityZone::Name
-    Default: us-east-2a
 
   QueueName:
     Description: Name of the default Slurm queue
