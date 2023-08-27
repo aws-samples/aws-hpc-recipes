@@ -1,0 +1,197 @@
+AWSTemplateFormatVersion: '2010-09-09'
+Description: >
+  Create an instance of AWS ParallelCluster with Slurm accounting enabled, using Amazon RDS as the DBMS.
+
+### Stack metadata
+Metadata:
+  AWS::CloudFormation::Interface:
+    ParameterGroups:
+      - Label:
+          default: Cluster Design
+        Parameters:
+          - OS
+          - Architecture
+          - QueueName
+          - ComputeInstanceMax
+      - Label:
+          default: Networking and Access
+        Parameters:
+          - NetworkStackNameParameter
+          - KeyName
+          - AllowedIps
+      - Label:
+          default: Accounting Database
+        Parameters:
+          - AdminPasswordSecretString
+      - Label:
+          default: Miscellaneous
+        Parameters:
+          - ClusterName
+
+Parameters:
+
+  NetworkStackNameParameter:
+    Description: Name of the HPC large-scale networking stack
+    Type: String
+    Default: hpc-networking
+
+  ClusterName:
+    Description: Name of cluster. Note this must be different than the stack name.
+    Type: String
+    Default: mycluster
+
+  QueueName:
+    Description: Name of the default Slurm queue
+    Type: String
+    Default: normal
+
+  ComputeInstanceMax:
+    Description: Maximum number of compute instances in the queue
+    Type: Number
+    MinValue: 1
+    Default: 10
+
+  AllowedIps:
+    Description: CIDR-formatted IP range for SSH connections to the cluster
+    Type: String
+    Default: 0.0.0.0/0
+
+  KeyName:
+    Description: Key pair for SSH login
+    Type: AWS::EC2::KeyPair::KeyName
+
+  OS:
+    Type: String
+    Default: alinux2
+    AllowedValues:
+      - alinux2
+      - centos7
+      - ubuntu1804
+      - ubuntu2004
+    Description: Cluster operating system
+
+  Architecture:
+    Type: String
+    Default: Graviton
+    AllowedValues:
+      - Graviton
+      - GPU
+      - x86
+    Description: Choose a node architecture.
+
+  AdminPasswordSecretString:
+      Description: >-
+        Password must be at least 8 characters long and contain at least 1 upper case, 1 lower case, 1 digit, and 1
+        non-alphanumeric character. It must not contain any of the following: # (hash), / (slash), ' (single quote), " (double quote)
+        or @ (at sign).
+      Type: String
+      NoEcho: true
+      MinLength: 8
+      # Only allow 'Medium' or better strength passwords according to https://dev.mysql.com/doc/refman/8.0/en/validate-password.html
+      AllowedPattern: (?=^.{8,}$)(?=.*\d)(?=.*[A-Z])(?=.*[a-z])(?=.*[^\w\s])(?!.*[@/'"#])^.*
+      ConstraintDescription: >-
+        Password must be at least 8 characters with at least one uppercase letter, one lower case letter, one numeric
+        digit, and one special (non-alphanumeric) character. It can not contain any of the following: # (hash), / (slash), ' (single quote), " (double quote) and @ (at sign).
+
+Mappings:
+  ParallelCluster:
+    Constants:
+      Version: 3.6.1
+  Recipes:
+    Constants:
+      Version: main
+  InstanceTypeForArchitecture:
+    HeadNode:
+      Graviton: c7g.medium
+      GPU: c6a.small
+      x86: c6a.small
+    LoginNodes:
+      Graviton: c7g.medium
+      GPU: c6a.small
+      x86: c6a.small
+    ComputeNodes:
+      Graviton: c7g.large
+      GPU: g5.xlarge
+      x86: c6a.large
+
+Resources:
+
+  PclusterClusterProvider:
+    Type: AWS::CloudFormation::Stack
+    DeletionPolicy: Delete
+    UpdateReplacePolicy: Delete
+    Properties:
+      TemplateURL: !Sub
+        - https://${AWS::Region}-aws-parallelcluster.s3.${AWS::Region}.${AWS::URLSuffix}/parallelcluster/${Version}/templates/custom_resource/cluster.yaml
+        - { Version: !FindInMap [ParallelCluster, Constants, Version] }
+      TimeoutInMinutes: 10
+
+  PclusterAcctDatabase:
+    Type: AWS::CloudFormation::Stack
+    DeletionPolicy: Delete
+    UpdateReplacePolicy: Delete
+    Properties:
+      Parameters:
+        ClusterName: !Join [ "-", [ 'sacct', 'db', !Ref ClusterName ] ]
+        ClusterAdmin: dbadmin
+        AdminPasswordSecretString: !Ref AdminPasswordSecretString
+        MinCapacity: 1
+        MaxCapacity: 2
+        Vpc: {"Fn::ImportValue" : {"Fn::Sub" : "${NetworkStackNameParameter}-VPC"}}
+        DatabaseClusterSubnetOne: {"Fn::Select": [0, { "Fn::Split" : [",", {"Fn::ImportValue" : {"Fn::Sub" : "${NetworkStackNameParameter}-PrivateSubnets"}}] }]}
+        DatabaseClusterSubnetTwo: {"Fn::Select": [1, { "Fn::Split" : [",", {"Fn::ImportValue" : {"Fn::Sub" : "${NetworkStackNameParameter}-PrivateSubnets"}}] }]}
+      TemplateURL: !Sub
+        - https://cfn3-dev-mwvaughn.s3.${AWS::Region}.${AWS::URLSuffix}/${Version}/recipes/db/slurm_accounting_db/assets/serverless-database.yaml
+        - { Version: !FindInMap [Recipes, Constants, Version] }
+      TimeoutInMinutes: 60  
+
+  PclusterCluster:
+    Type: Custom::PclusterCluster
+    DeletionPolicy: Delete
+    UpdateReplacePolicy: Delete
+    Properties:
+      ServiceToken: !GetAtt [ PclusterClusterProvider , Outputs.ServiceToken ]
+      ClusterName: !Ref ClusterName
+      ClusterConfiguration:
+        Image:
+          Os: !Ref OS
+        HeadNode:
+          InstanceType: !FindInMap [ InstanceTypeForArchitecture, HeadNode, !Ref Architecture ]
+          Networking:
+            SubnetId: {"Fn::Select": [0, { "Fn::Split" : [",", {"Fn::ImportValue" : {"Fn::Sub" : "${NetworkStackNameParameter}-PublicSubnet"}}] }]}
+            AdditionalSecurityGroups:
+              - !GetAtt [ PclusterAcctDatabase , Outputs.DatabaseClientSecurityGroup ]
+          Ssh:
+            KeyName: !Ref KeyName
+            AllowedIps: !Ref AllowedIps
+          Iam:
+            AdditionalIamPolicies:
+              - Policy: arn:aws:iam::aws:policy/AmazonSSMManagedInstanceCore
+        Scheduling:
+          Scheduler: slurm
+          SlurmSettings:
+            QueueUpdateStrategy: TERMINATE
+            Database:
+              Uri: !GetAtt [ PclusterAcctDatabase , Outputs.DatabaseHost ]
+              UserName: !GetAtt [ PclusterAcctDatabase , Outputs.DatabaseAdminUser ]
+              PasswordSecretArn: !GetAtt [ PclusterAcctDatabase , Outputs.DatabaseSecretArn ]
+          SlurmQueues:
+          - Name: !Ref QueueName
+            ComputeResources:
+            - Name: cr1
+              Instances:
+                - InstanceType: !FindInMap [ InstanceTypeForArchitecture, ComputeNodes, !Ref Architecture ]
+              MinCount: 0
+              MaxCount: !Ref ComputeInstanceMax
+            Networking:
+              SubnetIds: { "Fn::Split" : [",", {"Fn::ImportValue" : {"Fn::Sub" : "${NetworkStackNameParameter}-PrivateSubnets"}}]}
+
+Outputs:
+  HeadNodeIp:
+    Description: The Public IP address of the HeadNode
+    Value: !GetAtt [ PclusterCluster, headNode.publicIpAddress ]
+    Export:
+      Name: !Sub ${AWS::StackName}-HeadNodeIp
+  ValidationMessages:
+    Description: Warnings from cluster create or update operations.
+    Value: !GetAtt PclusterCluster.validationMessages
