@@ -869,23 +869,41 @@ Outputs:
     Value: !Join [",", [!If [CreateVPC, !Ref PclusterVpcSubnet1, !Ref PrivateSubnetOne ], !If [CreateVPC, !Ref PclusterVpcSubnet2, !Ref PrivateSubnetTwo ]]]
   DomainName:
     Value: !Ref DomainName
+    Export:
+        Name: !Sub ${AWS::StackName}-DomainName
   PasswordSecretArn:
     Value: !Ref PasswordSecret
+    Export:
+        Name: !Sub ${AWS::StackName}-PasswordSecretArn
   DomainCertificateArn:
     Value: !GetAtt DomainCertificateSetup.DomainCertificateArn
+    Export:
+        Name: !Sub ${AWS::StackName}-DomainCertificateArn
   DomainCertificateSecretArn:
     Value: !Ref DomainCertificateSecret
+    Export:
+        Name: !Sub ${AWS::StackName}-DomainCertificateSecretArn
   DomainReadOnlyUser:
     Value: !Sub
       - cn=ReadOnlyUser,ou=Users,ou=${ou},dc=${dc}
       - { dc: !Join [",dc=", !Split [".", !Ref DomainName ]], ou: !GetAtt Prep.DomainShortName }
+    Export:
+        Name: !Sub ${AWS::StackName}-DomainReadOnlyUser
   DomainAddrLdap:
     Value: !Sub
       - ldap://${address}
       - address: !Join [",ldap://", !GetAtt Prep.DnsIpAddresses]
+    Export:
+        Name: !Sub ${AWS::StackName}-DomainAddrLdap
   DomainAddrLdaps:
     Value: !Sub ldaps://${DomainName}
+    Export:
+        Name: !Sub ${AWS::StackName}-DomainAddrLdaps
   DomainCertificateSecretReadPolicy:
     Value: !Ref DomainCertificateSecretReadPolicy
+    Export:
+        Name: !Sub ${AWS::StackName}-DomainCertificateSecretReadPolicy
   DirectoryId:
     Value: !Ref Directory
+    Export:
+        Name: !Sub ${AWS::StackName}-DirectoryId
