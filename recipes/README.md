@@ -83,6 +83,12 @@ Generally, use `main` for the version, unless you need to pin to a specific HPCD
 * **Authors**: AWS HPC Engineering
 * **Usage**: [README.md](pcluster/parallelcluster_ui/README.md)
 * **Default**: [assets/launch.yaml](https://cfn3-dev-mwvaughn.s3.us-east-2.amazonaws.com/main/recipes/pcluster/parallelcluster_ui/assets/launch.yaml)
+#### multi_az ![tag](https://img.shields.io/badge/-parallelcluster-%23FF9900) ![tag](https://img.shields.io/badge/-experimental-%23D9534F) 
+
+* **About**: Create a cluster that can launch instances in multiple Availability Zones
+* **Authors**: Matt Vaughn <mwvaughn@amazon.com>
+* **Usage**: [README.md](pcluster/multi_az/README.md)
+
 #### pcluster_2az ![tag](https://img.shields.io/badge/-core-%23146EB4) ![tag](https://img.shields.io/badge/-experimental-%23D9534F) ![tag](https://img.shields.io/badge/-parallelcluster-%23FF9900) 
 
 * **About**: Deploy AWS ParallelCluster with a queue that leverages two availability zones for extra capacity.
@@ -95,6 +101,12 @@ Generally, use `main` for the version, unless you need to pin to a specific HPCD
 * **Authors**: Matt Vaughn <mwvaughn@amazon.com>, AWS HPC Engineering
 * **Usage**: [README.md](pcluster/latest/README.md)
 * **Default**: [assets/launch.yaml](https://cfn3-dev-mwvaughn.s3.us-east-2.amazonaws.com/main/recipes/pcluster/latest/assets/launch.yaml)
+#### slurm_accounting ![tag](https://img.shields.io/badge/-parallelcluster-%23FF9900) ![tag](https://img.shields.io/badge/-rds-%237DCEA0) ![tag](https://img.shields.io/badge/-experimental-%23D9534F) 
+
+* **About**: Create an instance of AWS ParallelCluster with Slurm accounting enabled, using Amazon RDS as the DBMS.
+* **Authors**: Matt Vaughn <mwvaughn@amazon.com>
+* **Usage**: [README.md](pcluster/slurm_accounting/README.md)
+
 #### pcluster_sacct_pcui ![tag](https://img.shields.io/badge/-core-%23146EB4) ![tag](https://img.shields.io/badge/-parallelcluster-%23FF9900) ![tag](https://img.shields.io/badge/-rds-%237DCEA0) 
 
 * **About**: Launch AWS ParallelCluster with Slurm accounting, managed by the ParallelCluster UI.
