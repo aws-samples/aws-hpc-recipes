@@ -1,4 +1,4 @@
-# ParallelCluster Multi-AZ
+# ParallelCluster with Multiple Availability Zones
 
 ## Info
 
@@ -28,7 +28,7 @@ You can also use AWS Systems Manager to access the cluster. Navigate to the **In
 
 ## Cleaning Up
 
-WHen you are done using your cluster, you can delete it and all its associated resources by navigating to the AWS CloudFormation console and deleting the **latest-pcluster** stack. 
+When you are done using your cluster, you can delete it and all its associated resources by navigating to the AWS CloudFormation console and deleting the **latest-pcluster** stack. 
 
 ## Cost Estimate
 
