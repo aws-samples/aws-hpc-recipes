@@ -1,9 +1,21 @@
-# slurm_accounting_db_aurora
+# Slurm Accounting Database using Amazon RDS
 
 ## Info
 
-Set up an Amazon Aurora database that can support Slurm accounting
+This recipe sets up an Amazon RDS database that can support AWS ParallelCluster Slurm Accounting. 
 
 ## Usage
 
+1. Launch the template: [![Launch stack](https://raw.githubusercontent.com/buildkite/cloudformation-launch-stack-button-svg/master/launch-stack.svg)](https://us-east-2.console.aws.amazon.com/cloudformation/home?region=us-east-2#/stacks/create/review?stackName=slurm-accounting-db&templateURL=https://cfn3-dev-mwvaughn.s3.us-east-2.amazonaws.com/main/recipes/db/slurm_accounting_db/assets/serverless-database.yaml)
+2. Follow the instructions in the AWS CloudFormation console. 
+3. Monitor the status of the stack named **slurm-accounting-db**. When its status is `CREATE_COMPLETE`, navigate to its **Outputs** tab. You will find several values you can either use to creating an AWS ParallelCluster instance directly, or that you can imoport if you choose to create a cluster using CloudFormation.
+
+For more details on how to use the resulting database resource, consult the [AWS ParallelCluster documentation](https://docs.aws.amazon.com/parallelcluster/latest/ug/tutorials_07_slurm-accounting-v3.html) or the [ParallelCluster with Slurm Accounting Enabled](../../pcluster/slurm_accounting/README.md) recipe. 
+
+## Cleaning Up
+
+WHen you are done using your database cluster, you can delete it by navigating to the AWS CloudFormation console and deleting the **slurm-accounting-db** stack. 
+
 ## Cost Estimate
+
+It will cost approximately $22.00 to run this database for one week. 
