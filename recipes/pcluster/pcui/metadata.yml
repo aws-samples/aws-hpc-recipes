@@ -4,7 +4,7 @@ name: pcui
 # The version of the recipe. Must be compatible with semantic versioning.
 version: "1.0.0"
 # A short summary description of the recipe
-description: Create an AWS ParallelCluster with an instance of the ParallelClusterUI to manage it.
+description: Create an AWS ParallelCluster with ParallelClusterUI to manage it.
 # The path to the README for the recipe relative to its root directory.
 readme: README.md
 # Optional URL for external documentation

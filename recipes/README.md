@@ -85,7 +85,7 @@ Generally, use `main` for the version, unless you need to pin to a specific HPCD
 
 #### pcui ![tag](https://img.shields.io/badge/-parallelcluster-%23FF9900) ![tag](https://img.shields.io/badge/-cognito-%23AAB7B8) ![tag](https://img.shields.io/badge/-lambda-%23AAB7B8) ![tag](https://img.shields.io/badge/-experimental-%23D9534F) 
 
-* **About**: Create an AWS ParallelCluster with an instance of the ParallelClusterUI to manage it.
+* **About**: Create an AWS ParallelCluster with ParallelClusterUI to manage it.
 * **Authors**: Matt Vaughn <mwvaughn@amazon.com>
 * **Usage**: [README.md](pcluster/pcui/README.md)
 
