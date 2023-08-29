@@ -867,6 +867,8 @@ Outputs:
     Value: !If [CreateVPC, !Ref PclusterVpc, !Ref Vpc ]
   PrivateSubnetIds:
     Value: !Join [",", [!If [CreateVPC, !Ref PclusterVpcSubnet1, !Ref PrivateSubnetOne ], !If [CreateVPC, !Ref PclusterVpcSubnet2, !Ref PrivateSubnetTwo ]]]
+    Export:
+        Name: !Sub ${AWS::StackName}-PrivateSubnetIds
   DomainName:
     Value: !Ref DomainName
     Export:
@@ -907,3 +909,8 @@ Outputs:
     Value: !Ref Directory
     Export:
         Name: !Sub ${AWS::StackName}-DirectoryId
+  DomainManagementNodeId:
+    Value: !Ref AdDomainAdminNode
+    Description: Instance ID for AD Domain Management Node
+    Export:
+        Name: !Sub ${AWS::StackName}-DomainManagementNodeId
