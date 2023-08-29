@@ -77,24 +77,24 @@ Generally, use `main` for the version, unless you need to pin to a specific HPCD
 
 ### pcluster: AWS ParallelCluster
 
-#### parallelcluster_ui ![tag](https://img.shields.io/badge/-core-%23146EB4) ![tag](https://img.shields.io/badge/-parallelcluster-%23FF9900) 
+#### multi_user ![tag](https://img.shields.io/badge/-parallelcluster-%23FF9900) ![tag](https://img.shields.io/badge/-activedirectory-%23AAB7B8) ![tag](https://img.shields.io/badge/-secretsmanager-%23AAB7B8) ![tag](https://img.shields.io/badge/-experimental-%23D9534F) 
 
-* **About**: Deploy AWS ParallelCluster UI in your customer account.
-* **Authors**: AWS HPC Engineering
-* **Usage**: [README.md](pcluster/parallelcluster_ui/README.md)
-* **Default**: [assets/launch.yaml](https://cfn3-dev-mwvaughn.s3.us-east-2.amazonaws.com/main/recipes/pcluster/parallelcluster_ui/assets/launch.yaml)
+* **About**: Creates a multi-user instance of AWS ParallelCluster using AWS Managed AD as the directory service.
+* **Authors**: Matt Vaughn <mwvaughn@amazon.com>
+* **Usage**: [README.md](pcluster/multi_user/README.md)
+
+#### pcui ![tag](https://img.shields.io/badge/-parallelcluster-%23FF9900) ![tag](https://img.shields.io/badge/-cognito-%23AAB7B8) ![tag](https://img.shields.io/badge/-lambda-%23AAB7B8) ![tag](https://img.shields.io/badge/-experimental-%23D9534F) 
+
+* **About**: Create an AWS ParallelCluster with an instance of the ParallelClusterUI to manage it.
+* **Authors**: Matt Vaughn <mwvaughn@amazon.com>
+* **Usage**: [README.md](pcluster/pcui/README.md)
+
 #### multi_az ![tag](https://img.shields.io/badge/-parallelcluster-%23FF9900) ![tag](https://img.shields.io/badge/-experimental-%23D9534F) 
 
 * **About**: Create a cluster that can launch instances in multiple Availability Zones
 * **Authors**: Matt Vaughn <mwvaughn@amazon.com>
 * **Usage**: [README.md](pcluster/multi_az/README.md)
 
-#### pcluster_2az ![tag](https://img.shields.io/badge/-core-%23146EB4) ![tag](https://img.shields.io/badge/-experimental-%23D9534F) ![tag](https://img.shields.io/badge/-parallelcluster-%23FF9900) 
-
-* **About**: Deploy AWS ParallelCluster with a queue that leverages two availability zones for extra capacity.
-* **Authors**: Matt Vaughn <mwvaughn@amazon.com>
-* **Usage**: [README.md](pcluster/pcluster_2az/README.md)
-* **Default**: [assets/launch.yaml](https://cfn3-dev-mwvaughn.s3.us-east-2.amazonaws.com/main/recipes/pcluster/pcluster_2az/assets/launch.yaml)
 #### latest ![tag](https://img.shields.io/badge/-core-%23146EB4) ![tag](https://img.shields.io/badge/-parallelcluster-%23FF9900) 
 
 * **About**: 1-click AWS ParallelCluster 3.6.1 with support for network provisioning.
@@ -107,24 +107,12 @@ Generally, use `main` for the version, unless you need to pin to a specific HPCD
 * **Authors**: Matt Vaughn <mwvaughn@amazon.com>
 * **Usage**: [README.md](pcluster/slurm_accounting/README.md)
 
-#### pcluster_sacct_pcui ![tag](https://img.shields.io/badge/-core-%23146EB4) ![tag](https://img.shields.io/badge/-parallelcluster-%23FF9900) ![tag](https://img.shields.io/badge/-rds-%237DCEA0) 
-
-* **About**: Launch AWS ParallelCluster with Slurm accounting, managed by the ParallelCluster UI.
-* **Authors**: Matt Vaughn <mwvaughn@amazon.com>
-* **Usage**: [README.md](pcluster/pcluster_sacct_pcui/README.md)
-* **Default**: [assets/launch.yaml](https://cfn3-dev-mwvaughn.s3.us-east-2.amazonaws.com/main/recipes/pcluster/pcluster_sacct_pcui/assets/launch.yaml)
 #### pcluster_lustre_scratch ![tag](https://img.shields.io/badge/-core-%23146EB4) ![tag](https://img.shields.io/badge/-experimental-%23D9534F) ![tag](https://img.shields.io/badge/-parallelcluster-%23FF9900) ![tag](https://img.shields.io/badge/-fsx-%237DCEA0) ![tag](https://img.shields.io/badge/-lustre-%23AAB7B8) 
 
 * **About**: Deploy AWS ParallelCluster with an Amazon FSx for Lustre scratch volume
 * **Authors**: Matt Vaughn <mwvaughn@amazon.com>
 * **Usage**: [README.md](pcluster/pcluster_lustre_scratch/README.md)
 * **Default**: [assets/launch.yaml](https://cfn3-dev-mwvaughn.s3.us-east-2.amazonaws.com/main/recipes/pcluster/pcluster_lustre_scratch/assets/launch.yaml)
-#### pcluster_sacct ![tag](https://img.shields.io/badge/-core-%23146EB4) ![tag](https://img.shields.io/badge/-parallelcluster-%23FF9900) ![tag](https://img.shields.io/badge/-rds-%237DCEA0) 
-
-* **About**: Launch AWS ParallelCluster with support for Slurm accounting.
-* **Authors**: Matt Vaughn <mwvaughn@amazon.com>
-* **Usage**: [README.md](pcluster/pcluster_sacct/README.md)
-* **Default**: [assets/launch.yaml](https://cfn3-dev-mwvaughn.s3.us-east-2.amazonaws.com/main/recipes/pcluster/pcluster_sacct/assets/launch.yaml)
 
 ### scheduler: HPC scheduler
 
