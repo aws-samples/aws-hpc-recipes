@@ -1,12 +1,28 @@
 AWSTemplateFormatVersion: '2010-09-09'
-Description: Creates an FSxL filesystem of PERSISENT_2 type plus the Security Group needed for use with ParallelCluster
+Description: Create a SCRATCH FSxL filesystem and the Security Group for use with with ParallelCluster
+
+### Stack metadata
+Metadata:
+  AWS::CloudFormation::Interface:
+    ParameterGroups:
+      - Label:
+          default: Filesystem Options
+        Parameters:
+          - Capacity
+          - Compression
+          - LustreVersion
+      - Label:
+          default: Networking and Access
+        Parameters:
+          # - VpcId
+          - SubnetId
 
 Parameters:
-  VpcId:
-    Description: VPC ID
-    Type: AWS::EC2::VPC::Id
+  # VpcId:
+  #   Description: Select a VPC ID
+  #   Type: AWS::EC2::VPC::Id
   SubnetId:
-    Description: Subnet
+    Description: Subnet in which to deploy the filesystem
     Type: AWS::EC2::Subnet::Id
   Capacity:
     Description: Storage capacity (1.2 TiB or increments of 2.4 TiB)
@@ -19,6 +35,13 @@ Parameters:
       - "LZ4"
       - "NONE"
     Default: "LZ4"
+  LustreVersion:
+    Description: Lustre software version
+    Type: String
+    AllowedValues:
+      - "2.15"
+      - "2.12"
+    Default: "2.12"
 
 Resources:
 
@@ -166,42 +189,53 @@ Resources:
     Type: Custom::VpcInfo
     Properties:
       ServiceToken: !GetAtt GetAttFromParam.Arn
-      NameFilter: !Ref VpcId
+      NameFilter: !Ref SubnetId
 
-  # Security group
   FSxLsecurityGroup:
     Type: AWS::EC2::SecurityGroup
+    DeletionPolicy: Delete
+    UpdateReplacePolicy: Delete
     Properties: 
-      GroupDescription: Allow FSx for Lustre to mount to ParallelCluster
+      GroupDescription: Allows FSx for Lustre to mount to ParallelCluster
       GroupName: !Sub "${AWS::StackName}-FSx Lustre Cfn"
-      VpcId: !Ref VpcId
+      VpcId: !GetAtt VpcInfo.VpcId
       SecurityGroupIngress:
         - IpProtocol: tcp
           FromPort: 988
           ToPort: 988
           CidrIp: !GetAtt VpcInfo.CidrBlock
-          Description: Allow Lustre traffic to mount PC
+          Description: Lustre 988
+        - IpProtocol: tcp
+          FromPort: 1021
+          ToPort: 1023
+          CidrIp: !GetAtt VpcInfo.CidrBlock
+          Description: Lustre 1021-1023
 
   FSxLFilesystem:
     Type: AWS::FSx::FileSystem
+    DeletionPolicy: Delete
+    UpdateReplacePolicy: Delete
     Properties:
       FileSystemType: LUSTRE
-      FileSystemTypeVersion: "2.12"
       StorageType: SSD
+      FileSystemTypeVersion: !Ref LustreVersion
       StorageCapacity: !Ref Capacity
       SecurityGroupIds:
-        - !GetAtt FSxLsecurityGroup.GroupId
+        - !Ref FSxLsecurityGroup
       SubnetIds:
         - !Ref SubnetId
       LustreConfiguration:
         DataCompressionType: !Ref Compression
-        DeploymentType: SCRATCH
-
+        DeploymentType: SCRATCH_2
 
 Outputs:
   FSxLustreFilesystemId:
     Description: The ID of the FSxL filesystem that has been created
     Value: !Ref FSxLFilesystem
+    Export:
+      Name: !Sub ${AWS::StackName}-FSxLustreFilesystemId
   FSxLustreSecurityGroupId:
     Description: The ID of the security group allowing access to FSxL filesystem
     Value: !Ref FSxLsecurityGroup
+    Export:
+      Name: !Sub ${AWS::StackName}-FSxLustreSecurityGroupId
