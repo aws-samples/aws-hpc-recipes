@@ -1,23 +1,32 @@
-# HPC Development Kit (HPCDK) for AWS
+# HPC Recipes for AWS
 
-HPCDK for AWS is a library of recipes you can use with AWS ParallelCluster to deploy HPC infrastructure on the cloud.
+This repository contains example recipes that demonstrate how to build HPC systems using AWS ParallelCluster and other AWS products.
 
-## About this repository
+## Contents
 
-The AWS HPC Team provides and maintains recipes tagged with `core`. The core recipes include  networking setups, filesystem configurations, and other foundational bits. They also include some example ParallelCluster deployments that illustrate some of its advanced features. Core recipes are updated with each new ParallelCluster release, and are tested routinely. We also collect and make available templates developed by the broader community. These are tagged with `community`.  We encourage contributions of new recipes or improvements on existing ones. Please note that we don't test, maintain, or support community recipes.
+Recipes are in the [recipes](./recipes/README.md) directory. You can find sample networking setups, filesystem configurations, database server deployments, and ParallelCluster deployments. The ParallelCluster recipes are especially interesting since they illustrate a) how to use some advanced features and b) how to integrate ParallelCluster with AWS products such as Amazon FSx for Lustre. 
 
-## The recipe library
+To aid in discoverability, recipes are indexed in the recipes [README](./recipes/README.md) file. They are organized by theme, such as "db" for database and "net" for networking. Recipes are also tagged to help you determine the most interesting aspects of each recipe. 
 
-Recipes are in namespaced directories under the [`recipes`](/recipes/) folder. We generate the README file in that folder from the list of active recipes to provide a simple discovery interface. 
+Here is an example of what a recipe looks like on the index page:
 
-## Getting started using HPCDK recipes
+![recipe](docs/media/recipe.png)
 
-TBD
+This recipe is named **slurm_accounting_db** and is a part of the **db** (database collection). Its tags tell us its a core recipe, referenced by others in the collection, and that it pertains to Amazon RDS and AWS ParallelCluster. 
+
+## Getting Started
+
+If you're new to AWS ParallelCluster, start by [reviewing its User Guide](https://docs.aws.amazon.com/parallelcluster/latest/ug/what-is-aws-parallelcluster.html), then try out the [recipes/pcluster/latest](./recipes/pcluster/latest/README.md) recipe. Then, navigate to [recipes](./recipes/README.md) and explore other topics. 
+
+## Security
+
+See [CONTRIBUTING](CONTRIBUTING.md#security-issue-notifications) for more information.
 
 ## Contributing
 
 We encourage you to contribute to HPCDK! Read up on our [contribution process and guidelines](CONTRIBUTING.md) and share your best ideas with the HPC community. Then, head to **[Get Started Building for HPCDK](docs/start.md)** to begin. 
 
-## Additional Resources
+## License
 
-TBD
+This repository is licensed under the MIT-0 License. See the [LICENSE](LICENSE) file.
+
