@@ -49,5 +49,5 @@ types:
   other: Unknown
 _internal:
   bucket: aws-hpc-recipes
+  region: us-east-1
   release_tag: main
-

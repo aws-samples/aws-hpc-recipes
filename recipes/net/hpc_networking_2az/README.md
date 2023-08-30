@@ -15,9 +15,9 @@ Five values are required to parameterize this template:
 
 Note that all four subnet CIDR blocks must be within that of the VPC you create, and they cannnot overlap.
 
-You can quick-launch in the AWS CloudFormation Console: [![Launch](https://samdengler.github.io/cloudformation-launch-stack-button-svg/images/us-east-2.svg)](https://us-east-2.console.aws.amazon.com/cloudformation/home?region=us-east-2#/stacks/create/review?stackName=tutorial-networking&templateURL=https://cfn3-dev-mwvaughn.s3.us-east-2.amazonaws.com/main/recipes/net/hpc_networking_2az/assets/public-private.cfn.yml)
+You can quick-launch in the AWS CloudFormation Console: [![Launch](https://samdengler.github.io/cloudformation-launch-stack-button-svg/images/us-east-2.svg)](https://us-east-2.console.aws.amazon.com/cloudformation/home?region=us-east-2#/stacks/create/review?stackName=tutorial-networking&templateURL=https://aws-hpc-recipes.s3.us-east-1.amazonaws.com/main/recipes/net/hpc_networking_2az/assets/public-private.cfn.yml)
 
-You can also import the template into the AWS CloudFormation console. Navigate to the [AWS CloudFormation console](https://console.aws.amazon.com/cloudformation/home). Choose **Create stack**, then on the following page, make sure Amazon S3 URL is set as the Template URL. Enter the complete S3 URL for this recipe `https://cfn3-dev-mwvaughn.s3.us-east-2.amazonaws.com/main/recipes/net/hpc_networking_2az/assets/public-private.cfn.yml` and follow through the rest of the launch workflow.
+You can also import the template into the AWS CloudFormation console. Navigate to the [AWS CloudFormation console](https://console.aws.amazon.com/cloudformation/home). Choose **Create stack**, then on the following page, make sure Amazon S3 URL is set as the Template URL. Enter the complete S3 URL for this recipe `https://aws-hpc-recipes.s3.us-east-1.amazonaws.com/main/recipes/net/hpc_networking_2az/assets/public-private.cfn.yml` and follow through the rest of the launch workflow.
 
 If you want to combine this stack with another, you can embed it as a nested stack. Here's what that might look like.
 
@@ -32,7 +32,7 @@ If you want to combine this stack with another, you can embed it as a nested sta
         CidrPrivateSubnetA: 10.3.0.0/18
         CidrPrivateSubnetB: 10.3.64.0/18
       TemplateURL: !Sub
-        - https://cfn3-dev-mwvaughn.s3.us-east-2.amazonaws.com/main/recipes/net/hpc_networking_2az/assets/public-private.cfn.yml
+        - https://aws-hpc-recipes.s3.us-east-1.amazonaws.com/main/recipes/net/hpc_networking_2az/assets/public-private.cfn.yml
         - { Region: !Ref AWS::Region }
       TimeoutInMinutes: 10
 ```

@@ -13,7 +13,7 @@ Creates a multi-user instance of AWS ParallelCluster using AWS Managed AD as the
 ### Launch the Cluster and AD Server
 
 1. Ensure you have a Amazon EC2 [SSH key created](https://docs.aws.amazon.com/AWSEC2/latest/UserGuide/create-key-pairs.html#having-ec2-create-your-key-pair) in the Region where you want to launch your cluster and AD management instance.
-2. Launch the template: [![Launch stack](https://raw.githubusercontent.com/buildkite/cloudformation-launch-stack-button-svg/master/launch-stack.svg)](https://us-east-2.console.aws.amazon.com/cloudformation/home?region=us-east-2#/stacks/create/review?stackName=multiuser-cluster&templateURL=https://cfn3-dev-mwvaughn.s3.us-east-2.amazonaws.com/main/recipes/pcluster/multi_user/assets/launch.yaml)
+2. Launch the template: [![Launch stack](https://raw.githubusercontent.com/buildkite/cloudformation-launch-stack-button-svg/master/launch-stack.svg)](https://us-east-2.console.aws.amazon.com/cloudformation/home?region=us-east-2#/stacks/create/review?stackName=multiuser-cluster&templateURL=https://aws-hpc-recipes.s3.us-east-1.amazonaws.com/main/recipes/pcluster/multi_user/assets/launch.yaml)
 3. Follow the instructions in the AWS CloudFormation console. As you work through the template, mind these points:
   * The value you enter for **NetworkStackNameParameter** must be the name of your HPC networking stack
   * The template requires you to provide a valid CIDR notation (X.X.X.X/X) to secure access to the login node. This is because you are enabling password authentication on an SSH connection. It is disabled by default for security purposes.

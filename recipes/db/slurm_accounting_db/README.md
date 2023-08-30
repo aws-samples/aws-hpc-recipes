@@ -6,7 +6,7 @@ This recipe sets up an Amazon RDS database that can support AWS ParallelCluster 
 
 ## Usage
 
-1. Launch the template: [![Launch stack](https://raw.githubusercontent.com/buildkite/cloudformation-launch-stack-button-svg/master/launch-stack.svg)](https://us-east-2.console.aws.amazon.com/cloudformation/home?region=us-east-2#/stacks/create/review?stackName=slurm-accounting-db&templateURL=https://cfn3-dev-mwvaughn.s3.us-east-2.amazonaws.com/main/recipes/db/slurm_accounting_db/assets/serverless-database.yaml)
+1. Launch the template: [![Launch stack](https://raw.githubusercontent.com/buildkite/cloudformation-launch-stack-button-svg/master/launch-stack.svg)](https://us-east-2.console.aws.amazon.com/cloudformation/home?region=us-east-2#/stacks/create/review?stackName=slurm-accounting-db&templateURL=https://aws-hpc-recipes.s3.us-east-1.amazonaws.com/main/recipes/db/slurm_accounting_db/assets/serverless-database.yaml)
 2. Follow the instructions in the AWS CloudFormation console. 
 3. Monitor the status of the stack named **slurm-accounting-db**. When its status is `CREATE_COMPLETE`, navigate to its **Outputs** tab. You will find several values you can either use to creating an AWS ParallelCluster instance directly, or that you can imoport if you choose to create a cluster using CloudFormation.
 

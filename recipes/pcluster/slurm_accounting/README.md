@@ -11,7 +11,7 @@ Creates an instance of AWS ParallelCluster with Slurm accounting enabled, using 
 ### Launch the Cluster and Database
 
 1. Ensure you have a Amazon EC2 [SSH key created](https://docs.aws.amazon.com/AWSEC2/latest/UserGuide/create-key-pairs.html#having-ec2-create-your-key-pair) in the Region where you want to launch your cluster.
-2. Launch the template: [![Launch stack](https://raw.githubusercontent.com/buildkite/cloudformation-launch-stack-button-svg/master/launch-stack.svg)](https://us-east-2.console.aws.amazon.com/cloudformation/home?region=us-east-2#/stacks/create/review?stackName=sacct-cluster&templateURL=https://cfn3-dev-mwvaughn.s3.us-east-2.amazonaws.com/main/recipes/pcluster/slurm_accounting/assets/launch.yaml)
+2. Launch the template: [![Launch stack](https://raw.githubusercontent.com/buildkite/cloudformation-launch-stack-button-svg/master/launch-stack.svg)](https://us-east-2.console.aws.amazon.com/cloudformation/home?region=us-east-2#/stacks/create/review?stackName=sacct-cluster&templateURL=https://aws-hpc-recipes.s3.us-east-1.amazonaws.com/main/recipes/pcluster/slurm_accounting/assets/launch.yaml)
 3. Follow the instructions in the AWS CloudFormation console. As you work through the template, mind these points:
   * The value you enter for **NetworkStackNameParameter** must be the name of your HPC networking stack
   * Don't set a value for **AdminPasswordSecretString** that is used anywhere else
@@ -32,7 +32,7 @@ When you are done using your cluster, you can delete it and all its associated r
 In this example, we create the accounting database as a resource in the CloudFormation template. When the stack is deleted, so is the accounting database. If you want your database to be persistent across cluster instances, or if you want to share it between clusters, you can import values from an existing database stack into your ParallelCluster deployment. 
 
 1. Run the the [Slurm Accounting Database](../../db/slurm_accounting_db/assets/serverless-database.yaml) quick-create. Take note of the name of the CloudFormation stack for the database. 
-2. Launch ParallelCluster using this alternative template: [![Launch stack](https://raw.githubusercontent.com/buildkite/cloudformation-launch-stack-button-svg/master/launch-stack.svg)](https://us-east-2.console.aws.amazon.com/cloudformation/home?region=us-east-2#/stacks/create/review?stackName=sacct-cluster-persistent&templateURL=https://cfn3-dev-mwvaughn.s3.us-east-2.amazonaws.com/main/recipes/pcluster/slurm_accounting/assets/launch-persistent.yaml)
+2. Launch ParallelCluster using this alternative template: [![Launch stack](https://raw.githubusercontent.com/buildkite/cloudformation-launch-stack-button-svg/master/launch-stack.svg)](https://us-east-2.console.aws.amazon.com/cloudformation/home?region=us-east-2#/stacks/create/review?stackName=sacct-cluster-persistent&templateURL=https://aws-hpc-recipes.s3.us-east-1.amazonaws.com/main/recipes/pcluster/slurm_accounting/assets/launch-persistent.yaml)
 3. When prompted, provide the name of your database CloudFormation stack to **DatabaseStackNameParameter**
 
 Now, the Amazon RDS database will not be deleted when and if you delete your ParallelCluster stack. 
