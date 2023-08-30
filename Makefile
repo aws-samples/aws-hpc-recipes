@@ -9,7 +9,7 @@ endif
 ifdef HPCDK_S3_BUCKET
 S3_BUCKET := $(HPCDK_S3_BUCKET)
 else
-S3_BUCKET := cfn3-dev-mwvaughn
+S3_BUCKET := aws-hpc-recipes
 endif
 
 # CLI profile

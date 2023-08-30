@@ -47,4 +47,7 @@ types:
   shell: Bash or other shell script
   terraform: Hashicorp Terraform file
   other: Unknown
-  
+_internal:
+  bucket: aws-hpc-recipes
+  release_tag: main
+
