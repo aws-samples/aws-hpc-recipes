@@ -7,8 +7,8 @@ def main():
     # Load metadata config
     config = utils.load_config()
     data = {
-        "repo_name": "HPCDK",
         "namespaces": {},
+        "_internal": config['_internal'],
         "colors": config['colors'],
         "tags": config['tags']
     }

@@ -1,10 +1,10 @@
-# HPCDK Recipes
+# AWS HPC Recipes
 
 You can access recipe assets using HTTPS or S3 protocols.
-* AWS S3 HTTP URL - https://hpcdk-on-aws.s3.us-east-2.amazonaws.com/VERSION/recipes/NAMESPACE/RECIPE/assets/
-* AWS S3 protocol - s3://hpcdk-on-aws/VERSION/recipes/NAMESPACE/RECIPE/assets/
+* AWS S3 HTTP URL - https://aws-hpc-recipes.s3.us-east-1.amazonaws.com/VERSION/recipes/NAMESPACE/RECIPE/assets/
+* AWS S3 protocol - s3://aws-hpc-recipes/VERSION/recipes/NAMESPACE/RECIPE/assets/
 
-Generally, use `main` for the version, unless you need to pin to a specific HPCDK release. If that's the case, replace `main` with a release tags such as `v1.0.0`. 
+Generally, use `main` for the version, unless you need to pin to a specific tag or commit. If that's the case, replace `main` with a release tags such as `v1.0.0`. 
 
 ### aws: General AWS (default)
 

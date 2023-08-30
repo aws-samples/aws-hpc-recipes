@@ -48,6 +48,6 @@ types:
   terraform: Hashicorp Terraform file
   other: Unknown
 _internal:
-  bucket: aws-hpc-recipes
+  s3_bucket: aws-hpc-recipes
   region: us-east-1
   release_tag: main

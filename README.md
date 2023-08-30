@@ -12,7 +12,7 @@ Here is an example of what a recipe looks like on the index page:
 
 ![recipe](docs/media/recipe.png)
 
-This recipe is named **slurm_accounting_db** and is a part of the **db** (database collection). Its tags tell us its a core recipe, referenced by others in the collection, and that it pertains to Amazon RDS and AWS ParallelCluster. 
+This recipe is named **slurm_accounting_db** and is a part of the **db** (database collection). Its tags tell us its a core recipe (i.e. it's maintained by AWS staff) and that it pertains to Amazon RDS and AWS ParallelCluster. 
 
 ## Getting Started
 
