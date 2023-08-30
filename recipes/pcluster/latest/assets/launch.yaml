@@ -119,7 +119,7 @@ Resources:
         PrivateCIDR: 10.0.16.0/20
         AvailabilityZone: !Ref AvailabilityZone
       TemplateURL: !Sub
-        - https://cfn3-dev-mwvaughn.s3.${AWS::Region}.${AWS::URLSuffix}/${Version}/recipes/net/simple/assets/public-private.cfn.json
+        - https://aws-hpc-recipes.s3.${AWS::Region}.${AWS::URLSuffix}/${Version}/recipes/net/simple/assets/public-private.cfn.json
         - { Version: !FindInMap [Recipes, Constants, Version] }
       TimeoutInMinutes: 10
 

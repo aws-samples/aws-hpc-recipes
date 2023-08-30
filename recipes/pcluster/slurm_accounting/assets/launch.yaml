@@ -141,7 +141,7 @@ Resources:
         DatabaseClusterSubnetOne: {"Fn::Select": [0, { "Fn::Split" : [",", {"Fn::ImportValue" : {"Fn::Sub" : "${NetworkStackNameParameter}-PrivateSubnets"}}] }]}
         DatabaseClusterSubnetTwo: {"Fn::Select": [1, { "Fn::Split" : [",", {"Fn::ImportValue" : {"Fn::Sub" : "${NetworkStackNameParameter}-PrivateSubnets"}}] }]}
       TemplateURL: !Sub
-        - https://cfn3-dev-mwvaughn.s3.${AWS::Region}.${AWS::URLSuffix}/${Version}/recipes/db/slurm_accounting_db/assets/serverless-database.yaml
+        - https://aws-hpc-recipes.s3.${AWS::Region}.${AWS::URLSuffix}/${Version}/recipes/db/slurm_accounting_db/assets/serverless-database.yaml
         - { Version: !FindInMap [Recipes, Constants, Version] }
       TimeoutInMinutes: 60  
 

@@ -60,7 +60,7 @@ Resources:
         CidrPrivateSubnetA: 10.3.0.0/18
         CidrPrivateSubnetB: 10.3.64.0/18
       TemplateURL: !Sub
-        - https://cfn3-dev-mwvaughn.s3.${Region}.amazonaws.com/resources/hpc-networking-hpcdk.yaml
+        - https://aws-hpc-recipes.s3.${Region}.amazonaws.com/resources/hpc-networking-hpcdk.yaml
         - { Bucket: !Ref SourceBucket, Region: !Ref AWS::Region }
       TimeoutInMinutes: 10
 
@@ -71,7 +71,7 @@ Resources:
         VpcId: !GetAtt [ PclusterVpc , Outputs.VpcId ]
         SubnetId: !GetAtt [ PclusterVpc , Outputs.PublicSubnetId ]
       TemplateURL: !Sub
-        - https://cfn3-dev-mwvaughn.s3.${Region}.amazonaws.com/resources/fsx-lustre-persistent-2.yaml
+        - https://aws-hpc-recipes.s3.${Region}.amazonaws.com/resources/fsx-lustre-persistent-2.yaml
         - { Bucket: !Ref SourceBucket, Region: !Ref AWS::Region }
       TimeoutInMinutes: 60
 

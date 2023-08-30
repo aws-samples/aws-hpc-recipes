@@ -168,7 +168,7 @@ Resources:
         PrivateSubnetOne: {"Fn::Select": [0, { "Fn::Split" : [",", {"Fn::ImportValue" : {"Fn::Sub" : "${NetworkStackNameParameter}-PrivateSubnets"}}] }]}
         PrivateSubnetTwo: {"Fn::Select": [1, { "Fn::Split" : [",", {"Fn::ImportValue" : {"Fn::Sub" : "${NetworkStackNameParameter}-PrivateSubnets"}}] }]}
       TemplateURL: !Sub
-        - https://cfn3-dev-mwvaughn.s3.${AWS::Region}.${AWS::URLSuffix}/${Version}/recipes/dir/demo_managed_ad/assets/main.yaml
+        - https://aws-hpc-recipes.s3.${AWS::Region}.${AWS::URLSuffix}/${Version}/recipes/dir/demo_managed_ad/assets/main.yaml
         - { Version: !FindInMap [Recipes, Constants, Version] }
       TimeoutInMinutes: 60
 
