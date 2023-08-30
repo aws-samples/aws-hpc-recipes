@@ -14,15 +14,11 @@ Metadata:
       - Label:
           default: Networking and Access
         Parameters:
-          # - VpcId
           - SubnetId
 
 Parameters:
-  # VpcId:
-  #   Description: Select a VPC ID
-  #   Type: AWS::EC2::VPC::Id
   SubnetId:
-    Description: Subnet in which to deploy the filesystem
+    Description: Subnet where you will deploy the FSx filesystem
     Type: AWS::EC2::Subnet::Id
   Capacity:
     Description: Storage capacity (1.2 TiB or increments of 2.4 TiB)
@@ -196,7 +192,7 @@ Resources:
     DeletionPolicy: Delete
     UpdateReplacePolicy: Delete
     Properties: 
-      GroupDescription: Allows FSx for Lustre to mount to ParallelCluster
+      GroupDescription: Allows FSx for Lustre traffic from ParallelCluster
       GroupName: !Sub "${AWS::StackName}-FSx Lustre Cfn"
       VpcId: !GetAtt VpcInfo.VpcId
       SecurityGroupIngress:
@@ -204,12 +200,10 @@ Resources:
           FromPort: 988
           ToPort: 988
           CidrIp: !GetAtt VpcInfo.CidrBlock
-          Description: Lustre 988
         - IpProtocol: tcp
           FromPort: 1021
           ToPort: 1023
           CidrIp: !GetAtt VpcInfo.CidrBlock
-          Description: Lustre 1021-1023
 
   FSxLFilesystem:
     Type: AWS::FSx::FileSystem
