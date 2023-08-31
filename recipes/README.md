@@ -1,10 +1,25 @@
 # AWS HPC Recipes
 
 You can access recipe assets using HTTPS or S3 protocols.
-* AWS S3 HTTP URL - https://aws-hpc-recipes.s3.us-east-1.amazonaws.com/VERSION/recipes/NAMESPACE/RECIPE/assets/
-* AWS S3 protocol - s3://aws-hpc-recipes/VERSION/recipes/NAMESPACE/RECIPE/assets/
+* HTTPS URL - https://aws-hpc-recipes.s3.us-east-1.amazonaws.com/VERSION/recipes/NAMESPACE/RECIPE/assets/
+* S3 URL - s3://aws-hpc-recipes/VERSION/recipes/NAMESPACE/RECIPE/assets/
 
 Generally, use `main` for the version, unless you need to pin to a specific tag or commit. If that's the case, replace `main` with a release tags such as `v1.0.0`. 
+
+Here are example URLs for the CloudFormation launch template in the latest ParallelCluster recipe (**recipes/pcluster/latest**):
+* HTTPS: https://aws-hpc-recipes.s3.us-east-1.amazonaws.com/main/recipes/pcluster/latest/assets/launch.yaml
+* S3: s3://aws-hpc-recipes/main/recipes/pcluster/latest/assets/launch.yaml
+
+You can use the HTTPS link in a couple of contexts.
+1. You can download the file it references
+    * `curl -O HTTPS_URL`
+2. If it's a Cloudformation template, you can import it into the CloudFormation console when creating a stack
+3. You can embed it in a CloudFormation quick-launch link
+    * `https://console.aws.amazon.com/cloudformation/home?region=REGION#/stacks/create/review?templateURL=HTTPS_URL`
+
+Many recipes in this repository have embedded quick-launch links. 
+
+----
 
 ### aws: General AWS (default)
 
