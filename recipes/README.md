@@ -127,7 +127,7 @@ Generally, use `main` for the version, unless you need to pin to a specific tag 
 
 #### fsx_lustre ![tag](https://img.shields.io/badge/-core-%23146EB4) ![tag](https://img.shields.io/badge/-fsx-%237DCEA0) ![tag](https://img.shields.io/badge/-parallelcluster-%23FF9900) 
 
-* **About**: Creates an FSxL filesystem and relevant security groups for use with ParallelCluster.
+* **About**: Creates either a scratch or persistent FSxL filesystem and the relevant security groups for use with ParallelCluster.
 * **Authors**: Matt Vaughn <mwvaughn@amazon.com>
 * **Usage**: [README.md](storage/fsx_lustre/README.md)
 
