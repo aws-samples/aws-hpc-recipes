@@ -65,13 +65,7 @@ The S3 URL is useful anywhere you want to use native S3 commands for data access
 *There are currently no recipes in this namespace.*
 ### ide: IDEs and GUIs
 
-#### cloud9 ![tag](https://img.shields.io/badge/-core-%23146EB4) ![tag](https://img.shields.io/badge/-experimental-%23D9534F) 
-
-* **About**: Cloud9 environment for working with HPC resources
-* **Authors**: Matt Vaughn <mwvaughn@amazon.com>
-* **Usage**: [README.md](ide/cloud9/README.md)
-* **Default**: [assets/cloud9.yaml](https://aws-hpc-recipes.s3.us-east-1.amazonaws.com/main/recipes/ide/cloud9/assets/cloud9.yaml)
-
+*There are currently no recipes in this namespace.*
 ### net: Networking
 
 #### simple ![tag](https://img.shields.io/badge/-core-%23146EB4) 
