@@ -1,4 +1,4 @@
-# Developing in HPCDK
+# Developing Recipes
 
 ## Makefile
 

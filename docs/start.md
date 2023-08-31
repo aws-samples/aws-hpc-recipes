@@ -1,11 +1,11 @@
-# Get Started Building for HPCDK
+# Get Started
 
- HPCDK isn't opinionated about what goes into a recipe. Whether you're building with CloudFormation, CDK, Ansible, or even shell scripts, the only hard requirement is that your recipe needs to follow the project's layout and metadata scheme. Luckily, we've made this straightforward with an Python script that bootstraps a new recipe for you. 
+We aren't opinionated about what goes into a recipe. Whether you're building with CloudFormation, CDK, Ansible, or even shell scripts, the only hard requirement is that your recipe needs to follow the project's layout and metadata scheme. Luckily, we've made this straightforward with an Python script that bootstraps a new recipe for you. 
 
 ## Install dependencies
 
-Download a copy of the HPCDK source code and prepare a Python environment:
- 1. Fork HPCDK and check out a local copy of that fork and change into the `hpcdk` directory
+Download a copy of the HPC Recipes source code and prepare a Python environment:
+ 1. Fork HPC Recipes and check out a local copy of that fork and change into the `aws-hpc-recipes` directory
  2. Create a new Git branch that will contain your recipe. 
  3. Create a Python virtual environment `python -m venv .env` then activate it `source .env/bin/activate`
  4. Install the project's Python dependencies (there aren't many) `pip install -r requirements.txt`
@@ -13,7 +13,7 @@ Download a copy of the HPCDK source code and prepare a Python environment:
 ## Create a new recipe
 
 Activate your Python environment and intiialize a recipe:
- 1. Change into the `hpcdk` directory
+ 1. Change into the `aws-hpc-recipes` directory
  2. Activate your Python virtual enviroment `source .env/bin/activate`
  5. Run the interactive new recipe script `python -m scripts.new_recipe`
 
@@ -32,14 +32,14 @@ Tags (comma-separated values for multiple): community, experimental, environment
 A few things to be aware of:
 * At each prompt, you will see text in `[brackets]`. This is the default value if you do not provide one.
 * Namespace controls under which `recipes/` sub-directory your contribution will be created. You must choose one of the designated options.
-* The combination of namespace and your recipe name must be unqiue within the HPCDK repository.
+* The combination of namespace and your recipe name must be unqiue within the HPC Recipes repository.
 * Short description is a sentence (or two) describing what your recipe does. It will be displayed on the recipes `README` page, so keep it succinct and descriptive. 
 * You must define at least one author. The script attempts to figure out who you are by inspecting your git global `user.name` and `user.email`. You can add multiple authors here via a comma-separated list. 
 * You can find the suggested "core" tags in `../config/metadata/values.yml#tags`. Feel free to define your own tags. They will simply render in grey on the recipes `README` page if they are not in the core list. 
 
 ## Develop your recipe
 
-Put all downloadable scripts, templates, tarballs, etc. into your recipe's `assets` directory. This will be mirrored out to an Amazon S3 bucket when your contribution is merged with the main HPCDK repository. 
+Put all downloadable scripts, templates, tarballs, etc. into your recipe's `assets` directory. This will be mirrored out to an Amazon S3 bucket when your contribution is merged with the main HPC Recipes repository. 
 
 Write a nice `README.md` describing what your recipe does, what dependencies it has, and how to use it. If you need more than one page, add additional Markdown files under the `docs` subdirectory. If you need to incorporate diagrams or figures, put that collateral under `docs` as well. 
 

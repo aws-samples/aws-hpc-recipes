@@ -24,7 +24,7 @@ See [CONTRIBUTING](CONTRIBUTING.md#security-issue-notifications) for more inform
 
 ## Contributing
 
-We encourage you to contribute to HPCDK! Read up on our [contribution process and guidelines](CONTRIBUTING.md) and share your best ideas with the HPC community. Then, head to **[Get Started Building for HPCDK](docs/start.md)** to begin. 
+We encourage your to contributions to this repository. Read up on our [contribution process and guidelines](CONTRIBUTING.md). Then, head to **[Get Started](docs/start.md)** to begin. 
 
 ## License
 
