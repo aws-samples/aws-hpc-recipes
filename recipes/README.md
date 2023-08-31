@@ -86,12 +86,6 @@ The S3 URL is useful anywhere you want to use native S3 commands for data access
 * **Authors**: Pierre-Yves Aquilanti <pierreya@amazon.com>, Matt Vaughn <mwvaughn@amazon.com>
 * **Usage**: [README.md](net/hpc_large_scale/README.md)
 * **Default**: [assets/main.yml](https://aws-hpc-recipes.s3.us-east-1.amazonaws.com/main/recipes/net/hpc_large_scale/assets/main.yml)
-#### hpc_networking_2az ![tag](https://img.shields.io/badge/-core-%23146EB4) ![tag](https://img.shields.io/badge/-experimental-%23D9534F) 
-
-* **About**: HPC networking with support for two Availability Zones.
-* **Authors**: Matt Vaughn <mwvaughn@amazon.com>
-* **Usage**: [README.md](net/hpc_networking_2az/README.md)
-* **Default**: [assets/public-private.cfn.yml](https://aws-hpc-recipes.s3.us-east-1.amazonaws.com/main/recipes/net/hpc_networking_2az/assets/public-private.cfn.yml)
 
 ### pcluster: AWS ParallelCluster
 
