@@ -28,7 +28,7 @@ Parameters:
   PerUnitStorageThroughput:
     Description: Provisioned Read/Write (MB/s/TiB)
     Type: Number
-    Default: 250
+    Default: 1000
     AllowedValues:
       - 125
       - 250
