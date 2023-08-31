@@ -1,14 +1,11 @@
 AWSTemplateFormatVersion: '2010-09-09'
 Description: >
-  Setup for large scale computations on AWS portable to multiple regions.
-  Public and and private subnets in all selected AZs.
-  An S3 Endpoint, Internet Gateway and NAT Gateway are deployed in the
-  public subnet if selected. Route tables are set for each subnet.
-  The VPC contains 4 CIDR blocks 10.0.0.0/16, 10.1.0.0/16, 10.2.0.0/16 and
-  10.3.0.0/16. The first CIDR is used for management with the public subnet.
-  This allows to access a maximum of addresses to be accessible by instances.
-  Author: Pierre-Yves Aquilanti - pierreya@
-
+  Configuration supporting large-scale computations on AWS.
+  Creates public and/or private subnets in all selected AZs.
+  VPC contains 4 CIDR blocks 10.0.0.0/16, 10.1.0.0/16, 10.2.0.0/16 and
+  10.3.0.0/16. The first CIDR is used for management in the public subnet.
+  This design allows access to a maximum number of IP addresses.
+  Route tables are also set up for each subnet.
 
 ####################
 ## Stack Metadata ##
