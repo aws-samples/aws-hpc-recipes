@@ -23,7 +23,7 @@ To connect your FSx filesystem to a ParallelCluster deployment, you will need to
 
 ## Cleaning Up
 
-When you are done using your cluster, you can delete it and all its associated resources by navigating to the AWS CloudFormation console and deleting the relevant stack. Note that any data on these filesystems will not be backed up if you do this. 
+When you are done using your filesystem, you can delete it and all its associated resources by navigating to the AWS CloudFormation console and deleting the relevant stack. Note that any data on these filesystems will not be backed up if you do this. 
 
 ## Cost Estimate
 
