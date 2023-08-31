@@ -4,7 +4,7 @@ name: fsx_lustre
 # The version of the recipe. Must be compatible with semantic versioning.
 version: "1.0.0"
 # A short summary description of the recipe
-description: Creates an FSxL filesystem and relevant security groups for use with ParallelCluster. 
+description: Creates either a scratch or persistent FSxL filesystem and the relevant security groups for use with ParallelCluster. 
 # The path to the README for the recipe relative to its root
 readme: README.md
 # Optional URL for external documentation
@@ -22,3 +22,5 @@ tags:
 # A list of file glob-like patterns used to filter any files or directories that should not be included in the S3 release. 
 build_ignore: []
 type: cloudformation
+# Default asset path
+default: 
