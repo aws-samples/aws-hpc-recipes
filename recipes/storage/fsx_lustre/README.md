@@ -14,8 +14,8 @@ Follow the instructions in the [Large-scale HPC Networking Setup](../../net/hpc_
 
 There are two templates. One creates a "scratch" filesystem, suitable for short-term high-performance storage. The other creates a "persistent" filesystem that is high performance, but also has higher durability. 
 
-* Create a [Scratch Filesystem]((https://us-east-2.console.aws.amazon.com/cloudformation/home?region=us-east-2#/stacks/create/review?stackName=fsxl-scratch&templateURL=https://aws-hpc-recipes.s3.us-east-1.amazonaws.com/main/recipes/storage/fsx_lustre/assets/scratch.yaml))
-* Create a [Persistent Filesystem]((https://us-east-2.console.aws.amazon.com/cloudformation/home?region=us-east-2#/stacks/create/review?stackName=fsxl-scratch&templateURL=https://aws-hpc-recipes.s3.us-east-1.amazonaws.com/main/recipes/storage/fsx_lustre/assets/persistent.yaml))
+* Create a [Scratch Filesystem](https://us-east-2.console.aws.amazon.com/cloudformation/home?region=us-east-2#/stacks/create/review?stackName=fsxl-scratch&templateURL=https://aws-hpc-recipes.s3.us-east-1.amazonaws.com/main/recipes/storage/fsx_lustre/assets/scratch.yaml)
+* Create a [Persistent Filesystem](https://us-east-2.console.aws.amazon.com/cloudformation/home?region=us-east-2#/stacks/create/review?stackName=fsxl-scratch&templateURL=https://aws-hpc-recipes.s3.us-east-1.amazonaws.com/main/recipes/storage/fsx_lustre/assets/persistent.yaml)
 
 When prompted to choose a subnet, select the one where you intend to place the majority of your computing. It is possible to access FSx for Lustre filesystems across Availability Zones, but there will be higher latency and additional costs due to cross-zone traffic.
 
