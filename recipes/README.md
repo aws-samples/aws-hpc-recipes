@@ -14,10 +14,13 @@ You can use the HTTPS link in a couple of contexts.
 1. You can download the file it references
     * `curl -O HTTPS_URL`
 2. If it's a Cloudformation template, you can import it into the CloudFormation console when creating a stack
-3. You can embed it in a CloudFormation quick-launch link
+3. You can embed it in a CloudFormation [quick-launch link](https://docs.aws.amazon.com/AWSCloudFormation/latest/UserGuide/cfn-console-create-stacks-quick-create-links.html).
     * `https://console.aws.amazon.com/cloudformation/home?region=REGION#/stacks/create/review?templateURL=HTTPS_URL`
 
-Many recipes in this repository have embedded quick-launch links. 
+Many recipes in this repository feature quick-launch links. 
+
+The S3 URL is useful anywhere you want to use native S3 commands for data access. 
+* `aws s3 cp s3://aws-hpc-recipes/VERSION/recipes/NAMESPACE/RECIPE/assets/FILE.yaml .`
 
 ----
 
