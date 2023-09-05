@@ -22,7 +22,7 @@ Parameters:
     Description: Subnet where you will deploy the FSx filesystem
     Type: AWS::EC2::Subnet::Id
   Capacity:
-    Description: Storage capacity (1.2 TiB or increments of 2.4 TiB)
+    Description: Storage capacity in GiB (1200 or increments of 2400)
     Type: Number
     Default: 1200
   PerUnitStorageThroughput:
