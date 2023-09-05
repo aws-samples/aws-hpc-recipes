@@ -1,27 +1,67 @@
 AWSTemplateFormatVersion: '2010-09-09'
 Description: Creates an FSx for OpenZFS filesystem plus the Security Group needed for use with ParallelCluster
 
+### Stack metadata
+Metadata:
+  AWS::CloudFormation::Interface:
+    ParameterGroups:
+      - Label:
+          default: Filesystem Options
+        Parameters:
+          - Capacity
+          - Compression
+          - ThroughputCapacity
+          - RecordSize
+      - Label:
+          default: Networking and Access
+        Parameters:
+          - SubnetId
+
 Parameters:
-  VpcId:
-    Description: VPC ID
-    Type: AWS::EC2::VPC::Id
   SubnetId:
     Description: Subnet
     Type: AWS::EC2::Subnet::Id
   Capacity:
     Description: Storage capacity (GiB)
     Type: Number
-    Default: 64
+    Default: 256
   Compression:
     Description: Data compression type
     Type: String
     AllowedValues:
       - "LZ4"
+      - "ZSTD"
       - "NONE"
     Default: "LZ4"
+  RecordSize:
+    Description: Record size in KiB for the root volume
+    Type: Number
+    Default: 128
+    AllowedValues:
+      - 4
+      - 8
+      - 16
+      - 32
+      - 64
+      - 128
+      - 256
+      - 512
+      - 1024
+  ThroughputCapacity:
+    Description: Throughput capacity for the filesystem (MBps)
+    Type: Number
+    Default: 64
+    AllowedValues:
+         - 64
+         - 128
+         - 256
+         - 512
+         - 1024
+         - 2048
+         - 3072
+         - 4096
 
 Resources:
-
   LambdaExecutionRole:
     Type: AWS::IAM::Role
     Properties:
@@ -166,15 +206,15 @@ Resources:
     Type: Custom::VpcInfo
     Properties:
       ServiceToken: !GetAtt GetAttFromParam.Arn
-      NameFilter: !Ref VpcId
+      NameFilter: !Ref SubnetId
 
   # Security group
-  FSxZsecurityGroup:
+  FSxOpenZFSsecurityGroup:
     Type: AWS::EC2::SecurityGroup
     Properties: 
-      GroupDescription: Allow FSx for OpenZFS to mount to ParallelCluster
+      GroupDescription: Allow FSx for OpenZFS traffic from ParallelCluster
       GroupName: !Sub "${AWS::StackName}-FSx OpenZFS Cfn"
-      VpcId: !Ref VpcId
+      VpcId: !GetAtt VpcInfo.VpcId
       SecurityGroupIngress:
         - IpProtocol: tcp
           FromPort: 111
@@ -207,30 +247,37 @@ Resources:
           CidrIp: !GetAtt VpcInfo.CidrBlock
           Description: NFS mount, status monitor, and lock daemon
 
-  FSxZFilesystem:
+  FSxOpenZFSFilesystem:
     Type: AWS::FSx::FileSystem
+    DeletionPolicy: Delete
+    UpdateReplacePolicy: Delete
     Properties:
       FileSystemType: OPENZFS
       StorageType: SSD
       StorageCapacity: !Ref Capacity
       SecurityGroupIds:
-        - !GetAtt FSxZsecurityGroup.GroupId
+        - !GetAtt FSxOpenZFSsecurityGroup.GroupId
       SubnetIds:
         - !Ref SubnetId
       OpenZFSConfiguration:
         DeploymentType: SINGLE_AZ_1
-        ThroughputCapacity: 64
+        ThroughputCapacity: !Ref ThroughputCapacity
         RootVolumeConfiguration:
           DataCompressionType: !Ref Compression
+          RecordSizeKiB: !Ref RecordSize
           NfsExports:
             - ClientConfigurations:
                 - Clients: "*"
-                  Options: ["rw", "no_root_squash"]
+                  Options: ["rw"]
 
 Outputs:
-  FSxZustreFilesystemId:
-    Description: The ID of the FSxZ filesystem that has been created
-    Value: !Ref FSxZFilesystem
-  FSxZustreSecurityGroupId:
-    Description: The ID of the security group allowing access to FSxZ filesystem
-    Value: !Ref FSxZsecurityGroup
+  FSxOpenZFSustreFilesystemId:
+    Description: The ID of the FSxOpenZFS filesystem that has been created
+    Value: !Ref FSxOpenZFSFilesystem
+    Export:
+      Name: !Sub ${AWS::StackName}-FSxOpenZFSFilesystemId
+  FSxOpenZFSustreSecurityGroupId:
+    Description: The ID of the security group allowing access to FSxOpenZFS filesystem
+    Value: !Ref FSxOpenZFSsecurityGroup
+    Export:
+      Name: !Sub ${AWS::StackName}-FSxOpenZFSSecurityGroupId
