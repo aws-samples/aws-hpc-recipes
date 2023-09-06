@@ -1,13 +1,35 @@
+AWSTemplateFormatVersion: '2010-09-09'
+Description: Creates an EFS filesystem, mount targets, and security group for the VPC
+
+Metadata:
+  AWS::CloudFormation::Interface:
+    ParameterGroups:
+      - Label:
+          default: Filesystem Options
+        Parameters:
+          - AutomaticBackups
+      - Label:
+          default: Networking and Access
+        Parameters:
+          - VpcId
+          - SubnetIds
+
 Parameters:
   VpcId:
-    Description: Vpc ID
+    Description: VPC where you will deploy the EFS filesystem
     Type: AWS::EC2::VPC::Id
   SubnetIds:
-    Description: Choose Two Subnets in Different AZ
+    Description: Choose Three Subnets in Different AZs in the VPC
     Type: List<AWS::EC2::Subnet::Id>
+  AutomaticBackups:
+    Description: Automatic backups for the filesystem
+    Type: String
+    Default: DISABLED
+    AllowedValues:
+         - "ENABLED"
+         - "DISABLED"
 
 Resources:
-
   LambdaExecutionRole:
     Type: AWS::IAM::Role
     Properties:
@@ -156,9 +178,11 @@ Resources:
 
   EfsFilesystem:
     Type: AWS::EFS::FileSystem
+    DeletionPolicy: Delete
+    UpdateReplacePolicy: Delete
     Properties: 
       BackupPolicy: 
-        Status: ENABLED
+        Status: !Ref AutomaticBackups
       Encrypted: false
       ThroughputMode: elastic
 
@@ -167,14 +191,13 @@ Resources:
     Type: AWS::EC2::SecurityGroup
     Properties: 
       GroupDescription: Allow EFS to mount to ParallelCluster
-      GroupName: !Sub "${AWS::StackName}-EfsPcluster"
+      GroupName: !Sub "${AWS::StackName}-Efs Cfn"
       VpcId: !Ref VpcId
       SecurityGroupIngress:
         - IpProtocol: tcp
           FromPort: 2049
           ToPort: 2049
           CidrIp: !GetAtt VpcInfo.CidrBlock
-          Description: Allow EFS traffic to mount PC
 
   EfsMountTarget1:
     Type: AWS::EFS::MountTarget
@@ -192,11 +215,24 @@ Resources:
               - !Ref EfsSecurityGroup
          SubnetId: !Select [ 1, !Ref SubnetIds ]
 
-
+  EfsMountTarget3:
+    Type: AWS::EFS::MountTarget
+    Properties:
+         FileSystemId: !Ref EfsFilesystem
+         SecurityGroups:
+              - !Ref EfsSecurityGroup
+         SubnetId: !Select [ 2, !Ref SubnetIds ]
 
 Outputs:
   EFSFilesystemId:
     Description: The ID of the EFS filesystem that has been created
     Value: !Ref EfsFilesystem
+    Export:
+      Name: !Sub ${AWS::StackName}-EFSFilesystemId
+  SecurityGroupId:
+    Description: Security group allowing access to filesystem
+    Value: !Ref EfsSecurityGroup
+    Export:
+      Name: !Sub ${AWS::StackName}-SecurityGroupId
 
 # TODO: Add conditionals based on length of array for the 2nd and third mount target
