@@ -15,11 +15,15 @@ Metadata:
       - Label:
           default: Networking and Access
         Parameters:
+          - VpcId
           - SubnetId
 
 Parameters:
+  VpcId:
+    Description: VPC where you will deploy the FSx filesystem
+    Type: AWS::EC2::VPC::Id
   SubnetId:
-    Description: Subnet
+    Description: Subnet where you will deploy the FSx filesystem (must be in same VPC)
     Type: AWS::EC2::Subnet::Id
   Capacity:
     Description: Storage capacity (GiB)
@@ -202,19 +206,20 @@ Resources:
 # ServiceToken - a pointer to the AWS Lambda function
 # NameFilter - the VPC parameter which serves as a filter
 
+
   VpcInfo:
     Type: Custom::VpcInfo
     Properties:
       ServiceToken: !GetAtt GetAttFromParam.Arn
-      NameFilter: !Ref SubnetId
+      NameFilter: !Ref VpcId
 
   # Security group
   FSxOpenZFSsecurityGroup:
     Type: AWS::EC2::SecurityGroup
     Properties: 
-      GroupDescription: Allow FSx for OpenZFS traffic from ParallelCluster
+      GroupDescription: Allow FSx for OpenZFS to mount to ParallelCluster
       GroupName: !Sub "${AWS::StackName}-FSx OpenZFS Cfn"
-      VpcId: !GetAtt VpcInfo.VpcId
+      VpcId: !Ref VpcId
       SecurityGroupIngress:
         - IpProtocol: tcp
           FromPort: 111
@@ -256,7 +261,7 @@ Resources:
       StorageType: SSD
       StorageCapacity: !Ref Capacity
       SecurityGroupIds:
-        - !GetAtt FSxOpenZFSsecurityGroup.GroupId
+        - !Ref FSxOpenZFSsecurityGroup
       SubnetIds:
         - !Ref SubnetId
       OpenZFSConfiguration:
@@ -271,13 +276,18 @@ Resources:
                   Options: ["rw"]
 
 Outputs:
-  FSxOpenZFSustreFilesystemId:
-    Description: The ID of the FSxOpenZFS filesystem that has been created
+  FSxOpenZFSFilesystemId:
+    Description: The ID of the FSxOpenZFS filesystem
     Value: !Ref FSxOpenZFSFilesystem
     Export:
       Name: !Sub ${AWS::StackName}-FSxOpenZFSFilesystemId
-  FSxOpenZFSustreSecurityGroupId:
-    Description: The ID of the security group allowing access to FSxOpenZFS filesystem
+  FSxOpenZFSRootVolumeId:
+    Description: The root volume ID for the FSxOpenZFS filesystem
+    Value: !GetAtt FSxOpenZFSFilesystem.RootVolumeId
+    Export:
+      Name: !Sub ${AWS::StackName}-FSxOpenZFSRootVolumeId
+  FSxOpenZFSSecurityGroupId:
+    Description: Security group allowing access to filesystem
     Value: !Ref FSxOpenZFSsecurityGroup
     Export:
       Name: !Sub ${AWS::StackName}-FSxOpenZFSSecurityGroupId
