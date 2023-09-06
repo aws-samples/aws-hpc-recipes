@@ -19,6 +19,7 @@ tags:
   - experimental
   - fsx
   - openzfs
+  - nfs
 # A list of file glob-like patterns used to filter any files or directories that should not be included in the S3 release. 
 build_ignore: []
 type: cloudformation

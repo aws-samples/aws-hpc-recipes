@@ -38,7 +38,7 @@ The S3 URL is useful anywhere you want to use native S3 commands for data access
 
 ### dir: Directory services
 
-#### demo_managed_ad ![tag](https://img.shields.io/badge/-experimental-%23D9534F) ![tag](https://img.shields.io/badge/-core-%23146EB4) 
+#### demo_managed_ad ![tag](https://img.shields.io/badge/-experimental-%23D9534F) 
 
 * **About**: Stand up a basic AWS Managed Microsoft AD for use with AWS ParallelCluster.
 * **Authors**: Matt Vaughn <mwvaughn@amazon.com>
@@ -68,7 +68,7 @@ The S3 URL is useful anywhere you want to use native S3 commands for data access
 *There are currently no recipes in this namespace.*
 ### net: Networking
 
-#### simple ![tag](https://img.shields.io/badge/-core-%23146EB4) 
+#### simple ![tag](https://img.shields.io/badge/-core-%23146EB4) ![tag](https://img.shields.io/badge/-vpc-%23AAB7B8) 
 
 * **About**: Default HPC networking stacks from the AWS ParallelCluster development team
 * **Authors**: AWS HPC Engineering
@@ -89,13 +89,13 @@ The S3 URL is useful anywhere you want to use native S3 commands for data access
 * **Authors**: Matt Vaughn <mwvaughn@amazon.com>
 * **Usage**: [README.md](pcluster/multi_user/README.md)
 
-#### pcui ![tag](https://img.shields.io/badge/-parallelcluster-%23FF9900) ![tag](https://img.shields.io/badge/-cognito-%23AAB7B8) ![tag](https://img.shields.io/badge/-lambda-%23AAB7B8) ![tag](https://img.shields.io/badge/-experimental-%23D9534F) 
+#### pcui ![tag](https://img.shields.io/badge/-parallelcluster-%23FF9900) ![tag](https://img.shields.io/badge/-cognito-%23AAB7B8) ![tag](https://img.shields.io/badge/-lambda-%23AAB7B8) 
 
 * **About**: Create an AWS ParallelCluster with ParallelClusterUI to manage it.
 * **Authors**: Matt Vaughn <mwvaughn@amazon.com>
 * **Usage**: [README.md](pcluster/pcui/README.md)
 
-#### multi_az ![tag](https://img.shields.io/badge/-parallelcluster-%23FF9900) ![tag](https://img.shields.io/badge/-experimental-%23D9534F) 
+#### multi_az ![tag](https://img.shields.io/badge/-parallelcluster-%23FF9900) 
 
 * **About**: Create a cluster that can launch instances in multiple Availability Zones
 * **Authors**: Matt Vaughn <mwvaughn@amazon.com>
@@ -107,7 +107,7 @@ The S3 URL is useful anywhere you want to use native S3 commands for data access
 * **Authors**: Matt Vaughn <mwvaughn@amazon.com>, AWS HPC Engineering
 * **Usage**: [README.md](pcluster/latest/README.md)
 * **Default**: [assets/launch.yaml](https://aws-hpc-recipes.s3.us-east-1.amazonaws.com/main/recipes/pcluster/latest/assets/launch.yaml)
-#### slurm_accounting ![tag](https://img.shields.io/badge/-parallelcluster-%23FF9900) ![tag](https://img.shields.io/badge/-rds-%237DCEA0) ![tag](https://img.shields.io/badge/-experimental-%23D9534F) 
+#### slurm_accounting ![tag](https://img.shields.io/badge/-parallelcluster-%23FF9900) ![tag](https://img.shields.io/badge/-rds-%237DCEA0) ![tag](https://img.shields.io/badge/-core-%23146EB4) 
 
 * **About**: Create an instance of AWS ParallelCluster with Slurm accounting enabled, using Amazon RDS as the DBMS.
 * **Authors**: Matt Vaughn <mwvaughn@amazon.com>
@@ -125,25 +125,25 @@ The S3 URL is useful anywhere you want to use native S3 commands for data access
 *There are currently no recipes in this namespace.*
 ### storage: Storage
 
+#### efs_simple ![tag](https://img.shields.io/badge/-core-%23146EB4) ![tag](https://img.shields.io/badge/-efs-%237DCEA0) ![tag](https://img.shields.io/badge/-nfs-%23AAB7B8) 
+
+* **About**: Create an Amazon EFS filesystem and mount targets in three Availability Zones.
+* **Authors**: Matt Vaughn <mwvaughn@amazon.com>
+* **Usage**: [README.md](storage/efs_simple/README.md)
+* **Default**: [assets/main.yml](https://aws-hpc-recipes.s3.us-east-1.amazonaws.com/main/recipes/storage/efs_simple/assets/main.yml)
 #### fsx_lustre_s3_dra ![tag](https://img.shields.io/badge/-fsx-%237DCEA0) ![tag](https://img.shields.io/badge/-lustre-%23AAB7B8) ![tag](https://img.shields.io/badge/-s3-%237DCEA0) ![tag](https://img.shields.io/badge/-experimental-%23D9534F) 
 
 * **About**: Demonstrates an FSx for Lustre filesystem with an S3 data repository association
 * **Authors**: Matt Vaughn <mwvaughn@amazon.com>
 * **Usage**: [README.md](storage/fsx_lustre_s3_dra/README.md)
 
-#### fsx_lustre ![tag](https://img.shields.io/badge/-core-%23146EB4) ![tag](https://img.shields.io/badge/-fsx-%237DCEA0) ![tag](https://img.shields.io/badge/-experimental-%23D9534F) 
+#### fsx_lustre ![tag](https://img.shields.io/badge/-core-%23146EB4) ![tag](https://img.shields.io/badge/-fsx-%237DCEA0) ![tag](https://img.shields.io/badge/-lustre-%23AAB7B8) 
 
 * **About**: Creates either a scratch or persistent FSxL filesystem and the relevant security groups for use with ParallelCluster.
 * **Authors**: Matt Vaughn <mwvaughn@amazon.com>
 * **Usage**: [README.md](storage/fsx_lustre/README.md)
 
-#### simple_efs ![tag](https://img.shields.io/badge/-core-%23146EB4) ![tag](https://img.shields.io/badge/-experimental-%23D9534F) 
-
-* **About**: Provision a basic Amazon EFS filesystem
-* **Authors**: Matt Vaughn <mwvaughn@amazon.com>
-* **Usage**: [README.md](storage/simple_efs/README.md)
-* **Default**: [assets/main.yml](https://aws-hpc-recipes.s3.us-east-1.amazonaws.com/main/recipes/storage/simple_efs/assets/main.yml)
-#### fsx_openzfs ![tag](https://img.shields.io/badge/-experimental-%23D9534F) ![tag](https://img.shields.io/badge/-fsx-%237DCEA0) ![tag](https://img.shields.io/badge/-openzfs-%23AAB7B8) 
+#### fsx_openzfs ![tag](https://img.shields.io/badge/-experimental-%23D9534F) ![tag](https://img.shields.io/badge/-fsx-%237DCEA0) ![tag](https://img.shields.io/badge/-openzfs-%23AAB7B8) ![tag](https://img.shields.io/badge/-nfs-%23AAB7B8) 
 
 * **About**: Provision an FSx for OpenZFS filesystem and relevant security groups for use with ParallelCluster
 * **Authors**: Matt Vaughn <mwvaughn@amazon.com>
