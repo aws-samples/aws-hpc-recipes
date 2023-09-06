@@ -31,5 +31,6 @@ This template exports several variables, namedspaced by stack name. This lets yo
 
 * VPC and Subnets - No Charge
 * Internet Gateway - No charge, but you pay a small amount for traffic passing out of the VPC.
-* NAT Gateway - There will be a region-specific hourly cost for the NAT gatway, plus a charge for data sent through the gateway. See [AWS VPC pricing](https://aws.amazon.com/vpc/pricing/) for details.
+* NAT Gateway - There is a region-specific hourly cost for the NAT gatway, plus a charge for data sent through the gateway.
 
+See [AWS VPC pricing](https://aws.amazon.com/vpc/pricing/) for details.
