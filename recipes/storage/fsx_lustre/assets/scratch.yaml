@@ -14,11 +14,15 @@ Metadata:
       - Label:
           default: Networking and Access
         Parameters:
+          - VpcId
           - SubnetId
 
 Parameters:
+  VpcId:
+    Description: VPC where you will deploy the FSx filesystem
+    Type: AWS::EC2::VPC::Id
   SubnetId:
-    Description: Subnet where you will deploy the FSx filesystem
+    Description: Subnet where you will deploy the FSx filesystem (must be in same VPC)
     Type: AWS::EC2::Subnet::Id
   Capacity:
     Description: Storage capacity in GiB (1200 or increments of 2400)
@@ -181,11 +185,12 @@ Resources:
 # ServiceToken - a pointer to the AWS Lambda function
 # NameFilter - the VPC parameter which serves as a filter
 
+
   VpcInfo:
     Type: Custom::VpcInfo
     Properties:
       ServiceToken: !GetAtt GetAttFromParam.Arn
-      NameFilter: !Ref SubnetId
+      NameFilter: !Ref VpcId
 
   FSxLsecurityGroup:
     Type: AWS::EC2::SecurityGroup
