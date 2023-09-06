@@ -121,7 +121,7 @@ Resources:
         HeadNode:
           InstanceType: !FindInMap [ InstanceTypeForArchitecture, HeadNode, !Ref Architecture ]
           Networking:
-            SubnetId: {"Fn::Select": [0, { "Fn::Split" : [",", {"Fn::ImportValue" : {"Fn::Sub" : "${NetworkStackNameParameter}-PublicSubnet"}}] }]}
+            SubnetId: {"Fn::Select": [0, { "Fn::Split" : [",", {"Fn::ImportValue" : {"Fn::Sub" : "${NetworkStackNameParameter}-PublicSubnets"}}] }]}
           Ssh:
             KeyName: !Ref KeyName
             AllowedIps: !Ref AllowedIps
