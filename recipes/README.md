@@ -74,10 +74,10 @@ The S3 URL is useful anywhere you want to use native S3 commands for data access
 * **Authors**: AWS HPC Engineering
 * **Usage**: [README.md](net/simple/README.md)
 * **Default**: [assets/public-private.cfn.json](https://aws-hpc-recipes.s3.us-east-1.amazonaws.com/main/recipes/net/simple/assets/public-private.cfn.json)
-#### hpc_large_scale ![tag](https://img.shields.io/badge/-experimental-%23D9534F) ![tag](https://img.shields.io/badge/-core-%23146EB4) 
+#### hpc_large_scale ![tag](https://img.shields.io/badge/-core-%23146EB4) ![tag](https://img.shields.io/badge/-vpc-%23AAB7B8) 
 
-* **About**: Setup for large scale computations on AWS across multiple regions
-* **Authors**: Pierre-Yves Aquilanti <pierreya@amazon.com>, Matt Vaughn <mwvaughn@amazon.com>
+* **About**: Setup for large scale computations on AWS.
+* **Authors**: Matt Vaughn <mwvaughn@amazon.com>
 * **Usage**: [README.md](net/hpc_large_scale/README.md)
 * **Default**: [assets/main.yml](https://aws-hpc-recipes.s3.us-east-1.amazonaws.com/main/recipes/net/hpc_large_scale/assets/main.yml)
 
@@ -131,7 +131,7 @@ The S3 URL is useful anywhere you want to use native S3 commands for data access
 * **Authors**: Matt Vaughn <mwvaughn@amazon.com>
 * **Usage**: [README.md](storage/fsx_lustre_s3_dra/README.md)
 
-#### fsx_lustre ![tag](https://img.shields.io/badge/-core-%23146EB4) ![tag](https://img.shields.io/badge/-fsx-%237DCEA0) ![tag](https://img.shields.io/badge/-parallelcluster-%23FF9900) 
+#### fsx_lustre ![tag](https://img.shields.io/badge/-core-%23146EB4) ![tag](https://img.shields.io/badge/-fsx-%237DCEA0) ![tag](https://img.shields.io/badge/-experimental-%23D9534F) 
 
 * **About**: Creates either a scratch or persistent FSxL filesystem and the relevant security groups for use with ParallelCluster.
 * **Authors**: Matt Vaughn <mwvaughn@amazon.com>
@@ -143,7 +143,7 @@ The S3 URL is useful anywhere you want to use native S3 commands for data access
 * **Authors**: Matt Vaughn <mwvaughn@amazon.com>
 * **Usage**: [README.md](storage/simple_efs/README.md)
 * **Default**: [assets/main.yml](https://aws-hpc-recipes.s3.us-east-1.amazonaws.com/main/recipes/storage/simple_efs/assets/main.yml)
-#### fsx_openzfs ![tag](https://img.shields.io/badge/-community-%2317202A) ![tag](https://img.shields.io/badge/-experimental-%23D9534F) ![tag](https://img.shields.io/badge/-efs-%237DCEA0) 
+#### fsx_openzfs ![tag](https://img.shields.io/badge/-experimental-%23D9534F) ![tag](https://img.shields.io/badge/-fsx-%237DCEA0) ![tag](https://img.shields.io/badge/-openzfs-%23AAB7B8) 
 
 * **About**: Provision an FSx for OpenZFS filesystem and relevant security groups for use with ParallelCluster
 * **Authors**: Matt Vaughn <mwvaughn@amazon.com>
