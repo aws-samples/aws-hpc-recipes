@@ -1,5 +1,5 @@
 AWSTemplateFormatVersion: '2010-09-09'
-Description: Creates a PERSISENT_2 FSxL filesystem (plus the relevant security group) and associates it with an S3 bucket via a Data Repository Assocation. 
+Description: Creates a persistent FSxL filesystem (plus the relevant security group) and associates it with an S3 bucket via a Data Repository Assocation. 
 
 ### Stack metadata
 Metadata:
@@ -21,11 +21,15 @@ Metadata:
       - Label:
           default: Networking and Access
         Parameters:
+          - VpcId
           - SubnetId
 
 Parameters:
+  VpcId:
+    Description: VPC where you will deploy the FSx filesystem
+    Type: AWS::EC2::VPC::Id
   SubnetId:
-    Description: Subnet where you will deploy the FSx filesystem
+    Description: Subnet where you will deploy the FSx filesystem (must be in same VPC)
     Type: AWS::EC2::Subnet::Id
   Capacity:
     Description: Storage capacity in GiB (1200 or increments of 2400)
@@ -223,7 +227,7 @@ Resources:
     Type: Custom::VpcInfo
     Properties:
       ServiceToken: !GetAtt GetAttFromParam.Arn
-      NameFilter: !Ref SubnetId
+      NameFilter: !Ref VpcId
 
   FSxLsecurityGroup:
     Type: AWS::EC2::SecurityGroup
@@ -231,7 +235,7 @@ Resources:
     UpdateReplacePolicy: Delete
     Properties: 
       GroupDescription: Allows FSx for Lustre traffic from ParallelCluster
-      GroupName: !Sub "${AWS::StackName}-FSx Lustre Cfn"
+      GroupName: !Sub "${AWS::StackName}-FSx-Lustre-Cfn"
       VpcId: !GetAtt VpcInfo.VpcId
       SecurityGroupIngress:
         - IpProtocol: tcp
@@ -271,8 +275,8 @@ Resources:
       DataRepositoryPath: !Ref DataRepositoryPath
       FileSystemId: !Ref FSxLFilesystem
       FileSystemPath: !Ref FileSystemPath
-      # Set up a one-way sync with the S3 bucket
       S3: 
+        # Sets up a S3=>Lustre sync
         AutoImportPolicy:
           Events:
             - NEW
@@ -289,11 +293,13 @@ Resources:
       FileSystemPath: !Ref FileSystemPath
       # Set up a two-way sync with the S3 bucket
       S3: 
+        # Sets up a Lustre=>S3 sync
         AutoExportPolicy:
           Events:
             - NEW
             - CHANGED
             - DELETED
+        # Sets up a S3=>Lustre sync
         AutoImportPolicy:
           Events:
             - NEW
