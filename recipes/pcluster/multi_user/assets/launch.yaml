@@ -25,8 +25,11 @@ Metadata:
           - UserName
           - UserPassword
 
-Parameters:
+Conditions:
+  GovCloud: !Equals [!Ref AWS::Partition, 'aws-us-gov']
+  China: !Equals [!Ref AWS::Partition, 'aws-cn']
 
+Parameters:
   NetworkStackNameParameter:
     Description: Name of the HPC large-scale networking stack
     Type: String
@@ -221,6 +224,15 @@ Outputs:
     Value: !GetAtt [ PclusterCluster, headNode.publicIpAddress ]
     Export:
       Name: !Sub ${AWS::StackName}-HeadNodeIp
+  SystemManagerUrl:
+    Description: URL to access the HeadNode via SystemManager
+    Value: !Sub
+      - https://${ConsoleDomain}/systems-manager/session-manager/${InstanceId}?region=${AWS::Region}
+      - { ConsoleDomain: !If [ GovCloud, 'console.amazonaws-us-gov.com', !If [ China, 'console.amazonaws.cn', !Sub '${AWS::Region}.console.aws.amazon.com']],
+          InstanceId: !GetAtt [ PclusterCluster, headNode.instanceId ]
+        }
+    Export:
+      Name: !Sub ${AWS::StackName}-SystemManagerUrl
   ValidationMessages:
     Description: Warnings from cluster create or update operations.
     Value: !GetAtt PclusterCluster.validationMessages

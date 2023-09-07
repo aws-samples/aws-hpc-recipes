@@ -21,7 +21,7 @@ Creates a multi-user instance of AWS ParallelCluster using AWS Managed AD as the
 
 ### Access the Cluster
 
-You can always use the administrator SSH keypair or Amazon Systems Manager to log into cluster. The point of this exercise is to demonstrate access using a username and password managed by a directory service. 
+You can always use the administrator SSH keypair or Amazon Systems Manager to log into cluster. However, the point of this exercise is to demonstrate access using a username and password managed by a directory service. 
 
 Try it out with `ssh UserName@HeadNodeIp`. You will be prompted for a password - type in the value you provided for `UserPassword`. You should see something similar to the text below.
 
