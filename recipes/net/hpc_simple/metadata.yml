@@ -1,10 +1,10 @@
 ---
 # The name of the recipe. This has the same character requirements as namespace.
-name: simple
+name: hpc_simple
 # The version of the recipe. Must be compatible with semantic versioning.
 version: "1.0.0"
 # A short summary description of the recipe
-description: Default HPC networking stacks from the AWS ParallelCluster development team
+description: Simple HPC networking stacks that can create or use an existing VPC.
 # The path to the README for the recipe relative to its root
 readme: README.md
 # Optional URL for external documentation
@@ -14,6 +14,7 @@ homepage:
 # A list of recipe content authors
 authors:
   - AWS HPC Engineering
+  - Matthew Vaughn <mwvaughn@amazon.com>
 # A list of tags you want to associate with the collection for indexing/searching. Tags have the same character requirements as namespace.
 tags:
   - core
@@ -21,4 +22,4 @@ tags:
 # A list of file glob-like patterns used to filter any files or directories that should not be included in the S3 release. 
 build_ignore: []
 type: cloudformation
-default: assets/public-private.cfn.json
+default: assets/public-private.yaml

@@ -1,0 +1,195 @@
+---
+AWSTemplateFormatVersion: '2010-09-09'
+Description: Create a single public subnet in a VPC. Can create a VPC or use an existing one.
+
+### Stack metadata
+Metadata:
+  AWS::CloudFormation::Interface:
+    ParameterGroups:
+      - Label:
+          default: VPC
+        Parameters:
+          - VpcId
+          - InternetGatewayId
+          - AvailabilityZone
+          - VpcCIDR
+      - Label:
+          default: Subnets
+        Parameters:
+          - PublicCIDR
+
+Parameters:
+  AvailabilityZone:
+    Description: "(Optional) Availability Zone in which you want to create your subnet(s). Required if you opt to create a VPC."
+    Type: String
+  InternetGatewayId:
+    Description: "(Optional) The id of the Internet Gateway. Required if using an existing VPC."
+    Type: String
+    Default: ''
+  PublicCIDR:
+    AllowedPattern: "\\d{1,3}\\.\\d{1,3}\\.\\d{1,3}\\.\\d{1,3}/(1[6-9]|2[0-9]|3[0-2])$"
+    Description: CIDR block for the public subnet
+    Default: 10.0.0.0/16
+    Type: String
+  VpcId:
+    Description: "(Optional) The VPC to create subnets in. Leave blank to create a new VPC."
+    Default: ''
+    Type: String
+  VpcCIDR:
+    Description: "CIDR block for the VPC if it will be created. Required if you opt to create a VPC."
+    Default: 10.0.0.0/16
+    Type: String
+
+Conditions:
+  CreateInternetGateway:
+    Fn::Equals:
+    - Ref: InternetGatewayId
+    - ''
+  CreateVpc:
+    Fn::Equals:
+    - Ref: VpcId
+    - ''
+  ExistingInternetGateway:
+    Fn::Not:
+    - Fn::Equals:
+      - Ref: InternetGatewayId
+      - ''
+
+Resources:
+  Vpc:
+    Condition: CreateVpc
+    Type: AWS::EC2::VPC
+    Properties:
+      CidrBlock:
+        Ref: VpcCIDR
+      EnableDnsHostnames: true
+  DefaultRouteDependsOnPublic:
+    Condition: CreateInternetGateway
+    DependsOn: VPCGatewayAttachment
+    Properties:
+      DestinationCidrBlock: 0.0.0.0/0
+      GatewayId:
+        Fn::If:
+        - CreateInternetGateway
+        - Ref: InternetGateway
+        - Ref: InternetGatewayId
+      RouteTableId:
+        Ref: RouteTablePublic
+    Type: AWS::EC2::Route
+  DefaultRouteNoDependsOnPublic:
+    Condition: ExistingInternetGateway
+    Properties:
+      DestinationCidrBlock: 0.0.0.0/0
+      GatewayId:
+        Fn::If:
+        - CreateInternetGateway
+        - Ref: InternetGateway
+        - Ref: InternetGatewayId
+      RouteTableId:
+        Ref: RouteTablePublic
+    Type: AWS::EC2::Route
+  InternetGateway:
+    Condition: CreateInternetGateway
+    Properties:
+      Tags:
+      - Key: Name
+        Value: parallelcluster:internet-gateway
+      - Key: Stack
+        Value:
+          Ref: AWS::StackId
+    Type: AWS::EC2::InternetGateway
+  Public:
+    Properties:
+      AvailabilityZone:
+        Ref: AvailabilityZone
+      CidrBlock:
+        Ref: PublicCIDR
+      MapPublicIpOnLaunch: true
+      Tags:
+      - Key: Name
+        Value: parallelcluster:public-subnet
+      - Key: Stack
+        Value:
+          Ref: AWS::StackId
+      VpcId:
+        Fn::If:
+        - CreateVpc
+        - Ref: Vpc
+        - Ref: VpcId
+    Type: AWS::EC2::Subnet
+  RouteAssociationPublic:
+    Properties:
+      RouteTableId:
+        Ref: RouteTablePublic
+      SubnetId:
+        Ref: Public
+    Type: AWS::EC2::SubnetRouteTableAssociation
+  RouteTablePublic:
+    Properties:
+      Tags:
+      - Key: Name
+        Value: parallelcluster:route-table-public
+      - Key: Stack
+        Value:
+          Ref: AWS::StackId
+      VpcId:
+        Fn::If:
+        - CreateVpc
+        - Ref: Vpc
+        - Ref: VpcId
+    Type: AWS::EC2::RouteTable
+  VPCGatewayAttachment:
+    Condition: CreateInternetGateway
+    Properties:
+      InternetGatewayId:
+        Ref: InternetGateway
+      VpcId:
+        Fn::If:
+        - CreateVpc
+        - Ref: Vpc
+        - Ref: VpcId
+    Type: AWS::EC2::VPCGatewayAttachment
+
+Outputs:
+  VPC:
+    Value:
+      Fn::If:
+        - CreateVpc
+        - Ref: Vpc
+        - Ref: VpcId
+    Description: ID of the VPC
+    Export:
+      Name: !Sub ${AWS::StackName}-VPC
+  PublicSubnets:
+    Value: !Join
+      - ','
+      - - !Ref Public
+    Description: ID of the public subnets
+    Export:
+      Name: !Sub ${AWS::StackName}-PublicSubnets
+  PrivateSubnets:
+    Value: !Join
+      - ','
+      - - ''
+    Description: ID of the private subnets
+    Export:
+      Name: !Sub ${AWS::StackName}-PrivateSubnets
+  DefaultPrivateSubnet:
+    Description: The ID of a default private subnet
+    Value: ''
+    Export:
+      Name: !Sub "${AWS::StackName}-DefaultPrivateSubnet"
+  DefaultPublicSubnet:
+    Description: The ID of a default public subnet
+    Value: !Ref Public
+    Export:
+      Name: !Sub "${AWS::StackName}-DefaultPublicSubnet"
+  InternetGatewayId:
+    Description: The ID of the Internet Gateway
+    Value: 
+      Fn::If:
+        - CreateInternetGateway
+        - Ref: InternetGateway
+        - Ref: InternetGatewayId
+    Export:
+      Name: !Sub "${AWS::StackName}-InternetGateway"
