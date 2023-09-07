@@ -227,20 +227,6 @@ Outputs:
     Description: ID of the VPC
     Export:
       Name: !Sub ${AWS::StackName}-VPC
-  PublicSubnets:
-    Value: !Join
-      - ','
-      - - !Ref Public
-    Description: ID of the public subnets
-    Export:
-      Name: !Sub ${AWS::StackName}-PublicSubnets
-  PrivateSubnets:
-    Value: !Join
-      - ','
-      - - !Ref Private
-    Description: ID of the private subnets
-    Export:
-      Name: !Sub ${AWS::StackName}-PrivateSubnets
   DefaultPrivateSubnet:
     Description: The ID of a default private subnet
     Value: !Ref Private
