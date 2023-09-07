@@ -4,7 +4,7 @@ name: hpc_large_scale
 # The version of the recipe. Must be compatible with semantic versioning.
 version: "1.0.0"
 # A short summary description of the recipe
-description: Setup for large scale computations on AWS. 
+description: Networking configuration for large-scale HPC on AWS. Creates a new VPC.
 # The path to the README for the recipe relative to its root directory.
 readme: README.md
 # Optional URL for external documentation

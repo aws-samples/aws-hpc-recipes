@@ -19,10 +19,10 @@ Once your networking stack has been created, you may wish to [activate terminati
 
 These templates export several variables, namedspaced by stack name. This lets you import them into other stacks.
 
-* VPC - the provisioned VPC
+* VPC - the pre-existing or provisioned VPC
 * DefaultPublicSubnet - the public subnet in the VPC
 * DefaultPrivateSubnet - the private subnet in the VPC (empty if non-existent)
-* InternetGatewayId - the internet gateway for the VPC
+* InternetGatewayId - the pre-existing or provisioned internet gateway for the VPC
 
 ## Cost Estimate
 

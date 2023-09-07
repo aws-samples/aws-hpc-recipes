@@ -4,7 +4,7 @@ name: hpc_simple
 # The version of the recipe. Must be compatible with semantic versioning.
 version: "1.0.0"
 # A short summary description of the recipe
-description: Simple HPC networking stacks that can create or use an existing VPC.
+description: Networking configuration for HPC on AWS. Can use an existing VPC or create a new one. 
 # The path to the README for the recipe relative to its root
 readme: README.md
 # Optional URL for external documentation
