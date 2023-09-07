@@ -24,10 +24,10 @@ The S3 URL is useful anywhere you want to use native S3 commands for data access
 
 ----
 
-### aws: General AWS (default)
+### :arrow_right: aws: General AWS (default)
 
 *There are currently no recipes in this namespace.*
-### db: Database management
+### :arrow_right: db: Database management
 
 #### slurm_accounting_db ![tag](https://img.shields.io/badge/-core-%23146EB4) ![tag](https://img.shields.io/badge/-rds-%237DCEA0) ![tag](https://img.shields.io/badge/-parallelcluster-%23FF9900) 
 
@@ -36,7 +36,7 @@ The S3 URL is useful anywhere you want to use native S3 commands for data access
 * **Usage**: [README.md](db/slurm_accounting_db/README.md)
 * **Default**: [assets/serverless-database.yaml](https://aws-hpc-recipes.s3.us-east-1.amazonaws.com/main/recipes/db/slurm_accounting_db/assets/serverless-database.yaml)
 
-### dir: Directory services
+### :arrow_right: dir: Directory services
 
 #### demo_managed_ad ![tag](https://img.shields.io/badge/-experimental-%23D9534F) 
 
@@ -45,7 +45,7 @@ The S3 URL is useful anywhere you want to use native S3 commands for data access
 * **Usage**: [README.md](dir/demo_managed_ad/README.md)
 * **Default**: [assets/main.yaml](https://aws-hpc-recipes.s3.us-east-1.amazonaws.com/main/recipes/dir/demo_managed_ad/assets/main.yaml)
 
-### env: User environment
+### :arrow_right: env: User environment
 
 #### lmod ![tag](https://img.shields.io/badge/-experimental-%23D9534F) ![tag](https://img.shields.io/badge/-community-%2317202A) 
 
@@ -60,13 +60,13 @@ The S3 URL is useful anywhere you want to use native S3 commands for data access
 * **Usage**: [README.md](env/spack/README.md)
 * **Default**: [assets/postinstall.sh](https://aws-hpc-recipes.s3.us-east-1.amazonaws.com/main/recipes/env/spack/assets/postinstall.sh)
 
-### iam: Identity Access and Management
+### :arrow_right: iam: Identity Access and Management
 
 *There are currently no recipes in this namespace.*
-### ide: IDEs and GUIs
+### :arrow_right: ide: IDEs and GUIs
 
 *There are currently no recipes in this namespace.*
-### net: Networking
+### :arrow_right: net: Networking
 
 #### hpc_simple ![tag](https://img.shields.io/badge/-core-%23146EB4) ![tag](https://img.shields.io/badge/-vpc-%23AAB7B8) 
 
@@ -81,7 +81,7 @@ The S3 URL is useful anywhere you want to use native S3 commands for data access
 * **Usage**: [README.md](net/hpc_large_scale/README.md)
 * **Default**: [assets/main.yaml](https://aws-hpc-recipes.s3.us-east-1.amazonaws.com/main/recipes/net/hpc_large_scale/assets/main.yaml)
 
-### pcluster: AWS ParallelCluster
+### :arrow_right: pcluster: AWS ParallelCluster
 
 #### multi_user ![tag](https://img.shields.io/badge/-parallelcluster-%23FF9900) ![tag](https://img.shields.io/badge/-activedirectory-%23AAB7B8) ![tag](https://img.shields.io/badge/-secretsmanager-%237DCEA0) ![tag](https://img.shields.io/badge/-experimental-%23D9534F) 
 
@@ -114,10 +114,10 @@ The S3 URL is useful anywhere you want to use native S3 commands for data access
 * **Usage**: [README.md](pcluster/slurm_accounting/README.md)
 
 
-### scheduler: HPC scheduler
+### :arrow_right: scheduler: HPC scheduler
 
 *There are currently no recipes in this namespace.*
-### storage: Storage
+### :arrow_right: storage: Storage
 
 #### efs_simple ![tag](https://img.shields.io/badge/-core-%23146EB4) ![tag](https://img.shields.io/badge/-efs-%237DCEA0) ![tag](https://img.shields.io/badge/-nfs-%23AAB7B8) 
 
