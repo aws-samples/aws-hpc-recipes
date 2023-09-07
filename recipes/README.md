@@ -68,15 +68,15 @@ The S3 URL is useful anywhere you want to use native S3 commands for data access
 *There are currently no recipes in this namespace.*
 ### net: Networking
 
-#### simple ![tag](https://img.shields.io/badge/-core-%23146EB4) ![tag](https://img.shields.io/badge/-vpc-%23AAB7B8) 
+#### hpc_simple ![tag](https://img.shields.io/badge/-core-%23146EB4) ![tag](https://img.shields.io/badge/-vpc-%23AAB7B8) 
 
-* **About**: Default HPC networking stacks from the AWS ParallelCluster development team
-* **Authors**: AWS HPC Engineering
-* **Usage**: [README.md](net/simple/README.md)
-* **Default**: [assets/public-private.cfn.json](https://aws-hpc-recipes.s3.us-east-1.amazonaws.com/main/recipes/net/simple/assets/public-private.cfn.json)
+* **About**: Networking configuration for HPC on AWS. Can use an existing VPC or create a new one.
+* **Authors**: AWS HPC Engineering, Matthew Vaughn <mwvaughn@amazon.com>
+* **Usage**: [README.md](net/hpc_simple/README.md)
+* **Default**: [assets/public-private.yaml](https://aws-hpc-recipes.s3.us-east-1.amazonaws.com/main/recipes/net/hpc_simple/assets/public-private.yaml)
 #### hpc_large_scale ![tag](https://img.shields.io/badge/-core-%23146EB4) ![tag](https://img.shields.io/badge/-vpc-%23AAB7B8) 
 
-* **About**: Setup for large scale computations on AWS.
+* **About**: Networking configuration for large-scale HPC on AWS. Creates a new VPC.
 * **Authors**: Matt Vaughn <mwvaughn@amazon.com>
 * **Usage**: [README.md](net/hpc_large_scale/README.md)
 * **Default**: [assets/main.yml](https://aws-hpc-recipes.s3.us-east-1.amazonaws.com/main/recipes/net/hpc_large_scale/assets/main.yml)
