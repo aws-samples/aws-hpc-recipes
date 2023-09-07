@@ -191,12 +191,14 @@ Resources:
     Type: AWS::EC2::SecurityGroup
     Properties: 
       GroupDescription: Allow EFS to mount to ParallelCluster
-      GroupName: !Sub "${AWS::StackName}-Efs Cfn"
       VpcId: !Ref VpcId
       SecurityGroupIngress:
         - IpProtocol: tcp
           FromPort: 2049
           ToPort: 2049
+          CidrIp: !GetAtt VpcInfo.CidrBlock
+      SecurityGroupEgress:
+        - IpProtocol: -1
           CidrIp: !GetAtt VpcInfo.CidrBlock
 
   EfsMountTarget1:

@@ -207,7 +207,6 @@ Resources:
     UpdateReplacePolicy: Delete
     Properties: 
       GroupDescription: Allows FSx for Lustre traffic from ParallelCluster
-      GroupName: !Sub "${AWS::StackName}-FSx Lustre Cfn"
       VpcId: !GetAtt VpcInfo.VpcId
       SecurityGroupIngress:
         - IpProtocol: tcp
@@ -217,6 +216,9 @@ Resources:
         - IpProtocol: tcp
           FromPort: 1021
           ToPort: 1023
+          CidrIp: !GetAtt VpcInfo.CidrBlock
+      SecurityGroupEgress:
+        - IpProtocol: -1
           CidrIp: !GetAtt VpcInfo.CidrBlock
 
   FSxLFilesystem:

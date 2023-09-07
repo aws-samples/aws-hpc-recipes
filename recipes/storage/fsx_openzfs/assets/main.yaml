@@ -217,8 +217,7 @@ Resources:
   FSxOpenZFSsecurityGroup:
     Type: AWS::EC2::SecurityGroup
     Properties: 
-      GroupDescription: Allow FSx for OpenZFS to mount to ParallelCluster
-      GroupName: !Sub "${AWS::StackName}-FSx OpenZFS Cfn"
+      GroupDescription: Allow FSx for OpenZFS access for ParallelCluster
       VpcId: !Ref VpcId
       SecurityGroupIngress:
         - IpProtocol: tcp
@@ -251,6 +250,9 @@ Resources:
           ToPort: 20003
           CidrIp: !GetAtt VpcInfo.CidrBlock
           Description: NFS mount, status monitor, and lock daemon
+      SecurityGroupEgress:
+        - IpProtocol: -1
+          CidrIp: !GetAtt VpcInfo.CidrBlock
 
   FSxOpenZFSFilesystem:
     Type: AWS::FSx::FileSystem
