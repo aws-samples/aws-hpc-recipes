@@ -15,15 +15,14 @@ Create an instance of the latest AWS ParallelCluster release, after configuring 
 
 ### Access the Cluster
 
-If you want to use SSH to access the cluster, you will need its public IP (from above). Using your local terminal, connect via SSH like so: `ssh -i KeyPair.pem ec2-user@HeadNodeIp` where `KeyPair.pem` is the path to the EC2 keypair you specified when launcing the cluster and `HeadNodeIp` is the IP address from above. If you chose one of the Ubuntu operating systems for your cluster, the login name may be `ubuntu` rather than `ec2-user`.
+To SSH into the cluster, you will need its public IP (from above). Using your local terminal, connect via SSH like so: `ssh -i KeyPair.pem ec2-user@HeadNodeIp` where `KeyPair.pem` is the path to the EC2 keypair you specified when launcing the cluster and `HeadNodeIp` is the IP address from above. If you chose one of the Ubuntu operating systems for your cluster, the login name may be `ubuntu` rather than `ec2-user`.
 
-You can also use AWS Systems Manager to access the cluster. Navigate to the **Instances** panel in the [Amazon EC2 Console](https://console.aws.amazon.com/ec2/home?region=us-east-2#Instances). You should see an instance named **HeadNode** - this is your cluster's access node. Select the instance, then choose **Actions** followed by **Connect**. On the **Connect to instance** page, navigate to **Session Manager** then choose **Connect**. A web-based terminal will launch and connect to the instance. 
-
-## Cleaning Up
-
-WHen you are done using your cluster, you can delete it and all its associated resources by navigating to the AWS CloudFormation console and deleting the **latest-pcluster** stack. 
+You can also use AWS Systems Manager to access the cluster. You can follow the link found in **Outputs > SystemManagerUrl**. Or, you can navigate to the **Instances** panel in the [Amazon EC2 Console](https://console.aws.amazon.com/ec2/home?region=us-east-2#Instances). Find the instance named **HeadNode** - this is your cluster's access node. Select that instance, then choose **Actions** followed by **Connect**. On the **Connect to instance** page, navigate to **Session Manager** then choose **Connect**.
 
 ## Cost Estimate
 
 Costs for a cluster created using this recipe will vary depending on the cluster architecture, since different instances types will be selected depending which one you choose. It will also vary based on how many jobs you submit to the cluster, since ParallelCluster can launch instances to run them. Based on on-demand pricing for the relevant instances, it should cost between $10 to $25.00 to run the cluster for a week, submitting a handful of jobs. 
 
+## Cleaning Up
+
+When you are done using your cluster, you can delete it and all its associated resources by navigating to the AWS CloudFormation console and deleting the **latest-pcluster** stack. 

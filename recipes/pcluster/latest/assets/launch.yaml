@@ -24,8 +24,11 @@ Metadata:
         Parameters:
           - ClusterName
 
-Parameters:
+Conditions:
+  GovCloud: !Equals [!Ref AWS::Partition, 'aws-us-gov']
+  China: !Equals [!Ref AWS::Partition, 'aws-cn']
 
+Parameters:
   ClusterName:
     Description: Name of cluster. Note this must be different than the stack name.
     Type: String
@@ -114,12 +117,12 @@ Resources:
     UpdateReplacePolicy: Delete
     Properties:
       Parameters:
-        InternetGatewayId: ''
+        VpcCIDR: 10.0.0.0/16
         PublicCIDR: 10.0.0.0/24
         PrivateCIDR: 10.0.16.0/20
         AvailabilityZone: !Ref AvailabilityZone
       TemplateURL: !Sub
-        - https://aws-hpc-recipes.s3.${AWS::Region}.${AWS::URLSuffix}/${Version}/recipes/net/simple/assets/public-private.cfn.json
+        - https://aws-hpc-recipes.s3.us-east-1.${AWS::URLSuffix}/${Version}/recipes/net/hpc_simple/assets/public-private.yaml
         - { Version: !FindInMap [Recipes, Constants, Version] }
       TimeoutInMinutes: 10
 
@@ -136,7 +139,7 @@ Resources:
         HeadNode:
           InstanceType: !FindInMap [ InstanceTypeForArchitecture, HeadNode, !Ref Architecture ]
           Networking:
-            SubnetId: !GetAtt [ PclusterVpc , Outputs.PublicSubnetId ]
+            SubnetId: !GetAtt [ PclusterVpc , Outputs.DefaultPublicSubnet ]
           Ssh:
             KeyName: !Ref KeyName
             AllowedIps: !Ref AllowedIps
@@ -156,7 +159,7 @@ Resources:
               MaxCount: !Ref ComputeInstanceMax
             Networking:
               SubnetIds:
-              - !GetAtt [ PclusterVpc , Outputs.PublicSubnetId ]
+              - !GetAtt [ PclusterVpc , Outputs.DefaultPrivateSubnet ]
 
 Outputs:
   HeadNodeIp:
@@ -164,6 +167,15 @@ Outputs:
     Value: !GetAtt [ PclusterCluster, headNode.publicIpAddress ]
     Export:
       Name: !Sub ${AWS::StackName}-HeadNodeIp
+  SystemManagerUrl:
+    Description: URL to access the HeadNode via SystemManager
+    Value: !Sub
+      - https://${ConsoleDomain}/systems-manager/session-manager/${InstanceId}?region=${AWS::Region}
+      - { ConsoleDomain: !If [ GovCloud, 'console.amazonaws-us-gov.com', !If [ China, 'console.amazonaws.cn', !Sub '${AWS::Region}.console.aws.amazon.com']],
+          InstanceId: !GetAtt [ PclusterCluster, headNode.instanceId ]
+        }
+    Export:
+      Name: !Sub ${AWS::StackName}-SystemManagerUrl
   ValidationMessages:
     Description: Warnings from cluster create or update operations.
     Value: !GetAtt PclusterCluster.validationMessages

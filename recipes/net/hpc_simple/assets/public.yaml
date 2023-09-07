@@ -160,11 +160,6 @@ Outputs:
     Description: ID of the VPC
     Export:
       Name: !Sub ${AWS::StackName}-VPC
-  DefaultPrivateSubnet:
-    Description: The ID of a default private subnet
-    Value: ''
-    Export:
-      Name: !Sub "${AWS::StackName}-DefaultPrivateSubnet"
   DefaultPublicSubnet:
     Description: The ID of a default public subnet
     Value: !Ref Public
