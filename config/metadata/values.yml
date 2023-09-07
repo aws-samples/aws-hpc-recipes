@@ -13,16 +13,15 @@ namespace:
   storage: Storage
 # List of default tags and their colors
 tags:
+  batch: orange
   core: blue
+  cognito: green
+  lambda: green
+  secretsmanager: green
   community: black
   experimental: red
   alinux2: orange
-  centos7: orange
-  rhel8: orange
-  ubuntu1804: orange
-  ubuntu2004: orange
   parallelcluster: orange
-  batch: green
   fsx: green
   cloudformation: green
   cloudwatch: green
