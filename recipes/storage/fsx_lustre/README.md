@@ -21,10 +21,10 @@ When prompted to choose a subnet, select the one where you intend to place the m
 
 To connect your FSx filesystem to a ParallelCluster deployment, you will need to know its filesystem ID. You can discover this in the **Outputs** from your newly-created CloudFormation stack. Note that the filesysted ID and the security group are also exported, so you can easily import them into other stacks. You can also find the filesytem ID and other details in [Amazon FSx console](https://console.aws.amazon.com/fsx/home) under **File systems**.
 
-## Cleaning Up
-
-When you are done using your filesystem, you can delete it and all its associated resources by navigating to the AWS CloudFormation console and deleting the relevant stack. Note that any data on these filesystems will not be backed up if you do this. 
-
 ## Cost Estimate
 
 The cost to operate an FSx for Lustre filesystem will vary based on the capacity and throughput you select. For reference, a 1.2 TB, 1000 MB/s/TiB persistent filesystem will cost around $90.00 to operate for a week. The same capacity scratch filesystem will cost about $42.00. 
+
+## Cleaning Up
+
+When you are done using this resource, you can delete it by navigating to the AWS CloudFormation console and deleting the relevant stack. If you have enabled termination protection, you will need to disable it first.

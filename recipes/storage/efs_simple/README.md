@@ -37,3 +37,7 @@ SharedStorage:
 ## Cost Estimate
 
 There is no upfront cost to create and operate an EFS filesystem. However, there can be charges based on how much data you store in it and what your access pattern is. For reference, a 100 GB EFS filesystem should cost around $1.00 to run for a week. 
+
+## Cleaning Up
+
+When you are done using this resource, you can delete it by navigating to the AWS CloudFormation console and deleting the relevant stack. If you have enabled termination protection, you will need to disable it first.

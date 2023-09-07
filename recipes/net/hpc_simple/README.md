@@ -6,7 +6,7 @@ This recipe demonstrates a basic cloud networking setup for HPC on AWS. Several 
 
 ## Usage
 
-There are two templates in this recipe. One creates a public subnet in an Availability Zone. The other creates a public and private subnet in the same Availability Zone. 
+There are two templates available. One creates a public subnet in an Availability Zone. The other creates a public and private subnet in the same Availability Zone. 
 
 * Create [Public and Private subnets](https://us-east-2.console.aws.amazon.com/cloudformation/home?region=us-east-2#/stacks/create/review?stackName=simple-networking-pubpriv&templateURL=https://aws-hpc-recipes.s3.us-east-1.amazonaws.com/main/recipes/net/hpc_simple/assets/public-private.yaml)
 * Create a [Public subnet](https://us-east-2.console.aws.amazon.com/cloudformation/home?region=us-east-2#/stacks/create/review?stackName=simple-networking-pub&templateURL=https://aws-hpc-recipes.s3.us-east-1.amazonaws.com/main/recipes/net/hpc_simple/assets/public.yaml)
@@ -31,3 +31,7 @@ These templates export several variables, namedspaced by stack name. This lets y
 * NAT Gateway - There is a region-specific hourly cost for the NAT gatway, plus a charge for data sent through the gateway.
 
 See [AWS VPC pricing](https://aws.amazon.com/vpc/pricing/) for details.
+
+## Cleaning Up
+
+When you are done using this networking configuration, you can delete it by navigating to the AWS CloudFormation console and deleting the relevant stack. If you have enabled termination protection, you will need to disable it first.

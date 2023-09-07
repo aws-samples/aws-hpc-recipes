@@ -12,3 +12,6 @@ Follow the instructions in the [Large-scale HPC Networking Setup](../../net/hpc_
 
 ### Create an FSx filesystem
 
+## Cleaning Up
+
+When you are done using this resource, you can delete it by navigating to the AWS CloudFormation console and deleting the relevant stack. If you have enabled termination protection, you will need to disable it first.

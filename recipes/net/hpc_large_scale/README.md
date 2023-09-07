@@ -12,7 +12,7 @@ This recipe includes a single CloudFormation template that prepares a VPC suitab
 
 You can launch this template by following this quick-create link:
 
-* Create [subnets in three Availability Zones](https://us-east-2.console.aws.amazon.com/cloudformation/home?region=us-east-2#/stacks/create/review?stackName=multiuser-cluster&templateURL=https://aws-hpc-recipes.s3.us-east-1.amazonaws.com/main/recipes/net/hpc_large_scale/assets/main.yml)
+* Create [subnets in three Availability Zones](https://us-east-2.console.aws.amazon.com/cloudformation/home?region=us-east-2#/stacks/create/review?stackName=hpc-networking&templateURL=https://aws-hpc-recipes.s3.us-east-1.amazonaws.com/main/recipes/net/hpc_large_scale/assets/main.yaml)
 
 If you don't wish to use the quick-create link, you can also download the [assets/main.yaml](assets/main.yaml) file and uploading it to the [AWS CloudFormation console](https://console.aws.amazon.com/cloudformation).
 
@@ -40,3 +40,7 @@ There are two additional exports that provide compatibility with recipes that re
 * NAT Gateway - There is a region-specific hourly cost for the NAT gatway, plus a charge for data sent through the gateway.
 
 See [AWS VPC pricing](https://aws.amazon.com/vpc/pricing/) for details.
+
+## Cleaning Up
+
+When you are done using this networking configuration, you can delete it by navigating to the AWS CloudFormation console and deleting the relevant stack. If you have enabled termination protection, you will need to disable it first.

@@ -79,7 +79,7 @@ The S3 URL is useful anywhere you want to use native S3 commands for data access
 * **About**: Networking configuration for large-scale HPC on AWS. Creates a new VPC.
 * **Authors**: Matt Vaughn <mwvaughn@amazon.com>
 * **Usage**: [README.md](net/hpc_large_scale/README.md)
-* **Default**: [assets/main.yml](https://aws-hpc-recipes.s3.us-east-1.amazonaws.com/main/recipes/net/hpc_large_scale/assets/main.yml)
+* **Default**: [assets/main.yaml](https://aws-hpc-recipes.s3.us-east-1.amazonaws.com/main/recipes/net/hpc_large_scale/assets/main.yaml)
 
 ### pcluster: AWS ParallelCluster
 
@@ -130,7 +130,7 @@ The S3 URL is useful anywhere you want to use native S3 commands for data access
 * **About**: Create an Amazon EFS filesystem and mount targets in three Availability Zones.
 * **Authors**: Matt Vaughn <mwvaughn@amazon.com>
 * **Usage**: [README.md](storage/efs_simple/README.md)
-* **Default**: [assets/main.yml](https://aws-hpc-recipes.s3.us-east-1.amazonaws.com/main/recipes/storage/efs_simple/assets/main.yml)
+* **Default**: [assets/main.yaml](https://aws-hpc-recipes.s3.us-east-1.amazonaws.com/main/recipes/storage/efs_simple/assets/main.yaml)
 #### fsx_lustre_s3_dra ![tag](https://img.shields.io/badge/-fsx-%237DCEA0) ![tag](https://img.shields.io/badge/-lustre-%23AAB7B8) ![tag](https://img.shields.io/badge/-s3-%237DCEA0) ![tag](https://img.shields.io/badge/-experimental-%23D9534F) 
 
 * **About**: Demonstrates an FSx for Lustre filesystem with an S3 data repository association

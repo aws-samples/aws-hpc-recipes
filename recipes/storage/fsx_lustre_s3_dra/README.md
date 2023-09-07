@@ -21,10 +21,10 @@ By default, this template will create a bidirectional DRA. That means that files
 
 The key difference between this template and the read-only version is in resource `FSxLDra`, where we create both an `AutoExportPolicy` and an `AutoImportPolicy`, rather than just an `AutoImportPolicy`.
 
-## Cleaning Up
-
-When you are done using your FSx filesystem and DRA, you can delete them by navigating to the AWS CloudFormation console and deleting the relevant stack. Note that the data on the FSx for Lustre filesystem will not be backed up. Data in the S3 resource will not be affected as it is not managed by this CloudFormation stack. 
-
 ## Cost Estimate
 
 The cost to operate the FSx for Lustre filesystem will vary based on the capacity and throughput you select. For reference, a 1.2 TB, 1000 MB/s/TiB persistent filesystem will cost around $90.00 to operate for a week. 
+
+## Cleaning Up
+
+When you are done using this resource, you can delete it by navigating to the AWS CloudFormation console and deleting the relevant stack. If you have enabled termination protection, you will need to disable it first.
