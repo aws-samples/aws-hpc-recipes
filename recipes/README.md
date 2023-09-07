@@ -47,12 +47,6 @@ The S3 URL is useful anywhere you want to use native S3 commands for data access
 
 ### :arrow_right: env: User environment
 
-#### lmod ![tag](https://img.shields.io/badge/-experimental-%23D9534F) ![tag](https://img.shields.io/badge/-community-%2317202A) 
-
-* **About**: Install Lmod alongside Environment modules
-* **Authors**: Matt Vaughn <mwvaughn@amazon.com>
-* **Usage**: [README.md](env/lmod/README.md)
-
 #### spack ![tag](https://img.shields.io/badge/-experimental-%23D9534F) ![tag](https://img.shields.io/badge/-community-%2317202A) 
 
 * **About**: Install and configure Spack on shared storage
