@@ -83,13 +83,13 @@ The S3 URL is useful anywhere you want to use native S3 commands for data access
 
 ### pcluster: AWS ParallelCluster
 
-#### multi_user ![tag](https://img.shields.io/badge/-parallelcluster-%23FF9900) ![tag](https://img.shields.io/badge/-activedirectory-%23AAB7B8) ![tag](https://img.shields.io/badge/-secretsmanager-%23AAB7B8) ![tag](https://img.shields.io/badge/-experimental-%23D9534F) 
+#### multi_user ![tag](https://img.shields.io/badge/-parallelcluster-%23FF9900) ![tag](https://img.shields.io/badge/-activedirectory-%23AAB7B8) ![tag](https://img.shields.io/badge/-secretsmanager-%237DCEA0) ![tag](https://img.shields.io/badge/-experimental-%23D9534F) 
 
 * **About**: Creates a multi-user instance of AWS ParallelCluster using AWS Managed AD as the directory service.
 * **Authors**: Matt Vaughn <mwvaughn@amazon.com>
 * **Usage**: [README.md](pcluster/multi_user/README.md)
 
-#### pcui ![tag](https://img.shields.io/badge/-parallelcluster-%23FF9900) ![tag](https://img.shields.io/badge/-cognito-%23AAB7B8) ![tag](https://img.shields.io/badge/-lambda-%23AAB7B8) 
+#### pcui ![tag](https://img.shields.io/badge/-parallelcluster-%23FF9900) ![tag](https://img.shields.io/badge/-cognito-%237DCEA0) ![tag](https://img.shields.io/badge/-lambda-%237DCEA0) 
 
 * **About**: Create an AWS ParallelCluster with ParallelClusterUI to manage it.
 * **Authors**: Matt Vaughn <mwvaughn@amazon.com>
@@ -113,12 +113,6 @@ The S3 URL is useful anywhere you want to use native S3 commands for data access
 * **Authors**: Matt Vaughn <mwvaughn@amazon.com>
 * **Usage**: [README.md](pcluster/slurm_accounting/README.md)
 
-#### pcluster_lustre_scratch ![tag](https://img.shields.io/badge/-core-%23146EB4) ![tag](https://img.shields.io/badge/-experimental-%23D9534F) ![tag](https://img.shields.io/badge/-parallelcluster-%23FF9900) ![tag](https://img.shields.io/badge/-fsx-%237DCEA0) ![tag](https://img.shields.io/badge/-lustre-%23AAB7B8) 
-
-* **About**: Deploy AWS ParallelCluster with an Amazon FSx for Lustre scratch volume
-* **Authors**: Matt Vaughn <mwvaughn@amazon.com>
-* **Usage**: [README.md](pcluster/pcluster_lustre_scratch/README.md)
-* **Default**: [assets/launch.yaml](https://aws-hpc-recipes.s3.us-east-1.amazonaws.com/main/recipes/pcluster/pcluster_lustre_scratch/assets/launch.yaml)
 
 ### scheduler: HPC scheduler
 
