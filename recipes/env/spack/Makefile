@@ -4,6 +4,7 @@ all: build
 
 build: assets
 
+.PHONY: assets
 assets: assets/postinstall.sh
 	@echo "Build assets for spack"
 
