@@ -1,0 +1,25 @@
+---
+# The name of the recipe. This has the same character requirements as namespace.
+name: login_nodes
+# The version of the recipe. Must be compatible with semantic versioning.
+version: "1.0.0"
+# A short summary description of the recipe
+description: Demonstrates the new Login Nodes feature in ParallelCluster 3.7.0
+# The path to the README for the recipe relative to its root directory.
+readme: README.md
+# Optional URL for external documentation
+documentation: 
+# Optional URL for a homepage
+homepage:
+# A list of recipe content authors
+authors:
+  - Matt Vaughn <mwvaughn@amazon.com>
+# A list of tags you want to associate with the collection for indexing/searching. Tags have the same character requirements as namespace.
+tags:
+  - parallelcluster
+# A list of file glob-like patterns used to filter any files or directories that should not be included in the S3 release. 
+build_ignore: []
+# Recipe type
+type: other
+# Default asset path
+default: 
