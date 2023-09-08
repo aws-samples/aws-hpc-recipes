@@ -1,6 +1,6 @@
 AWSTemplateFormatVersion: '2010-09-09'
 Description: >
-  Demonstration template showing the latest ParallelCluster release
+  Deploy a demo of the latest AWS ParallelCluster release. 
 
 ### Stack metadata
 Metadata:
@@ -30,7 +30,7 @@ Conditions:
 
 Parameters:
   ClusterName:
-    Description: Name of cluster. Note this must be different than the stack name.
+    Description: Name of cluster. This must be unqiue in the Region and different than the stack name.
     Type: String
     Default: mycluster
 
@@ -81,23 +81,23 @@ Parameters:
 Mappings:
   ParallelCluster:
     Constants:
-      Version: 3.6.1
+      Version: 3.7.0
   Recipes:
     Constants:
       Version: main
   InstanceTypeForArchitecture:
     HeadNode:
       Graviton: c7g.medium
-      GPU: c6a.small
-      x86: c6a.small
-    LoginNodes:
-      Graviton: c7g.medium
-      GPU: c6a.small
-      x86: c6a.small
-    ComputeNodes:
-      Graviton: c7g.large
-      GPU: g5.xlarge
+      GPU: c6a.large
       x86: c6a.large
+    LoginNodes:
+      Graviton: c7g.large
+      GPU: c6a.xlarge
+      x86: c6a.xlarge
+    ComputeNodes:
+      Graviton: c7g.xlarge
+      GPU: g5.xlarge
+      x86: c6a.xlarge
 
 Resources:
 
@@ -143,6 +143,11 @@ Resources:
           Ssh:
             KeyName: !Ref KeyName
             AllowedIps: !Ref AllowedIps
+          Dcv:
+            Enabled: true
+          LocalStorage:
+            RootVolume:
+              Size: 40
           Iam:
             AdditionalIamPolicies:
               - Policy: arn:aws:iam::aws:policy/AmazonSSMManagedInstanceCore
@@ -157,9 +162,22 @@ Resources:
               InstanceType: !FindInMap [ InstanceTypeForArchitecture, ComputeNodes, !Ref Architecture ]
               MinCount: 0
               MaxCount: !Ref ComputeInstanceMax
+              DisableSimultaneousMultithreading: true
             Networking:
               SubnetIds:
-              - !GetAtt [ PclusterVpc , Outputs.DefaultPrivateSubnet ]
+                - !GetAtt [ PclusterVpc , Outputs.DefaultPrivateSubnet ]
+              PlacementGroup:
+                Enabled: true
+            ComputeSettings:
+              LocalStorage:
+                RootVolume:
+                  Size: 40
+        SharedStorage:
+        - StorageType: Efs
+          Name: shared
+          MountDir: /shared
+          EfsSettings:
+            DeletionPolicy: Delete
 
 Outputs:
   HeadNodeIp:

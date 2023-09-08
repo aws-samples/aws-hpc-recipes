@@ -8,10 +8,15 @@ Create an instance of the latest AWS ParallelCluster release, after configuring 
 
 ### Launch the Cluster
 
-1. Ensure you have a Amazon EC2 [SSH key created](https://docs.aws.amazon.com/AWSEC2/latest/UserGuide/create-key-pairs.html#having-ec2-create-your-key-pair) in the Region where you want to launch your cluster.
+1. Ensure you have an Amazon EC2 [SSH key created](https://docs.aws.amazon.com/AWSEC2/latest/UserGuide/create-key-pairs.html#having-ec2-create-your-key-pair) in the Region where you want to launch your cluster.
 2. Launch the template: [![Launch stack](../../../docs/media/launch-stack.svg)](https://us-east-2.console.aws.amazon.com/cloudformation/home?region=us-east-2#/stacks/create/review?stackName=latest-pcluster&templateURL=https://aws-hpc-recipes.s3.us-east-1.amazonaws.com/main/recipes/pcluster/latest/assets/launch.yaml)
 3. Follow the instructions in the AWS CloudFormation console. 
 4. Monitor the status of the stack named **latest-pcluster**. When its status is `CREATE_COMPLETE`, navigate to its **Outputs** tab. Find the output named **HeadNodeIp** - this is the public IP address for your cluster login node.
+
+#### Notes
+
+1. This template selects head node and compute node instance types based on the architecture you choose. Since this is a demonstration, rather than a production cluster, smaller instance types have been selected.
+2. Your cluster nodes will have a shared directory mounted at `/shared`. It uses Amazon Elastic Filesystem (EFS), since that is simple to configure and relatively inexpensive. Consider using [more performance-optimized storage](https://docs.aws.amazon.com/parallelcluster/latest/ug/SharedStorage-v3.html#SharedStorage-v3.properties) for production workloads. 
 
 ### Access the Cluster
 
