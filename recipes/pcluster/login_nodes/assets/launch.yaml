@@ -15,6 +15,7 @@ Metadata:
           - ComputeInstanceMax
       - Label:
           default: Login Nodes
+        Parameters:
             - LoginNodeCount
             - KeyName
             - AllowedIps
