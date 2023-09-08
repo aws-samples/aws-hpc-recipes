@@ -1,0 +1,171 @@
+AWSTemplateFormatVersion: '2010-09-09'
+Description: >
+  Demonstration template showing ParallelCluster configured to launch instances in multiple Availability Zones
+
+### Stack metadata
+Metadata:
+  AWS::CloudFormation::Interface:
+    ParameterGroups:
+      - Label:
+          default: Cluster Design
+        Parameters:
+          - OS
+          - Architecture
+          - QueueName
+          - ComputeInstanceMax
+      - Label:
+          default: Networking and Access
+        Parameters:
+          - KeyName
+          - AllowedIps
+          - HeadNodeSubnetId
+          - ComputeNodesSubnetIds
+      - Label:
+          default: Miscellaneous
+        Parameters:
+          - ClusterName
+
+Conditions:
+  GovCloud: !Equals [!Ref AWS::Partition, 'aws-us-gov']
+  China: !Equals [!Ref AWS::Partition, 'aws-cn']
+
+Parameters:
+
+  ClusterName:
+    Description: Name of cluster. Must be unique to the Region and different than the stack name.
+    Type: String
+    Default: mycluster
+
+  QueueName:
+    Description: Name of the default Slurm queue
+    Type: String
+    Default: normal
+
+  ComputeInstanceMax:
+    Description: Maximum number of compute instances in the queue
+    Type: Number
+    MinValue: 1
+    Default: 10
+
+  AllowedIps:
+    Description: CIDR-formatted IP range for SSH connections to the cluster
+    Type: String
+    Default: 0.0.0.0/0
+
+  KeyName:
+    Description: Key pair for SSH login
+    Type: AWS::EC2::KeyPair::KeyName
+
+  OS:
+    Type: String
+    Default: alinux2
+    AllowedValues:
+      - alinux2
+      - centos7
+      - ubuntu1804
+      - ubuntu2004
+    Description: Cluster operating system
+
+  Architecture:
+    Type: String
+    Default: Graviton
+    AllowedValues:
+      - Graviton
+      - GPU
+      - x86
+    Description: Choose a node architecture.
+
+  HeadNodeSubnetId:
+    Description: Public subnet for head node
+    Type: AWS::EC2::Subnet::Id
+
+  ComputeNodesSubnetIds:
+    Description: Subnet(s) for compute nodes. Private subnets are recommended. If multiple are selected, they must be in different AZs. 
+    Type: List<AWS::EC2::Subnet::Id>
+
+Mappings:
+  ParallelCluster:
+    Constants:
+      Version: 3.6.1
+  Recipes:
+    Constants:
+      Version: main
+  InstanceTypeForArchitecture:
+    HeadNode:
+      Graviton: c7g.medium
+      GPU: c6a.large
+      x86: c6a.large
+    LoginNodes:
+      Graviton: c7g.large
+      GPU: c6a.xlarge
+      x86: c6a.xlarge
+    ComputeNodes:
+      Graviton: c7g.xlarge
+      GPU: g5.xlarge
+      x86: c6a.xlarge
+
+Resources:
+
+  PclusterClusterProvider:
+    Type: AWS::CloudFormation::Stack
+    DeletionPolicy: Delete
+    UpdateReplacePolicy: Delete
+    Properties:
+      TemplateURL: !Sub
+        - https://${AWS::Region}-aws-parallelcluster.s3.${AWS::Region}.${AWS::URLSuffix}/parallelcluster/${Version}/templates/custom_resource/cluster.yaml
+        - { Version: !FindInMap [ParallelCluster, Constants, Version] }
+      TimeoutInMinutes: 10
+
+  PclusterCluster:
+    Type: Custom::PclusterCluster
+    DeletionPolicy: Delete
+    UpdateReplacePolicy: Delete
+    Properties:
+      ServiceToken: !GetAtt [ PclusterClusterProvider , Outputs.ServiceToken ]
+      ClusterName: !Ref ClusterName
+      ClusterConfiguration:
+        Image:
+          Os: !Ref OS
+        HeadNode:
+          InstanceType: !FindInMap [ InstanceTypeForArchitecture, HeadNode, !Ref Architecture ]
+          Networking:
+            SubnetId: !Ref HeadNodeSubnetId
+          Ssh:
+            KeyName: !Ref KeyName
+            AllowedIps: !Ref AllowedIps
+          Iam:
+            AdditionalIamPolicies:
+              - Policy: arn:aws:iam::aws:policy/AmazonSSMManagedInstanceCore
+        Scheduling:
+          Scheduler: slurm
+          SlurmSettings:
+            QueueUpdateStrategy: TERMINATE
+          SlurmQueues:
+          - Name: !Ref QueueName
+            ComputeResources:
+            - Name: cr1
+              Instances:
+                - InstanceType: !FindInMap [ InstanceTypeForArchitecture, ComputeNodes, !Ref Architecture ]
+              MinCount: 0
+              MaxCount: !Ref ComputeInstanceMax
+            Networking:
+              SubnetIds: !Ref ComputeNodesSubnetIds
+
+Outputs:
+  HeadNodeIp:
+    Description: The Public IP address of the HeadNode
+    Value: !GetAtt [ PclusterCluster, headNode.publicIpAddress ]
+    Export:
+      Name: !Sub ${AWS::StackName}-HeadNodeIp
+  SystemManagerUrl:
+    Description: URL to access the HeadNode via SystemManager
+    Value: !Sub
+      - https://${ConsoleDomain}/systems-manager/session-manager/${InstanceId}?region=${AWS::Region}
+      - { ConsoleDomain: !If [ GovCloud, 'console.amazonaws-us-gov.com', !If [ China, 'console.amazonaws.cn', !Sub '${AWS::Region}.console.aws.amazon.com']],
+          InstanceId: !GetAtt [ PclusterCluster, headNode.instanceId ]
+        }
+    Export:
+      Name: !Sub ${AWS::StackName}-SystemManagerUrl
+  ValidationMessages:
+    Description: Warnings from cluster create or update operations.
+    Value: !GetAtt PclusterCluster.validationMessages
