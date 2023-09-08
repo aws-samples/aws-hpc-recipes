@@ -77,6 +77,12 @@ The S3 URL is useful anywhere you want to use native S3 commands for data access
 
 ### :arrow_right: pcluster: AWS ParallelCluster
 
+#### login_nodes ![tag](https://img.shields.io/badge/-parallelcluster-%23FF9900) 
+
+* **About**: Demonstrates the new Login Nodes feature in ParallelCluster 3.7.0
+* **Authors**: Matt Vaughn <mwvaughn@amazon.com>
+* **Usage**: [README.md](pcluster/login_nodes/README.md)
+
 #### multi_user ![tag](https://img.shields.io/badge/-parallelcluster-%23FF9900) ![tag](https://img.shields.io/badge/-activedirectory-%23AAB7B8) ![tag](https://img.shields.io/badge/-secretsmanager-%237DCEA0) ![tag](https://img.shields.io/badge/-experimental-%23D9534F) 
 
 * **About**: Creates a multi-user instance of AWS ParallelCluster using AWS Managed AD as the directory service.
