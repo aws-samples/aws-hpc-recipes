@@ -47,10 +47,10 @@ The S3 URL is useful anywhere you want to use native S3 commands for data access
 
 ### :arrow_right: env: User environment
 
-#### spack ![tag](https://img.shields.io/badge/-experimental-%23D9534F) ![tag](https://img.shields.io/badge/-community-%2317202A) 
+#### spack ![tag](https://img.shields.io/badge/-community-%2317202A) 
 
-* **About**: Install and configure Spack on shared storage
-* **Authors**: Matt Vaughn <mwvaughn@amazon.com>
+* **About**: Install and configure Spack + Spack configs on shared storage
+* **Authors**: Stephen Sachs, Matt Vaughn
 * **Usage**: [README.md](env/spack/README.md)
 * **Default**: [assets/postinstall.sh](https://aws-hpc-recipes.s3.us-east-1.amazonaws.com/main/recipes/env/spack/assets/postinstall.sh)
 
