@@ -61,6 +61,7 @@ deploy:
 .PHONY: readme
 readme:
 	python -m scripts.render_readme
+	git add recipes/README.md
 
 set_version:
 	$(eval RELEASE_TAG := $(shell git describe))
