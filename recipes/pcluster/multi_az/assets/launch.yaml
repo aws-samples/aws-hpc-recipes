@@ -88,16 +88,16 @@ Mappings:
   InstanceTypeForArchitecture:
     HeadNode:
       Graviton: c7g.medium
-      GPU: c6a.small
-      x86: c6a.small
-    LoginNodes:
-      Graviton: c7g.medium
-      GPU: c6a.small
-      x86: c6a.small
-    ComputeNodes:
-      Graviton: c7g.large
-      GPU: g5.xlarge
+      GPU: c6a.large
       x86: c6a.large
+    LoginNodes:
+      Graviton: c7g.large
+      GPU: c6a.xlarge
+      x86: c6a.xlarge
+    ComputeNodes:
+      Graviton: c7g.xlarge
+      GPU: g5.xlarge
+      x86: c6a.xlarge
 
 Resources:
 
