@@ -13,6 +13,8 @@ This recipe demonstrates the new Login Nodes feature in ParallelCluster 3.7.0.
 3. Follow the instructions in the AWS CloudFormation console. 
 4. Monitor the status of the stack named **latest-pcluster**. When its status is `CREATE_COMPLETE`, you can log into the cluster. 
 
+If you do not wish to import the networking configuration from a stack provided by the **HPC Recipe for AWS** collection. you can use the [alternative CloudFormation template](assets/launch-alt.yaml). 
+
 ### Access the Cluster
 
 SSH access works differently in clusters configured with Login Nodes. Rather than directly connecting to the head node, it is expected you will connect to a pool of login nodes. These have the same general configuration as the head node, including job submission and management rights, but are not responsible for running the scheduler or the default shared filesystem. This approach keeps the head node from getting overloaded with user processes. In the configuration we demonstrate here, the head node is not even publicly accessible!
