@@ -4,9 +4,9 @@
 
 Creates an instance of AWS ParallelCluster with Slurm accounting enabled, using Amazon RDS as the database management server.
 
-### Configure a multi-AZ networking stack
+### (Optional) Configure a multi-AZ networking stack
 
-1. Follow the instructions in the [Large-scale HPC Networking Setup](../../net/hpc_large_scale/README.md) recipe. You only need to do this once per Region you want to deploy clusters in. If you named the networking stack something besides **hpc-networking**, make a note of that as you will need it to set up your cluster. 
+1. Follow the instructions in the [Large-scale HPC Networking Setup](../../net/hpc_large_scale/README.md) recipe. You only need to do this once per Region you want to deploy clusters in. If you named the networking stack something besides **hpc-networking**, make a note of that as you may need it to set up your cluster and other resources.
 
 ### Launch the Cluster and Database
 
@@ -17,15 +17,13 @@ Creates an instance of AWS ParallelCluster with Slurm accounting enabled, using 
   * Don't set a value for **AdminPasswordSecretString** that is used anywhere else
 4. Monitor the status of the stack named **sacct-cluster**. When its status is `CREATE_COMPLETE`, navigate to its **Outputs** tab. Find the output named **HeadNodeIp** - this is the public IP address for your cluster login node.
 
+**Note**: If you do not wish to import the networking configuration from a stack provided by the **HPC Recipe for AWS** collection. you can use the [alternative CloudFormation template](assets/launch-alt.yaml). 
+
 ### Access the Cluster and Try Slurm Accounting
 
 You can either log in via SSH to the **HeadNodeIp** using the keypair you specified, or you can use Amazon Systems Manager to log from the AWS EC2 Console. Once you are logged into the system, you can test out a couple of commands that confirm Slurm accounting is active. 
 1. Try using the [sacct](https://slurm.schedmd.com/sacct.html) command to display accounting data for all jobs and job steps in the Slurm database. 
 2. Try out the [sacctmgr](https://slurm.schedmd.com/sacctmgr.html) command. It is used to configure accounting in detail. 
-
-## Cleaning Up
-
-When you are done using your cluster, you can delete it and all its associated resources by navigating to the AWS CloudFormation console and deleting the **sacct-cluster** stack. 
 
 ## Persistent Databases
 
@@ -37,12 +35,18 @@ In this example, we create the accounting database as a resource in the CloudFor
 
 Now, the Amazon RDS database will not be deleted when and if you delete your ParallelCluster stack. 
 
-## Cost Estimate
-
-Costs for a cluster created using this recipe will vary depending on the cluster architecture, since different instances types will be selected depending which one you choose. It will also vary based on how many jobs you submit to the cluster, since ParallelCluster can launch instances to run them. There will also be a charge for the Amazon RDS cluster. Based on on-demand pricing for the relevant instances, it should cost between $30 to $50.00 to run the cluster for a week, submitting a handful of jobs. 
-
 ## Key Details
+
+This is an interesting CloudFormation template, since it highlights a pretty complex resource orchestration. Here are key details you can dive deep on:
 
 * The `AdminPasswordSecretString` parameter is an excellent example of using a regular expression to validate user input.
 * Make sure to add the security group for the database cluster to the head node (see `Resources.PclusterCluster.Properties.ClusterConfiguration.HeadNode.Networking.AdditionalSecurityGroups`)
 * The database cluster in this recipe launches in private subnets shared with the compute nodes. This is  not mandatory as long as its IP is reachable from the head node. 
+
+## Cost Estimate
+
+Costs for a cluster created using this recipe will vary depending on the cluster architecture, since different instances types will be selected depending which one you choose. It will also vary based on how many jobs you submit to the cluster, since ParallelCluster can launch instances to run them. There will also be a charge for the Amazon RDS cluster. Based on on-demand pricing for the relevant instances, it should cost between $30 to $50.00 to run the cluster for a week, submitting a handful of jobs. 
+
+## Cleaning Up
+
+When you are done using your cluster, you can delete it and all its associated resources by navigating to the AWS CloudFormation console and deleting the relevant stack.  
