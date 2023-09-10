@@ -38,7 +38,7 @@ The S3 URL is useful anywhere you want to use native S3 commands for data access
 
 ### :arrow_right: dir: Directory services
 
-#### demo_managed_ad ![tag](https://img.shields.io/badge/-experimental-%23D9534F) 
+#### demo_managed_ad ![tag](https://img.shields.io/badge/-beta-%23D9534F) 
 
 * **About**: Stand up a basic AWS Managed Microsoft AD for use with AWS ParallelCluster.
 * **Authors**: Matt Vaughn <mwvaughn@amazon.com>
@@ -83,7 +83,7 @@ The S3 URL is useful anywhere you want to use native S3 commands for data access
 * **Authors**: Matt Vaughn <mwvaughn@amazon.com>
 * **Usage**: [README.md](pcluster/login_nodes/README.md)
 
-#### multi_user ![tag](https://img.shields.io/badge/-parallelcluster-%23FF9900) ![tag](https://img.shields.io/badge/-activedirectory-%23AAB7B8) ![tag](https://img.shields.io/badge/-secretsmanager-%237DCEA0) ![tag](https://img.shields.io/badge/-experimental-%23D9534F) 
+#### multi_user ![tag](https://img.shields.io/badge/-parallelcluster-%23FF9900) ![tag](https://img.shields.io/badge/-activedirectory-%23AAB7B8) ![tag](https://img.shields.io/badge/-secretsmanager-%237DCEA0) ![tag](https://img.shields.io/badge/-beta-%23D9534F) 
 
 * **About**: Creates a multi-user instance of AWS ParallelCluster using AWS Managed AD as the directory service.
 * **Authors**: Matt Vaughn <mwvaughn@amazon.com>
@@ -125,7 +125,7 @@ The S3 URL is useful anywhere you want to use native S3 commands for data access
 * **Authors**: Matt Vaughn <mwvaughn@amazon.com>
 * **Usage**: [README.md](storage/efs_simple/README.md)
 * **Default**: [assets/main.yaml](https://aws-hpc-recipes.s3.us-east-1.amazonaws.com/main/recipes/storage/efs_simple/assets/main.yaml)
-#### fsx_lustre_s3_dra ![tag](https://img.shields.io/badge/-fsx-%237DCEA0) ![tag](https://img.shields.io/badge/-lustre-%23AAB7B8) ![tag](https://img.shields.io/badge/-s3-%237DCEA0) ![tag](https://img.shields.io/badge/-experimental-%23D9534F) 
+#### fsx_lustre_s3_dra ![tag](https://img.shields.io/badge/-fsx-%237DCEA0) ![tag](https://img.shields.io/badge/-lustre-%23AAB7B8) ![tag](https://img.shields.io/badge/-s3-%237DCEA0) ![tag](https://img.shields.io/badge/-beta-%23D9534F) 
 
 * **About**: Demonstrates an FSx for Lustre filesystem with an S3 data repository association
 * **Authors**: Matt Vaughn <mwvaughn@amazon.com>
@@ -137,7 +137,7 @@ The S3 URL is useful anywhere you want to use native S3 commands for data access
 * **Authors**: Matt Vaughn <mwvaughn@amazon.com>
 * **Usage**: [README.md](storage/fsx_lustre/README.md)
 
-#### fsx_openzfs ![tag](https://img.shields.io/badge/-experimental-%23D9534F) ![tag](https://img.shields.io/badge/-fsx-%237DCEA0) ![tag](https://img.shields.io/badge/-openzfs-%23AAB7B8) ![tag](https://img.shields.io/badge/-nfs-%23AAB7B8) 
+#### fsx_openzfs ![tag](https://img.shields.io/badge/-beta-%23D9534F) ![tag](https://img.shields.io/badge/-fsx-%237DCEA0) ![tag](https://img.shields.io/badge/-openzfs-%23AAB7B8) ![tag](https://img.shields.io/badge/-nfs-%23AAB7B8) 
 
 * **About**: Provision an FSx for OpenZFS filesystem and relevant security groups for use with ParallelCluster
 * **Authors**: Matt Vaughn <mwvaughn@amazon.com>

@@ -97,9 +97,9 @@ def process_tags(tags_string):
         tags = [slugify(t.strip()) for t in tags_string.split(",")]
     else:
         tags = []
-    # Automatically tag new recipes as experimental
-    if ["experimental"] not in tags:
-        tags.append("experimental")
+    # Automatically tag new recipes as beta
+    if ["beta"] not in tags:
+        tags.append("beta")
     return tags
 
 

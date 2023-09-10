@@ -26,7 +26,7 @@ Namespace [aws]: env
 Recipe name [a-z_]+: install_figlet
 Short description: Install the figlet ASCII art generator so you can create awesome login banners.
 Author (comma-separated values for multiple) [Terry Whitlock <thwhit@example.org>]:
-Tags (comma-separated values for multiple): community, experimental, environment, freesoftware
+Tags (comma-separated values for multiple): community, beta, environment, freesoftware
 ```
 
 A few things to be aware of:

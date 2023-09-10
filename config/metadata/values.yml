@@ -19,7 +19,7 @@ tags:
   lambda: green
   secretsmanager: green
   community: black
-  experimental: red
+  beta: purple
   alinux2: orange
   parallelcluster: orange
   fsx: green
@@ -40,6 +40,7 @@ colors:
   black: 17202A
   white: F8F9F9
   grey: AAB7B8
+  purple: 800080
 types:
   cdk: AWS CDK project
   cloudformation: AWS CloudFormation template
