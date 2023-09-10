@@ -6,18 +6,20 @@ Creates a multi-user instance of AWS ParallelCluster using AWS Managed AD as the
 
 ## Usage
 
-### Configure a multi-AZ networking stack
+### (Optional) Configure a multi-AZ networking stack
 
-1. Follow the instructions in the [Large-scale HPC Networking Setup](../../net/hpc_large_scale/README.md) recipe. You only need to do this once per Region you want to deploy clusters in. If you named the networking stack something besides **hpc-networking**, make a note of that as you will need it to set up your cluster. 
+1. Follow the instructions in the [Large-scale HPC Networking Setup](../../net/hpc_large_scale/README.md) recipe. You only need to do this once per Region you want to deploy clusters in. If you named the networking stack something besides **hpc-networking**, make a note of that as you may need it to set up some of the recipes in this collection.
 
 ### Launch the Cluster and AD Server
 
 1. Ensure you have a Amazon EC2 [SSH key created](https://docs.aws.amazon.com/AWSEC2/latest/UserGuide/create-key-pairs.html#having-ec2-create-your-key-pair) in the Region where you want to launch your cluster and AD management instance.
 2. Launch the template: [![Launch stack](../../../docs/media/launch-stack.svg)](https://us-east-2.console.aws.amazon.com/cloudformation/home?region=us-east-2#/stacks/create/review?stackName=multiuser-cluster&templateURL=https://aws-hpc-recipes.s3.us-east-1.amazonaws.com/main/recipes/pcluster/multi_user/assets/launch.yaml)
 3. Follow the instructions in the AWS CloudFormation console. As you work through the template, mind these points:
-  * The value you enter for **NetworkStackNameParameter** must be the name of your HPC networking stack
-  * The template requires you to provide a valid CIDR notation (X.X.X.X/X) to secure access to the login node. This is because you are enabling password authentication on an SSH connection. It is disabled by default for security purposes.
+  * The value you enter for **NetworkStackNameParameter** is the name of your HPC networking stack
+  * The template asks you to provide a valid CIDR notation (X.X.X.X/X) to secure access to the login node. This is because you are enabling password authentication on an SSH connection. It is disabled by default for security purposes.
   * The values you provide for `UserName` and `UserPassword` are the credentials you will use to log into the cluster. Choose an appropriately strong password!
+
+**Note**: If you do not wish to import the networking configuration from a stack provided by the **HPC Recipe for AWS** collection. you can use the [alternative CloudFormation template](assets/launch-alt.yaml). 
 
 ### Access the Cluster
 
