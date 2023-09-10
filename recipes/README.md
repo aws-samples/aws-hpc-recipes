@@ -32,27 +32,21 @@ The S3 URL is useful anywhere you want to use native S3 commands for data access
 #### slurm_accounting_db ![tag](https://img.shields.io/badge/-core-%23146EB4) ![tag](https://img.shields.io/badge/-rds-%237DCEA0) ![tag](https://img.shields.io/badge/-parallelcluster-%23FF9900) 
 
 * **About**: Set up a replicated Amazon Aurora database that can support Slurm accounting.
-* **Authors**: AWS HPC Engineering
 * **Usage**: [README.md](db/slurm_accounting_db/README.md)
-* **Default**: [assets/serverless-database.yaml](https://aws-hpc-recipes.s3.us-east-1.amazonaws.com/main/recipes/db/slurm_accounting_db/assets/serverless-database.yaml)
 
 ### :arrow_right: dir: Directory services
 
 #### demo_managed_ad ![tag](https://img.shields.io/badge/-beta-%23800080) ![tag](https://img.shields.io/badge/-activedirectory-%23AAB7B8) ![tag](https://img.shields.io/badge/-secretsmanager-%237DCEA0) 
 
 * **About**: Stand up a basic AWS Managed Microsoft AD for use with AWS ParallelCluster.
-* **Authors**: Matt Vaughn
 * **Usage**: [README.md](dir/demo_managed_ad/README.md)
-* **Default**: [assets/main.yaml](https://aws-hpc-recipes.s3.us-east-1.amazonaws.com/main/recipes/dir/demo_managed_ad/assets/main.yaml)
 
 ### :arrow_right: env: User environment
 
 #### spack ![tag](https://img.shields.io/badge/-community-%2317202A) 
 
 * **About**: Install and configure Spack + Spack configs on shared storage
-* **Authors**: Stephen Sachs, Matt Vaughn
 * **Usage**: [README.md](env/spack/README.md)
-* **Default**: [assets/postinstall.sh](https://aws-hpc-recipes.s3.us-east-1.amazonaws.com/main/recipes/env/spack/assets/postinstall.sh)
 
 ### :arrow_right: iam: Identity Access and Management
 
@@ -65,54 +59,38 @@ The S3 URL is useful anywhere you want to use native S3 commands for data access
 #### hpc_simple ![tag](https://img.shields.io/badge/-core-%23146EB4) ![tag](https://img.shields.io/badge/-vpc-%23AAB7B8) 
 
 * **About**: Networking configuration for HPC on AWS. Can use an existing VPC or create a new one.
-* **Authors**: AWS HPC Engineering, Matthew Vaughn
 * **Usage**: [README.md](net/hpc_simple/README.md)
-* **Default**: [assets/public-private.yaml](https://aws-hpc-recipes.s3.us-east-1.amazonaws.com/main/recipes/net/hpc_simple/assets/public-private.yaml)
 #### hpc_large_scale ![tag](https://img.shields.io/badge/-core-%23146EB4) ![tag](https://img.shields.io/badge/-vpc-%23AAB7B8) 
 
 * **About**: Networking configuration for large-scale HPC on AWS. Creates a new VPC.
-* **Authors**: Matt Vaughn
 * **Usage**: [README.md](net/hpc_large_scale/README.md)
-* **Default**: [assets/main.yaml](https://aws-hpc-recipes.s3.us-east-1.amazonaws.com/main/recipes/net/hpc_large_scale/assets/main.yaml)
 
 ### :arrow_right: pcluster: AWS ParallelCluster
 
 #### login_nodes ![tag](https://img.shields.io/badge/-parallelcluster-%23FF9900) 
 
 * **About**: Demonstrates the new Login Nodes feature in ParallelCluster 3.7.0
-* **Authors**: Matt Vaughn
 * **Usage**: [README.md](pcluster/login_nodes/README.md)
-
 #### multi_user ![tag](https://img.shields.io/badge/-parallelcluster-%23FF9900) ![tag](https://img.shields.io/badge/-activedirectory-%23AAB7B8) ![tag](https://img.shields.io/badge/-secretsmanager-%237DCEA0) ![tag](https://img.shields.io/badge/-beta-%23800080) 
 
 * **About**: Creates a multi-user instance of AWS ParallelCluster using AWS Managed AD as the directory service.
-* **Authors**: Matt Vaughn
 * **Usage**: [README.md](pcluster/multi_user/README.md)
-
 #### pcui ![tag](https://img.shields.io/badge/-parallelcluster-%23FF9900) ![tag](https://img.shields.io/badge/-cognito-%237DCEA0) ![tag](https://img.shields.io/badge/-lambda-%237DCEA0) 
 
 * **About**: Create an AWS ParallelCluster with ParallelClusterUI to manage it.
-* **Authors**: Matt Vaughn
 * **Usage**: [README.md](pcluster/pcui/README.md)
-
 #### multi_az ![tag](https://img.shields.io/badge/-parallelcluster-%23FF9900) 
 
 * **About**: Create a cluster that can launch instances in multiple Availability Zones
-* **Authors**: Matt Vaughn
 * **Usage**: [README.md](pcluster/multi_az/README.md)
-
 #### latest ![tag](https://img.shields.io/badge/-core-%23146EB4) ![tag](https://img.shields.io/badge/-parallelcluster-%23FF9900) 
 
-* **About**: 1-click AWS ParallelCluster 3.6.1 with support for network provisioning.
-* **Authors**: Matt Vaughn, AWS HPC Engineering
+* **About**: Quick demo of the latest ParallelCluster release
 * **Usage**: [README.md](pcluster/latest/README.md)
-* **Default**: [assets/launch.yaml](https://aws-hpc-recipes.s3.us-east-1.amazonaws.com/main/recipes/pcluster/latest/assets/launch.yaml)
 #### slurm_accounting ![tag](https://img.shields.io/badge/-parallelcluster-%23FF9900) ![tag](https://img.shields.io/badge/-rds-%237DCEA0) ![tag](https://img.shields.io/badge/-core-%23146EB4) 
 
 * **About**: Create an instance of AWS ParallelCluster with Slurm accounting enabled, using Amazon RDS as the DBMS.
-* **Authors**: Matt Vaughn
 * **Usage**: [README.md](pcluster/slurm_accounting/README.md)
-
 
 ### :arrow_right: scheduler: HPC scheduler
 
@@ -122,25 +100,17 @@ The S3 URL is useful anywhere you want to use native S3 commands for data access
 #### efs_simple ![tag](https://img.shields.io/badge/-core-%23146EB4) ![tag](https://img.shields.io/badge/-efs-%237DCEA0) ![tag](https://img.shields.io/badge/-nfs-%23AAB7B8) 
 
 * **About**: Create an Amazon EFS filesystem and mount targets in three Availability Zones.
-* **Authors**: Matt Vaughn
 * **Usage**: [README.md](storage/efs_simple/README.md)
-* **Default**: [assets/main.yaml](https://aws-hpc-recipes.s3.us-east-1.amazonaws.com/main/recipes/storage/efs_simple/assets/main.yaml)
 #### fsx_lustre_s3_dra ![tag](https://img.shields.io/badge/-fsx-%237DCEA0) ![tag](https://img.shields.io/badge/-lustre-%23AAB7B8) ![tag](https://img.shields.io/badge/-s3-%237DCEA0) ![tag](https://img.shields.io/badge/-beta-%23800080) 
 
 * **About**: Demonstrates an FSx for Lustre filesystem with an S3 data repository association
-* **Authors**: Matt Vaughn
 * **Usage**: [README.md](storage/fsx_lustre_s3_dra/README.md)
-
 #### fsx_lustre ![tag](https://img.shields.io/badge/-core-%23146EB4) ![tag](https://img.shields.io/badge/-fsx-%237DCEA0) ![tag](https://img.shields.io/badge/-lustre-%23AAB7B8) 
 
 * **About**: Creates either a scratch or persistent FSxL filesystem and the relevant security groups for use with ParallelCluster.
-* **Authors**: Matt Vaughn
 * **Usage**: [README.md](storage/fsx_lustre/README.md)
-
 #### fsx_openzfs ![tag](https://img.shields.io/badge/-beta-%23800080) ![tag](https://img.shields.io/badge/-fsx-%237DCEA0) ![tag](https://img.shields.io/badge/-openzfs-%23AAB7B8) ![tag](https://img.shields.io/badge/-nfs-%23AAB7B8) 
 
 * **About**: Provision an FSx for OpenZFS filesystem and relevant security groups for use with ParallelCluster
-* **Authors**: Matt Vaughn
 * **Usage**: [README.md](storage/fsx_openzfs/README.md)
-* **Default**: [assets/main.yaml](https://aws-hpc-recipes.s3.us-east-1.amazonaws.com/main/recipes/storage/fsx_openzfs/assets/main.yaml)
 
