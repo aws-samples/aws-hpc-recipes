@@ -2,9 +2,9 @@
 # The name of the recipe. This has the same character requirements as namespace.
 name: latest
 # In this recipe, this tracks the referenced ParallelCluster release.
-version: "3.6.1"
+version: "3.7.0"
 # A short summary description of the recipe
-description: 1-click AWS ParallelCluster 3.6.1 with support for network provisioning.
+description: Quick demo of the latest ParallelCluster release
 # The path to the README for the recipe relative to its root
 readme: README.md
 # Optional URL for external documentation
