@@ -81,4 +81,4 @@ Costs for a cluster created using this recipe will vary depending on the cluster
 
 ## Cleaning Up
 
-When you are done using your cluster, you can delete it and all its associated resources by navigating to the AWS CloudFormation console and deleting the **multiuser-cluster** stack. 
+When you are done using your cluster, you can delete it and all its associated resources by navigating to the AWS CloudFormation console and deleting the relevant stack. 

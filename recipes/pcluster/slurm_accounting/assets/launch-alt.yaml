@@ -150,7 +150,7 @@ Resources:
     UpdateReplacePolicy: Delete
     Properties:
       Parameters:
-        ClusterName: !Join [ "-", [ 'sacct', 'db', !Ref ClusterName ] ]
+        ClusterName: !Sub 'accounting-${AWS::StackName}'
         ClusterAdmin: dbadmin
         AdminPasswordSecretString: !Ref AdminPasswordSecretString
         MinCapacity: 1
