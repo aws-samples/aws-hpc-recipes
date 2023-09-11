@@ -2,21 +2,18 @@
 
 This repository contains example recipes that demonstrate how to build HPC systems using AWS ParallelCluster and other AWS products.
 
-## Contents
+## Getting Started
 
-Recipes are in the [recipes](./recipes/README.md) directory. You can find sample networking setups, filesystem configurations, database server deployments, and ParallelCluster deployments. The ParallelCluster recipes are especially interesting since they illustrate a) how to use some advanced features and b) how to integrate ParallelCluster with AWS products such as Amazon FSx for Lustre. 
+* If you are new to AWS ParallelCluster, you can watch a [5-minute explainer video](https://youtu.be/gmw7A3kOh60).
+* You can launch an HPC cluster in the cloud [with just a few clicks](recipes/pcluster/latest/README.md).
+* Do you need help setting up HPC-ready networking? Choose from a [simple example](recipes/net/hpc_simple/README.md) or a [more advanced configuration](recipes/net/hpc_large_scale/README.md).
+* There are also examples of setting up HPC-ready filesystems on AWS [for you to try and learn from](recipes/README.md#arrow_right-storage-storage).
 
-To aid in discoverability, recipes are indexed in the recipes [README](./recipes/README.md) file. They are organized by theme, such as "db" for database and "net" for networking. Recipes are also tagged to help you determine the most interesting aspects of each recipe. 
-
-Here is an example of what a recipe looks like on the index page:
+To simply explore what's here, the [recipes home page](./recipes/README.md) shows you every recipe. Here is an example of what you'll find:
 
 ![recipe](docs/media/recipe.png)
 
-This recipe is named **slurm_accounting_db** and is a part of the **db** (database collection). Its tags tell us its a core recipe (i.e. it's maintained by AWS staff) and that it pertains to Amazon RDS and AWS ParallelCluster. 
-
-## Getting Started
-
-If you're new to AWS ParallelCluster, start by [reviewing its User Guide](https://docs.aws.amazon.com/parallelcluster/latest/ug/what-is-aws-parallelcluster.html), then try out the [recipes/pcluster/latest](./recipes/pcluster/latest/README.md) recipe. Then, navigate to [recipes](./recipes/README.md) and explore other topics. 
+This is a recipe named **slurm_accounting_db**. It's part of the **db** (database collection). The tags tell us its a **core** recipe (i.e. it's maintained by AWS staff) and that it pertains to Amazon RDS and AWS ParallelCluster. 
 
 ## Security
 
@@ -24,7 +21,7 @@ See [CONTRIBUTING](CONTRIBUTING.md#security-issue-notifications) for more inform
 
 ## Contributing
 
-We encourage your to contributions to this repository. Read up on our [contribution process and guidelines](CONTRIBUTING.md). Then, head to **[Get Started](docs/start.md)** to begin. 
+We encourage your to contributions to this collection. Read up on our [contribution process and guidelines](CONTRIBUTING.md). Then, head to **[Get Started](docs/start.md)** to begin. 
 
 ## License
 
