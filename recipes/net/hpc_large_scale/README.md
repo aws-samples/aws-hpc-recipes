@@ -8,7 +8,7 @@ This recipe demonstrates a cloud networking setup that supports large-scale HPC 
 
 This recipe includes a single CloudFormation template that prepares a VPC suitable for larger-scale computations. It provisions public and private subnets in three Availability Zones in the Region of your choice. By default, the template is configured to create a VPC with a `/16` CIDR block (65,536 addresses) and 6 subnet blocks that supporting 4096 IP addresses each (`/20` CIDR block). You can specify your own CIDR block values when you run the template. 
 
-It is recommended that this stack replace the [hpc_simple](../hpc_simple/) stack, rather than operating both concurrently, as they are largely duplicative in function.
+It is recommended that this stack replace the [hpc_basic](../hpc_basic/) stack, rather than operating both concurrently, as they are largely duplicative in function.
 
 ### Usage
 

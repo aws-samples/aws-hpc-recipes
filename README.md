@@ -6,7 +6,7 @@ This repository contains example recipes that demonstrate how to build HPC syste
 
 * If you are new to AWS ParallelCluster, you can watch a [5-minute explainer video](https://youtu.be/gmw7A3kOh60).
 * You can launch an HPC cluster in the cloud [with just a few clicks](recipes/pcluster/latest/README.md).
-* Do you need help setting up HPC-ready networking? Choose from a [simple example](recipes/net/hpc_simple/README.md) or a [more advanced configuration](recipes/net/hpc_large_scale/README.md).
+* Do you need help setting up HPC-ready networking? Choose from a [simple example](recipes/net/hpc_basic/README.md) or a [more advanced configuration](recipes/net/hpc_large_scale/README.md).
 * There are also examples of setting up HPC-ready filesystems on AWS [for you to try and learn from](recipes/README.md#arrow_right-storage-storage).
 
 To simply explore what's here, the [recipes home page](./recipes/README.md) shows you every recipe. Here is an example of what you'll find:

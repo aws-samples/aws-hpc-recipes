@@ -55,10 +55,10 @@ You can use an AWS HPC recipe in several ways:
 * **About**: Networking configuration for large-scale HPC on AWS. Creates a new VPC.
 * **Usage**: [README.md](net/hpc_large_scale/README.md)
 
-#### hpc_simple ![tag](https://img.shields.io/badge/-core-%23146EB4) ![tag](https://img.shields.io/badge/-vpc-%23AAB7B8) 
+#### hpc_basic ![tag](https://img.shields.io/badge/-core-%23146EB4) ![tag](https://img.shields.io/badge/-vpc-%23AAB7B8) 
 
 * **About**: Networking configuration for HPC on AWS. Can use an existing VPC or create a new one.
-* **Usage**: [README.md](net/hpc_simple/README.md)
+* **Usage**: [README.md](net/hpc_basic/README.md)
 
 
 ### :arrow_right: pcluster: AWS ParallelCluster
