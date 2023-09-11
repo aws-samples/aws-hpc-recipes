@@ -1,6 +1,6 @@
-# The Recipe Collection
+# HPC Recipes for AWS
 
-This page shows all available recipes. They are organized by theme (e.g. `database` and `network`). Each recipe also has tags that indicate the key technologies (i.e. `parallelcluster` and `rds`) it references. 
+This page shows [all available recipes](#recipe-list). They are organized by theme (e.g. `Database management` and `Networking`). Each recipe also has tags that indicate the key technologies (i.e. `parallelcluster` and `rds`) it references. 
 
 ## Making use of recipes
 
