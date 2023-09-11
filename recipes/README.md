@@ -50,23 +50,33 @@ You can use an AWS HPC recipe in several ways:
 
 ### :arrow_right: net: Networking
 
-#### hpc_simple ![tag](https://img.shields.io/badge/-core-%23146EB4) ![tag](https://img.shields.io/badge/-vpc-%23AAB7B8) 
-
-* **About**: Networking configuration for HPC on AWS. Can use an existing VPC or create a new one.
-* **Usage**: [README.md](net/hpc_simple/README.md)
-
 #### hpc_large_scale ![tag](https://img.shields.io/badge/-core-%23146EB4) ![tag](https://img.shields.io/badge/-vpc-%23AAB7B8) 
 
 * **About**: Networking configuration for large-scale HPC on AWS. Creates a new VPC.
 * **Usage**: [README.md](net/hpc_large_scale/README.md)
 
+#### hpc_simple ![tag](https://img.shields.io/badge/-core-%23146EB4) ![tag](https://img.shields.io/badge/-vpc-%23AAB7B8) 
+
+* **About**: Networking configuration for HPC on AWS. Can use an existing VPC or create a new one.
+* **Usage**: [README.md](net/hpc_simple/README.md)
+
 
 ### :arrow_right: pcluster: AWS ParallelCluster
+
+#### latest ![tag](https://img.shields.io/badge/-core-%23146EB4) ![tag](https://img.shields.io/badge/-parallelcluster-%23FF9900) 
+
+* **About**: Quick demo of the latest ParallelCluster release
+* **Usage**: [README.md](pcluster/latest/README.md)
 
 #### login_nodes ![tag](https://img.shields.io/badge/-parallelcluster-%23FF9900) 
 
 * **About**: Demonstrates the new Login Nodes feature in ParallelCluster 3.7.0
 * **Usage**: [README.md](pcluster/login_nodes/README.md)
+
+#### multi_az ![tag](https://img.shields.io/badge/-parallelcluster-%23FF9900) 
+
+* **About**: Create a cluster that can launch instances in multiple Availability Zones
+* **Usage**: [README.md](pcluster/multi_az/README.md)
 
 #### multi_user ![tag](https://img.shields.io/badge/-parallelcluster-%23FF9900) ![tag](https://img.shields.io/badge/-activedirectory-%23AAB7B8) ![tag](https://img.shields.io/badge/-secretsmanager-%237DCEA0) ![tag](https://img.shields.io/badge/-beta-%23800080) 
 
@@ -77,16 +87,6 @@ You can use an AWS HPC recipe in several ways:
 
 * **About**: Create an AWS ParallelCluster with ParallelClusterUI to manage it.
 * **Usage**: [README.md](pcluster/pcui/README.md)
-
-#### multi_az ![tag](https://img.shields.io/badge/-parallelcluster-%23FF9900) 
-
-* **About**: Create a cluster that can launch instances in multiple Availability Zones
-* **Usage**: [README.md](pcluster/multi_az/README.md)
-
-#### latest ![tag](https://img.shields.io/badge/-core-%23146EB4) ![tag](https://img.shields.io/badge/-parallelcluster-%23FF9900) 
-
-* **About**: Quick demo of the latest ParallelCluster release
-* **Usage**: [README.md](pcluster/latest/README.md)
 
 #### slurm_accounting ![tag](https://img.shields.io/badge/-parallelcluster-%23FF9900) ![tag](https://img.shields.io/badge/-rds-%237DCEA0) ![tag](https://img.shields.io/badge/-core-%23146EB4) 
 
@@ -105,15 +105,15 @@ You can use an AWS HPC recipe in several ways:
 * **About**: Create an Amazon EFS filesystem and mount targets in three Availability Zones.
 * **Usage**: [README.md](storage/efs_simple/README.md)
 
-#### fsx_lustre_s3_dra ![tag](https://img.shields.io/badge/-fsx-%237DCEA0) ![tag](https://img.shields.io/badge/-lustre-%23AAB7B8) ![tag](https://img.shields.io/badge/-s3-%237DCEA0) ![tag](https://img.shields.io/badge/-beta-%23800080) 
-
-* **About**: Demonstrates an FSx for Lustre filesystem with an S3 data repository association
-* **Usage**: [README.md](storage/fsx_lustre_s3_dra/README.md)
-
 #### fsx_lustre ![tag](https://img.shields.io/badge/-core-%23146EB4) ![tag](https://img.shields.io/badge/-fsx-%237DCEA0) ![tag](https://img.shields.io/badge/-lustre-%23AAB7B8) 
 
 * **About**: Creates either a scratch or persistent FSxL filesystem and the relevant security groups for use with ParallelCluster.
 * **Usage**: [README.md](storage/fsx_lustre/README.md)
+
+#### fsx_lustre_s3_dra ![tag](https://img.shields.io/badge/-fsx-%237DCEA0) ![tag](https://img.shields.io/badge/-lustre-%23AAB7B8) ![tag](https://img.shields.io/badge/-s3-%237DCEA0) ![tag](https://img.shields.io/badge/-beta-%23800080) 
+
+* **About**: Demonstrates an FSx for Lustre filesystem with an S3 data repository association
+* **Usage**: [README.md](storage/fsx_lustre_s3_dra/README.md)
 
 #### fsx_openzfs ![tag](https://img.shields.io/badge/-beta-%23800080) ![tag](https://img.shields.io/badge/-fsx-%237DCEA0) ![tag](https://img.shields.io/badge/-openzfs-%23AAB7B8) ![tag](https://img.shields.io/badge/-nfs-%23AAB7B8) 
 

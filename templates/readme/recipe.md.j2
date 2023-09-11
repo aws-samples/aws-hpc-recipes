@@ -1,6 +1,6 @@
 {% if ns_data.recipes|length > 0 %}
-{% for recipe in ns_data.recipes -%}
-#### {{ recipe.name }} {% if recipe.tags %}{% for tag in recipe.tags -%}![tag](https://img.shields.io/badge/-{{ tag }}-%23{{ colors.get(tags.get(tag, 'grey')) }}) {% endfor %}{% endif %}
+{% for recipe in ns_data.recipes|sort(attribute='name') -%}
+#### {{ recipe.name }} {% if recipe.tags %}{% for tag in recipe.tags|sort(attribute='tag') -%}![tag](https://img.shields.io/badge/-{{ tag }}-%23{{ colors.get(tags.get(tag, 'grey')) }}) {% endfor %}{% endif %}
 
 * **About**: {{ recipe.description }}
 * **Usage**: [{{ recipe.readme }}]({{ ns_name }}/{{ recipe.name }}/{{ recipe.readme }})
