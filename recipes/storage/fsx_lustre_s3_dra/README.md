@@ -21,6 +21,29 @@ By default, this template will create a bidirectional DRA. That means that files
 
 The key difference between this template and the read-only version is in resource `FSxLDra`, where we create both an `AutoExportPolicy` and an `AutoImportPolicy`, rather than just an `AutoImportPolicy`.
 
+### Use with AWS ParallelCluster
+
+Add the new FSx for Lustre filesystem to your ParallelCluster deployment with an entry in the `SharedStorage` configuration section.
+
+```yaml
+# Example shared storage configuration
+---
+SharedStorage:
+  - Name: FsxLustre0
+    StorageType: FsxLustre
+    MountDir: /shared/fsx
+    FsxLustreSettings:
+      VolumeId: fs-0123456789abcdef0
+```
+
+### Testing It Out
+
+1. Upload files to the source S3 bucket (if it doesn't already have some in it). 
+2. Log into your ParallelCluster system. The files in your S3 bucket should be visible when you list the shared storage mount directory for the FSx for Lustre resource. 
+3. Now, create some files on the cluster in the mount directory. 
+4. View the contents of the S3 bucket using the AWS CLI/SDK or the AWS S3 Console. The new files should be visible there.
+5. Delete or rename some files on either side (S3 or FSx) - the changes should propagate quickly between systems.
+
 ## Cost Estimate
 
 The cost to operate the FSx for Lustre filesystem will vary based on the capacity and throughput you select. For reference, a 1.2 TB, 1000 MB/s/TiB persistent filesystem will cost around $90.00 to operate for a week. 
