@@ -4,7 +4,9 @@
 
 * **About**: {{ recipe.description }}
 * **Usage**: [{{ recipe.readme }}]({{ ns_name }}/{{ recipe.name }}/{{ recipe.readme }})
+
 {% endfor %}
 {% else %}
 *There are currently no recipes in this namespace.*
+
 {% endif -%}

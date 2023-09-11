@@ -1,4 +1,2 @@
-{% for ns_name, ns_data in namespaces.items() -%}
-### :arrow_right: {{ ns_name }}: {{ ns_data.description }}
-{% include 'recipe.md.j2' %}
-{%- endfor %}
+{% for ns_name, ns_data in namespaces.items() -%}### :arrow_right: {{ ns_name }}: {{ ns_data.description }}
+{% include 'recipe.md.j2' %}{%- endfor %}
