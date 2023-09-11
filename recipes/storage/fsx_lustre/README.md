@@ -19,6 +19,8 @@ There are two templates. One creates a "scratch" filesystem, suitable for short-
 
 When prompted to choose a subnet, select the one where you intend to place the majority of your computing. It is possible to access FSx for Lustre filesystems across Availability Zones, but there will be higher latency and additional costs due to cross-zone traffic.
 
+### Use with AWS ParallelCluster
+
 To connect your FSx filesystem to a ParallelCluster deployment, you will need to know its filesystem ID. You can discover this in the **Outputs** from your newly-created CloudFormation stack. Note that the filesysted ID and the security group are also exported, so you can easily import them into other stacks. You can also find the filesytem ID and other details in [Amazon FSx console](https://console.aws.amazon.com/fsx/home) under **File systems**.
 
 ## Cost Estimate

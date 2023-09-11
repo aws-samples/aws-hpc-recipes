@@ -10,6 +10,8 @@ This recipe sets up an Amazon RDS database that can support AWS ParallelCluster 
 2. Follow the instructions in the AWS CloudFormation console. 
 3. Monitor the status of the stack named **slurm-accounting-db**. When its status is `CREATE_COMPLETE`, navigate to its **Outputs** tab. You will find several values you can either use to creating an AWS ParallelCluster instance directly, or that you can imoport if you choose to create a cluster using CloudFormation.
 
+### Use with AWS ParallelCluster
+
 For more details on how to use the resulting database resource, consult the [AWS ParallelCluster documentation](https://docs.aws.amazon.com/parallelcluster/latest/ug/tutorials_07_slurm-accounting-v3.html) or the [ParallelCluster with Slurm Accounting Enabled](../../pcluster/slurm_accounting/README.md) recipe. 
 
 ## Cost Estimate
