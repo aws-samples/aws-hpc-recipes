@@ -14,7 +14,7 @@ homepage:
 # A list of recipe content authors
 authors:
   - Matt Vaughn
-  - AWS HPC Engineering
+  - AWS HPC Engineering Team
 # A list of tags you want to associate with the collection for indexing/searching. Tags have the same character requirements as namespace.
 tags:
   - core

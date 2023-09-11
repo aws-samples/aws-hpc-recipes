@@ -13,6 +13,8 @@ Create an instance of the latest AWS ParallelCluster release, after configuring 
 3. Follow the instructions in the AWS CloudFormation console. 
 4. Monitor the status of the stack named **latest-pcluster**. When its status is `CREATE_COMPLETE`, navigate to its **Outputs** tab. Find the output named **HeadNodeIp** - this is the public IP address for your cluster login node.
 
+**Note**: This template creates a VPC and subnets. If you wish to use your own networking configuration, launch your cluster using the [alternative CloudFormation template](assets/launch-alt.yaml). 
+
 #### Notes
 
 1. This template selects head node and compute node instance types based on the architecture you choose. Since this is a demonstration, rather than a production cluster, smaller instance types have been selected.

@@ -16,9 +16,10 @@ Metadata:
       - Label:
           default: Networking and Access
         Parameters:
-          - AvailabilityZone
           - KeyName
           - AllowedIps
+          - HeadNodeSubnetId
+          - ComputeNodesSubnetId
       - Label:
           default: Miscellaneous
         Parameters:
@@ -33,11 +34,6 @@ Parameters:
     Description: Name of cluster. Must be unique in the Region and different from the stack name.
     Type: String
     Default: mycluster
-
-  AvailabilityZone:
-    Description: Availability zone where instances will be launched
-    Type: AWS::EC2::AvailabilityZone::Name
-    Default: us-east-2a
 
   QueueName:
     Description: Name of the default Slurm queue
@@ -78,6 +74,14 @@ Parameters:
       - x86
     Description: Choose a node architecture.
 
+  HeadNodeSubnetId:
+    Description: Subnet for head node. Choose a public subnet to facilitate inbound SSH access. 
+    Type: AWS::EC2::Subnet::Id
+
+  ComputeNodesSubnetId:
+    Description: Subnet for compute nodes. Private subnet is recommended. Should be in the same AZ as HeadNodeSubnetIp. Can even be the same value as HeadNodeSubnetId.
+    Type: AWS::EC2::Subnet::Id
+
 Mappings:
   ParallelCluster:
     Constants:
@@ -111,21 +115,6 @@ Resources:
         - { Version: !FindInMap [ParallelCluster, Constants, Version] }
       TimeoutInMinutes: 10
 
-  PclusterVpc:
-    Type: AWS::CloudFormation::Stack
-    DeletionPolicy: Delete
-    UpdateReplacePolicy: Delete
-    Properties:
-      Parameters:
-        VpcCIDR: 10.0.0.0/16
-        PublicCIDR: 10.0.0.0/24
-        PrivateCIDR: 10.0.16.0/20
-        AvailabilityZone: !Ref AvailabilityZone
-      TemplateURL: !Sub
-        - https://aws-hpc-recipes.s3.us-east-1.${AWS::URLSuffix}/${Version}/recipes/net/hpc_simple/assets/public-private.yaml
-        - { Version: !FindInMap [Recipes, Constants, Version] }
-      TimeoutInMinutes: 10
-
   PclusterCluster:
     Type: Custom::PclusterCluster
     DeletionPolicy: Delete
@@ -139,7 +128,7 @@ Resources:
         HeadNode:
           InstanceType: !FindInMap [ InstanceTypeForArchitecture, HeadNode, !Ref Architecture ]
           Networking:
-            SubnetId: !GetAtt [ PclusterVpc , Outputs.DefaultPublicSubnet ]
+            SubnetId: !Ref HeadNodeSubnetId
           Ssh:
             KeyName: !Ref KeyName
             AllowedIps: !Ref AllowedIps
@@ -165,7 +154,7 @@ Resources:
               DisableSimultaneousMultithreading: true
             Networking:
               SubnetIds:
-                - !GetAtt [ PclusterVpc , Outputs.DefaultPrivateSubnet ]
+                - !Ref ComputeNodesSubnetId
               PlacementGroup:
                 Enabled: true
             ComputeSettings:
