@@ -18,7 +18,7 @@ You can use an AWS HPC recipe in several ways:
 
 ### :arrow_right: db: Database management
 
-#### slurm_accounting_db ![tag](https://img.shields.io/badge/-core-%23146EB4) ![tag](https://img.shields.io/badge/-rds-%237DCEA0) ![tag](https://img.shields.io/badge/-parallelcluster-%23FF9900) 
+#### slurm_accounting_db ![tag](https://img.shields.io/badge/-core-%23146EB4) ![tag](https://img.shields.io/badge/-parallelcluster-%23FF9900) ![tag](https://img.shields.io/badge/-rds-%237DCEA0) 
 
 * **About**: Set up a replicated Amazon Aurora database that can support Slurm accounting.
 * **Usage**: [README.md](db/slurm_accounting_db/README.md)
@@ -26,7 +26,7 @@ You can use an AWS HPC recipe in several ways:
 
 ### :arrow_right: dir: Directory services
 
-#### demo_managed_ad ![tag](https://img.shields.io/badge/-beta-%23800080) ![tag](https://img.shields.io/badge/-activedirectory-%23AAB7B8) ![tag](https://img.shields.io/badge/-secretsmanager-%237DCEA0) 
+#### demo_managed_ad ![tag](https://img.shields.io/badge/-activedirectory-%23AAB7B8) ![tag](https://img.shields.io/badge/-beta-%23800080) ![tag](https://img.shields.io/badge/-secretsmanager-%237DCEA0) 
 
 * **About**: Stand up a basic AWS Managed Microsoft AD for use with AWS ParallelCluster.
 * **Usage**: [README.md](dir/demo_managed_ad/README.md)
@@ -78,17 +78,17 @@ You can use an AWS HPC recipe in several ways:
 * **About**: Create a cluster that can launch instances in multiple Availability Zones
 * **Usage**: [README.md](pcluster/multi_az/README.md)
 
-#### multi_user ![tag](https://img.shields.io/badge/-parallelcluster-%23FF9900) ![tag](https://img.shields.io/badge/-activedirectory-%23AAB7B8) ![tag](https://img.shields.io/badge/-secretsmanager-%237DCEA0) ![tag](https://img.shields.io/badge/-beta-%23800080) 
+#### multi_user ![tag](https://img.shields.io/badge/-activedirectory-%23AAB7B8) ![tag](https://img.shields.io/badge/-beta-%23800080) ![tag](https://img.shields.io/badge/-parallelcluster-%23FF9900) ![tag](https://img.shields.io/badge/-secretsmanager-%237DCEA0) 
 
 * **About**: Creates a multi-user instance of AWS ParallelCluster using AWS Managed AD as the directory service.
 * **Usage**: [README.md](pcluster/multi_user/README.md)
 
-#### pcui ![tag](https://img.shields.io/badge/-parallelcluster-%23FF9900) ![tag](https://img.shields.io/badge/-cognito-%237DCEA0) ![tag](https://img.shields.io/badge/-lambda-%237DCEA0) 
+#### pcui ![tag](https://img.shields.io/badge/-cognito-%237DCEA0) ![tag](https://img.shields.io/badge/-lambda-%237DCEA0) ![tag](https://img.shields.io/badge/-parallelcluster-%23FF9900) 
 
 * **About**: Create an AWS ParallelCluster with ParallelClusterUI to manage it.
 * **Usage**: [README.md](pcluster/pcui/README.md)
 
-#### slurm_accounting ![tag](https://img.shields.io/badge/-parallelcluster-%23FF9900) ![tag](https://img.shields.io/badge/-rds-%237DCEA0) ![tag](https://img.shields.io/badge/-core-%23146EB4) 
+#### slurm_accounting ![tag](https://img.shields.io/badge/-core-%23146EB4) ![tag](https://img.shields.io/badge/-parallelcluster-%23FF9900) ![tag](https://img.shields.io/badge/-rds-%237DCEA0) 
 
 * **About**: Create an instance of AWS ParallelCluster with Slurm accounting enabled, using Amazon RDS as the DBMS.
 * **Usage**: [README.md](pcluster/slurm_accounting/README.md)
@@ -110,12 +110,12 @@ You can use an AWS HPC recipe in several ways:
 * **About**: Creates either a scratch or persistent FSxL filesystem and the relevant security groups for use with ParallelCluster.
 * **Usage**: [README.md](storage/fsx_lustre/README.md)
 
-#### fsx_lustre_s3_dra ![tag](https://img.shields.io/badge/-fsx-%237DCEA0) ![tag](https://img.shields.io/badge/-lustre-%23AAB7B8) ![tag](https://img.shields.io/badge/-s3-%237DCEA0) ![tag](https://img.shields.io/badge/-beta-%23800080) 
+#### fsx_lustre_s3_dra ![tag](https://img.shields.io/badge/-beta-%23800080) ![tag](https://img.shields.io/badge/-fsx-%237DCEA0) ![tag](https://img.shields.io/badge/-lustre-%23AAB7B8) ![tag](https://img.shields.io/badge/-s3-%237DCEA0) 
 
 * **About**: Demonstrates an FSx for Lustre filesystem with an S3 data repository association
 * **Usage**: [README.md](storage/fsx_lustre_s3_dra/README.md)
 
-#### fsx_openzfs ![tag](https://img.shields.io/badge/-beta-%23800080) ![tag](https://img.shields.io/badge/-fsx-%237DCEA0) ![tag](https://img.shields.io/badge/-openzfs-%23AAB7B8) ![tag](https://img.shields.io/badge/-nfs-%23AAB7B8) 
+#### fsx_openzfs ![tag](https://img.shields.io/badge/-beta-%23800080) ![tag](https://img.shields.io/badge/-fsx-%237DCEA0) ![tag](https://img.shields.io/badge/-nfs-%23AAB7B8) ![tag](https://img.shields.io/badge/-openzfs-%23AAB7B8) 
 
 * **About**: Provision an FSx for OpenZFS filesystem and relevant security groups for use with ParallelCluster
 * **Usage**: [README.md](storage/fsx_openzfs/README.md)
