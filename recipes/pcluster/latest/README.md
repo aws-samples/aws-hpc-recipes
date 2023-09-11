@@ -26,6 +26,8 @@ To SSH into the cluster, you will need its public IP (from above). Using your lo
 
 You can also use AWS Systems Manager to access the cluster. You can follow the link found in **Outputs > SystemManagerUrl**. Or, you can navigate to the **Instances** panel in the [Amazon EC2 Console](https://console.aws.amazon.com/ec2/home?region=us-east-2#Instances). Find the instance named **HeadNode** - this is your cluster's access node. Select that instance, then choose **Actions** followed by **Connect**. On the **Connect to instance** page, navigate to **Session Manager** then choose **Connect**.
 
+Once you are logged into the system, you can run your first job using Slurm. Learn more via the [ParallelCluster User Guide](https://docs.aws.amazon.com/parallelcluster/latest/ug/tutorials-running-your-first-job-on-version-3.html#tutorial-1stjob-logging-in-head-node) and [Day1HPC](https://day1hpc.com/tags/parallelcluster/), the AWS HPC community site. 
+
 ## Cost Estimate
 
 Costs for a cluster created using this recipe will vary depending on the cluster architecture, since different instances types will be selected depending which one you choose. It will also vary based on how many jobs you submit to the cluster, since ParallelCluster can launch instances to run them. Based on on-demand pricing for the relevant instances, it should cost between $10 to $25.00 to run the cluster for a week, submitting a handful of jobs. 
