@@ -13,7 +13,7 @@ This recipe demonstrates the new Login Nodes feature in ParallelCluster 3.7.0.
 3. Follow the instructions in the AWS CloudFormation console. 
 4. Monitor the status of the stack named **latest-pcluster**. When its status is `CREATE_COMPLETE`, you can log into the cluster. 
 
-If you do not wish to import the networking configuration from a stack provided by the **HPC Recipes for AWS** collection. you can use the [alternative CloudFormation template](assets/launch-alt.yaml). 
+If you do not wish to import the networking configuration from a stack provided by the **HPC Recipes for AWS** collection. you can use the [alternative CloudFormation template](https://us-east-2.console.aws.amazon.com/cloudformation/home?region=us-east-2#/stacks/create/review?stackName=login-nodes&templateURL=https://aws-hpc-recipes.s3.us-east-1.amazonaws.com/main/recipes/pcluster/login_nodes/assets/launch-alt.yaml). 
 
 ### Access the Cluster
 

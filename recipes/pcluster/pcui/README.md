@@ -18,7 +18,7 @@ Creates an instance of AWS ParallelCluster along with a deployment of the Parall
     * The value you enter for **NetworkStackNameParameter** is the name of your HPC networking stack
     * You need to be able to receive email at the address you provide for **AdminUserEmail**
 
-**Note**: If you do not wish to import the networking configuration from a stack provided by the **HPC Recipes for AWS** collection. you can use the [alternative CloudFormation template](assets/launch-alt.yaml). 
+**Note**: If you do not wish to import the networking configuration from a stack provided by the **HPC Recipes for AWS** collection. you can use the [alternative CloudFormation template](https://us-east-2.console.aws.amazon.com/cloudformation/home?region=us-east-2#/stacks/create/review?stackName=pcluster-pcui&templateURL=https://aws-hpc-recipes.s3.us-east-1.amazonaws.com/main/recipes/pcluster/pcui/assets/launch-alt.yaml). 
 
 ### Logging into ParallelCluster UI
 

@@ -17,7 +17,7 @@ Creates an instance of AWS ParallelCluster with Slurm accounting enabled, using 
   * Don't set a value for **AdminPasswordSecretString** that is used anywhere else
 4. Monitor the status of the stack named **sacct-cluster**. When its status is `CREATE_COMPLETE`, navigate to its **Outputs** tab. Find the output named **HeadNodeIp** - this is the public IP address for your cluster login node.
 
-**Note**: If you do not wish to import the networking configuration from a stack provided by the **HPC Recipes for AWS** collection. you can use the [alternative CloudFormation template](assets/launch-alt.yaml). 
+**Note**: If you do not wish to import the networking configuration from a stack provided by the **HPC Recipes for AWS** collection. you can use the [alternative CloudFormation template](https://us-east-2.console.aws.amazon.com/cloudformation/home?region=us-east-2#/stacks/create/review?stackName=sacct-cluster&templateURL=https://aws-hpc-recipes.s3.us-east-1.amazonaws.com/main/recipes/pcluster/slurm_accounting/assets/launch-alt.yaml). 
 
 ### Access the Cluster and Try Slurm Accounting
 
