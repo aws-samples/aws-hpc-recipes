@@ -14,7 +14,7 @@ If you discover a potential security issue in this project we ask that you notif
 
 We request that you follow these guidelines:
 
-1. Populate your recipe `metadata.yml` file as fully and accurately as you can. This information is used to render the index page of all HPCDK recipes. 
+1. Populate your recipe `metadata.yml` file as fully and accurately as you can. This information is used to render the recipes index page. 
 2. Make sure your README is populated with enough detail for people to understand what your recipe does and how to use it. Ensure that every asset is documented, where feasible, with a comment describing what it does. If an asset has an explicit description field, like CloudFormation templates do, populate it. 
 3. Test your recipe. Can you successfully create or manage resources with it. If your recipe uses CloudFormation, confirm that the stack (and all of its resources) successfully deleted.
 4. Format your assets to make them as readable as possible. Use PEP conventions for Python, prettify YAML and JSON files, and so on. Also, comment liberally. 

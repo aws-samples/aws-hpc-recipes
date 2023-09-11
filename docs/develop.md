@@ -9,9 +9,9 @@ Most project build processes are defined and controlled in the top-level Makefil
 
 ## Deploy recipes to your own S3 bucket
 
-First, create an S3 bucket. This should be dedicated to your work with HPCDK as it will contain world-readable files. 
+First, create an S3 bucket. This should be dedicated to your work with the HPC recipes library as it will contain world-readable files. 
 
-Now, you can affect the destination and path for your personal HPCDK deployment as follows:
+You can configure the destination and path for your HPC recipes library deployment as follows:
 * Set `HPCDK_TAG` to the branch name you are deploying from
 * Set `HPCDK_S3_BUCKET` to the name of your personal bucket
 * Set `HPCDK_PROFILE` to your preferred AWS CLI credentials profile is

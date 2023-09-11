@@ -18,7 +18,7 @@ Create an instance of AWS ParallelCluster configured to launch instances in mult
 4. Monitor the status of the stack named **multi-az-cluster**. When its status is `CREATE_COMPLETE`, navigate to its **Outputs** tab. Find the output named **HeadNodeIp** - this is the public IP address for your cluster login node.
 5. As a test, you can create and submit several batch jobs until all your configured Compute instances have launched. They *may or may not* launch in different availability zones. You can tell by looking at the Availability Zone column in the EC2 instances list. 
 
-**Note**: If you do not wish to import the networking configuration from a stack provided by the **HPC Recipe for AWS** collection. you can use the [alternative CloudFormation template](assets/launch-alt.yaml). 
+**Note**: If you do not wish to import the networking configuration from a stack provided by the **HPC Recipes for AWS** collection. you can use the [alternative CloudFormation template](assets/launch-alt.yaml). 
 
 If you want to learn more about multi-AZ clusters, check out the related article on the [AWS HPC Blog](https://aws.amazon.com/blogs/hpc/multiple-availability-zones-now-supported-in-aws-parallelcluster-3-4/).
 

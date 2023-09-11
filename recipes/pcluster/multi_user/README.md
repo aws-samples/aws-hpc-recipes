@@ -19,7 +19,7 @@ Creates a multi-user instance of AWS ParallelCluster using AWS Managed AD as the
   * The template asks you to provide a valid CIDR notation (X.X.X.X/X) to secure access to the login node. This is because you are enabling password authentication on an SSH connection. It is disabled by default for security purposes.
   * The values you provide for `UserName` and `UserPassword` are the credentials you will use to log into the cluster. Choose an appropriately strong password!
 
-**Note**: If you do not wish to import the networking configuration from a stack provided by the **HPC Recipe for AWS** collection. you can use the [alternative CloudFormation template](assets/launch-alt.yaml). 
+**Note**: If you do not wish to import the networking configuration from a stack provided by the **HPC Recipes for AWS** collection. you can use the [alternative CloudFormation template](assets/launch-alt.yaml). 
 
 ### Access the Cluster
 
