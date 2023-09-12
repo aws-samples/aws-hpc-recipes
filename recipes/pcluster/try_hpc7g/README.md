@@ -16,7 +16,7 @@ The cluster design includes the following features:
 
 1. Navigate to the [AWS Service Quotas console](https://console.aws.amazon.com/servicequotas/home/services/ec2/quotas) and change to the **us-east-1** Region.
 2. Search for **HPC**, then check the **Running On-Demand HPC instances** quota to ensure your **Applied quota value** is sufficient to allow instance launches. This quota is expressed in vCPUs, not instances. 
-3. If it is not sufficient for your needs, choose the **Request increase at account-level** option and wait for your request to be processed.
+3. If it is not sufficient for your needs, choose the **Request increase at account-level** option and wait for your request to be processed. Then, return to this exercise.
 
 ### Launch the Cluster
 

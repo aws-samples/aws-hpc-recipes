@@ -15,8 +15,8 @@ The cluster design includes the following features:
 ### Check your Service Quota
 
 1. Navigate to the [AWS Service Quotas console](https://console.aws.amazon.com/servicequotas/home/services/ec2/quotas). Change to either the **us-east-2** or **eu-north-1** Region, depending on where you want to launch your test cluster. 
-2. Search for **HPC**, then check the **Running On-Demand HPC instances** quota to ensure your **Applied quota value** is sufficient to allow instance launches. This quota is expressed in vCPUs, so this value must 48 or larger. 
-3. If it is not, choose the **Request increase at account-level** option and wait for your request to be processed.
+2. Search for **HPC**, then check the **Running On-Demand HPC instances** quota to ensure your **Applied quota value** is sufficient to allow instance launches. This quota is expressed in vCPUs. 
+3. If your account quota is not sufficient to meet your needs, choose the **Request increase at account-level** option and wait for your request to be processed. Then, return to this exercise. 
 
 ### Launch the Cluster
 
@@ -33,7 +33,7 @@ If you want to use SSH to access the cluster, you will need its public IP (from 
 
 You can also use AWS Systems Manager to access the cluster. You can follow the link found in **Outputs > SystemManagerUrl**. Or, you can navigate to the **Instances** panel in the [Amazon EC2 Console](https://console.aws.amazon.com/ec2/home#Instances). Find the instance named **HeadNode** - this is your cluster's access node. Select that instance, then choose **Actions** followed by **Connect**. On the **Connect to instance** page, navigate to **Session Manager** then choose **Connect**.
 
-Once you are on the system, you can find a queue that will host jobs in Hpc6a instances.
+Once you are on the system, you can find a queue that will host jobs on Hpc6a instances.
 
 ```shell
 % sinfo

@@ -17,7 +17,7 @@ The cluster design includes the following features:
 
 1. Navigate to the [AWS Service Quotas console](https://console.aws.amazon.com/servicequotas/home/services/ec2/quotas). Change to either the **us-east-2** or **eu-west-1** Region, depending on where you want to launch your test cluster. 
 2. Search for **hpc7a** and make sure your **Applied quota value** is sufficient to allow instance launches.
-3. If it is not, choose the **Request increase at account-level** option and wait for your request to be processed.
+3. If it is not, choose the **Request increase at account-level** option and wait for your request to be processed. Then, return to this exercise. 
 
 ### Launch the Cluster
 
