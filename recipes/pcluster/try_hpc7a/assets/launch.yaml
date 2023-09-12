@@ -1,6 +1,6 @@
 AWSTemplateFormatVersion: '2010-09-09'
 Description: >
-  Deploy an HPC7a benchmarking cluster.
+  Deploy an Hpc7a test cluster.
 
 ### Stack metadata
 Metadata:

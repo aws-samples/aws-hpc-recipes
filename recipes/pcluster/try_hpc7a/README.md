@@ -1,4 +1,4 @@
-# HPC7a Benchmarking Cluster
+# Hpc7a Test Cluster
 
 ## Info
 
