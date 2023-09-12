@@ -1,0 +1,307 @@
+AWSTemplateFormatVersion: '2010-09-09'
+Description: >
+  Deploy an HPC7a benchmarking cluster.
+
+### Stack metadata
+Metadata:
+  AWS::CloudFormation::Interface:
+    ParameterGroups:
+      - Label:
+          default: Cluster Design
+        Parameters:
+          - OS
+          - ComputeInstanceMax12
+          - ComputeInstanceMax24
+          - ComputeInstanceMax48
+          - ComputeInstanceMax96
+      - Label:
+          default: Storage
+        Parameters:
+          - SharedSize
+          - FSxSize
+      - Label:
+          default: Networking and Access
+        Parameters:
+          - AvailabilityZone
+          - KeyName
+          - AllowedIps
+      - Label:
+          default: Miscellaneous
+        Parameters:
+          - ClusterName
+
+Conditions:
+  GovCloud: !Equals [!Ref AWS::Partition, 'aws-us-gov']
+  China: !Equals [!Ref AWS::Partition, 'aws-cn']
+
+Parameters:
+  ClusterName:
+    Description: Name of cluster. Must be unique in the Region and different from the stack name.
+    Type: String
+    Default: hpc7a-cluster
+
+  AvailabilityZone:
+    Description: Availability zone where instances will be launched. HPC7a instances are available in the us-east-2b and eu-west-1a Availability Zones.
+    Type: AWS::EC2::AvailabilityZone::Name
+    Default: us-east-2b
+    AllowedValues:
+         - "us-east-2b"
+         - "eu-west-1a"
+
+  ComputeInstanceMax12:
+    Description: "Maximum # compute instances in queue q12x"
+    Type: Number
+    MinValue: 1
+    Default: 32
+
+  ComputeInstanceMax24:
+    Description: "Maximum # compute instances in queue q24x"
+    Type: Number
+    MinValue: 1
+    Default: 32
+
+  ComputeInstanceMax48:
+    Description: "Maximum # compute instances in queue q48x"
+    Type: Number
+    MinValue: 1
+    Default: 32
+
+  ComputeInstanceMax96:
+    Description: "Maximum # compute instances in queue q96x"
+    Type: Number
+    MinValue: 1
+    Default: 32
+
+  AllowedIps:
+    Description: CIDR-formatted IP range for SSH connections to the cluster
+    Type: String
+    Default: 0.0.0.0/0
+
+  KeyName:
+    Description: Key pair for SSH login
+    Type: AWS::EC2::KeyPair::KeyName
+
+  OS:
+    Type: String
+    Default: alinux2
+    AllowedValues:
+      - alinux2
+      - centos7
+      - ubuntu1804
+      - ubuntu2004
+    Description: Cluster operating system
+
+  SharedSize:
+    Type: Number
+    Description: Size of NFS volume at /shared
+    Default: 500
+    MinValue: 50
+
+  FSxSize:
+    Type: Number
+    Description: Size of FSx for Lustre volume at /fsx
+    Default: 2400
+    MinValue: 1200
+    AllowedValues:
+         - 1200
+         - 2400
+         - 4800
+         - 7200
+         - 9600
+
+Mappings:
+  ParallelCluster:
+    Constants:
+      Version: 3.7.0
+  Recipes:
+    Constants:
+      Version: main
+
+Resources:
+
+  PclusterClusterProvider:
+    Type: AWS::CloudFormation::Stack
+    DeletionPolicy: Delete
+    UpdateReplacePolicy: Delete
+    Properties:
+      TemplateURL: !Sub
+        - https://${AWS::Region}-aws-parallelcluster.s3.${AWS::Region}.${AWS::URLSuffix}/parallelcluster/${Version}/templates/custom_resource/cluster.yaml
+        - { Version: !FindInMap [ParallelCluster, Constants, Version] }
+      TimeoutInMinutes: 10
+
+  PclusterVpc:
+    Type: AWS::CloudFormation::Stack
+    DeletionPolicy: Delete
+    UpdateReplacePolicy: Delete
+    Properties:
+      Parameters:
+        VpcCIDR: 10.0.0.0/16
+        PublicCIDR: 10.0.0.0/24
+        PrivateCIDR: 10.0.16.0/20
+        AvailabilityZone: !Ref AvailabilityZone
+      TemplateURL: !Sub
+        - https://aws-hpc-recipes.s3.us-east-1.${AWS::URLSuffix}/${Version}/recipes/net/hpc_basic/assets/public-private.yaml
+        - { Version: !FindInMap [Recipes, Constants, Version] }
+      TimeoutInMinutes: 10
+
+  PclusterCluster:
+    Type: Custom::PclusterCluster
+    DeletionPolicy: Delete
+    UpdateReplacePolicy: Delete
+    Properties:
+      ServiceToken: !GetAtt [ PclusterClusterProvider , Outputs.ServiceToken ]
+      ClusterName: !Ref ClusterName
+      ClusterConfiguration:
+        Image:
+          Os: !Ref OS
+        HeadNode:
+          InstanceType: r7a.4xlarge
+          Networking:
+            SubnetId: !GetAtt [ PclusterVpc , Outputs.DefaultPublicSubnet ]
+          Ssh:
+            KeyName: !Ref KeyName
+            AllowedIps: !Ref AllowedIps
+          Dcv:
+            Enabled: true
+          Iam:
+            AdditionalIamPolicies:
+              - Policy: arn:aws:iam::aws:policy/AmazonSSMManagedInstanceCore
+              - Policy: arn:aws:iam::aws:policy/AmazonS3ReadOnlyAccess
+          # CustomActions:
+          #   OnNodeConfigured:
+          #     Script: https://aws-hpc-recipes.s3.us-east-1.amazonaws.com/main/recipes/env/spack/assets/postinstall.sh
+        Scheduling:
+          Scheduler: slurm
+          SlurmSettings:
+            QueueUpdateStrategy: DRAIN
+            EnableMemoryBasedScheduling: true
+          SlurmQueues:
+          - Name: q96x
+            CapacityType: ONDEMAND
+            AllocationStrategy: lowest-price
+            ComputeResources:
+            - Name: nodes
+              InstanceType: hpc7a.96xlarge
+              MinCount: 0
+              MaxCount: !Ref ComputeInstanceMax96
+              DisableSimultaneousMultithreading: true
+              Efa:
+                Enabled: true
+            Networking:
+              SubnetIds:
+                - !GetAtt [ PclusterVpc , Outputs.DefaultPrivateSubnet ]
+              PlacementGroup:
+                Enabled: true
+            ComputeSettings:
+              LocalStorage:
+                RootVolume:
+                  VolumeType: gp3
+            Iam:
+              AdditionalIamPolicies:
+                - Policy: arn:aws:iam::aws:policy/AmazonS3ReadOnlyAccess
+          - Name: q12x
+            CapacityType: ONDEMAND
+            AllocationStrategy: lowest-price
+            ComputeResources:
+            - Name: nodes
+              InstanceType: hpc7a.12xlarge
+              MinCount: 0
+              MaxCount: !Ref ComputeInstanceMax12
+              DisableSimultaneousMultithreading: true
+              Efa:
+                Enabled: true
+            Networking:
+              SubnetIds:
+                - !GetAtt [ PclusterVpc , Outputs.DefaultPrivateSubnet ]
+              PlacementGroup:
+                Enabled: true
+            ComputeSettings:
+              LocalStorage:
+                RootVolume:
+                  VolumeType: gp3
+            Iam:
+              AdditionalIamPolicies:
+                - Policy: arn:aws:iam::aws:policy/AmazonS3ReadOnlyAccess
+          - Name: q24x
+            CapacityType: ONDEMAND
+            AllocationStrategy: lowest-price
+            ComputeResources:
+            - Name: nodes
+              InstanceType: hpc7a.24xlarge
+              MinCount: 0
+              MaxCount: !Ref ComputeInstanceMax24
+              DisableSimultaneousMultithreading: true
+              Efa:
+                Enabled: true
+            Networking:
+              SubnetIds:
+                - !GetAtt [ PclusterVpc , Outputs.DefaultPrivateSubnet ]
+              PlacementGroup:
+                Enabled: true
+            ComputeSettings:
+              LocalStorage:
+                RootVolume:
+                  VolumeType: gp3
+            Iam:
+              AdditionalIamPolicies:
+                - Policy: arn:aws:iam::aws:policy/AmazonS3ReadOnlyAccess
+          - Name: q48x
+            CapacityType: ONDEMAND
+            AllocationStrategy: lowest-price
+            ComputeResources:
+            - Name: nodes
+              InstanceType: hpc7a.48xlarge
+              MinCount: 0
+              MaxCount: !Ref ComputeInstanceMax48
+              DisableSimultaneousMultithreading: true
+              Efa:
+                Enabled: true
+            Networking:
+              SubnetIds:
+                - !GetAtt [ PclusterVpc , Outputs.DefaultPrivateSubnet ]
+              PlacementGroup:
+                Enabled: true
+            ComputeSettings:
+              LocalStorage:
+                RootVolume:
+                  VolumeType: gp3
+            Iam:
+              AdditionalIamPolicies:
+                - Policy: arn:aws:iam::aws:policy/AmazonS3ReadOnlyAccess
+        SharedStorage:
+        - StorageType: Ebs
+          Name: Ebs0
+          MountDir: /shared
+          EbsSettings:
+            DeletionPolicy: Delete
+            VolumeType: gp3
+            Size: !Ref SharedSize
+        - StorageType: FsxLustre
+          Name: FsxLustre0
+          MountDir: /fsx
+          FsxLustreSettings:
+            DeletionPolicy: Delete
+            StorageCapacity: !Ref FSxSize
+            DeploymentType: SCRATCH_2
+        Tags:
+          - Key: 'source'
+            Value: 'aws-hpc-recipes'
+
+Outputs:
+  HeadNodeIp:
+    Description: The Public IP address of the HeadNode
+    Value: !GetAtt [ PclusterCluster, headNode.publicIpAddress ]
+    Export:
+      Name: !Sub ${AWS::StackName}-HeadNodeIp
+  SystemManagerUrl:
+    Description: URL to access the HeadNode via SystemManager
+    Value: !Sub
+      - https://${ConsoleDomain}/systems-manager/session-manager/${InstanceId}?region=${AWS::Region}
+      - { ConsoleDomain: !If [ GovCloud, 'console.amazonaws-us-gov.com', !If [ China, 'console.amazonaws.cn', !Sub '${AWS::Region}.console.aws.amazon.com']],
+          InstanceId: !GetAtt [ PclusterCluster, headNode.instanceId ]
+        }
+    Export:
+      Name: !Sub ${AWS::StackName}-SystemManagerUrl
+  ValidationMessages:
+    Description: Warnings from cluster create or update operations.
+    Value: !GetAtt PclusterCluster.validationMessages
