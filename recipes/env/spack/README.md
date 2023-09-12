@@ -25,8 +25,9 @@ Resources:
     PclusterCluster:
         ClusterConfiguration:
             HeadNode:
-                OnNodeConfigured:
-                    Script: https://aws-hpc-recipes.s3.us-east-1.amazonaws.com/main/recipes/env/spack/assets/postinstall.sh
+                CustomActions:
+                    OnNodeConfigured:
+                        Script: https://aws-hpc-recipes.s3.us-east-1.amazonaws.com/main/recipes/env/spack/assets/postinstall.sh
 ```
 
 In either case, Spack will install into the first shared directory it finds. If it cannot find a shared directory, it will install in `/home/ec2-user/spack`. 
