@@ -30,6 +30,7 @@ tags:
   efs: green
   ebs: green
   rds: green
+  graviton: green
 # Hex codes for each color
 colors:
   blue: 146EB4

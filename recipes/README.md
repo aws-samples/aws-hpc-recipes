@@ -108,7 +108,7 @@ You can use an AWS HPC recipe in several ways:
 * **About**: Create a ParallelCluster system to try out Hpc7a instances.
 * **Usage**: [README.md](pcluster/try_hpc7a/README.md)
 
-#### try_hpc7g ![tag](https://img.shields.io/badge/-aarch64-%23AAB7B8) ![tag](https://img.shields.io/badge/-graviton-%23AAB7B8) ![tag](https://img.shields.io/badge/-hpc7g-%23AAB7B8) ![tag](https://img.shields.io/badge/-parallelcluster-%23FF9900) 
+#### try_hpc7g ![tag](https://img.shields.io/badge/-aarch64-%23AAB7B8) ![tag](https://img.shields.io/badge/-graviton-%237DCEA0) ![tag](https://img.shields.io/badge/-hpc7g-%23AAB7B8) ![tag](https://img.shields.io/badge/-parallelcluster-%23FF9900) 
 
 * **About**: Create a ParallelCluster system to try out Hpc7g instances.
 * **Usage**: [README.md](pcluster/try_hpc7g/README.md)
