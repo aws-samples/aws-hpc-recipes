@@ -26,7 +26,7 @@ If you want to learn more about multi-AZ clusters, check out the related article
 
 If you want to use SSH to access the cluster, you will need its public IP (from above). Using your local terminal, connect via SSH like so: `ssh -i KeyPair.pem ec2-user@HeadNodeIp` where `KeyPair.pem` is the path to the EC2 keypair you specified when launcing the cluster and `HeadNodeIp` is the IP address from above. If you chose one of the Ubuntu operating systems for your cluster, the login name may be `ubuntu` rather than `ec2-user`.
 
-You can also use AWS Systems Manager to access the cluster. Navigate to the **Instances** panel in the [Amazon EC2 Console](https://console.aws.amazon.com/ec2/home?region=us-east-2#Instances). You should see an instance named **HeadNode** - this is your cluster's access node. Select the instance, then choose **Actions** followed by **Connect**. On the **Connect to instance** page, navigate to **Session Manager** then choose **Connect**. A web-based terminal will launch and connect to the instance. 
+You can also use AWS Systems Manager to access the cluster. Navigate to the **Instances** panel in the [Amazon EC2 Console](https://console.aws.amazon.com/ec2/home#Instances). You should see an instance named **HeadNode** - this is your cluster's access node. Select the instance, then choose **Actions** followed by **Connect**. On the **Connect to instance** page, navigate to **Session Manager** then choose **Connect**. A web-based terminal will launch and connect to the instance. 
 
 ## Cleaning Up
 
