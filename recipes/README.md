@@ -98,6 +98,11 @@ You can use an AWS HPC recipe in several ways:
 * **About**: Create a ParallelCluster system to try out Hpc6a instances.
 * **Usage**: [README.md](pcluster/try_hpc6a/README.md)
 
+#### try_hpc6id ![tag](https://img.shields.io/badge/-hpc6id-%23AAB7B8) ![tag](https://img.shields.io/badge/-parallelcluster-%23FF9900) ![tag](https://img.shields.io/badge/-x86_64-%23AAB7B8) 
+
+* **About**: Create a ParallelCluster system to try out Hpc6id instances.
+* **Usage**: [README.md](pcluster/try_hpc6id/README.md)
+
 #### try_hpc7a ![tag](https://img.shields.io/badge/-hpc7a-%23AAB7B8) ![tag](https://img.shields.io/badge/-parallelcluster-%23FF9900) ![tag](https://img.shields.io/badge/-x86_64-%23AAB7B8) 
 
 * **About**: Create a ParallelCluster system to try out Hpc7a instances.
