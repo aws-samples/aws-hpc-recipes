@@ -18,7 +18,7 @@ You can use an AWS HPC recipe in several ways:
 
 ### :arrow_right: db: Database management
 
-#### slurm_accounting_db ![tag](https://img.shields.io/badge/-core-%23146EB4) ![tag](https://img.shields.io/badge/-parallelcluster-%23FF9900) ![tag](https://img.shields.io/badge/-rds-%237DCEA0) 
+#### slurm_accounting_db ![tag](https://img.shields.io/badge/-aurora-%237DCEA0) ![tag](https://img.shields.io/badge/-core-%23146EB4) ![tag](https://img.shields.io/badge/-parallelcluster-%23FF9900) ![tag](https://img.shields.io/badge/-serverless-%23AAB7B8) 
 
 * **About**: Set up a replicated Amazon Aurora database that can support Slurm accounting.
 * **Usage**: [README.md](db/slurm_accounting_db/README.md)
