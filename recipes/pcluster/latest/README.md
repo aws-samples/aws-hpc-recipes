@@ -35,3 +35,10 @@ Costs for a cluster created using this recipe will vary depending on the cluster
 ## Cleaning Up
 
 When you are done using your cluster, you can delete it and all its associated resources by navigating to the AWS CloudFormation console and deleting the **latest-pcluster** stack. 
+
+## Next Steps
+
+Once you've checked out the basics of ParallelCluster with this recipe, here are some things you can do next:
+1. Create a reusable networking configuration. You can choose from a [simple example](recipes/net/hpc_basic/README.md) or a [more advanced configuration](recipes/net/hpc_large_scale/README.md) depending on your needs. 
+2. Explore options for provisioning [persistent storage on AWS](../../README.md#arrow_right-storage-storage)
+3. Try out more advanced [HPC cluster configurations](../../README.md#arrow_right-pcluster-aws-parallelcluster)
