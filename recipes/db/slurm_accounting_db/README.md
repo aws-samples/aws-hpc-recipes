@@ -1,8 +1,8 @@
-# Slurm Accounting Database using Amazon RDS
+# Slurm Accounting Database using Amazon Aurora Serverless
 
 ## Info
 
-This recipe sets up an Amazon RDS database that can support AWS ParallelCluster Slurm Accounting. 
+This recipe sets up an Amazon Aurora Serverless database that can support AWS ParallelCluster Slurm Accounting. 
 
 ## Usage
 
