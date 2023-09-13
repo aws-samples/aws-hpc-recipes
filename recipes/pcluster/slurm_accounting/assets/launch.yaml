@@ -181,7 +181,7 @@ Resources:
           SlurmQueues:
           - Name: !Ref QueueName
             ComputeResources:
-            - Name: nodes
+            - Name: cr1
               Instances:
                 - InstanceType: !FindInMap [ InstanceTypeForArchitecture, ComputeNodes, !Ref Architecture ]
               MinCount: 0
