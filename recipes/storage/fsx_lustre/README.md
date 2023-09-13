@@ -36,6 +36,17 @@ SharedStorage:
       VolumeId: fs-0123456789abcdef0
 ```
 
+You also need to retrieve the `SecurityGroupId` from the CloudFormation stack output and add it to the `HeadNode` and `Scheduling` sections.
+
+```yaml
+# Example of allowing head node access
+---
+HeadNode:
+  Networking:
+    AdditionalSecurityGroups:
+      - sg-0123456789abcdef0
+```
+
 ## Cost Estimate
 
 The cost to operate an FSx for Lustre filesystem will vary based on the capacity and throughput you select. For reference, a 1.2 TB, 1000 MB/s/TiB persistent filesystem will cost around $90.00 to operate for a week. The same capacity scratch filesystem will cost about $42.00. 

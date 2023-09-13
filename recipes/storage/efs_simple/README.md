@@ -34,6 +34,17 @@ SharedStorage:
       FileSystemId: fs-0123456789abcdef0
 ```
 
+3. Also, retrieve the `SecurityGroupId` from the CloudFormation stack output and add it to the `HeadNode` and `Scheduling` sections.
+
+```yaml
+# Example of allowing head node access
+---
+HeadNode:
+  Networking:
+    AdditionalSecurityGroups:
+      - sg-0123456789abcdef0
+```
+
 ## Cost Estimate
 
 There is no upfront cost to create and operate an EFS filesystem. However, there can be charges based on how much data you store in it and what your access pattern is. For reference, a 100 GB EFS filesystem should cost around $1.00 to run for a week. 

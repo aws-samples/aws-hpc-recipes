@@ -35,6 +35,17 @@ SharedStorage:
       VolumeId: fsvol-0123456789abcdef0
 ```
 
+You also need to retrieve the `SecurityGroupId` from the CloudFormation stack output and add it to the `HeadNode` and `Scheduling` sections.
+
+```yaml
+# Example of allowing head node access
+---
+HeadNode:
+  Networking:
+    AdditionalSecurityGroups:
+      - sg-0123456789abcdef0
+```
+
 ## Cost Estimate
 
 The cost to operate an FSx for OpenZFS filesystem will vary based on the capacity and throughput you select. A filesystem configured with the defaults in this template will cost around $7.00 to operate for a week. 
