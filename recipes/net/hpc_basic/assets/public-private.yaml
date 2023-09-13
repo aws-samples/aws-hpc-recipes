@@ -9,10 +9,10 @@ Metadata:
       - Label:
           default: VPC
         Parameters:
-          - VpcId
-          - InternetGatewayId
           - AvailabilityZone
           - VpcCIDR
+          - VpcId
+          - InternetGatewayId
       - Label:
           default: Subnets
         Parameters:
