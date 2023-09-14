@@ -1,5 +1,5 @@
 
-Description: AWS Managed Microsoft AD to support multi-user AWS ParallelCluster
+Description: AWS Managed Microsoft AD to support multi-user AWS ParallelCluster. Relies on a compatible networking stack.
 
 Metadata:
   AWS::CloudFormation::Interface:
@@ -23,9 +23,7 @@ Metadata:
       - Label:
           default: "Networking"
         Parameters:
-          - Vpc
-          - PrivateSubnetOne
-          - PrivateSubnetTwo
+          - NetworkStackNameParameter
 
 Parameters:
   DomainName:
@@ -60,30 +58,19 @@ Parameters:
     MaxLength: 64
     AllowedPattern: (?=^.{8,64}$)((?=.*\d)(?=.*[A-Z])(?=.*[a-z])|(?=.*\d)(?=.*[^A-Za-z0-9\s])(?=.*[a-z])|(?=.*[^A-Za-z0-9\s])(?=.*[A-Z])(?=.*[a-z])|(?=.*\d)(?=.*[A-Z])(?=.*[^A-Za-z0-9\s]))^.*
     NoEcho: true
-
   Keypair:
     Description: EC2 Keypair to access management instance.
     Type: AWS::EC2::KeyPair::KeyName
-  Vpc:
-    Description: VPC ID to create the Directory Service in.
-    Type: AWS::EC2::VPC::Id
-  PrivateSubnetOne:
-    Description: Subnet ID of the first private subnet. 
-    Type: AWS::EC2::Subnet::Id
-  PrivateSubnetTwo:
-    Description: Subnet ID of the second private subnet.
-    Type: AWS::EC2::Subnet::Id
   AdminNodeAmiId:
     Description: AMI for the Admin Node
     Type: 'AWS::SSM::Parameter::Value<AWS::EC2::Image::Id>'
     Default: '/aws/service/ami-amazon-linux-latest/amzn2-ami-hvm-x86_64-gp2'
+  NetworkStackNameParameter:
+    Description: Name of the HPC large-scale networking stack. Requires stackname-PrivateSubnets export.
+    Type: String
+    Default: hpc-networking
 
 Transform: AWS::Serverless-2016-10-31
-
-Conditions:
-  CreateVPC: !Equals [!Ref Vpc, '']
-  # CreateAD: !Equals [!Ref Ad, '']
-  CreateAD: !Equals ['', '']
 
 Resources:
   DisableImdsv1LaunchTemplate:
@@ -127,94 +114,6 @@ Resources:
                   - ds:DescribeDirectories
                 # Resource: !Sub arn:${AWS::Partition}:ds:*:${AWS::AccountId}:directory/*
                 Resource: '*'
-
-  PclusterVpc:
-    Type: AWS::EC2::VPC
-    Condition: CreateVPC
-    Properties:
-      CidrBlock: 10.0.0.0/16
-      EnableDnsHostnames: true
-      EnableDnsSupport: true
-      InstanceTenancy: default
-  PclusterVpcIGW:
-    Type: AWS::EC2::InternetGateway
-    Condition: CreateVPC
-  PclusterVpcSubnet1Route:
-    Type: AWS::EC2::Route
-    Condition: CreateVPC
-    DependsOn:
-    - PclusterVpcGWA
-    Properties:
-      DestinationCidrBlock: 0.0.0.0/0
-      GatewayId:
-        Ref: PclusterVpcIGW
-      RouteTableId:
-        Ref: PclusterVpcSubnet1RouteTable
-  PclusterVpcSubnet1RouteTable:
-    Type: AWS::EC2::RouteTable
-    Condition: CreateVPC
-    Properties:
-      VpcId:
-        Ref: PclusterVpc
-  PclusterVpcSubnet1RTA:
-    Type: AWS::EC2::SubnetRouteTableAssociation
-    Condition: CreateVPC
-    Properties:
-      RouteTableId:
-        Ref: PclusterVpcSubnet1RouteTable
-      SubnetId:
-        Ref: PclusterVpcSubnet1
-  PclusterVpcSubnet1:
-    Type: AWS::EC2::Subnet
-    Condition: CreateVPC
-    Properties:
-      AvailabilityZone: !Sub ${AWS::Region}a
-      CidrBlock: 10.0.0.0/17
-      MapPublicIpOnLaunch: true
-      VpcId:
-        Ref: PclusterVpc
-  PclusterVpcSunet1Route:
-    Type: AWS::EC2::Route
-    Condition: CreateVPC
-    DependsOn:
-    - PclusterVpcGWA
-    Properties:
-      DestinationCidrBlock: 0.0.0.0/0
-      GatewayId:
-        Ref: PclusterVpcIGW
-      RouteTableId:
-        Ref: PclusterVpcSubnet2RouteTable
-  PclusterVpcSubnet2RouteTable:
-    Type: AWS::EC2::RouteTable
-    Condition: CreateVPC
-    Properties:
-      VpcId:
-        Ref: PclusterVpc
-  PclusterVpcSubnet2RTA:
-    Type: AWS::EC2::SubnetRouteTableAssociation
-    Condition: CreateVPC
-    Properties:
-      RouteTableId:
-        Ref: PclusterVpcSubnet2RouteTable
-      SubnetId:
-        Ref: PclusterVpcSubnet2
-  PclusterVpcSubnet2:
-    Type: AWS::EC2::Subnet
-    Condition: CreateVPC
-    Properties:
-      AvailabilityZone: !Sub ${AWS::Region}b
-      CidrBlock: 10.0.128.0/17
-      MapPublicIpOnLaunch: true
-      VpcId:
-        Ref: PclusterVpc
-  PclusterVpcGWA:
-    Type: AWS::EC2::VPCGatewayAttachment
-    Condition: CreateVPC
-    Properties:
-      InternetGatewayId:
-        Ref: PclusterVpcIGW
-      VpcId:
-        Ref: PclusterVpc
 
   PrepLambda:
     Type: AWS::Lambda::Function
@@ -281,26 +180,24 @@ Resources:
 
   Directory:
     Type: AWS::DirectoryService::MicrosoftAD
-    Condition: CreateAD
     Properties:
       Name: !Ref DomainName
       Password: !Ref AdminPassword
       Edition: Standard
       VpcSettings:
         SubnetIds:
-          - !If [CreateVPC, !Ref PclusterVpcSubnet1, !Ref PrivateSubnetOne ]
-          - !If [CreateVPC, !Ref PclusterVpcSubnet2, !Ref PrivateSubnetTwo ]
-        VpcId: !If [CreateVPC, !Ref PclusterVpc, !Ref Vpc ]
+          - {"Fn::Select": [0, { "Fn::Split" : [",", {"Fn::ImportValue" : {"Fn::Sub" : "${NetworkStackNameParameter}-PrivateSubnets"}}] }]}
+          - {"Fn::Select": [1, { "Fn::Split" : [",", {"Fn::ImportValue" : {"Fn::Sub" : "${NetworkStackNameParameter}-PrivateSubnets"}}] }]}
+        VpcId: {"Fn::ImportValue" : {"Fn::Sub" : "${NetworkStackNameParameter}-VPC"}}
 
   Prep:
     Type: Custom::PrepLambda
     Properties:
       ServiceToken: !GetAtt PrepLambda.Arn
       DomainName:  !Ref DomainName
-      Vpc: !If [CreateVPC, !Ref PclusterVpc, !Ref Vpc ]
-      PrivateSubnetOne: !If [CreateVPC, !Ref PclusterVpcSubnet1, !Ref PrivateSubnetOne ]
-      PrivateSubnetTwo: !If [CreateVPC, !Ref PclusterVpcSubnet2, !Ref PrivateSubnetTwo ]
-      # DirectoryId: !If [CreateAD, !Ref Directory, !Ref Ad ]
+      Vpc: {"Fn::ImportValue" : {"Fn::Sub" : "${NetworkStackNameParameter}-VPC"}}
+      PrivateSubnetOne: {"Fn::Select": [0, { "Fn::Split" : [",", {"Fn::ImportValue" : {"Fn::Sub" : "${NetworkStackNameParameter}-PrivateSubnets"}}] }]}
+      PrivateSubnetTwo: {"Fn::Select": [1, { "Fn::Split" : [",", {"Fn::ImportValue" : {"Fn::Sub" : "${NetworkStackNameParameter}-PrivateSubnets"}}] }]}
       DirectoryId: !Ref Directory
 
   AdDomainAdminNodeSecurityGroup:
@@ -317,7 +214,7 @@ Resources:
           FromPort: 22
           IpProtocol: tcp
           ToPort: 22
-      VpcId: !If [CreateVPC, !Ref PclusterVpc, !Ref Vpc ]
+      VpcId: {"Fn::ImportValue" : {"Fn::Sub" : "${NetworkStackNameParameter}-VPC"}}
 
 
   JoinRole:
@@ -341,7 +238,6 @@ Resources:
                 Effect: Allow
                 Resource: !Sub
                   - arn:${AWS::Partition}:ds:${AWS::Region}:${AWS::AccountId}:directory/${DirectoryId}
-                  # - { DirectoryId: !If [CreateAD, !Ref Directory, !Ref Ad ] }
                   - { DirectoryId: !Ref Directory }
           PolicyName: ResetUserPassword
         - PolicyDocument:
@@ -394,7 +290,7 @@ Resources:
         Version: !GetAtt 'DisableImdsv1LaunchTemplate.LatestVersionNumber'
       SecurityGroupIds:
         - Ref: AdDomainAdminNodeSecurityGroup
-      SubnetId: !If [CreateVPC, !Ref PclusterVpcSubnet1, !Ref PrivateSubnetOne ]
+      SubnetId: {"Fn::Select": [0, { "Fn::Split" : [",", {"Fn::ImportValue" : {"Fn::Sub" : "${NetworkStackNameParameter}-PrivateSubnets"}}] }]}
       Tags:
         - Key: "Name"
           Value: !Sub [ "AdDomainAdminNode-${StackIdSuffix}", {StackIdSuffix: !Select [1, !Split ['/', !Ref 'AWS::StackId']]}]
@@ -483,7 +379,6 @@ Resources:
                   - ds:ResetUserPassword
                 Resource: !Sub
                   - arn:${AWS::Partition}:ds:${AWS::Region}:${AWS::AccountId}:directory/${DirectoryId}
-                  # - { DirectoryId: !If [CreateAD, !Ref Directory, !Ref Ad ] }
                   - { DirectoryId: !Ref Directory }
         - PolicyName: StopInstances
           PolicyDocument:
@@ -565,7 +460,6 @@ Resources:
     Properties:
       ServiceToken: !GetAtt PostLambda.Arn
       AdminNodeInstanceId: !Ref AdDomainAdminNode
-      # DirectoryId: !If [CreateAD, !Ref Directory, !Ref Ad ]
       DirectoryId: !Ref Directory
       UserName: !Ref UserName
       UserPassword: !Ref UserPassword
@@ -596,8 +490,8 @@ Resources:
     Properties:
       Scheme: internal
       Subnets:
-        - !If [CreateVPC, !Ref PclusterVpcSubnet1, !Ref PrivateSubnetOne ]
-        - !If [CreateVPC, !Ref PclusterVpcSubnet2, !Ref PrivateSubnetTwo ]
+        - {"Fn::Select": [0, { "Fn::Split" : [",", {"Fn::ImportValue" : {"Fn::Sub" : "${NetworkStackNameParameter}-PrivateSubnets"}}] }]}
+        - {"Fn::Select": [1, { "Fn::Split" : [",", {"Fn::ImportValue" : {"Fn::Sub" : "${NetworkStackNameParameter}-PrivateSubnets"}}] }]}
       Type: network
 
   NetworkLoadBalancerTargetGroup:
@@ -605,7 +499,7 @@ Resources:
     Properties:
       Port: 389
       Protocol: TCP
-      VpcId: !If [CreateVPC, !Ref PclusterVpc, !Ref Vpc ]
+      VpcId: {"Fn::ImportValue" : {"Fn::Sub" : "${NetworkStackNameParameter}-VPC"}}
       HealthCheckEnabled: True
       HealthCheckIntervalSeconds: 10
       HealthCheckPort: 389
@@ -627,7 +521,7 @@ Resources:
     Properties:
       Name: !Ref DomainName
       VPCs:
-        - VPCId: !If [ CreateVPC, !Ref PclusterVpc, !Ref Vpc ]
+        - VPCId: {"Fn::ImportValue" : {"Fn::Sub" : "${NetworkStackNameParameter}-VPC"}}
           VPCRegion: !Ref AWS::Region
 
   DNSRecord:
@@ -889,12 +783,6 @@ Resources:
               - !Ref DomainCertificateSecret
 
 Outputs:
-  VpcId:
-    Value: !If [CreateVPC, !Ref PclusterVpc, !Ref Vpc ]
-  PrivateSubnetIds:
-    Value: !Join [",", [!If [CreateVPC, !Ref PclusterVpcSubnet1, !Ref PrivateSubnetOne ], !If [CreateVPC, !Ref PclusterVpcSubnet2, !Ref PrivateSubnetTwo ]]]
-    Export:
-        Name: !Sub ${AWS::StackName}-PrivateSubnetIds
   DomainName:
     Value: !Ref DomainName
     Export:
