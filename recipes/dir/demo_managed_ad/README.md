@@ -14,6 +14,8 @@ This recipes sets up a basic AWS Managed Microsoft AD deployment that can suppor
 
 You can include the Output values directly in a cluster configuration, as per the [ParallelCluster documentation](https://docs.aws.amazon.com/parallelcluster/latest/ug/multi-user-v3.html). Alternatively, if you are deploying a cluster with AWS CloudFormation, these values have been exported so you may import them into your template using the `[Fn::Import](https://docs.aws.amazon.com/AWSCloudFormation/latest/UserGuide/intrinsic-function-reference-importvalue.html)` intrinsic function. 
 
+**Note** If you wish to import networking configuration directly from an existing CloudFormation stack, you can use the alternative [import template]((https://us-east-2.console.aws.amazon.com/cloudformation/home?region=us-east-2#/stacks/create/review?stackName=managed_adb&templateURL=https://aws-hpc-recipes.s3.us-east-1.amazonaws.com/main/recipes/dir/demo_managed_ad/assets/main-import.yaml)), providing the name of an active HPC Recipes for AWS networking  stack.
+
 ## Cost Estimate
 
 It will cost approximately $72.00 to run this directory service for a week. 
