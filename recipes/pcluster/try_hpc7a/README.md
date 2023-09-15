@@ -22,11 +22,11 @@ The cluster design includes the following features:
 ### Launch the Cluster
 
 1. Ensure you have an Amazon EC2 [SSH key created](https://docs.aws.amazon.com/AWSEC2/latest/UserGuide/create-key-pairs.html#having-ec2-create-your-key-pair) in the Region where you want to launch your cluster.
-2. Launch the template: [![Launch stack](../../../docs/media/launch-stack.svg)](https://us-east-2.console.aws.amazon.com/cloudformation/home?region=us-east-2#/stacks/create/review?stackName=try-hpc7a&templateURL=https://aws-hpc-recipes.s3.us-east-1.amazonaws.com/main/recipes/pcluster/try_hpc7a/assets/launch.yaml)
+2. Launch the template: [![Launch stack](../../../docs/media/launch-stack.svg)](https://console.aws.amazon.com/cloudformation/home?region=us-east-2#/stacks/create/review?stackName=try-hpc7a&templateURL=https://aws-hpc-recipes.s3.us-east-1.amazonaws.com/main/recipes/pcluster/try_hpc7a/assets/launch.yaml)
 3. Follow the instructions in the AWS CloudFormation console. When you configure the queue sizes (i.e. `ComputeInstanceMax12`), choose a value that is consistent with your service quota. 
 4. Monitor the status of the AWS CloudFormation stack. When its status reaches `CREATE_COMPLETE`, navigate to its **Outputs** tab. There is information there you can use to access the new cluster. 
 
-**Note**: This template creates a VPC and subnets associcated with the cluster. If you wish to use your own networking configuration, launch your cluster using the [alternative CloudFormation template](https://us-east-2.console.aws.amazon.com/cloudformation/home?region=us-east-2#/stacks/create/review?stackName=try-hpc7a&templateURL=https://aws-hpc-recipes.s3.us-east-1.amazonaws.com/main/recipes/pcluster/try_hpc7a/assets/launch-alt.yaml). 
+**Note**: This template creates a VPC and subnets associcated with the cluster. If you wish to use your own networking configuration, launch your cluster using the [alternative CloudFormation template](https://console.aws.amazon.com/cloudformation/home?region=us-east-2#/stacks/create/review?stackName=try-hpc7a&templateURL=https://aws-hpc-recipes.s3.us-east-1.amazonaws.com/main/recipes/pcluster/try_hpc7a/assets/launch-alt.yaml). 
 
 ### Access the Cluster
 

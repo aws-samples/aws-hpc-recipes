@@ -14,7 +14,7 @@ Follow the instructions in the [Large-scale HPC Networking Setup](../../net/hpc_
 
 There is only one template in this recipe, whichj creates a simple EFS filesystem. 
 
-* Create an [EFS Filesystem](https://us-east-2.console.aws.amazon.com/cloudformation/home?region=us-east-2#/stacks/create/review?stackName=efs-simple&templateURL=https://aws-hpc-recipes.s3.us-east-1.amazonaws.com/main/recipes/storage/efs_simple/assets/main.yaml)
+* Create an [EFS Filesystem](https://console.aws.amazon.com/cloudformation/home?region=us-east-2#/stacks/create/review?stackName=efs-simple&templateURL=https://aws-hpc-recipes.s3.us-east-1.amazonaws.com/main/recipes/storage/efs_simple/assets/main.yaml)
 
 ### Use with AWS ParallelCluster
 

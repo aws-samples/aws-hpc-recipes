@@ -14,7 +14,7 @@ Follow the instructions in the [Large-scale HPC Networking Setup](../../net/hpc_
 
 There is a single template in this recipe. It creates a simple Amazon FSx for OpenZFS filesystem and volume. 
 
-* [Create an OpenZFS filesystem](https://us-east-2.console.aws.amazon.com/cloudformation/home?region=us-east-2#/stacks/create/review?stackName=fsx-openzfs&templateURL=https://aws-hpc-recipes.s3.us-east-1.amazonaws.com/main/recipes/storage/fsx_openzfs/assets/main.yaml)
+* [Create an OpenZFS filesystem](https://console.aws.amazon.com/cloudformation/home?region=us-east-2#/stacks/create/review?stackName=fsx-openzfs&templateURL=https://aws-hpc-recipes.s3.us-east-1.amazonaws.com/main/recipes/storage/fsx_openzfs/assets/main.yaml)
 
 When prompted to choose a VPC and subnet, select the one where you intend to place the majority of your computing. It is possible to access FSx for OpenZFS filesystems from other Availability Zones, but there will be higher latency and additional costs due to cross-zone traffic.
 

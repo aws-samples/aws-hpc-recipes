@@ -8,7 +8,7 @@ This recipe demonstrates a basic cloud networking setup for HPC on AWS. Several 
 
 This template creates one public and one private subnet in the same Availability Zone. 
 
-* Create [Public and Private subnets](https://us-east-2.console.aws.amazon.com/cloudformation/home?region=us-east-2#/stacks/create/review?stackName=basic-networking-pubpriv&templateURL=https://aws-hpc-recipes.s3.us-east-1.amazonaws.com/main/recipes/net/hpc_basic/assets/public-private.yaml)
+* Create [Public and Private subnets](https://console.aws.amazon.com/cloudformation/home?region=us-east-2#/stacks/create/review?stackName=basic-networking-pubpriv&templateURL=https://aws-hpc-recipes.s3.us-east-1.amazonaws.com/main/recipes/net/hpc_basic/assets/public-private.yaml)
 
 If you don't wish to use the quick-create links, you can also download the [assets/public-private.yaml](assets/public-private.yaml) file and uploading it to the [AWS CloudFormation console](https://console.aws.amazon.com/cloudformation).
 

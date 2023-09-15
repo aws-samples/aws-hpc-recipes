@@ -13,12 +13,12 @@ Creates an instance of AWS ParallelCluster along with a deployment of the Parall
 ### Launch ParallelCluster UI with an Example Cluster
 
 1. Ensure you have a Amazon EC2 [SSH key created](https://docs.aws.amazon.com/AWSEC2/latest/UserGuide/create-key-pairs.html#having-ec2-create-your-key-pair) in the Region where you want to launch your cluster and AD management instance.
-2. Launch the template: [![Launch stack](../../../docs/media/launch-stack.svg)](https://us-east-2.console.aws.amazon.com/cloudformation/home?region=us-east-2#/stacks/create/review?stackName=pcluster-pcui&templateURL=https://aws-hpc-recipes.s3.us-east-1.amazonaws.com/main/recipes/pcluster/pcui/assets/launch.yaml)
+2. Launch the template: [![Launch stack](../../../docs/media/launch-stack.svg)](https://console.aws.amazon.com/cloudformation/home?region=us-east-2#/stacks/create/review?stackName=pcluster-pcui&templateURL=https://aws-hpc-recipes.s3.us-east-1.amazonaws.com/main/recipes/pcluster/pcui/assets/launch.yaml)
 3. Follow the instructions in the AWS CloudFormation console. As you work through the template, mind these points:
     * The value you enter for **NetworkStackNameParameter** is the name of your HPC networking stack
     * You need to be able to receive email at the address you provide for **AdminUserEmail**
 
-**Note**: If you do not wish to import the networking configuration from a stack provided by the **HPC Recipes for AWS** collection. you can use the [alternative CloudFormation template](https://us-east-2.console.aws.amazon.com/cloudformation/home?region=us-east-2#/stacks/create/review?stackName=pcluster-pcui&templateURL=https://aws-hpc-recipes.s3.us-east-1.amazonaws.com/main/recipes/pcluster/pcui/assets/launch-alt.yaml). 
+**Note**: If you do not wish to import the networking configuration from a stack provided by the **HPC Recipes for AWS** collection. you can use the [alternative CloudFormation template](https://console.aws.amazon.com/cloudformation/home?region=us-east-2#/stacks/create/review?stackName=pcluster-pcui&templateURL=https://aws-hpc-recipes.s3.us-east-1.amazonaws.com/main/recipes/pcluster/pcui/assets/launch-alt.yaml). 
 
 ### Logging into ParallelCluster UI
 

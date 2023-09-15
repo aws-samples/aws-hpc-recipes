@@ -9,11 +9,11 @@ Create an instance of the latest AWS ParallelCluster release, after configuring 
 ### Launch the Cluster
 
 1. Ensure you have an Amazon EC2 [SSH key created](https://docs.aws.amazon.com/AWSEC2/latest/UserGuide/create-key-pairs.html#having-ec2-create-your-key-pair) in the Region where you want to launch your cluster.
-2. Launch the template: [![Launch stack](../../../docs/media/launch-stack.svg)](https://us-east-2.console.aws.amazon.com/cloudformation/home?region=us-east-2#/stacks/create/review?stackName=latest-pcluster&templateURL=https://aws-hpc-recipes.s3.us-east-1.amazonaws.com/main/recipes/pcluster/latest/assets/launch.yaml)
+2. Launch the template: [![Launch stack](../../../docs/media/launch-stack.svg)](https://console.aws.amazon.com/cloudformation/home?region=us-east-2#/stacks/create/review?stackName=latest-pcluster&templateURL=https://aws-hpc-recipes.s3.us-east-1.amazonaws.com/main/recipes/pcluster/latest/assets/launch.yaml)
 3. Follow the instructions in the AWS CloudFormation console. 
 4. Monitor the status of the stack named **latest-pcluster**. When its status is `CREATE_COMPLETE`, navigate to its **Outputs** tab. Find the output named **HeadNodeIp** - this is the public IP address for your cluster login node.
 
-**Note**: This template creates a VPC and subnets. If you wish to use your own networking configuration, launch your cluster using the [alternative CloudFormation template](https://us-east-2.console.aws.amazon.com/cloudformation/home?region=us-east-2#/stacks/create/review?stackName=latest-pcluster&templateURL=https://aws-hpc-recipes.s3.us-east-1.amazonaws.com/main/recipes/pcluster/latest/assets/launch-alt.yaml). 
+**Note**: This template creates a VPC and subnets. If you wish to use your own networking configuration, launch your cluster using the [alternative CloudFormation template](https://console.aws.amazon.com/cloudformation/home?region=us-east-2#/stacks/create/review?stackName=latest-pcluster&templateURL=https://aws-hpc-recipes.s3.us-east-1.amazonaws.com/main/recipes/pcluster/latest/assets/launch-alt.yaml). 
 
 #### Notes
 
