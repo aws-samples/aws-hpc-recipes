@@ -1,0 +1,264 @@
+AWSTemplateFormatVersion: 2010-09-09
+Description: AWS ParallelCluster Slurm Accounting Database
+Metadata:
+  AWS::CloudFormation::Interface:
+    ParameterGroups:
+      - Label:
+          default: "Database Cluster Configuration"
+        Parameters:
+          - ClusterName
+          - ClusterAdmin
+          - AdminPasswordSecretString
+          - MinCapacity
+          - MaxCapacity
+      - Label:
+          default: "Network Configuration"
+        Parameters:
+          - NetworkStackNameParameter
+    ParameterLabels:
+      ClusterName:
+        default: "The name of the database cluster"
+      ClusterAdmin:
+        default: "The database administrator user name."
+      AdminPasswordSecretString:
+        default: "The administrator password."
+      MinCapacity:
+        default: "The minimum scaling capacity of the database cluster."
+      MaxCapacity:
+        default: "The maximum scaling capacity of the database cluster."
+      NetworkStackNameParameter:
+        default: "External stack providing VPC and private subnets via export"
+
+Parameters:
+  ClusterName:
+    Description: Database Cluster Name
+    Type: String
+    Default: "slurm-accounting-cluster"
+    MinLength: 1
+    MaxLength: 63
+    AllowedPattern: ^[a-z][-a-z0-9]{0,62}$
+    ConstraintDescription: >-
+      Cluster name must be between 1 and 63 characters, start with a lower case character, and be followed by a mix of
+      lower case characters, digits, and - (hyphens).
+  AdminPasswordSecretString:
+    Description: >-
+      Password must be at least 8 characters long and contain at least 1 upper case, 1 lower case, 1 digit, and 1
+      non-alphanumeric character. It must not contain any of the following: # (hash), / (slash), ' (single quote), " (double quote)
+      or @ (at sign).
+    Type: String
+    NoEcho: true
+    MinLength: 8
+    # Only allow 'Medium' or better strength passwords according to https://dev.mysql.com/doc/refman/8.0/en/validate-password.html
+    AllowedPattern: (?=^.{8,}$)(?=.*\d)(?=.*[A-Z])(?=.*[a-z])(?=.*[^\w\s])(?!.*[@/'"#])^.*
+    ConstraintDescription: >-
+      Password must be at least 8 characters with at least one uppercase letter, one lower case letter, one numeric
+      digit, and one special (non-alphanumeric) character. It can not contain any of the following: # (hash), / (slash), ' (single quote), " (double quote) and @ (at sign).
+  ClusterAdmin:
+    Description: Administrator user name.
+    Type: String
+    Default: clusteradmin
+    MinLength: 3
+    MaxLength: 64
+  NetworkStackNameParameter:
+    Description: Name of the HPC large-scale networking stack. Requires stackname-PrivateSubnets export.
+    Type: String
+    Default: hpc-networking
+  MinCapacity:
+    Description: Must be less than the maximum capacity.
+    Type: Number
+    Default: 1
+    MinValue: .5
+    MaxValue: 127.5
+  MaxCapacity:
+    Description: Must be greater than or equal to the minimum capacity.
+    Type: Number
+    Default: 4
+    MinValue: 1
+    MaxValue: 128
+
+Transform: AWS::Serverless-2016-10-31
+Conditions:
+  InUsIsobEast1: !Equals [ !Ref AWS::Region, 'us-isob-east-1' ]
+  InUsIsoEast1: !Equals [ !Ref AWS::Region, 'us-iso-east-1' ]
+  UseServerlessDatabase: !Not [!Or [Condition: InUsIsobEast1, Condition: InUsIsoEast1]]
+
+Resources:
+
+  #
+  # Database Cluster
+  #
+  AccountingClusterParameterGroup:
+    Type: 'AWS::RDS::DBClusterParameterGroup'
+    Properties:
+      Description: Cluster parameter group for aurora-mysql
+      Family: aurora-mysql8.0
+      Parameters:
+        require_secure_transport: 'ON'
+        innodb_lock_wait_timeout: '900'
+      Tags:
+        - Key: 'parallelcluster:usecase'
+          Value: 'slurm accounting'
+  
+  AccountingClusterSubnetGroup:
+    Type: 'AWS::RDS::DBSubnetGroup'
+    Properties:
+      DBSubnetGroupDescription: !Sub 'Subnets for AccountingCluster-${AWS::Region} database'
+      SubnetIds:
+        - {"Fn::Select": [0, { "Fn::Split" : [",", {"Fn::ImportValue" : {"Fn::Sub" : "${NetworkStackNameParameter}-PrivateSubnets"}}] }]}
+        - {"Fn::Select": [1, { "Fn::Split" : [",", {"Fn::ImportValue" : {"Fn::Sub" : "${NetworkStackNameParameter}-PrivateSubnets"}}] }]}
+      Tags:
+        - Key: 'parallelcluster:usecase'
+          Value: 'slurm accounting'
+ 
+  AccountingClusterSecurityGroup:
+    Type: 'AWS::EC2::SecurityGroup'
+    Properties:
+      GroupDescription: RDS security group
+      SecurityGroupEgress:
+        - CidrIp: 0.0.0.0/0
+          Description: Allow all outbound traffic by default
+          IpProtocol: '-1'
+      Tags:
+        - Key: 'parallelcluster:usecase'
+          Value: 'slurm accounting'
+      VpcId: {"Fn::ImportValue" : {"Fn::Sub" : "${NetworkStackNameParameter}-VPC"}}
+
+  AccountingClusterSecurityGroupInboundRule:
+    Type: 'AWS::EC2::SecurityGroupIngress'
+    Properties:
+      IpProtocol: tcp
+      Description: Allow incoming connections from client security group
+      FromPort: !GetAtt
+        - AccountingCluster
+        - Endpoint.Port
+      GroupId: !GetAtt
+        - AccountingClusterSecurityGroup
+        - GroupId
+      SourceSecurityGroupId: !GetAtt
+        - AccountingClusterClientSecurityGroup
+        - GroupId
+      ToPort: !GetAtt
+        - AccountingCluster
+        - Endpoint.Port
+
+  AccountingClusterAdminSecret:
+    Type: 'AWS::SecretsManager::Secret'
+    Properties:
+      Description: 'Serverless Database Cluster Administrator Password'
+      SecretString: !Ref AdminPasswordSecretString
+      Tags:
+        - Key: 'parallelcluster:usecase'
+          Value: 'slurm accounting'
+
+  AccountingCluster:
+    Type: 'AWS::RDS::DBCluster'
+    Properties:
+      DBClusterIdentifier: !Ref ClusterName
+      Engine: "aurora-mysql"
+      EngineVersion: "8.0.mysql_aurora.3.03.0"
+      CopyTagsToSnapshot: true
+      DBClusterParameterGroupName: !Ref AccountingClusterParameterGroup
+      DBSubnetGroupName: !Ref AccountingClusterSubnetGroup
+      EnableHttpEndpoint: false
+      MasterUsername: !Ref ClusterAdmin
+      MasterUserPassword: !Ref AdminPasswordSecretString
+      ServerlessV2ScalingConfiguration: !If
+        - UseServerlessDatabase
+        - MaxCapacity: !Ref MaxCapacity
+          MinCapacity: !Ref MinCapacity
+        - !Ref AWS::NoValue
+      StorageEncrypted: true
+      Tags:
+        - Key: 'parallelcluster:usecase'
+          Value: 'slurm accounting'
+      VpcSecurityGroupIds:
+        - !GetAtt
+          - AccountingClusterSecurityGroup
+          - GroupId
+    UpdateReplacePolicy: Delete
+    DeletionPolicy: Delete
+
+  AccountingClusterInstance1:
+    Type: 'AWS::RDS::DBInstance'
+    Properties:
+      DBInstanceClass: !If [UseServerlessDatabase, 'db.serverless', 'db.r5.large']
+      DBClusterIdentifier: !Ref AccountingCluster
+      DBInstanceIdentifier: !Sub '${ClusterName}-instance-1'
+      Engine: "aurora-mysql"
+      PubliclyAccessible: false
+    UpdateReplacePolicy: Delete
+    DeletionPolicy: Delete
+
+  AccountingClusterInstance2:
+    Type: 'AWS::RDS::DBInstance'
+    Properties:
+      DBInstanceClass: !If [UseServerlessDatabase, 'db.serverless', 'db.r5.large']
+      DBClusterIdentifier: !Ref AccountingCluster
+      DBInstanceIdentifier: !Sub '${ClusterName}-instance-2'
+      Engine: "aurora-mysql"
+      PubliclyAccessible: false
+    UpdateReplacePolicy: Delete
+    DeletionPolicy: Delete
+
+  AccountingClusterClientSecurityGroup:
+    Type: 'AWS::EC2::SecurityGroup'
+    Properties:
+      GroupDescription: Security Group to allow connection to Serverless DB Cluster
+      Tags:
+        - Key: 'parallel-cluster:usecase'
+          Value: 'slurm accounting'
+      VpcId: {"Fn::ImportValue" : {"Fn::Sub" : "${NetworkStackNameParameter}-VPC"}}
+
+  AccountingClusterClientSecurityGroupOutboundRule:
+    Type: 'AWS::EC2::SecurityGroupEgress'
+    Properties:
+      GroupId: !GetAtt
+        - AccountingClusterClientSecurityGroup
+        - GroupId
+      IpProtocol: tcp
+      Description: Allow incoming connections from PCluster
+      DestinationSecurityGroupId: !GetAtt
+        - AccountingClusterSecurityGroup
+        - GroupId
+      FromPort: !GetAtt
+        - AccountingCluster
+        - Endpoint.Port
+      ToPort: !GetAtt
+        - AccountingCluster
+        - Endpoint.Port
+
+Outputs:
+  ClusterName:
+    Value: !Ref ClusterName
+    Export:
+        Name: !Sub ${AWS::StackName}-ClusterName
+  DatabaseHost:
+    Value: !GetAtt
+      - AccountingCluster
+      - Endpoint.Address
+    Export:
+        Name: !Sub ${AWS::StackName}-DatabaseHost
+  DatabasePort:
+    Value: !GetAtt
+      - AccountingCluster
+      - Endpoint.Port
+    Export:
+        Name: !Sub ${AWS::StackName}-DatabasePort
+  DatabaseAdminUser:
+    Value: !Ref ClusterAdmin
+    Export:
+        Name: !Sub ${AWS::StackName}-DatabaseAdminUser
+  DatabaseSecretArn:
+    Value: !Ref AccountingClusterAdminSecret
+    Export:
+        Name: !Sub ${AWS::StackName}-DatabaseSecretArn
+  DatabaseClusterSecurityGroup:
+    Value: !GetAtt
+      - AccountingClusterSecurityGroup
+      - GroupId
+    Export:
+        Name: !Sub ${AWS::StackName}-DatabaseClusterSecurityGroup
+  DatabaseClientSecurityGroup:
+    Value: !GetAtt
+      - AccountingClusterClientSecurityGroup
+      - GroupId
