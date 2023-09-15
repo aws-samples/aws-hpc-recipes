@@ -8,7 +8,7 @@ This recipe is a trivial example of creating an S3 bucket with CloudFormation. N
 
 There is only one template in this recipe. Stack creation will fail if the bucket already exists.
 
-* Create an [S3 bucket](https://console.aws.amazon.com/cloudformation/home?region=us-east-2#/stacks/create/review?stackName=s3-simple&templateURL=https://aws-hpc-recipes.s3.us-east-1.amazonaws.com/main/recipes/storage/s3_demo_bucket/assets/main.yaml)
+* Create an [S3 bucket](https://console.aws.amazon.com/cloudformation/home?region=us-east-2#/stacks/create/review?stackName=s3-simple&templateURL=https://aws-hpc-recipes.s3.us-east-1.amazonaws.com/main/recipes/storage/s3_demo/assets/main.yaml)
 
 ## Cleaning up
 
