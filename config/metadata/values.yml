@@ -11,6 +11,7 @@ namespace:
   pcluster: AWS ParallelCluster
   scheduler: HPC scheduler
   storage: Storage
+  training: Teaching and training recipes
 # List of default tags and their colors
 tags:
   batch: orange
@@ -32,6 +33,10 @@ tags:
   rds: green
   graviton: green
   aurora: green
+  100: blue
+  200: blue
+  300: blue
+  400: blue
 # Hex codes for each color
 colors:
   blue: 146EB4

@@ -140,6 +140,29 @@ You can use an AWS HPC recipe in several ways:
 * **About**: Provision an FSx for OpenZFS filesystem and relevant security groups for use with ParallelCluster
 * **Usage**: [README.md](storage/fsx_openzfs/README.md)
 
+#### s3_demo ![tag](https://img.shields.io/badge/-s3-%237DCEA0) 
+
+* **About**: Create an Amazon S3 bucket using CloudFormation.
+* **Usage**: [README.md](storage/s3_demo/README.md)
+
+
+### :arrow_right: training: Teaching and training recipes
+
+#### try_recipes_1 ![tag](https://img.shields.io/badge/-cloudformation-%237DCEA0) ![tag](https://img.shields.io/badge/-fsx-%237DCEA0) ![tag](https://img.shields.io/badge/-parallelcluster-%23FF9900) ![tag](https://img.shields.io/badge/-s3-%237DCEA0) 
+
+* **About**: Cluster example using CloudFormation imports.
+* **Usage**: [README.md](training/try_recipes_1/README.md)
+
+#### try_recipes_1 ![tag](https://img.shields.io/badge/-cloudformation-%237DCEA0) ![tag](https://img.shields.io/badge/-fsx-%237DCEA0) ![tag](https://img.shields.io/badge/-parallelcluster-%23FF9900) ![tag](https://img.shields.io/badge/-s3-%237DCEA0) 
+
+* **About**: Cluster example using nested CloudFormation stacks.
+* **Usage**: [README.md](training/try_recipes_1/README.md)
+
+#### try_recipes_1 ![tag](https://img.shields.io/badge/-cloudformation-%237DCEA0) ![tag](https://img.shields.io/badge/-fsx-%237DCEA0) ![tag](https://img.shields.io/badge/-parallelcluster-%23FF9900) ![tag](https://img.shields.io/badge/-s3-%237DCEA0) 
+
+* **About**: Cluster example using manual configuration.
+* **Usage**: [README.md](training/try_recipes_1/README.md)
+
 
 
 ---
