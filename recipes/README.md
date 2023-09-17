@@ -150,18 +150,18 @@ You can use an AWS HPC recipe in several ways:
 
 #### try_recipes_1 ![tag](https://img.shields.io/badge/-cloudformation-%237DCEA0) ![tag](https://img.shields.io/badge/-fsx-%237DCEA0) ![tag](https://img.shields.io/badge/-parallelcluster-%23FF9900) ![tag](https://img.shields.io/badge/-s3-%237DCEA0) 
 
-* **About**: Cluster example using CloudFormation imports.
-* **Usage**: [README.md](training/try_recipes_1/README.md)
-
-#### try_recipes_1 ![tag](https://img.shields.io/badge/-cloudformation-%237DCEA0) ![tag](https://img.shields.io/badge/-fsx-%237DCEA0) ![tag](https://img.shields.io/badge/-parallelcluster-%23FF9900) ![tag](https://img.shields.io/badge/-s3-%237DCEA0) 
-
-* **About**: Cluster example using nested CloudFormation stacks.
-* **Usage**: [README.md](training/try_recipes_1/README.md)
-
-#### try_recipes_1 ![tag](https://img.shields.io/badge/-cloudformation-%237DCEA0) ![tag](https://img.shields.io/badge/-fsx-%237DCEA0) ![tag](https://img.shields.io/badge/-parallelcluster-%23FF9900) ![tag](https://img.shields.io/badge/-s3-%237DCEA0) 
-
 * **About**: Cluster example using manual configuration.
 * **Usage**: [README.md](training/try_recipes_1/README.md)
+
+#### try_recipes_2 ![tag](https://img.shields.io/badge/-cloudformation-%237DCEA0) ![tag](https://img.shields.io/badge/-fsx-%237DCEA0) ![tag](https://img.shields.io/badge/-parallelcluster-%23FF9900) ![tag](https://img.shields.io/badge/-s3-%237DCEA0) 
+
+* **About**: Cluster example using CloudFormation imports.
+* **Usage**: [README.md](training/try_recipes_2/README.md)
+
+#### try_recipes_3 ![tag](https://img.shields.io/badge/-cloudformation-%237DCEA0) ![tag](https://img.shields.io/badge/-fsx-%237DCEA0) ![tag](https://img.shields.io/badge/-parallelcluster-%23FF9900) ![tag](https://img.shields.io/badge/-s3-%237DCEA0) 
+
+* **About**: Cluster example using nested CloudFormation stacks.
+* **Usage**: [README.md](training/try_recipes_3/README.md)
 
 
 
