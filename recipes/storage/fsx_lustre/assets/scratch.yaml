@@ -198,7 +198,7 @@ Resources:
     UpdateReplacePolicy: Delete
     Properties: 
       GroupDescription: Allows FSx for Lustre traffic from ParallelCluster
-      VpcId: !GetAtt VpcInfo.VpcId
+      VpcId: !Ref VpcId
       SecurityGroupIngress:
         - IpProtocol: tcp
           FromPort: 988
