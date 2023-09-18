@@ -21,7 +21,7 @@ If you are not sure whether your account can use Trn1 instances, try to launch o
 
 1. Create a basic HPC networking configuration in a Region and Availability Zone where [Trn1 instances are available](https://aws.amazon.com/ec2/instance-types/trn1/). You can do this manually or using the [net/hpc_basic](https://console.aws.amazon.com/cloudformation/home?region=us-west-2#/stacks/create/review?stackName=basic-networking&templateURL=https://aws-hpc-recipes.s3.us-east-1.amazonaws.com/main/recipes/net/hpc_basic/assets/public-private.yaml) recipe. 
 2. Ensure you have an Amazon EC2 [SSH key created](https://docs.aws.amazon.com/AWSEC2/latest/UserGuide/create-key-pairs.html#having-ec2-create-your-key-pair) in the Region where you want to launch your Trn1 cluster.
-3. [Launch the cluster template](https://console.aws.amazon.com/cloudformation/home?region=us-east-2#/stacks/create/review?stackName=try-trn1&templateURL=https://aws-hpc-recipes.s3.us-east-1.amazonaws.com/main/recipes/pcluster/try_trn1/assets/launch.yaml)
+3. [Launch the cluster template](https://console.aws.amazon.com/cloudformation/home?region=us-east-2#/stacks/create/review?stackName=try-trn1&templateURL=https://aws-hpc-recipes.s3.us-east-1.amazonaws.com/main/recipes/pcluster/try_trn1/assets/launch-alt.yaml)
     * Follow the instructions in the AWS CloudFormation console. When you configure the queue sizes (i.e. `ComputeInstanceMax`), choose a value that is consistent with your service quota. 
 4. Monitor the status of the AWS CloudFormation stack. When its status reaches `CREATE_COMPLETE`, navigate to its **Outputs** tab to find information you need to access the cluster.
 
