@@ -17,4 +17,4 @@ Once you are on the system you can inspect its queues, install software, run job
 
 ## Cleaning up
 
-1. Delete your cluster stack. All other resources created by this recipe will automatically be deleted.
+1. Delete your cluster stack. Other resources created by this recipe will automatically be deleted. 

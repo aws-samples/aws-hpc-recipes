@@ -105,16 +105,6 @@ Resources:
         - { Version: !FindInMap [Recipes, Constants, Version] }
       TimeoutInMinutes: 10
 
-  DemoBucket:
-    Type: AWS::CloudFormation::Stack
-    DeletionPolicy: Delete
-    UpdateReplacePolicy: Delete
-    Properties:
-      TemplateURL: !Sub
-        - https://aws-hpc-recipes.s3.us-east-1.${AWS::URLSuffix}/${Version}/recipes/storage/s3_demo/assets/main.yaml
-        - { Version: !FindInMap [Recipes, Constants, Version] }
-      TimeoutInMinutes: 10
-
   FSxFilesystem:
     Type: AWS::CloudFormation::Stack
     DeletionPolicy: Delete
@@ -124,11 +114,8 @@ Resources:
         VpcId: !GetAtt [ PclusterVpc , Outputs.VPC ]
         SubnetId: !GetAtt [ PclusterVpc , Outputs.DefaultPrivateSubnet ]
         Capacity: !Ref FilesystemCapacityGb
-        DataRepositoryPath: !Sub
-          - 's3://${BucketName}/'
-          - BucketName: !GetAtt [ DemoBucket , Outputs.BucketName ]
       TemplateURL: !Sub
-        - https://aws-hpc-recipes.s3.us-east-1.${AWS::URLSuffix}/${Version}/recipes/storage/fsx_lustre_s3_dra/assets/persistent-dra.yaml
+        - https://aws-hpc-recipes.s3.us-east-1.${AWS::URLSuffix}/${Version}/recipes/storage/fsx_lustre/assets/persistent.yaml
         - { Version: !FindInMap [Recipes, Constants, Version] }
 
   PclusterClusterProvider:
