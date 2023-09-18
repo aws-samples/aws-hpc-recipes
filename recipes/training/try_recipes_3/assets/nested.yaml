@@ -1,6 +1,6 @@
 AWSTemplateFormatVersion: '2010-09-09'
 Description: >
-  Recipe to configure an HPC cluster using nested stacks
+  Recipe to configure an HPC cluster using nested stacks.
 
 ### Stack metadata
 Metadata:
@@ -58,9 +58,8 @@ Parameters:
 
   FilesystemCapacityGb:
     Type: Number
-    Description: Size (Gb) of FSx for Lustre volume at /fsx
-    Default: 2400
-    MinValue: 1200
+    Description: Size (in GB) of FSx for Lustre volume at /fsx
+    Default: 1200
     AllowedValues:
          - 1200
          - 2400
@@ -131,7 +130,6 @@ Resources:
       TemplateURL: !Sub
         - https://aws-hpc-recipes.s3.us-east-1.${AWS::URLSuffix}/${Version}/recipes/storage/fsx_lustre_s3_dra/assets/persistent-dra.yaml
         - { Version: !FindInMap [Recipes, Constants, Version] }
-      TimeoutInMinutes: 10
 
   PclusterClusterProvider:
     Type: AWS::CloudFormation::Stack

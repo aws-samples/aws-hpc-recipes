@@ -1,6 +1,6 @@
 AWSTemplateFormatVersion: '2010-09-09'
 Description: >
-  Manual recipe to configure an HPC cluster
+  Recipe to configure an HPC cluster with manual settings.
 
 ### Stack metadata
 Metadata:

@@ -25,4 +25,4 @@ build_ignore: []
 # Recipe type
 type: other
 # Default asset path
-default: 
+default: assets/manual.yaml
