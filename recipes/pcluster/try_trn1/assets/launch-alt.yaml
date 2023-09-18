@@ -1,0 +1,206 @@
+AWSTemplateFormatVersion: '2010-09-09'
+Description: >
+  Deploy an Trn1 test cluster.
+
+### Stack metadata
+Metadata:
+  AWS::CloudFormation::Interface:
+    ParameterGroups:
+      - Label:
+          default: Neuron SDK
+        Parameters:
+          - NeuronSDKVersion
+      - Label:
+          default: Cluster configuration
+        Parameters:
+          - ClusterName
+          - OS
+          - KeyName
+          - AllowedIps
+          - HeadNodeSubnetId
+          - ComputeNodesSubnetId
+          - ComputeInstanceMax
+      - Label:
+          default: Storage configuration
+        Parameters:
+          - RootVolumeSize
+          - FSxSize
+
+Conditions:
+  GovCloud: !Equals [!Ref AWS::Partition, 'aws-us-gov']
+  China: !Equals [!Ref AWS::Partition, 'aws-cn']
+
+Parameters:
+  ClusterName:
+    Description: Name of cluster. Must be unique in the Region and different from the stack name.
+    Type: String
+    Default: trn1-cluster
+
+  HeadNodeSubnetId:
+    Description: Subnet for head node. Choose a public subnet to facilitate inbound SSH access. 
+    Type: AWS::EC2::Subnet::Id
+
+  ComputeNodesSubnetId:
+    Description: Private subnet for compute nodes. Should be in the same AZ as HeadNodeSubnetIp.
+    Type: AWS::EC2::Subnet::Id
+
+  ComputeInstanceMax:
+    Description: "Maximum # compute instances in queue trn1"
+    Type: Number
+    MinValue: 1
+    Default: 16
+
+  AllowedIps:
+    Description: CIDR-formatted IP range for SSH connections to the cluster
+    Type: String
+    Default: 0.0.0.0/0
+
+  KeyName:
+    Description: Key pair for SSH login
+    Type: AWS::EC2::KeyPair::KeyName
+
+  OS:
+    Type: String
+    Default: ubuntu2004
+    AllowedValues:
+      - ubuntu2004
+    Description: Cluster operating system
+
+  RootVolumeSize:
+    Type: Number
+    Description: Root volume size
+    Default: 1000
+    MinValue: 500
+
+  FSxSize:
+    Type: Number
+    Description: Size of FSx for Lustre volume at /fsx
+    Default: 1200
+    AllowedValues:
+         - 1200
+         - 2400
+         - 4800
+         - 7200
+         - 9600
+
+  NeuronSDKVersion:
+    Type: String
+    Description: Version of Neuron SDK to install. See https://awsdocs-neuron.readthedocs-hosted.com/ for list of supported versions.
+    Default: "2.13.1"
+
+Mappings:
+  ParallelCluster:
+    Constants:
+      Version: 3.7.0
+  Recipes:
+    Constants:
+      Version: main
+
+Resources:
+
+  PclusterClusterProvider:
+    Type: AWS::CloudFormation::Stack
+    DeletionPolicy: Delete
+    UpdateReplacePolicy: Delete
+    Properties:
+      TemplateURL: !Sub
+        - https://${AWS::Region}-aws-parallelcluster.s3.${AWS::Region}.${AWS::URLSuffix}/parallelcluster/${Version}/templates/custom_resource/cluster.yaml
+        - { Version: !FindInMap [ParallelCluster, Constants, Version] }
+      TimeoutInMinutes: 10
+
+  PclusterCluster:
+    Type: Custom::PclusterCluster
+    DeletionPolicy: Delete
+    UpdateReplacePolicy: Delete
+    Properties:
+      ServiceToken: !GetAtt [ PclusterClusterProvider , Outputs.ServiceToken ]
+      ClusterName: !Ref ClusterName
+      ClusterConfiguration:
+        Image:
+          Os: !Ref OS
+        HeadNode:
+          InstanceType: c5.4xlarge
+          Networking:
+            SubnetId: !Ref HeadNodeSubnetId
+          Ssh:
+            KeyName: !Ref KeyName
+            AllowedIps: !Ref AllowedIps
+          Iam:
+            S3Access:
+              - BucketName: neuron-s3
+                EnableWriteAccess: false
+            AdditionalIamPolicies:
+              - Policy: arn:aws:iam::aws:policy/AmazonSSMManagedInstanceCore
+          LocalStorage:
+            RootVolume:
+              Size: !Ref RootVolumeSize
+          CustomActions:
+            OnNodeConfigured:
+              Script: !Sub
+                - s3://neuron-s3/pcluster/post-install-scripts/neuron-installation/v${SDKVersion}/u20/pt/install_neuron.sh
+                - { SDKVersion: !Ref NeuronSDKVersion }
+        Scheduling:
+          Scheduler: slurm
+          SlurmSettings:
+            QueueUpdateStrategy: DRAIN
+          SlurmQueues:
+          - Name: compute1
+            ComputeSettings:
+              LocalStorage:
+                RootVolume:
+                  Size: !Ref RootVolumeSize
+                EphemeralVolume:
+                  MountDir: /local_storage
+            ComputeResources:
+            - Name: queue1-i1
+              InstanceType: trn1.32xlarge
+              MinCount: 0
+              MaxCount: !Ref ComputeInstanceMax
+              Efa:
+                Enabled: true
+            Networking:
+              SubnetIds:
+                - !Ref ComputeNodesSubnetId
+              PlacementGroup:
+                Enabled: true
+            CustomActions:
+              OnNodeConfigured:
+                Script: !Sub
+                  - s3://neuron-s3/pcluster/post-install-scripts/neuron-installation/v${SDKVersion}/u20/pt/install_neuron.sh
+                  - { SDKVersion: !Ref NeuronSDKVersion }
+            Iam:
+              S3Access:
+                - BucketName: neuron-s3
+                  EnableWriteAccess: false
+              AdditionalIamPolicies:
+                - Policy: arn:aws:iam::aws:policy/AmazonS3ReadOnlyAccess
+        SharedStorage:
+        - StorageType: FsxLustre
+          Name: pclusterfsx
+          MountDir: /fsx
+          FsxLustreSettings:
+            DeletionPolicy: Delete
+            StorageCapacity: !Ref FSxSize
+            DeploymentType: SCRATCH_2
+        Tags:
+          - Key: 'source'
+            Value: 'aws-hpc-recipes'
+
+Outputs:
+  HeadNodeInstanceId:
+    Description: The instance ID for the HeadNode
+    Value: !GetAtt [ PclusterCluster, headNode.instanceId ]
+    Export:
+      Name: !Sub ${AWS::StackName}-HeadNodeInstanceId
+  SystemManagerUrl:
+    Description: URL to access the HeadNode via SystemManager
+    Value: !Sub
+      - https://${ConsoleDomain}/systems-manager/session-manager/${InstanceId}?region=${AWS::Region}
+      - { ConsoleDomain: !If [ GovCloud, 'console.amazonaws-us-gov.com', !If [ China, 'console.amazonaws.cn', !Sub '${AWS::Region}.console.aws.amazon.com']],
+          InstanceId: !GetAtt [ PclusterCluster, headNode.instanceId ]
+        }
+    Export:
+      Name: !Sub ${AWS::StackName}-SystemManagerUrl
+  ValidationMessages:
+    Description: Warnings from cluster create or update operations.
+    Value: !GetAtt PclusterCluster.validationMessages

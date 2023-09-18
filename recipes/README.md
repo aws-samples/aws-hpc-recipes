@@ -113,6 +113,11 @@ You can use an AWS HPC recipe in several ways:
 * **About**: Create a ParallelCluster system to try out Hpc7g instances.
 * **Usage**: [README.md](pcluster/try_hpc7g/README.md)
 
+#### try_trn1 ![tag](https://img.shields.io/badge/-beta-%23800080) ![tag](https://img.shields.io/badge/-neuronsdk-%23AAB7B8) ![tag](https://img.shields.io/badge/-parallelcluster-%23FF9900) ![tag](https://img.shields.io/badge/-trainium-%23AAB7B8) 
+
+* **About**: Create a ParallelCluster system to try out Trn1 instances.
+* **Usage**: [README.md](pcluster/try_trn1/README.md)
+
 
 ### :arrow_right: scheduler: HPC scheduler
 

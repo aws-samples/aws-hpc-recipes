@@ -33,6 +33,7 @@ tags:
   rds: green
   graviton: green
   aurora: green
+  tranium: green
   100: blue
   200: blue
   300: blue
