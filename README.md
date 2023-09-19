@@ -1,5 +1,7 @@
 # HPC Recipes for AWS
 
+[![DOI](https://zenodo.org/badge/DOI/10.5281/zenodo.8360274.svg)](https://doi.org/10.5281/zenodo.8360274)
+
 This repository contains example recipes that demonstrate how to build HPC systems using AWS ParallelCluster and other AWS products.
 
 ## Getting Started
