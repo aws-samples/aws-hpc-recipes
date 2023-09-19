@@ -17,9 +17,14 @@ Before you start, there are two items to be aware of:
 By default, this template will create a bidirectional DRA. That means that files you add to/change/delete from the Lustre filesystem will show up in S3 and vice versa. The template gives you an option to *Create a read-only DRA*. This will make the DRA unidirectional, where changes to the S3 resource will show up in Lustre, but not the other way around. This is implemented with a CloudFormation conditional that creates the DRA with or without an `AutoExportPolicy`. 
 
 * Switch to the region where your source S3 bucket exists.
-* Use this quick-launch link to create a [Persistent Filesystem with DRA](https://console.aws.amazon.com/cloudformation/home?region=us-east-2#/stacks/create/review?stackName=fsxl-dra&templateURL=https://aws-hpc-recipes.s3.us-east-1.amazonaws.com/main/recipes/storage/fsx_lustre_s3_dra/assets/perisistent-dra.yaml)
+* Use this quick-launch link to create a [Persistent Filesystem with DRA](https://console.aws.amazon.com/cloudformation/home?region=us-east-2#/stacks/create/review?stackName=fsxl-dra&templateURL=https://aws-hpc-recipes.s3.us-east-1.amazonaws.com/main/recipes/storage/fsx_lustre_s3_dra/assets/persistent-dra.yaml)
 
 The key difference between this template and the read-only version is in resource `FSxLDra`, where we create both an `AutoExportPolicy` and an `AutoImportPolicy`, rather than just an `AutoImportPolicy`.
+
+### Alternative Import Stack
+
+You can import networking configuration from an existing stack, rather than specifying specific VPC and subnet IDs. 
+* Use the [alternative import stack](https://console.aws.amazon.com/cloudformation/home?region=us-east-2#/stacks/create/review?stackName=fsxl-dra&templateURL=https://aws-hpc-recipes.s3.us-east-1.amazonaws.com/main/recipes/storage/fsx_lustre_s3_dra/assets/persistent-dra.yaml) to launch a persistent filesystem with DRA.
 
 ### Use with AWS ParallelCluster
 
