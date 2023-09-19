@@ -165,7 +165,7 @@ Resources:
       MapPublicIpOnLaunch: true
       Tags:
       - Key: Name
-        Value: !Sub '${AWS::StackName}:PrivateSubnetA-${AvailabilityZone}'
+        Value: !Sub '${AWS::StackName}:PublicSubnetA-${AvailabilityZone}'
       - Key: Stack
         Value:
           Ref: AWS::StackId
