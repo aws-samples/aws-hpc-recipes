@@ -1,0 +1,61 @@
+---
+# List of namespaces
+namespace:
+  aws: General AWS (default)
+  db: Database management
+  dir: Directory services
+  env: User environment
+  iam: Identity Access and Management
+  ide: IDEs and GUIs
+  net: Networking
+  pcluster: AWS ParallelCluster
+  scheduler: HPC scheduler
+  storage: Storage
+  training: Teaching and training recipes
+# List of default tags and their colors
+tags:
+  batch: orange
+  core: blue
+  cognito: green
+  lambda: green
+  secretsmanager: green
+  community: black
+  beta: purple
+  alinux2: orange
+  parallelcluster: orange
+  fsx: green
+  cloudformation: green
+  cloudwatch: green
+  s3: green
+  cloud9: green
+  efs: green
+  ebs: green
+  rds: green
+  graviton: green
+  aurora: green
+  tranium: green
+  100: blue
+  200: blue
+  300: blue
+  400: blue
+# Hex codes for each color
+colors:
+  blue: 146EB4
+  orange: FF9900
+  red: D9534F
+  yellow: F7DC6F
+  green: 7DCEA0
+  black: 17202A
+  white: F8F9F9
+  grey: AAB7B8
+  purple: 800080
+types:
+  cdk: AWS CDK project
+  cloudformation: AWS CloudFormation template
+  shell: Bash or other shell script
+  terraform: Hashicorp Terraform file
+  other: Unknown
+_internal:
+  s3_bucket: aws-hpc-recipes
+  region: us-east-1
+  release_tag: main

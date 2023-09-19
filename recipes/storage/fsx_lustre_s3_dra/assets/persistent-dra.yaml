@@ -1,0 +1,321 @@
+AWSTemplateFormatVersion: '2010-09-09'
+Description: Creates a persistent FSxL filesystem (plus the relevant security group) and associates it with an S3 bucket via a Data Repository Assocation. 
+
+### Stack metadata
+Metadata:
+  AWS::CloudFormation::Interface:
+    ParameterGroups:
+      - Label:
+          default: Filesystem Options
+        Parameters:
+          - Capacity
+          - PerUnitStorageThroughput
+          - Compression
+          - LustreVersion
+      - Label:
+          default: Data Repository Association Options
+        Parameters:
+          - DataRepositoryPath
+          - FileSystemPath
+          - ReadOnlyDra
+      - Label:
+          default: Networking and Access
+        Parameters:
+          - VpcId
+          - SubnetId
+
+Parameters:
+  VpcId:
+    Description: VPC where you will deploy the FSx filesystem
+    Type: AWS::EC2::VPC::Id
+  SubnetId:
+    Description: Subnet where you will deploy the FSx filesystem (must be in same VPC)
+    Type: AWS::EC2::Subnet::Id
+  Capacity:
+    Description: Storage capacity in GiB (1200 or increments of 2400)
+    Type: Number
+    Default: 1200
+  PerUnitStorageThroughput:
+    Description: Provisioned Read/Write (MB/s/TiB)
+    Type: Number
+    Default: 1000
+    AllowedValues:
+      - 125
+      - 250
+      - 500
+      - 1000
+  Compression:
+    Description: Data compression type
+    Type: String
+    AllowedValues:
+      - "LZ4"
+      - "NONE"
+    Default: "LZ4"
+  LustreVersion:
+    Description: Lustre software version 
+    Type: String
+    AllowedValues:
+      - "2.15"
+      - "2.12"
+    Default: "2.12"
+  DataRepositoryPath:
+    Description: Path to the Amazon S3 data repository to link with the file system (s3://myBucket/myPrefix/)
+    Type: String
+    Default: ''
+  FileSystemPath:
+    Description: Path on FSx for Lustre Filesystem to link with the data repository
+    Type: String
+    Default: "/data/s3"
+  ReadOnlyDra:
+    Description: Create a read-only DRA
+    Type: String
+    Default: "False"
+    AllowedValues:
+      - "True"
+      - "False"
+
+Conditions:
+  CreateReadOnlyDra: !Equals 
+    - !Ref ReadOnlyDra
+    - True
+  CreateReadWriteDra: !Equals 
+    - !Ref ReadOnlyDra
+    - False
+
+Resources:
+  LambdaExecutionRole:
+    Type: AWS::IAM::Role
+    Properties:
+      AssumeRolePolicyDocument:
+        Version: '2012-10-17'
+        Statement:
+        - Effect: Allow
+          Principal:
+            Service:
+            - lambda.amazonaws.com
+          Action:
+          - sts:AssumeRole
+      Path: "/"
+      Policies:
+      - PolicyName: root
+        PolicyDocument:
+          Version: '2012-10-17'
+          Statement:
+          - Effect: Allow
+            Action:
+            - logs:CreateLogGroup
+            - logs:CreateLogStream
+            - logs:PutLogEvents
+            Resource: arn:aws:logs:*:*:*
+          - Effect: Allow
+            Action:
+            - ec2:DescribeSubnets
+            - ec2:DescribeVpcs
+            Resource: "*"
+
+  GetAttFromParam:
+    Type: AWS::Lambda::Function
+    Properties: 
+      Description: Look up info from a VPC or subnet ID 
+      Handler: index.handler
+      MemorySize: 128
+      Role: !GetAtt LambdaExecutionRole.Arn
+      Runtime: "python3.9"
+      Timeout: 30
+      Code:
+        ZipFile: |
+          import json
+          import boto3
+          import cfnresponse
+          import logging
+          
+          def handler(event, context):
+            logger = logging.getLogger()
+            logger.setLevel(logging.INFO)
+            
+            # initialize our responses, assume failure by default
+            
+            response_data = {}
+            response_status = cfnresponse.FAILED
+            
+            logger.info('Received event: {}'.format(json.dumps(event)))
+            
+            if event['RequestType'] == 'Delete':
+              response_status = cfnresponse.SUCCESS
+              cfnresponse.send(event, context, response_status, response_data)
+            
+            try:
+              ec2=boto3.client('ec2')
+            except Exception as e:
+              logger.info('boto3.client failure: {}'.format(e))
+              cfnresponse.send(event, context, response_status, response_data)
+            
+            name_filter = event['ResourceProperties']['NameFilter']
+            name_filter_parts = name_filter.split('-')
+            resource_type=name_filter_parts[0]
+            
+            if resource_type == "vpc":
+              try:
+                vpcs=ec2.describe_vpcs(VpcIds=[name_filter])
+              except Exception as e:
+                logger.info('ec2.describe_vpcs failure: {}'.format(e))
+                cfnresponse.send(event, context, response_status, response_data)
+              
+              number_of_vpcs = len(vpcs['Vpcs'])
+              logger.info('number of vpcs returned: {}'.format(number_of_vpcs))
+              
+              if number_of_vpcs == 1:
+                CidrBlock = vpcs['Vpcs'][0]['CidrBlock']
+                response_data['CidrBlock'] = CidrBlock
+                logger.info('vpc CidrBlock {}'.format(CidrBlock))
+                response_status = cfnresponse.SUCCESS
+                cfnresponse.send(event, context, response_status, response_data)
+              
+              elif number_of_vpcs == 0:
+                logger.info('no matching vpcs for filter {}'.format(name_filter))
+                cfnresponse.send(event, context, response_status, response_data)
+              
+              else:
+                logger.info('multiple matching vpcs for filter {}'.format(name_filter))
+                cfnresponse.send(event, context, response_status, response_data)
+              
+            elif resource_type == "subnet":
+              try:
+                subnets = ec2.describe_subnets(SubnetIds=[name_filter])
+              except Exception as e:
+                logger.info('ec2.describe_subnets failure: {}'.format(e))
+                cfnresponse.send(event, context, response_status, response_data)
+              
+              number_of_subnets = len(subnets['Subnets'])
+              logger.info('number of subnets returned: {}'.format(number_of_subnets))
+              
+              if number_of_subnets == 1:
+                CidrBlock = subnets['Subnets'][0]['CidrBlock']
+                VpcId = subnets['Subnets'][0]['VpcId']
+                AvailabilityZone = subnets['Subnets'][0]['AvailabilityZone']
+                response_data['AvailabilityZone'] = AvailabilityZone
+                response_data['CidrBlock'] = CidrBlock
+                response_data['VpcId'] = VpcId
+                
+                logger.info('subnet AvailabilityZone {}'.format(AvailabilityZone))
+                logger.info('subnet CidrBlock {}'.format(CidrBlock))
+                logger.info('subnet VpcId {}'.format(VpcId))
+                
+                response_status = cfnresponse.SUCCESS
+                cfnresponse.send(event, context, response_status, response_data)
+                
+              elif number_of_subnets == 0:
+                logger.info('no matching subnet for filter {}'.format(name_filter))
+                cfnresponse.send(event, context, response_status, response_data)
+                
+              else:
+                logger.info('multiple matching subnets for filter {}'.format(name_filter))
+                cfnresponse.send(event, context, response_status, response_data)
+              
+            else:
+              logger.info('invalid resource type {}'.resource_type)
+              cfnresponse.send(event, context, response_status, response_data)
+
+# VpcInfo - Lambda-backed resource for looking up an Amazon VPC
+#
+# Parameters
+#
+# ServiceToken - a pointer to the AWS Lambda function
+# NameFilter - the VPC parameter which serves as a filter
+
+  VpcInfo:
+    Type: Custom::VpcInfo
+    Properties:
+      ServiceToken: !GetAtt GetAttFromParam.Arn
+      NameFilter: !Ref VpcId
+
+  FSxLsecurityGroup:
+    Type: AWS::EC2::SecurityGroup
+    DeletionPolicy: Delete
+    UpdateReplacePolicy: Delete
+    Properties: 
+      GroupDescription: Allows FSx for Lustre traffic from ParallelCluster
+      VpcId: !Ref VpcId
+      SecurityGroupIngress:
+        - IpProtocol: tcp
+          FromPort: 988
+          ToPort: 988
+          CidrIp: !GetAtt VpcInfo.CidrBlock
+        - IpProtocol: tcp
+          FromPort: 1021
+          ToPort: 1023
+          CidrIp: !GetAtt VpcInfo.CidrBlock
+      SecurityGroupEgress:
+        - IpProtocol: -1
+          CidrIp: !GetAtt VpcInfo.CidrBlock
+
+  FSxLFilesystem:
+    Type: AWS::FSx::FileSystem
+    DeletionPolicy: Delete
+    UpdateReplacePolicy: Delete
+    Properties:
+      FileSystemType: LUSTRE
+      StorageType: SSD
+      FileSystemTypeVersion: !Ref LustreVersion
+      StorageCapacity: !Ref Capacity
+      SecurityGroupIds:
+        - !Ref FSxLsecurityGroup
+      SubnetIds:
+        - !Ref SubnetId
+      LustreConfiguration:
+        DataCompressionType: !Ref Compression
+        DeploymentType: PERSISTENT_2
+        PerUnitStorageThroughput: !Ref PerUnitStorageThroughput
+
+  # Only one of these FSxLDra* resources will be created
+
+  FSxLDraRo:
+    Type: AWS::FSx::DataRepositoryAssociation
+    Condition: CreateReadOnlyDra
+    Properties: 
+      BatchImportMetaDataOnCreate: true
+      DataRepositoryPath: !Ref DataRepositoryPath
+      FileSystemId: !Ref FSxLFilesystem
+      FileSystemPath: !Ref FileSystemPath
+      S3: 
+        # Sets up a S3=>Lustre sync
+        AutoImportPolicy:
+          Events:
+            - NEW
+            - CHANGED
+            - DELETED
+
+  FSxLDraRw:
+    Type: AWS::FSx::DataRepositoryAssociation
+    # Condition: CreateReadWriteDra
+    Properties: 
+      BatchImportMetaDataOnCreate: true
+      DataRepositoryPath: !Ref DataRepositoryPath
+      FileSystemId: !Ref FSxLFilesystem
+      FileSystemPath: !Ref FileSystemPath
+      # Set up a two-way sync with the S3 bucket
+      S3: 
+        # Sets up a Lustre=>S3 sync
+        AutoExportPolicy:
+          Events:
+            - NEW
+            - CHANGED
+            - DELETED
+        # Sets up a S3=>Lustre sync
+        AutoImportPolicy:
+          Events:
+            - NEW
+            - CHANGED
+            - DELETED
+
+Outputs:
+  FSxLustreFilesystemId:
+    Description: The ID of the FSxL filesystem that has been created
+    Value: !Ref FSxLFilesystem
+    Export:
+      Name: !Sub ${AWS::StackName}-FSxLustreFilesystemId
+  FSxLustreSecurityGroupId:
+    Description: The ID of the security group allowing access to FSxL filesystem
+    Value: !Ref FSxLsecurityGroup
+    Export:
+      Name: !Sub ${AWS::StackName}-FSxLustreSecurityGroupId

@@ -1,0 +1,35 @@
+AWSTemplateFormatVersion: '2010-09-09'
+Description: >
+  Create an Amazon S3 bucket.
+  
+Parameters:
+  BucketName:
+    Description: "Name of the S3 bucket. Leave empty to let CloudFormation name the bucket for you."
+    Type: String
+    Default: ""
+
+Conditions:
+     NamedBucket: !Not [!Equals [!Ref BucketName, '']]
+
+Resources:
+  CreatedBucket:
+    # https://docs.aws.amazon.com/AWSCloudFormation/latest/UserGuide/aws-properties-s3-bucket.html#aws-properties-s3-bucket-properties
+    Type: AWS::S3::Bucket
+    Properties:
+      BucketName:
+        Fn::If:
+          - NamedBucket
+          - !Ref BucketName
+          - !Ref AWS::NoValue
+
+Outputs:
+  BucketName:
+    Description: "Bucket name"
+    Value: !Ref CreatedBucket
+    Export:
+        Name: !Sub ${AWS::StackName}-BucketName
+  BucketArn:
+    Description: "ARN of the S3 bucket"
+    Value: !GetAtt [CreatedBucket, Arn]
+    Export:
+        Name: !Sub ${AWS::StackName}-BucketArn

@@ -1,0 +1,36 @@
+# HPC Recipes for AWS
+
+This page shows [all available recipes](#recipe-list). They are organized by theme (e.g. `Database management` and `Networking`). Each recipe also has tags that indicate the key technologies (i.e. `parallelcluster` and `rds`) it references. 
+
+## Making use of recipes
+
+You can use an AWS HPC recipe in several ways:
+
+* **Learn from it.** Read the README file and inspect its `assets` directory to understand how it works. 
+* **Launch resources with it.** Navigate to its README page and follow the instructions. There is often a quick-launch link to the AWS CloudFormation console.
+* **Incorporate it.** Recipe assets are permissively licensed so you can use them in your own builds. You can also [bring assets in by URL](#incorporating-recipe-assets)
+
+## Recipe List
+
+{% include 'namespace.md.j2' %}
+---
+## Incorporating recipe assets
+
+You can access recipe assets using HTTPS or S3 protocols. They are mirrored to an S3 bucket so they can used with AWS CloudFormation. 
+
+Here are example URLs for the CloudFormation launch template for the "latest" ParallelCluster recipe (**recipes/pcluster/latest**):
+* **HTTPS Template**: https://{{_internal.s3_bucket}}.s3.{{_internal.region}}.amazonaws.com/main/recipes/pcluster/latest/assets/launch.yaml
+* **S3 Template**: s3://{{_internal.s3_bucket}}/main/recipes/pcluster/latest/assets/launch.yaml
+
+In both URLs, `/main/` is the HPC Recipes on AWS version. At present, the only supported version is **main**. 
+
+You can use the HTTPS link in a couple of contexts.
+1. You can download the file it references
+    * `curl -O HTTPS_URL`
+2. If it's a Cloudformation template, you can import it into the CloudFormation console when creating a stack
+3. You can embed it in a CloudFormation [quick-launch link](https://docs.aws.amazon.com/AWSCloudFormation/latest/UserGuide/cfn-console-create-stacks-quick-create-links.html).
+    * **Template**: `https://console.aws.amazon.com/cloudformation/home?region=REGION#/stacks/create/review?templateURL=HTTPS_URL`
+
+The S3 URL is useful anywhere you want to use native S3 commands for data access. 
+* **Template**: `aws s3 cp s3://aws-hpc-recipes/main/recipes/NAMESPACE/RECIPE/assets/FILE.yaml .`
+

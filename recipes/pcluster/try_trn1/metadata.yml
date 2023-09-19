@@ -1,0 +1,29 @@
+---
+# The name of the recipe. This has the same character requirements as namespace.
+name: try_trn1
+# The version of the recipe. Must be compatible with semantic versioning.
+version: "1.0.0"
+# A short summary description of the recipe
+description: Create a ParallelCluster system to try out Trn1 instances.
+# The path to the README for the recipe relative to its root directory.
+readme: README.md
+# Optional URL for external documentation
+documentation: https://github.com/aws-neuron/aws-neuron-parallelcluster-samples
+# Optional URL for a homepage
+homepage:
+# A list of recipe content authors
+authors:
+  - Matt Vaughn
+  - AWS Neuron SDK Team
+# A list of tags you want to associate with the collection for indexing/searching. Tags have the same character requirements as namespace.
+tags:
+  - parallelcluster
+  - neuronsdk
+  - beta
+  - trainium
+# A list of file glob-like patterns used to filter any files or directories that should not be included in the S3 release. 
+build_ignore: []
+# Recipe type
+type: other
+# Default asset path
+default: assets/launch-alt.yaml
