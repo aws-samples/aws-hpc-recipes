@@ -4,7 +4,7 @@
 
 This recipes sets up a basic AWS Managed Microsoft AD deployment that can support a demonstration multi-user AWS ParallelCluster environment. 
 
-**Note** This template is for educational purposes only because it does not enable encrypted LDAP. Consult the documentation to learn [how to secure an AWS Managed Microsoft AD](https://docs.aws.amazon.com/directoryservice/latest/admin-guide/ms_ad_security.html).
+**Note** This template uses self-signed certificates to enable encrypted LDAP. Consult the documentation to learn [how to secure an AWS Managed Microsoft AD](https://docs.aws.amazon.com/directoryservice/latest/admin-guide/ms_ad_security.html).
 
 ## Usage
 

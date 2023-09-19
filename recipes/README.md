@@ -26,7 +26,7 @@ You can use an HPC Recipe for AWS in several ways:
 
 ### :arrow_right: dir: Directory services
 
-#### demo_managed_ad ![tag](https://img.shields.io/badge/-activedirectory-%23AAB7B8) ![tag](https://img.shields.io/badge/-beta-%23800080) ![tag](https://img.shields.io/badge/-secretsmanager-%237DCEA0) 
+#### demo_managed_ad ![tag](https://img.shields.io/badge/-activedirectory-%23AAB7B8) ![tag](https://img.shields.io/badge/-secretsmanager-%237DCEA0) 
 
 * **About**: Stand up a basic AWS Managed Microsoft AD for use with AWS ParallelCluster.
 * **Usage**: [README.md](dir/demo_managed_ad/README.md)
