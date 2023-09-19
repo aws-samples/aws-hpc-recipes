@@ -4,7 +4,7 @@ This page shows [all available recipes](#recipe-list). They are organized by the
 
 ## Making use of recipes
 
-You can use an AWS HPC recipe in several ways:
+You can use an HPC Recipe for AWS in several ways:
 
 * **Learn from it.** Read the README file and inspect its `assets` directory to understand how it works. 
 * **Launch resources with it.** Navigate to its README page and follow the instructions. There is often a quick-launch link to the AWS CloudFormation console.
