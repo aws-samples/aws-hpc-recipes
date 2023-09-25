@@ -2,7 +2,7 @@
 
 ## Info
 
-This recipe demonstrates the new Login Nodes feature in ParallelCluster 3.7.0.
+This recipe demonstrates the new Login Nodes feature in ParallelCluster 3.7.1.
 
 ## Usage
 

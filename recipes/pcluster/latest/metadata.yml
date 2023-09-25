@@ -2,7 +2,7 @@
 # The name of the recipe. This has the same character requirements as namespace.
 name: latest
 # In this recipe, this tracks the referenced ParallelCluster release.
-version: "3.7.0"
+version: "3.7.1"
 # A short summary description of the recipe
 description: Quick demo of the latest ParallelCluster release
 # The path to the README for the recipe relative to its root
