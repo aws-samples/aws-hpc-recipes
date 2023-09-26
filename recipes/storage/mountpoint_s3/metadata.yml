@@ -4,7 +4,7 @@ name: mountpoint_s3
 # The version of the recipe. Must be compatible with semantic versioning.
 version: "1.0.0"
 # A short summary description of the recipe
-description: Configures AWS ParallelCluster to mount an S3 to directories using mountpoint-s3
+description: Configure AWS ParallelCluster to mount S3 buckets to directories using mountpoint-s3
 # The path to the README for the recipe relative to its root directory.
 readme: README.md
 # Optional URL for external documentation
