@@ -82,6 +82,23 @@ Add the `--requester-pays` argument to acknowledge your account will be billed f
 
 Override the default `--read-only` configuration. Note that you cannot over-write an object in the bucket. You can delete it and write a new copy. To allow that behavior, enable deletes in the S3 bucket with `--allow-delete`. 
 
+### How to
+
+Pass custom `mount-s3` parameters by adding a third argument to the `mount.sh` script. Here is an example of mounting a public bucket like you might find in the [Registry of Open Data on AWS](https://registry.opendata.aws/).
+
+```yaml
+HeadNode:
+    CustomActions:
+        OnNodeConfigured:
+            Sequence:
+                - Script1: https://aws-hpc-recipes.s3.us-east-1.amazonaws.com/main/recipes/storage/mountpoint_s3/assets/install.sh
+                - Script2: https://aws-hpc-recipes.s3.us-east-1.amazonaws.com/main/recipes/storage/mountpoint_s3/assets/mount.sh
+                  Args:
+                    - PUBLIC-BUCKET-NAME
+                    - /shared/public-data
+                    - "--no-sign-request --allow-root --debug"
+```
+
 ## Operating system support
 
 The recipe is currently validated on the following operating systems:
