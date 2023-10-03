@@ -1,0 +1,230 @@
+AWSTemplateFormatVersion: '2010-09-09'
+Transform: AWS::LanguageExtensions
+Description: Example of how to operate OpenLDAP on Fargate.
+
+Parameters:
+  VpcId:
+    Type: AWS::EC2::VPC::Id
+    Description: The virtual private network into which to launch all resources
+  SubnetOne:
+    Type: AWS::EC2::Subnet::Id
+    Description: The first subnet across which to distribute the application and
+                 EFS access
+  SubnetTwo:
+    Type: AWS::EC2::Subnet::Id
+    Description: The first subnet across which to distribute the application and
+                 EFS access
+
+Resources:
+
+  # The ECS cluster that will be controlling the tasks in AWS Fargate
+  Cluster:
+    Type: AWS::ECS::Cluster
+
+  # The filesystem itself
+  EFSFileSystem:
+    Type: AWS::EFS::FileSystem
+    DeletionPolicy: Delete
+    UpdateReplacePolicy: Retain
+    Properties:
+      Encrypted: true
+      PerformanceMode: generalPurpose
+      ThroughputMode: bursting
+
+  # Access point - required because our main container is a non-root container
+  EFSAccessPoint:
+    Type: AWS::EFS::AccessPoint
+    Properties: 
+      FileSystemId: !Ref EFSFileSystem
+      PosixUser: 
+        Gid: 0
+        Uid: 1001
+      RootDirectory: 
+        Path: /data
+
+  # Mount target allows usage of the EFS inside of subnet one
+  EFSMountTargetOne:
+    Type: AWS::EFS::MountTarget
+    Properties:
+      FileSystemId: !Ref EFSFileSystem
+      SubnetId: !Ref SubnetOne
+      SecurityGroups:
+        - !Ref EFSFileSystemSecurityGroup
+
+  # Mount target allows usage of the EFS inside of subnet two
+  EFSMountTargetTwo:
+    Type: AWS::EFS::MountTarget
+    Properties:
+      FileSystemId: !Ref EFSFileSystem
+      SubnetId: !Ref SubnetTwo
+      SecurityGroups:
+        - !Ref EFSFileSystemSecurityGroup
+
+  # This security group is used by the mount targets so
+  # that they will allow inbound NFS connections from
+  # the AWS Fargate tasks that we launch
+  EFSFileSystemSecurityGroup:
+    Type: AWS::EC2::SecurityGroup
+    Properties:
+      GroupDescription: Security group for EFS file system
+      VpcId: !Ref VpcId
+      SecurityGroupIngress:
+        - IpProtocol: tcp
+          FromPort: 2049
+          ToPort: 2049
+          SourceSecurityGroupId: !Ref ServiceSecurityGroup
+
+  # This role is used to setup the execution environment for
+  # the task, in this case to connect to the Elastic File System
+  TaskExecutionRole:
+    Type: AWS::IAM::Role
+    Properties:
+      AssumeRolePolicyDocument:
+        Statement:
+          - Effect: Allow
+            Principal:
+              Service: [ecs-tasks.amazonaws.com]
+            Action: ['sts:AssumeRole']
+            Condition:
+              ArnLike:
+                aws:SourceArn: !Sub arn:aws:ecs:${AWS::Region}:${AWS::AccountId}:*
+              StringEquals:
+                aws:SourceAccount: !Ref AWS::AccountId
+      ManagedPolicyArns:
+        - arn:aws:iam::aws:policy/service-role/AmazonECSTaskExecutionRolePolicy
+      Policies:
+        - PolicyName: EFSAccess
+          PolicyDocument:
+            Version: '2012-10-17'
+            Statement:
+              - Effect: Allow
+                Action:
+                  - elasticfilesystem:ClientMount
+                  - elasticfilesystem:ClientWrite
+                  - elasticfilesystem:DescribeMountTargets
+                  - elasticfilesystem:DescribeFileSystems
+                  # - elasticfilesystem:ClientRootAccess
+                Resource: !GetAtt EFSFileSystem.Arn
+
+  # This role is used at runtime.
+  TaskRole:
+    Type: AWS::IAM::Role
+    Properties:
+      AssumeRolePolicyDocument:
+        Statement:
+          - Effect: Allow
+            Principal:
+              Service: [ecs-tasks.amazonaws.com]
+            Action: ['sts:AssumeRole']
+            Condition:
+              ArnLike:
+                aws:SourceArn: !Sub arn:aws:ecs:${AWS::Region}:${AWS::AccountId}:*
+              StringEquals:
+                aws:SourceAccount: !Ref AWS::AccountId
+      Policies:
+        - PolicyName: ExecAccess
+          PolicyDocument:
+            Version: '2012-10-17'
+            Statement:
+              - Effect: Allow
+                Action:
+                  - ssmmessages:CreateControlChannel
+                  - ssmmessages:CreateDataChannel
+                  - ssmmessages:OpenControlChannel
+                  - ssmmessages:OpenDataChannel
+                Resource: '*'
+
+  # Store the logs from the task for inspection and review
+  # for up to 7 days
+  EfsTaskLogGroup:
+    Type: AWS::Logs::LogGroup
+    Properties:
+      RetentionInDays: 7
+
+  # This task definition describes how to launch the application, and how
+  # to mount the Elastic File System into the container
+  TaskDefinition:
+    Type: AWS::ECS::TaskDefinition
+    Properties:
+      Family: openldap-tasks
+      TaskRoleArn: !GetAtt TaskRole.Arn
+      ExecutionRoleArn: !GetAtt TaskExecutionRole.Arn
+      NetworkMode: awsvpc
+      ContainerDefinitions:
+        - Name: openldap
+          Image: bitnami/openldap:2.6.6
+          Environment:
+            - Name: LDAP_ADMIN_USERNAME
+              Value: admin
+            - Name: LDAP_ADMIN_PASSWORD
+              Value: adminpassword
+            - Name: LDAP_USERS
+              Value: user01,user02
+            - Name: LDAP_PASSWORDS
+              Value: password1,password2
+          Essential: true
+          LinuxParameters:
+            InitProcessEnabled: true
+          MountPoints:
+            - SourceVolume: openldap-volume
+              ContainerPath: /bitnami/openldap
+              ReadOnly: false
+          LogConfiguration:
+            LogDriver: awslogs
+            Options:
+              awslogs-group: !Ref EfsTaskLogGroup
+              awslogs-region: !Ref AWS::Region
+              awslogs-stream-prefix: openldap-task
+          PortMappings:
+            - ContainerPort: 1389
+              Protocol: tcp
+            - ContainerPort: 1636
+              Protocol: tcp              
+      Volumes:
+        - Name: openldap-volume
+          EFSVolumeConfiguration:
+            FilesystemId: !Ref EFSFileSystem
+            # RootDirectory: /
+            TransitEncryption: ENABLED
+            AuthorizationConfig:
+              AccessPointId: !Ref EFSAccessPoint
+              IAM: ENABLED
+      RequiresCompatibilities:
+        - FARGATE
+      Cpu: '256'
+      Memory: '512'
+
+  # Security group that the task will use to run
+  ServiceSecurityGroup:
+    Type: AWS::EC2::SecurityGroup
+    Properties:
+      GroupDescription: Security group for service
+      VpcId: !Ref VpcId
+
+  # Launch multiple copies of the task as a service
+  Service:
+    Type: AWS::ECS::Service
+    DependsOn:
+      # This ensures that the service doesn't
+      # try to start tasks before the EFS filesystem is
+      # actually available in the VPC
+      - EFSMountTargetOne
+      - EFSMountTargetTwo
+    Properties:
+      ServiceName: 'ecs-efs-demo'
+      Cluster: !Ref Cluster
+      LaunchType: FARGATE
+      DeploymentConfiguration:
+        MaximumPercent: 200
+        MinimumHealthyPercent: 75
+      DesiredCount: 1
+      EnableExecuteCommand: true
+      NetworkConfiguration:
+        AwsvpcConfiguration:
+          AssignPublicIp: DISABLED
+          SecurityGroups:
+            - !Ref ServiceSecurityGroup
+          Subnets:
+            - !Ref SubnetOne
+            - !Ref SubnetTwo
+      TaskDefinition: !Ref 'TaskDefinition'
