@@ -60,6 +60,19 @@ dn: CN=mygroup,OU=Users,OU=corp,DC=corp,DC=pcluster,DC=com
 modifying entry "CN=mygroup,OU=Users,OU=corp,DC=corp,DC=res,DC=com"
 ```
 
+You can search for the users that exist in your AD with the following command:
+
+```
+$ ldapsearch "(&(objectClass=user))" -x -h corp.pcluster.com -b "DC=corp,DC=pcluster,DC=com" -D "CN=Admin,OU=Users,OU=CORP,DC=corp,DC=pcluster,DC=com"
+```
+
+You can search for the groups that exist in your AD with the following command:
+
+```
+$ ldapsearch "(&(objectClass=group))" -x -h corp.pcluster.com -b "DC=corp,DC=pcluster,DC=com" -D "CN=Admin,OU=Users,OU=CORP,DC=corp,DC=pcluster,DC=com"
+```
+
+
 ### LDIF Support
 
 Both of the recipes provided here accept a parameter for an `LDIFS3Path`. This parameter is an S3 path (without the `s3://` prefix) to an LDIF file that will be imported on stack creation. This file must be accessible by the management host.
