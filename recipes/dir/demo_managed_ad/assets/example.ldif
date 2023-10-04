@@ -1,0 +1,36 @@
+# Add a user
+dn: CN=myuser,OU=Users,OU=corp,DC=corp,DC=res,DC=com
+changetype: add
+objectClass: top
+objectClass: person
+objectClass: organizationalPerson
+objectClass: user
+cn: myuser
+name: myuser
+userPrincipalName: myuser@corp.pcluster.com
+mail: myuser@corp.pcluster.com
+uidNumber: 1001
+gidNumber: 1001
+unixHomeDirectory: /home/myuser
+loginShell: /bin/bash
+userPassword: myuser.
+
+# Add a group and add above user to that group
+dn: CN=mygroup,OU=Users,OU=corp,DC=corp,DC=res,DC=com
+changetype: add
+objectClass: top
+objectClass: group
+cn: mygroup
+description: mygroup
+distinguishedName: CN=mygroup,OU=Users,OU=corp,DC=corp,DC=res,DC=com
+name: mygroup
+sAMAccountName: mygroup
+objectCategory: CN=Group,CN=Schema,CN=Configuration,DC=corp,DC=res,DC=com
+gidNumber: 1002
+member: CN=myuser,OU=Users,OU=corp,DC=corp,DC=res,DC=com
+
+# adding a member to a group
+#dn: CN=mygroup,OU=Users,OU=corp,DC=corp,DC=res,DC=com
+#changetype: modify
+#add: member
+#member: CN=myuser,OU=Users,OU=corp,DC=corp,DC=res,DC=com
