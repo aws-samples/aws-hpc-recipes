@@ -247,7 +247,7 @@ Resources:
                 Resource: !Sub
                   - arn:${AWS::Partition}:s3:::${S3Path}
                   - { S3Path: !Ref LDIFS3Path }
-          PolicyName: Access LDIF File
+          PolicyName: AccessLDIFFile
         - PolicyDocument:
             Statement:
               - Action:
