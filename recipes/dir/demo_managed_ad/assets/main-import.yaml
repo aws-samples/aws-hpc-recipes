@@ -819,6 +819,8 @@ Outputs:
     Value: !Ref DomainCertificateSecret
     Export:
         Name: !Sub ${AWS::StackName}-DomainCertificateSecretArn
+  DomainShortName:
+    Value: !GetAtt Prep.DomainShortName
   DomainReadOnlyUser:
     Value: !Sub
       - cn=ReadOnlyUser,ou=Users,ou=${ou},dc=${dc}
