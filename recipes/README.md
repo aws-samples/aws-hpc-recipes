@@ -119,6 +119,14 @@ You can use an HPC Recipe for AWS in several ways:
 * **Usage**: [README.md](pcluster/try_trn1/README.md)
 
 
+### :arrow_right: security: Security configuration
+
+#### public_certs ![tag](https://img.shields.io/badge/-core-%23146EB4) ![tag](https://img.shields.io/badge/-route53-%23AAB7B8) ![tag](https://img.shields.io/badge/-secretsmanager-%237DCEA0) ![tag](https://img.shields.io/badge/-vpc-%23AAB7B8) 
+
+* **About**: Certificate creation for public domain. Creates secrets for pem/key files for a public cert for a Route53 owned domain.
+* **Usage**: [README.md](security/public_certs/README.md)
+
+
 ### :arrow_right: scheduler: HPC scheduler
 
 *There are currently no recipes in this namespace.*
