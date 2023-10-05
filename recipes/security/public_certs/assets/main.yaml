@@ -11,6 +11,7 @@ Metadata:
       - Label:
           default: "Environment"
         Parameters:
+          - SubnetId
           - AdminNodeAmiId
 
 Parameters:
@@ -20,8 +21,8 @@ Parameters:
     Default: corp.pcluster.com
     AllowedPattern: ^([a-zA-Z0-9]+[\\.-])+([a-zA-Z0-9])+$
   SubnetId:
-    Type: String
-    Default: subnet-001faa8abdadba8e7
+    Description: Choose a subnet to launch the Admin Node in.
+    Type: AWS::EC2::Subnet::Id
   AdminNodeAmiId:
     Description: AMI for the Admin Node
     Type: 'AWS::SSM::Parameter::Value<AWS::EC2::Image::Id>'
