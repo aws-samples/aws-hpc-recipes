@@ -16,7 +16,7 @@ It uses the [acme.sh](https://github.com/acmesh-official/acme.sh) script to gene
 
 You can launch this template by following this quick-create link:
 
-* Create [Public Certificates](https://console.aws.amazon.com/cloudformation/home?region=us-east-2#/stacks/create/review?stackName=public-certs&templateURL=https://aws-hpc-recipes.s3.us-east-1.amazonaws.com/main/recipes/cert/public_certs/assets/main.yaml)
+* Create [Public Certificates](https://console.aws.amazon.com/cloudformation/home?region=us-east-2#/stacks/create/review?stackName=public-certs&templateURL=https://aws-hpc-recipes.s3.us-east-1.amazonaws.com/main/recipes/security/public_certs/assets/main.yaml)
 
 If you don't wish to use the quick-create link, you can also download the [assets/main.yaml](assets/main.yaml) file and uploading it to the [AWS CloudFormation console](https://console.aws.amazon.com/cloudformation).
 
