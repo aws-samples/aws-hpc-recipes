@@ -22,21 +22,6 @@ If you don't wish to use the quick-create link, you can also download the [asset
 
 **NOTE**: The certificate lifetime is 60 days and there is no mechanism for renewal. This is for demonstration purposes and a more complete solution is needed for certificate renewal.
 
-### Importing into other CloudFormation Stacks
-
-This template exports several variables, namedspaced by stack name. This lets you import them into other stacks. 
-
-* VPC - the provisioned VPC
-* PublicSubnets - comma-delimited list of public subnet IDs
-* PrivateSubnets - comma-delimited list of private subnet IDs
-* InternetGatewayId - the internet gateway for the VPC
-* SecurityGroup - a security group allowing inbound and outbound communications from the VPC
-
-There are two additional exports that provide compatibility with recipes that rely on the Simple HPC Networking stack. Values for these default to one of the public and/or private subnets defined by the template. The subnets will be in the same Availability Zone.
-
-* DefaultPublicSubnet - a public subnet in the VPC
-* DefaultPrivateSubnet - a private subnet in the VPC
-
 ## Cost Estimate
 
 * Instance - No Charge after stack creation
