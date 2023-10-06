@@ -5,15 +5,13 @@ Description: Example of how to operate OpenLDAP on Fargate.
 Parameters:
   VpcId:
     Type: AWS::EC2::VPC::Id
-    Description: The virtual private network into which to launch all resources
+    Description: The VPC into which to launch all resources
   SubnetOne:
     Type: AWS::EC2::Subnet::Id
-    Description: The first subnet across which to distribute the application and
-                 EFS access
+    Description: The first subnet for running an OpenLDAP service
   SubnetTwo:
     Type: AWS::EC2::Subnet::Id
-    Description: The first subnet across which to distribute the application and
-                 EFS access
+    Description: The first subnet for running an OpenLDAP service
 
 Resources:
 
@@ -21,7 +19,7 @@ Resources:
   Cluster:
     Type: AWS::ECS::Cluster
 
-  # The filesystem itself
+  # The EFS filesystem
   EFSFileSystem:
     Type: AWS::EFS::FileSystem
     DeletionPolicy: Delete
@@ -31,18 +29,25 @@ Resources:
       PerformanceMode: generalPurpose
       ThroughputMode: bursting
 
-  # Access point - required because our main container is a non-root container
+  # EFS Access point
+  # Required because our main container is a non-root container
+  # The POSIX user for the mount point is determined by looking container Dockerfile
+  # https://github.com/bitnami/containers/blob/main/bitnami/openldap/2.6/debian-11/Dockerfile
   EFSAccessPoint:
     Type: AWS::EFS::AccessPoint
     Properties: 
       FileSystemId: !Ref EFSFileSystem
       PosixUser: 
-        Gid: 0
-        Uid: 1001
-      RootDirectory: 
+        Gid: "0"
+        Uid: "1001"
+      RootDirectory:
+        CreationInfo:
+             OwnerUid: "0"
+             OwnerGid: "0"
+             Permissions: '0777' 
         Path: /data
 
-  # Mount target allows usage of the EFS inside of subnet one
+  # Mount target for subnet one
   EFSMountTargetOne:
     Type: AWS::EFS::MountTarget
     Properties:
@@ -51,7 +56,7 @@ Resources:
       SecurityGroups:
         - !Ref EFSFileSystemSecurityGroup
 
-  # Mount target allows usage of the EFS inside of subnet two
+  # Mount target for subnet two
   EFSMountTargetTwo:
     Type: AWS::EFS::MountTarget
     Properties:
@@ -60,9 +65,15 @@ Resources:
       SecurityGroups:
         - !Ref EFSFileSystemSecurityGroup
 
-  # This security group is used by the mount targets so
-  # that they will allow inbound NFS connections from
-  # the AWS Fargate tasks that we launch
+  # Security group that ECS tasks will use to run
+  ServiceSecurityGroup:
+    Type: AWS::EC2::SecurityGroup
+    Properties:
+      GroupDescription: Security group for service
+      VpcId: !Ref VpcId
+
+  # Allow inbound connection to EFS filesystem
+  # from resources in ServiceSecurityGroup
   EFSFileSystemSecurityGroup:
     Type: AWS::EC2::SecurityGroup
     Properties:
@@ -103,7 +114,6 @@ Resources:
                   - elasticfilesystem:ClientWrite
                   - elasticfilesystem:DescribeMountTargets
                   - elasticfilesystem:DescribeFileSystems
-                  # - elasticfilesystem:ClientRootAccess
                 Resource: !GetAtt EFSFileSystem.Arn
 
   # This role is used at runtime.
@@ -137,12 +147,14 @@ Resources:
   # Store the logs from the task for inspection and review
   # for up to 7 days
   EfsTaskLogGroup:
+    DeletionPolicy: Retain
+    UpdateReplacePolicy: Retain
     Type: AWS::Logs::LogGroup
     Properties:
       RetentionInDays: 7
 
-  # This task definition describes how to launch the application, and how
-  # to mount the Elastic File System into the container
+  # Launch the application, mounting the EFS filesystem
+  # for data peristence.
   TaskDefinition:
     Type: AWS::ECS::TaskDefinition
     Properties:
@@ -184,7 +196,6 @@ Resources:
         - Name: openldap-volume
           EFSVolumeConfiguration:
             FilesystemId: !Ref EFSFileSystem
-            # RootDirectory: /
             TransitEncryption: ENABLED
             AuthorizationConfig:
               AccessPointId: !Ref EFSAccessPoint
@@ -194,24 +205,15 @@ Resources:
       Cpu: '256'
       Memory: '512'
 
-  # Security group that the task will use to run
-  ServiceSecurityGroup:
-    Type: AWS::EC2::SecurityGroup
-    Properties:
-      GroupDescription: Security group for service
-      VpcId: !Ref VpcId
-
-  # Launch multiple copies of the task as a service
+  # Launch task as a service
   Service:
     Type: AWS::ECS::Service
     DependsOn:
-      # This ensures that the service doesn't
-      # try to start tasks before the EFS filesystem is
-      # actually available in the VPC
+      # Ensure task don't launch before EFS is ready
       - EFSMountTargetOne
       - EFSMountTargetTwo
     Properties:
-      ServiceName: 'ecs-efs-demo'
+      ServiceName: 'openldap'
       Cluster: !Ref Cluster
       LaunchType: FARGATE
       DeploymentConfiguration:
