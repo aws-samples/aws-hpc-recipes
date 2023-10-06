@@ -35,7 +35,22 @@ Resources:
     Type: AWS::EFS::FileSystem
     DeletionPolicy: Delete
     UpdateReplacePolicy: Delete
-    Properties: 
+    Properties:
+      FileSystemPolicy:
+        Version: 2012-10-17
+        Id: efs-prevent-anonymous-access-policy
+        Statement:
+          - Sid: efs-statement
+            Effect: Allow
+            Principal:
+              AWS: '*'
+            Action:
+              - 'elasticfilesystem:ClientRootAccess'
+              - 'elasticfilesystem:ClientWrite'
+              - 'elasticfilesystem:ClientMount'
+            Condition:
+              Bool:
+                'elasticfilesystem:AccessedViaMountTarget': 'true'
       BackupPolicy: 
         Status: !Ref AutomaticBackups
       Encrypted: false
