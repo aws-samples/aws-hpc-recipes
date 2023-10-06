@@ -1,5 +1,5 @@
 AWSTemplateFormatVersion: '2010-09-09'
-Transform: AWS::LanguageExtensions
+Transform: AWS::Serverless-2016-10-31
 Description: Example of how to operate OpenLDAP on Fargate.
 
 Parameters:
@@ -12,8 +12,37 @@ Parameters:
   SubnetTwo:
     Type: AWS::EC2::Subnet::Id
     Description: The first subnet for running an OpenLDAP service
+  DomainName:
+    Type: String
+    Default: 'corp.pcluster.com'
+  CertProvisionerAmiId:
+    Description: AMI for the Admin Node
+    Type: 'AWS::SSM::Parameter::Value<AWS::EC2::Image::Id>'
+    Default: '/aws/service/ami-amazon-linux-latest/amzn2-ami-hvm-x86_64-gp2'
 
 Resources:
+
+  # Ensure CertNode uses IMDS v2
+  DisableImdsv1LaunchTemplate:
+    Type: AWS::EC2::LaunchTemplate
+    Properties:
+      LaunchTemplateData:
+        MetadataOptions:
+          HttpEndpoint: enabled
+          HttpPutResponseHopLimit: 4
+          HttpTokens: required
+
+  DomainCertificateSecret:
+    Type: AWS::SecretsManager::Secret
+    Properties:
+      Description: Domain certificate
+      Name: !Sub [ "DomainCertificateSecret-${StackIdSuffix}", { StackIdSuffix: !Select [ 1, !Split [ '/', !Ref 'AWS::StackId' ] ] } ]
+
+  DomainPrivateKeySecret:
+    Type: AWS::SecretsManager::Secret
+    Properties:
+      Description: Domain private key
+      Name: !Sub [ "DomainPrivateKeySecret-${StackIdSuffix}", { StackIdSuffix: !Select [ 1, !Split [ '/', !Ref 'AWS::StackId' ] ] } ]
 
   # The ECS cluster that will be controlling the tasks in AWS Fargate
   Cluster:
@@ -29,11 +58,11 @@ Resources:
       PerformanceMode: generalPurpose
       ThroughputMode: bursting
 
-  # EFS Access point
+  # EFS Access point for Data
   # Required because our main container is a non-root container
   # The POSIX user for the mount point is determined by looking container Dockerfile
   # https://github.com/bitnami/containers/blob/main/bitnami/openldap/2.6/debian-11/Dockerfile
-  EFSAccessPoint:
+  EFSAccessPointData:
     Type: AWS::EFS::AccessPoint
     Properties: 
       FileSystemId: !Ref EFSFileSystem
@@ -46,6 +75,24 @@ Resources:
              OwnerGid: "0"
              Permissions: '0777' 
         Path: /data
+
+  # EFS Access point for Certs
+  # Required because our main container is a non-root container
+  # The POSIX user for the mount point is determined by looking container Dockerfile
+  # https://github.com/bitnami/containers/blob/main/bitnami/openldap/2.6/debian-11/Dockerfile
+  EFSAccessPointCerts:
+    Type: AWS::EFS::AccessPoint
+    Properties: 
+      FileSystemId: !Ref EFSFileSystem
+      PosixUser: 
+        Gid: "0"
+        Uid: "1001"
+      RootDirectory:
+        CreationInfo:
+             OwnerUid: "0"
+             OwnerGid: "0"
+             Permissions: '0777' 
+        Path: /certs
 
   # Mount target for subnet one
   EFSMountTargetOne:
@@ -85,8 +132,364 @@ Resources:
           ToPort: 2049
           SourceSecurityGroupId: !Ref ServiceSecurityGroup
 
+  # Role for provisioner instance
+  CertProvisionerRole:
+    Type: AWS::IAM::Role
+    Properties:
+      AssumeRolePolicyDocument:
+        Statement:
+          - Action: sts:AssumeRole
+            Effect: Allow
+            Principal:
+              Service: ec2.amazonaws.com
+        Version: "2012-10-17"
+      ManagedPolicyArns:
+        - arn:aws:iam::aws:policy/AmazonSSMManagedInstanceCore
+        - arn:aws:iam::aws:policy/AmazonSSMDirectoryServiceAccess
+      Policies:
+        - PolicyDocument:
+            Statement:
+              - Action:
+                  - secretsmanager:PutSecretValue
+                Effect: Allow
+                Resource:
+                  - !Ref DomainCertificateSecret
+                  - !Ref DomainPrivateKeySecret
+          PolicyName: PutDomainCertificateSecrets
+
+  # IAM Profile for provisioner instance
+  CertProvisionerProfile:
+    Type: AWS::IAM::InstanceProfile
+    Properties:
+      Roles:
+        - Ref: CertProvisionerRole
+
+  # SecGroup for provisioner instance
+  CertProvisionerSecurityGroup:
+    Type: AWS::EC2::SecurityGroup
+    Properties:
+      GroupDescription: Allow SSH access
+      SecurityGroupEgress:
+        - CidrIp: 0.0.0.0/0
+          FromPort: -1
+          IpProtocol: "-1"
+          ToPort: -1
+      SecurityGroupIngress:
+        - CidrIp: 0.0.0.0/0
+          FromPort: 22
+          IpProtocol: tcp
+          ToPort: 22
+      VpcId: !Ref VpcId
+
+  # Ephemeral Cert Provisioner instance
+  CertProvisionerNode:
+    Type: AWS::EC2::Instance
+    CreationPolicy:
+      ResourceSignal:
+        Timeout: PT30M
+    Metadata:
+      "AWS::CloudFormation::Init":
+        configSets:
+          setup:
+            - install_dependencies
+        install_dependencies:
+          packages:
+            yum:
+              openssl: []
+    Properties:
+      IamInstanceProfile:
+        Ref: CertProvisionerProfile
+      ImageId: !Ref CertProvisionerAmiId
+      InstanceType: t2.micro
+      LaunchTemplate:
+        LaunchTemplateId: !Ref 'DisableImdsv1LaunchTemplate'
+        Version: !GetAtt 'DisableImdsv1LaunchTemplate.LatestVersionNumber'
+      SecurityGroupIds:
+        - Ref: CertProvisionerSecurityGroup
+      SubnetId: !Ref SubnetOne
+      Tags:
+        - Key: "Name"
+          Value: !Sub [ "CertProvisionerNode-${StackIdSuffix}", {StackIdSuffix: !Select [1, !Split ['/', !Ref 'AWS::StackId']]}]
+      UserData:
+        Fn::Base64:
+          !Sub
+            - |
+              #!/bin/bash -e
+              set -o pipefail
+              exec > >(tee /var/log/user-data.log|logger -t user-data -s 2>/dev/console) 2>&1
+              yum update -y aws-cfn-bootstrap
+              /opt/aws/bin/cfn-init -v --stack "${AWS::StackName}" --resource CertProvisionerNode --configsets setup --region "${AWS::Region}"
+              echo "Domain Name: ${DirectoryDomain}"
+              echo "Domain Certificate Secret: ${DomainCertificateSecretArn}"
+              echo "Domain Private Key Secret: ${DomainPrivateKeySecretArn}"
+              
+              echo "Creating domain certificate..."
+              PRIVATE_KEY="${DirectoryDomain}.key"
+              CERTIFICATE="${DirectoryDomain}.crt"
+              printf '.\n.\n.\n.\n.\n%s\n.\n' "${DirectoryDomain}" | openssl req -x509 -sha256 -nodes -newkey rsa:2048 -keyout "$PRIVATE_KEY" -days 365 -out "$CERTIFICATE"
+              
+              echo "Storing domain private key to Secrets Manager..."
+              aws secretsmanager put-secret-value --secret-id "${DomainPrivateKeySecretArn}" --secret-string "file://$PRIVATE_KEY" --region "${AWS::Region}"
+              
+              echo "Storing domain certificate to Secrets Manager..."
+              aws secretsmanager put-secret-value --secret-id "${DomainCertificateSecretArn}" --secret-string "file://$CERTIFICATE" --region "${AWS::Region}"
+              
+              echo "Deleting private key and certificate from local file system..."
+              rm -rf "$PRIVATE_KEY" "$CERTIFICATE"
+              
+              /opt/aws/bin/cfn-signal -e "$?" --stack "${AWS::StackName}" --resource CertProvisionerNode --region "${AWS::Region}"
+
+              sudo shutdown now -h
+
+            - { DirectoryDomain: !Ref DomainName,
+                DomainCertificateSecretArn: !Ref DomainCertificateSecret,
+                DomainPrivateKeySecretArn: !Ref DomainPrivateKeySecret,
+              }
+
+  # Role to support Lambda that imports cert into ACM
+  DomainCertificateSetupLambdaRole:
+    Type: AWS::IAM::Role
+    Properties:
+      AssumeRolePolicyDocument:
+        Version: 2012-10-17
+        Statement:
+          - Action:
+              - sts:AssumeRole
+            Effect: Allow
+            Principal:
+              Service:
+                - lambda.amazonaws.com
+      Policies:
+        - PolicyName: LogOutput
+          PolicyDocument:
+            Version: 2012-10-17
+            Statement:
+              - Action:
+                  - logs:CreateLogGroup
+                  - logs:CreateLogStream
+                  - logs:PutLogEvents
+                Effect: Allow
+                Resource: '*'
+        - PolicyName: ManageDomainCertificate
+          PolicyDocument:
+            Version: 2012-10-17
+            Statement:
+              - Effect: Allow
+                Action:
+                  - acm:ImportCertificate
+                  - acm:AddTagsToCertificate
+                Resource: !Sub arn:${AWS::Partition}:acm:${AWS::Region}:${AWS::AccountId}:certificate/*
+                Condition:
+                  StringEquals:
+                    aws:RequestTag/StackId: !Sub ${AWS::StackId}
+              - Effect: Allow
+                Action:
+                  - secretsmanager:GetSecretValue
+                Resource:
+                  - !Ref DomainCertificateSecret
+                  - !Ref DomainPrivateKeySecret
+
+  # Lambda that imports cert into ACM
+  DomainCertificateSetupLambda:
+    Type: AWS::Lambda::Function
+    Properties:
+      Description: !Sub "${AWS::StackName}: custom resource handler to import the domain certificate into ACM."
+      Handler: index.handler
+      MemorySize: 128
+      Role: !GetAtt DomainCertificateSetupLambdaRole.Arn
+      Runtime: python3.11
+      Timeout: 300
+      TracingConfig:
+        Mode: Active
+      Code:
+        ZipFile: |
+          import time
+          import cfnresponse
+          import boto3
+          import logging
+          import random
+          import string
+          logger = logging.getLogger()
+          logger.setLevel(logging.INFO)
+          acm = boto3.client("acm")
+          sm = boto3.client("secretsmanager")
+
+          def create_physical_resource_id():
+              alnum = string.ascii_uppercase + string.ascii_lowercase + string.digits
+              return ''.join(random.choice(alnum) for _ in range(16))
+
+          def import_certificate(certificate_secret_arn, private_key_secret_arn, tags):
+            logger.info('Reading secrets from Secrets Manager...')
+            domain_certificate = sm.get_secret_value(SecretId=certificate_secret_arn)["SecretString"]
+            domain_private_key = sm.get_secret_value(SecretId=private_key_secret_arn)["SecretString"]
+            logger.info('Importing certificate into ACM...')
+            certificate_arn = acm.import_certificate(
+              Certificate=domain_certificate, PrivateKey=domain_private_key, Tags=tags
+            )["CertificateArn"]
+            return certificate_arn
+
+          def handler(event, context):
+              logger.info(f"Context: {context}")
+              logger.info(f"Event: {event}")
+              logger.info(f"Boto version: {boto3.__version__}")
+
+              domain_name = event['ResourceProperties']['DomainName']
+              certificate_secret_arn = event['ResourceProperties']['DomainCertificateSecretArn']
+              private_key_secret_arn = event['ResourceProperties']['DomainPrivateKeySecretArn']
+              tags = [{ 'Key': 'StackId', 'Value': event['StackId']}]
+
+              response_data = {}
+              reason = None
+              response_status = cfnresponse.SUCCESS
+
+              physical_resource_id = event.get("PhysicalResourceId", create_physical_resource_id())
+
+              try:
+                if event['RequestType'] == 'Create':
+                  certificate_arn = import_certificate(certificate_secret_arn, private_key_secret_arn, tags)
+                  response_data['DomainCertificateArn'] = certificate_arn
+                  response_data['Message'] = f"Resource creation successful! ACM certificate imported: {certificate_arn}"
+              except Exception as e:
+                response_status = cfnresponse.FAILED
+                reason = str(e)
+              cfnresponse.send(event, context, response_status, response_data, physical_resource_id, reason)
+
+  # Invoke the Lambda that imports cert into ACM
+  DomainCertificateSetup:
+    Type: Custom::DomainCertificateSetupLambda
+    DependsOn:
+      - Post
+    Properties:
+      ServiceToken: !GetAtt DomainCertificateSetupLambda.Arn
+      DomainName: !Ref DomainName
+      DomainCertificateSecretArn: !Ref DomainCertificateSecret
+      DomainPrivateKeySecretArn: !Ref DomainPrivateKeySecret
+
+# Role supporting lamdda for cleaning up cert from ACM
+CleanupLambdaRole:
+    Type: AWS::IAM::Role
+    DependsOn:
+      - DomainCertificateSetup
+    Properties:
+      AssumeRolePolicyDocument:
+        Version: 2012-10-17
+        Statement:
+          - Action:
+              - sts:AssumeRole
+            Effect: Allow
+            Principal:
+              Service:
+                - lambda.amazonaws.com
+      Policies:
+        - PolicyName: LogOutput
+          PolicyDocument:
+            Version: 2012-10-17
+            Statement:
+              - Action:
+                  - logs:CreateLogGroup
+                  - logs:CreateLogStream
+                  - logs:PutLogEvents
+                Effect: Allow
+                Resource: '*'
+        - PolicyName: DeleteDomainCertificate
+          PolicyDocument:
+            Version: 2012-10-17
+            Statement:
+              - Effect: Allow
+                Action:
+                  - acm:DeleteCertificate
+                Resource: !GetAtt DomainCertificateSetup.DomainCertificateArn
+
+# Lamda for cleaning up cert from ACM
+CleanupLambda:
+  Type: AWS::Lambda::Function
+  Properties:
+    Description: !Sub "${AWS::StackName}: custom resource handler to cleanup resources."
+    Handler: index.handler
+    MemorySize: 128
+    Role: !GetAtt CleanupLambdaRole.Arn
+    Runtime: python3.11
+    Timeout: 900
+    TracingConfig:
+      Mode: Active
+    Code:
+      ZipFile: |
+        import time
+        import cfnresponse
+        import boto3
+        import logging
+        import random
+        import string
+        logger = logging.getLogger()
+        logger.setLevel(logging.INFO)
+        acm = boto3.client("acm")
+
+        def create_physical_resource_id():
+          alnum = string.ascii_uppercase + string.ascii_lowercase + string.digits
+          return ''.join(random.choice(alnum) for _ in range(16))
+
+        def delete_certificate(certificate_arn):
+          logger.info(f"Deleting ACM certificate {certificate_arn}...")
+          max_attempts = 10
+          sleep_time = 60
+          for attempt in range(1, max_attempts+1):
+            try:
+              acm.delete_certificate(CertificateArn=certificate_arn)
+              break
+            except acm.exceptions.ResourceInUseException as e:
+              logger.info(f"(Attempt {attempt}/{max_attempts}) Cannot delete ACM certificate because it is in use. Retrying in {sleep_time} seconds...")
+              if attempt == max_attempts:
+                raise Exception(f"Cannot delete certificate {certificate_arn}: {e}")
+              else:
+                time.sleep(sleep_time)
+
+        def handler(event, context):
+          logger.info(f"Context: {context}")
+          logger.info(f"Event: {event}")
+          logger.info(f"Boto version: {boto3.__version__}")
+
+          response_data = {}
+          reason = None
+          response_status = cfnresponse.SUCCESS
+
+          physical_resource_id = event.get("PhysicalResourceId", create_physical_resource_id())
+
+          try:
+            if event['RequestType'] == 'Delete':
+              certificate_arn = event['ResourceProperties']['DomainCertificateArn']
+              delete_certificate(certificate_arn)
+          except Exception as e:
+            response_status = cfnresponse.FAILED
+            reason = str(e)
+          cfnresponse.send(event, context, response_status, response_data, physical_resource_id, reason)
+
+  # Invoke cleanup Lambda
+  Cleanup:
+    Type: Custom::CleanupLambda
+    DependsOn:
+      - DomainCertificateSetup
+    Properties:
+      ServiceToken: !GetAtt CleanupLambda.Arn
+      DomainCertificateArn: !GetAtt DomainCertificateSetup.DomainCertificateArn
+
+  # Policy customers can use to read the Domain Cert secret
+  DomainCertificateSecretReadPolicy:
+    Type: AWS::IAM::ManagedPolicy
+    DependsOn:
+      - DomainCertificateSecret
+    Properties:
+      ManagedPolicyName: !Sub [ "DomainCertificateSecretReadPolicy-${StackIdSuffix}", { StackIdSuffix: !Select [ 1, !Split [ '/', !Ref 'AWS::StackId' ] ] } ]
+      PolicyDocument:
+        Version: 2012-10-17
+        Statement:
+          - Effect: Allow
+            Action:
+              - secretsmanager:GetSecretValue
+            Resource:
+              - !Ref DomainCertificateSecret
+
   # This role is used to setup the execution environment for
-  # the task, in this case to connect to the Elastic File System
+  # the OpenLDAP Fargate task, allowing it to connect to EFS
   TaskExecutionRole:
     Type: AWS::IAM::Role
     Properties:
@@ -198,7 +601,7 @@ Resources:
             FilesystemId: !Ref EFSFileSystem
             TransitEncryption: ENABLED
             AuthorizationConfig:
-              AccessPointId: !Ref EFSAccessPoint
+              AccessPointId: !Ref EFSAccessPointData
               IAM: ENABLED
       RequiresCompatibilities:
         - FARGATE
@@ -230,3 +633,5 @@ Resources:
             - !Ref SubnetOne
             - !Ref SubnetTwo
       TaskDefinition: !Ref 'TaskDefinition'
+
+Outputs:
