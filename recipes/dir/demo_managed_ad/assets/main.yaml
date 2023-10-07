@@ -938,6 +938,10 @@ Outputs:
       - { dc: !Join [",dc=", !Split [".", !Ref DomainName ]], ou: !GetAtt Prep.DomainShortName }
     Export:
         Name: !Sub ${AWS::StackName}-DomainReadOnlyUser
+  DnsIpAddress1:
+    Value: !GetAtt Prep.DnsIpAddress1
+  DnsIpAddress2:
+    Value: !GetAtt Prep.DnsIpAddress2
   DomainAddrLdap:
     Value: !Sub
       - ldap://${address}
