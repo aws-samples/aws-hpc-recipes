@@ -66,10 +66,11 @@ Parameters:
     AllowedValues:
       - alinux2
       - centos7
-      - ubuntu1804
       - ubuntu2004
+      - ubuntu2204
+      - rhel8
     Description: Cluster operating system
-
+    
   Architecture:
     Type: String
     Default: Graviton
