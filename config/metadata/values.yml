@@ -9,6 +9,7 @@ namespace:
   ide: IDEs and GUIs
   net: Networking
   pcluster: AWS ParallelCluster
+  res: Research and Engineering Studio on AWS
   security: Security configuration
   scheduler: HPC scheduler
   storage: Storage
@@ -39,6 +40,7 @@ tags:
   200: blue
   300: blue
   400: blue
+  res: green
 # Hex codes for each color
 colors:
   blue: 146EB4
