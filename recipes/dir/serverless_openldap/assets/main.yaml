@@ -209,6 +209,8 @@ Resources:
       SecurityGroupIds:
         - Ref: CertProvisionerSecurityGroup
         - Ref: EfsClientSecurityGroup
+        # DEBUG only - uncomment to allow provisioner node to connect to LDAPS service
+        # - Ref: LdapServiceSecurityGroup
       SubnetId: !Ref SubnetOne
       Tags:
         - Key: "Name"
@@ -589,6 +591,10 @@ Resources:
         - Name: openldap
           Image: bitnami/openldap:2.6.6
           Environment:
+            - Name: LDAP_ALLOW_ANON_BINDING
+              Value: "yes"
+            - Name: LDAP_LOGLEVEL
+              Value: 256
             - Name: LDAP_ADMIN_USERNAME
               Value: admin
             - Name: LDAP_ADMIN_PASSWORD
@@ -605,6 +611,8 @@ Resources:
               Value: /bitnami/openldap/certs/certificate.crt
             - Name: LDAP_TLS_KEY_FILE
               Value: /bitnami/openldap/certs/certificate.key
+            - Name: LDAP_REQUIRE_TLS
+              Value: "no"
           Essential: true
           LinuxParameters:
             InitProcessEnabled: true
@@ -646,7 +654,31 @@ Resources:
       Cpu: '256'
       Memory: '512'
 
-  # Launch task as a service
+  # Clients join this group to get access to LDAP/S service
+  LdapClientSecurityGroup:
+    Type: AWS::EC2::SecurityGroup
+    Properties:
+      GroupDescription: Security group for LDAP clients
+      VpcId: !Ref VpcId
+
+  # Allow inbound connection to LDAP ECS service
+  # from resources in LdapClientSecurityGroup
+  LdapServiceSecurityGroup:
+    Type: AWS::EC2::SecurityGroup
+    Properties:
+      GroupDescription: Security group for LDAP service
+      VpcId: !Ref VpcId
+      SecurityGroupIngress:
+        - IpProtocol: tcp
+          FromPort: 1389
+          ToPort: 1389
+          SourceSecurityGroupId: !Ref LdapClientSecurityGroup
+        - IpProtocol: tcp
+          FromPort: 1636
+          ToPort: 1636
+          SourceSecurityGroupId: !Ref LdapClientSecurityGroup
+
+  # Launch OpenLDAP task as a service
   Service:
     Type: AWS::ECS::Service
     DependsOn:
@@ -669,9 +701,122 @@ Resources:
           AssignPublicIp: DISABLED
           SecurityGroups:
             - !Ref EfsClientSecurityGroup
+            - !Ref LdapServiceSecurityGroup
           Subnets:
             - !Ref SubnetOne
             - !Ref SubnetTwo
       TaskDefinition: !Ref 'TaskDefinition'
+      LoadBalancers:
+           - ContainerName: 'openldap'
+             ContainerPort: 1389
+             TargetGroupArn: !Ref ServiceTargetGroup1389
+           - ContainerName: 'openldap'
+             ContainerPort: 1636
+             TargetGroupArn: !Ref ServiceTargetGroup1636
 
-# Outputs:
+  ServiceTargetGroup1389:
+    Type: AWS::ElasticLoadBalancingV2::TargetGroup
+    Properties:
+      HealthCheckEnabled: true
+      HealthCheckIntervalSeconds: 120
+      HealthCheckTimeoutSeconds: 30
+      Port: 1389
+      Protocol: TCP
+      TargetType: ip
+      VpcId: !Ref VpcId
+
+  ServiceTargetGroup1636:
+    Type: AWS::ElasticLoadBalancingV2::TargetGroup
+    Properties:
+      HealthCheckEnabled: false
+      Port: 1636
+      Protocol: TCP
+      TargetType: ip
+      VpcId: !Ref VpcId
+
+  ServiceListener1389:
+    Type: AWS::ElasticLoadBalancingV2::Listener
+    Properties: 
+      DefaultActions: 
+        - Type: "forward"
+          TargetGroupArn: !Ref ServiceTargetGroup1389
+      LoadBalancerArn: !Ref ServiceLoadBalancer
+      Port: 1389
+      Protocol: TCP
+
+  ServiceListener1636:
+    Type: AWS::ElasticLoadBalancingV2::Listener
+    Properties: 
+      DefaultActions: 
+        - Type: "forward"
+          TargetGroupArn: !Ref ServiceTargetGroup1636
+      LoadBalancerArn: !Ref ServiceLoadBalancer
+      Port: 1636
+      Protocol: TCP
+
+  ServiceLoadBalancer:
+    Type: AWS::ElasticLoadBalancingV2::LoadBalancer
+    Properties: 
+      IpAddressType: ipv4
+      Scheme: internal
+      Subnets: 
+        - !Ref SubnetOne
+        - !Ref SubnetTwo
+      Type: network
+
+Outputs:
+  VpcId:
+    Value: !Ref VpcId
+    Export:
+        Name: !Sub ${AWS::StackName}-VpcId
+  PrivateSubnetIds:
+    Value: !Join [",", [!Ref SubnetOne, !Ref SubnetTwo]]
+    Export:
+        Name: !Sub ${AWS::StackName}-PrivateSubnetIds
+  DomainName:
+    Value: !Ref DomainName
+    Export:
+        Name: !Sub ${AWS::StackName}-DomainName
+  # PasswordSecretArn:
+  #   Value: !Ref PasswordSecret
+  #   Export:
+  #       Name: !Sub ${AWS::StackName}-PasswordSecretArn
+  DomainCertificateArn:
+    Value: !GetAtt DomainCertificateSetup.DomainCertificateArn
+    Export:
+        Name: !Sub ${AWS::StackName}-DomainCertificateArn
+  DomainCertificateSecretArn:
+    Value: !Ref DomainCertificateSecret
+    Export:
+        Name: !Sub ${AWS::StackName}-DomainCertificateSecretArn
+  # DomainReadOnlyUser:
+  #   Value: !Sub
+  #     - cn=ReadOnlyUser,ou=Users,ou=${ou},dc=${dc}
+  #     - { dc: !Join [",dc=", !Split [".", !Ref DomainName ]], ou: !GetAtt Prep.DomainShortName }
+  #   Export:
+  #       Name: !Sub ${AWS::StackName}-DomainReadOnlyUser
+  DomainAddrLdap:
+    Value: !Sub
+      - ldap://${address}
+      - address: !GetAtt ServiceLoadBalancer.DNSName
+    Export:
+        Name: !Sub ${AWS::StackName}-DomainAddrLdap
+  DomainAddrLdaps:
+    Value: !Sub
+      - ldaps://${address}
+      - address: !GetAtt ServiceLoadBalancer.DNSName
+    Export:
+        Name: !Sub ${AWS::StackName}-DomainAddrLdaps
+  DomainCertificateSecretReadPolicy:
+    Value: !Ref DomainCertificateSecretReadPolicy
+    Export:
+        Name: !Sub ${AWS::StackName}-DomainCertificateSecretReadPolicy
+  # DirectoryId:
+  #   Value: !Ref Directory
+  #   Export:
+  #       Name: !Sub ${AWS::StackName}-DirectoryId
+  # DomainManagementNodeId:
+  #   Value: !Ref AdDomainAdminNode
+  #   Description: Instance ID for AD Domain Management Node
+  #   Export:
+  #       Name: !Sub ${AWS::StackName}-DomainManagementNodeId
