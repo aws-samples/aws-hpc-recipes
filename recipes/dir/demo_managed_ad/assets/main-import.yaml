@@ -1,17 +1,17 @@
 
-Description: AWS Managed Microsoft AD to support multi-user AWS ParallelCluster. Relies on a compatible networking stack.
+Description: AWS Managed Microsoft Active Directory to support multi-user AWS ParallelCluster. Relies on a compatible networking stack.
 
 Metadata:
   AWS::CloudFormation::Interface:
     ParameterGroups:
       - Label:
-          default: "AD Configuration"
+          default: "Active Directory Configuration"
         Parameters:
           - DomainName
           - AdminPassword
-          - ReadOnlyPassword
+          - ServiceAccountPassword
       - Label:
-          default: "Default AD User(s)"
+          default: "Default Active Directory User(s)"
         Parameters:
           - UserName
           - UserPassword
@@ -28,19 +28,24 @@ Metadata:
 
 Parameters:
   DomainName:
-    Description: AD Domain Name.
+    Description: Active Directory Domain Name.
     Type: String
     Default: corp.pcluster.com
     AllowedPattern: ^([a-zA-Z0-9]+[\\.-])+([a-zA-Z0-9])+$
   AdminPassword:
-    Description: AD Admin Password.
+    Description: Active Directory Admin Password.
     Type: String
     MinLength: 8
     MaxLength: 64
     AllowedPattern: (?=^.{8,64}$)((?=.*\d)(?=.*[A-Z])(?=.*[a-z])|(?=.*\d)(?=.*[^A-Za-z0-9\s])(?=.*[a-z])|(?=.*[^A-Za-z0-9\s])(?=.*[A-Z])(?=.*[a-z])|(?=.*\d)(?=.*[A-Z])(?=.*[^A-Za-z0-9\s]))^.*
     NoEcho: true
-  ReadOnlyPassword:
-    Description: AD ReadOnlyUser Password.
+  ServiceAccountName:
+    Description: Username for the Service Account
+    Type: String
+    MinLength: 4
+    Default: ReadOnlyUser
+  ServiceAccountPassword:
+    Description: Active Drectory Service Account Password.
     Type: String
     MinLength: 8
     MaxLength: 64
@@ -324,11 +329,11 @@ Resources:
               ADMIN_PW="${AdminPassword}"
               echo "$ADMIN_PW" | sudo realm join -U Admin "${DirectoryDomain}"
               sleep 10
-              echo "Registering ReadOnlyUser..."
-              echo "$ADMIN_PW" | adcli create-user -x -U Admin --domain="${DirectoryDomain}" --display-name=ReadOnlyUser ReadOnlyUser
+              echo "Creating Service Account..."
+              echo "$ADMIN_PW" | adcli create-user -x -U Admin --domain="${DirectoryDomain}" --display-name=${ServiceAccountName} ${ServiceAccountName}
               sleep 0.5
               if [ "${UserName}" != "" ]; then
-                echo "Registering User..."
+                echo "Creating User..."
                 echo "$ADMIN_PW" | adcli create-user -x -U Admin --domain="${DirectoryDomain}" --display-name="${UserName}" "${UserName}"
               fi
 
@@ -356,6 +361,7 @@ Resources:
 
             - { DirectoryDomain: !GetAtt Prep.DomainName,
                 AdminPassword: !Ref AdminPassword,
+                ServiceAccountName: !Ref ServiceAccountName,
                 UserName: !Ref UserName,
                 DnsIp1: !GetAtt Prep.DnsIpAddress1,
                 DnsIp2: !GetAtt Prep.DnsIpAddress2,
@@ -448,12 +454,13 @@ Resources:
               return ret
           
           def handler(event, context):
-              print(redact_keys(event, {"ReadOnlyPassword", "UserPassword", "AdminPassword"}))
+              print(redact_keys(event, {"ServiceAccountPassword", "UserPassword", "AdminPassword"}))
               print( 'boto version {}'.format(boto3.__version__))
               directory_id = event['ResourceProperties']['DirectoryId']
               instance_id = event['ResourceProperties']['AdminNodeInstanceId']
 
-              read_only_password = event['ResourceProperties']['ReadOnlyPassword']
+              service_account_name = event['ResourceProperties']['ServiceAccountName']
+              service_account_password = event['ResourceProperties']['ServiceAccountPassword']
               user_name = event['ResourceProperties']['UserName']
               user_password = event['ResourceProperties']['UserPassword']
               admin_password = event['ResourceProperties']['AdminPassword']
@@ -465,7 +472,7 @@ Resources:
               if event['RequestType'] == 'Create':
                   response_data['Message'] = 'Resource creation successful!'
                   physical_resource_id = create_physical_resource_id()
-                  ds.reset_user_password(DirectoryId=directory_id, UserName='ReadOnlyUser', NewPassword=read_only_password)
+                  ds.reset_user_password(DirectoryId=directory_id, UserName=service_account_name, NewPassword=service_account_password)
                   if user_name != "":
                     ds.reset_user_password(DirectoryId=directory_id, UserName=user_name, NewPassword=user_password)
                   ds.reset_user_password(DirectoryId=directory_id, UserName='Admin', NewPassword=admin_password)
@@ -484,14 +491,15 @@ Resources:
       UserName: !Ref UserName
       UserPassword: !Ref UserPassword
       AdminPassword: !Ref AdminPassword
-      ReadOnlyPassword: !Ref ReadOnlyPassword
+      ServiceAccountName: !Ref ServiceAccountName
+      ServiceAccountPassword: !Ref ServiceAccountPassword
 
   PasswordSecret:
     Type: AWS::SecretsManager::Secret
     Properties:
-      Description: Password for Microsoft AD
+      Description: Password for Microsoft Active Directory
       Name: !Sub [ "PasswordSecret-${StackIdSuffix}", {StackIdSuffix: !Select [1, !Split ['/', !Ref 'AWS::StackId']]}]
-      SecretString: !Ref ReadOnlyPassword
+      SecretString: !Ref ServiceAccountPassword
 
   DomainCertificateSecret:
     Type: AWS::SecretsManager::Secret
@@ -821,12 +829,17 @@ Outputs:
         Name: !Sub ${AWS::StackName}-DomainCertificateSecretArn
   DomainShortName:
     Value: !GetAtt Prep.DomainShortName
-  DomainReadOnlyUser:
+  DomainServiceAccount:
+    Description: Username for Service Account created during stack creation.
     Value: !Sub
-      - cn=ReadOnlyUser,ou=Users,ou=${ou},dc=${dc}
-      - { dc: !Join [",dc=", !Split [".", !Ref DomainName ]], ou: !GetAtt Prep.DomainShortName }
+      - cn={service_account_name},ou=Users,ou=${ou},dc=${dc}
+      - { service_account_name: !Ref ServiceAccountName, dc: !Join [",dc=", !Split [".", !Ref DomainName ]], ou: !GetAtt Prep.DomainShortName }
     Export:
-        Name: !Sub ${AWS::StackName}-DomainReadOnlyUser
+        Name: !Sub ${AWS::StackName}-DomainServiceAccount
+  DnsIpAddress1:
+    Value: !GetAtt Prep.DnsIpAddress1
+  DnsIpAddress2:
+    Value: !GetAtt Prep.DnsIpAddress2
   DomainAddrLdap:
     Value: !Sub
       - ldap://${address}
@@ -847,6 +860,6 @@ Outputs:
         Name: !Sub ${AWS::StackName}-DirectoryId
   DomainManagementNodeId:
     Value: !Ref AdDomainAdminNode
-    Description: Instance ID for AD Domain Management Node
+    Description: Instance ID for Active Directory Domain Management Node
     Export:
         Name: !Sub ${AWS::StackName}-DomainManagementNodeId
