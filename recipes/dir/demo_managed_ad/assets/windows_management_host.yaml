@@ -275,5 +275,5 @@ Outputs:
   ManagementHostId:
     Value: !Ref Instance
   ManagementHostPublicDns:
-    Description: Public DNS entry to access the managmenet host.
+    Description: Public DNS entry to access the management host.
     Value: !GetAtt Instance.PublicDnsName
