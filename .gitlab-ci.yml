@@ -28,7 +28,7 @@ workflow:
   rules:
     - if: $CI_COMMIT_REF_NAME == "main"
       variables:
-        GITLAB_ENV: produdction
+        GITLAB_ENV: production
     - when: always
 
 stages:
