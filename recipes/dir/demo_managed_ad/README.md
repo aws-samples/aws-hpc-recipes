@@ -16,11 +16,11 @@ You can include the Output values directly in a cluster configuration, as per th
 
 **Note** If you wish to import networking configuration directly from an existing CloudFormation stack, you can use the alternative [import template](https://console.aws.amazon.com/cloudformation/home?region=us-east-2#/stacks/create/review?stackName=managed-adb&templateURL=https://aws-hpc-recipes.s3.us-east-1.amazonaws.com/main/recipes/dir/demo_managed_ad/assets/main-import.yaml), providing the name of an active HPC Recipes for AWS networking stack.
 
-### User and Group Management via Management Host
+### User and Group Management via Linux Management Host
 
 Once the stack has reached the `CREATE_COMPLETE` state, you can manage your groups and users via the Linux management host. 
 
-#### Accessing the management host
+#### Accessing the linux management host
 
 To access the management host, go to the AWS CloudFormation stack in the [AWS CloudFormation console](https://console.aws.amazon.com/cloudformation/home).
 
@@ -72,6 +72,60 @@ You can search for the groups that exist in your AD with the following command:
 $ ldapsearch "(&(objectClass=group))" -x -h corp.pcluster.com -b "DC=corp,DC=pcluster,DC=com" -D "CN=Admin,OU=Users,OU=CORP,DC=corp,DC=pcluster,DC=com"
 ```
 
+### User and Group Management via Windows Management Host
+
+There is a [Windows Management Host](ttps://console.aws.amazon.com/cloudformation/home?region=us-east-2#/stacks/create/review?stackName=managed-adb&templateURL=https://aws-hpc-recipes.s3.us-east-1.amazonaws.com/main/recipes/dir/demo_managed_ad/assets/main.yaml) stack that will launch a domain joined windows host. Additionally, this stack takes a parameter (`PSS3Path`) for an S3 path (without the `s3://`) to a powershell script that will be run on the `DeledationUser` after the instance has joined the domain. This is useful for automating the setup of your domain using powershell commands. The host will have RDP open to the ClientIpCidr and the host will run the script provided at the PSS3Path,
+
+**Note**: It will take some time (~10m) after your instance boots for it to join the domain. 
+
+#### Accessing the host
+
+You may access this instance by going to the Outputs tab and copying the **ManagementHostPublicDns**
+
+![image](https://github.com/charlesg3/aws-hpc-recipes/assets/6087509/c09d785e-aff0-4844-9a95-cb27849d1699)
+
+Next, open your RDP client and use the dns entry from above to connect to the instance. The credentials will be Admin and the AdministratorPassword you provided when you created the Directory Service. Once you connect to the instance, you can open the **Active Directory Users and Computers** interface by choosing to run that from the start menu:
+![image](https://github.com/charlesg3/aws-hpc-recipes/assets/6087509/387f0abe-5db4-4d8d-aaff-9e42023f5dc9)
+
+
+You can also use the PowerShell commands like [Get-ADUser](https://learn.microsoft.com/en-us/powershell/module/activedirectory/get-aduser?view=windowsserver2022-ps) to access the directory:
+
+![image](https://github.com/charlesg3/aws-hpc-recipes/assets/6087509/bf96cf6d-96ac-40c0-836a-e8c29405d1d2)
+
+##### Troubleshooting
+
+The agent’s error log is located at `C:\ProgramData\Amazon\EC2Launch\log\agent.log`  and will specify where the bootstrap script is stored as well as its error output. 
+
+For example:
+
+`cat C:\ProgramData\Amazon\EC2Launch\log\agent.log`
+
+```
+[...]
+2023-10-07 22:39:05 Info: Script file is created at: C:\Windows\system32\config\systemprofile\AppData\Local\Temp\EC2Launch3800281881\UserScript.ps1
+2023-10-07 22:39:05 Info: Error file is created at: C:\Windows\system32\config\systemprofile\AppData\Local\Temp\EC2Launch3800281881\err.tmp
+2023-10-07 22:39:05 Info: Output file is created at: C:\Windows\system32\config\systemprofile\AppData\Local\Temp\EC2Launch3800281881\output.tmp
+2023-10-07 22:40:27 Error: Error running task: failed to run task 'postReadyUserData-executeScript-0': failed to run script: Error occurred while executing script.
+2023-10-07 22:40:27 Info: Stage: postReadyUserData completed.
+2023-10-07 22:40:27 Info: Run StartSsm task.
+2023-10-07 22:40:27 Info: AmazonSSMAgent service already running.
+2023-10-07 22:40:27 Info: AmazonSSMAgent is running now.
+2023-10-07 22:40:27 Info: Stage: postReady completed.
+2023-10-07 22:40:27 Info: Run-once already exists: C:\ProgramData\Amazon\EC2Launch\state\.run-once
+2023-10-07 22:40:27 Info: Replace C:\ProgramData\Amazon\EC2Launch\state\state.json with C:\ProgramData\Amazon\EC2Launch\state\previous-state.json
+2023-10-07 22:40:27 Info: Success: C:\ProgramData\Amazon\EC2Launch\state\previous-state.json replaced C:\ProgramData\Amazon\EC2Launch\state\state.json
+2023-10-07 22:40:27 Info: EC2Launch stopped
+2023-10-07 22:42:26 Info: Configure wallpaper. Path: C:\ProgramData\Amazon\EC2Launch\wallpaper\Ec2Wallpaper.jpg; Attributes: hostName,instanceId,privateIpAddress,publicIpAddress,instanceSize,availabilityZone,architecture,memory,network; Instance Tags: Display none
+2023-10-07 22:42:27 Info: Success: Completed wallpaper configuration.
+```
+
+##### Accessing the management host as non-domain user
+
+To access the instance as a non-domain host, open the [CloudFormation console](https://console.aws.amazon.com/cloudformation/home#/stacks), select your Windows Management Host stack and go to the **Resources** tab.
+
+![image](https://github.com/charlesg3/aws-hpc-recipes/assets/6087509/db52f8b6-9c41-472d-b8b2-211815f99e9f)
+
+Open the instance in the EC2 console by selecting it, then select it from the list and go to **Actions > Security > Get Windows password**, provide the PEM key for your keypair and select **Decrypt password**. This will open up a modal that has the administrator user and password. Copy these. Now open the host (using the DNS from the **Outputs** tab on the CloudFormation stack) to connect to the host directly.
 
 ### LDIF Support
 
