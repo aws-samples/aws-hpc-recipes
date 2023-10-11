@@ -944,7 +944,7 @@ Outputs:
   DomainServiceAccount:
     Description: Username for Service Account created during stack creation.
     Value: !Sub
-      - cn={service_account_name},ou=Users,ou=${ou},dc=${dc}
+      - cn=${service_account_name},ou=Users,ou=${ou},dc=${dc}
       - { service_account_name: !Ref ServiceAccountName, dc: !Join [",dc=", !Split [".", !Ref DomainName ]], ou: !GetAtt Prep.DomainShortName }
     Export:
         Name: !Sub ${AWS::StackName}-DomainServiceAccount
