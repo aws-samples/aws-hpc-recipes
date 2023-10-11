@@ -63,13 +63,13 @@ modifying entry "CN=mygroup,OU=Users,OU=corp,DC=corp,DC=res,DC=com"
 You can search for the users that exist in your AD with the following command:
 
 ```
-$ ldapsearch "(&(objectClass=user))" -x -h corp.pcluster.com -b "DC=corp,DC=pcluster,DC=com" -D "CN=Admin,OU=Users,OU=CORP,DC=corp,DC=pcluster,DC=com"
+$ ldapsearch "(&(objectClass=user))" -x -h corp.pcluster.com -b "DC=corp,DC=pcluster,DC=com" -D "CN=Admin,OU=Users,OU=CORP,DC=corp,DC=pcluster,DC=com -W"
 ```
 
 You can search for the groups that exist in your AD with the following command:
 
 ```
-$ ldapsearch "(&(objectClass=group))" -x -h corp.pcluster.com -b "DC=corp,DC=pcluster,DC=com" -D "CN=Admin,OU=Users,OU=CORP,DC=corp,DC=pcluster,DC=com"
+$ ldapsearch "(&(objectClass=group))" -x -h corp.pcluster.com -b "DC=corp,DC=pcluster,DC=com" -D "CN=Admin,OU=Users,OU=CORP,DC=corp,DC=pcluster,DC=com -W"
 ```
 
 
