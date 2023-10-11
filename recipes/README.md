@@ -119,6 +119,14 @@ You can use an HPC Recipe for AWS in several ways:
 * **Usage**: [README.md](pcluster/try_trn1/README.md)
 
 
+### :arrow_right: res: Research and Engineering Studio on AWS
+
+#### res_demo_env ![tag](https://img.shields.io/badge/-ad-%23AAB7B8) ![tag](https://img.shields.io/badge/-beta-%23800080) ![tag](https://img.shields.io/badge/-cognito-%237DCEA0) ![tag](https://img.shields.io/badge/-efs-%237DCEA0) ![tag](https://img.shields.io/badge/-res-%237DCEA0) ![tag](https://img.shields.io/badge/-sso-%23AAB7B8) 
+
+* **About**: Demonstration environment for RES on AWS.
+* **Usage**: [README.md](res/res_demo_env/README.md)
+
+
 ### :arrow_right: security: Security configuration
 
 #### public_certs ![tag](https://img.shields.io/badge/-core-%23146EB4) ![tag](https://img.shields.io/badge/-route53-%23AAB7B8) ![tag](https://img.shields.io/badge/-secretsmanager-%237DCEA0) ![tag](https://img.shields.io/badge/-vpc-%23AAB7B8) 
