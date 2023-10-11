@@ -16,12 +16,27 @@
 # This specific template is located at:
 # https://gitlab.com/gitlab-org/gitlab/-/blob/master/lib/gitlab/ci/templates/Getting-Started.gitlab-ci.yml
 
+# NOTES
+# HPCDK_S3_BUCKET has a different value depending on the Gitlab environment.
+# Gitlab environment is set based on the branch. Branch "main" targets to 
+# "production", while other branches deploy to "development" 
+
+variables:
+  GITLAB_ENV: development
+
+workflow:
+  rules:
+    - if: $CI_COMMIT_REF_NAME == "main"
+      variables:
+        GITLAB_ENV: produdction
+    - when: always
+
 stages:
   - deploy
 
-deploy-job:      # This job runs in the deploy stage.
-  stage: deploy  # It only runs when *both* jobs in the test stage complete successfully.
-  environment: production
+deploy-job:
+  stage: deploy  
+  environment: $GITLAB_ENV
   image: registry.gitlab.com/gitlab-org/cloud-deploy/aws-base:latest
   script:
     - aws s3 sync --delete --acl public-read --exclude "*" --include "*/assets/*" --exclude "*/.gitkeep" recipes s3://${HPCDK_S3_BUCKET}/${CI_COMMIT_BRANCH}/recipes/
