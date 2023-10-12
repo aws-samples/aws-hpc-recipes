@@ -441,9 +441,14 @@ Resources:
                 echo "$ADMIN_PW" | adcli create-user -x -U Admin --domain="${DirectoryDomain}" --display-name="${UserName}" "${UserName}"
               fi
 
+              export DC="${DC}"
+              export OU="${OU}"
+              export DirectoryDomain="${DirectoryDomain}"
+              export ServiceAccountName="${ServiceAccountName}"
+
               if [ "${LDIFS3Path}" != "" ]; then
                 echo "Running LDIF File..."
-                aws s3 cp s3://${LDIFS3Path} - > /tmp/ldif.tmp
+                aws s3 cp s3://${LDIFS3Path} - | envsubst > /tmp/ldif.tmp
                 ldapmodify -x -h ${DirectoryDomain} -D "cn=Admin,ou=Users,ou=${OU},dc=${DC}" -w $ADMIN_PW -f /tmp/ldif.tmp
               fi
               
