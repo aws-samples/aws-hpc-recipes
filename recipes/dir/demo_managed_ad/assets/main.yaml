@@ -423,13 +423,6 @@ Resources:
               echo "Domain Name: ${DirectoryDomain}"
               echo "Domain Certificate Secret: ${DomainCertificateSecretArn}"
               echo "Domain Private Key Secret: ${DomainPrivateKeySecretArn}"
-              cat << EOF > /etc/resolv.conf
-              search           ${DirectoryDomain}
-              nameserver       ${DnsIp1}
-              nameserver       ${DnsIp2}
-              EOF
-              sed -i 's/PEERDNS=.*/PEERDNS=no/' /etc/sysconfig/network-scripts/ifcfg-eth0
-              chattr +i /etc/resolv.conf
               ADMIN_PW="${AdminPassword}"
               echo "$ADMIN_PW" | sudo realm join -U Admin "${DirectoryDomain}"
               sleep 10
@@ -472,8 +465,6 @@ Resources:
                 AdminPassword: !Ref AdminPassword,
                 ServiceAccountName: !Ref ServiceAccountName,
                 UserName: !Ref UserName,
-                DnsIp1: !GetAtt Prep.DnsIpAddress1,
-                DnsIp2: !GetAtt Prep.DnsIpAddress2,
                 DomainCertificateSecretArn: !Ref DomainCertificateSecret,
                 DomainPrivateKeySecretArn: !Ref DomainPrivateKeySecret,
                 LDIFS3Path: !Ref LDIFS3Path,
@@ -801,6 +792,20 @@ Resources:
       DomainName: !Ref DomainName
       DomainCertificateSecretArn: !Ref DomainCertificateSecret
       DomainPrivateKeySecretArn: !Ref DomainPrivateKeySecret
+
+  DhcpOptions:
+    Type: AWS::EC2::DHCPOptions
+    Properties:
+      DomainName: !Ref DomainName
+      DomainNameServers: 
+        - !GetAtt Prep.DnsIpAddress1
+        - !GetAtt Prep.DnsIpAddress2
+
+  VPCDHCPOptionsAssociation:
+    Type: AWS::EC2::VPCDHCPOptionsAssociation
+    Properties: 
+      DhcpOptionsId: !GetAtt DhcpOptions.DhcpOptionsId
+      VpcId: !If [CreateVPC, !Ref PclusterVpc, !Ref Vpc ]
 
   CleanupLambdaRole:
     Type: AWS::IAM::Role
