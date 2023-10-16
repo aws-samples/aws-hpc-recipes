@@ -70,7 +70,7 @@ You can use an HPC Recipe for AWS in several ways:
 
 #### login_nodes ![tag](https://img.shields.io/badge/-parallelcluster-%23FF9900) 
 
-* **About**: Demonstrates the new Login Nodes feature in ParallelCluster 3.7.1
+* **About**: Demonstrates the new Login Nodes feature in ParallelCluster 3.7.2
 * **Usage**: [README.md](pcluster/login_nodes/README.md)
 
 #### multi_az ![tag](https://img.shields.io/badge/-parallelcluster-%23FF9900) 

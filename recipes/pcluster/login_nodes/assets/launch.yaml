@@ -1,6 +1,6 @@
 AWSTemplateFormatVersion: '2010-09-09'
 Description: >
-  Demonstrates the new Login Nodes feature in ParallelCluster 3.7.1
+  Demonstrates the new Login Nodes feature in ParallelCluster 3.7.2
 
 ### Stack metadata
 Metadata:
@@ -92,7 +92,7 @@ Parameters:
 Mappings:
   ParallelCluster:
     Constants:
-      Version: 3.7.1
+      Version: 3.7.2
   Recipes:
     Constants:
       Version: main

@@ -4,7 +4,7 @@ name: login_nodes
 # The version of the recipe. Must be compatible with semantic versioning.
 version: "1.0.0"
 # A short summary description of the recipe
-description: Demonstrates the new Login Nodes feature in ParallelCluster 3.7.1
+description: Demonstrates the new Login Nodes feature in ParallelCluster 3.7.2
 # The path to the README for the recipe relative to its root directory.
 readme: README.md
 # Optional URL for external documentation
