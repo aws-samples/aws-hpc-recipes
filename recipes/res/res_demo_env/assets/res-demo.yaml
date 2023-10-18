@@ -1,0 +1,95 @@
+Description: A demo CloudFormation stack for setting up Research and Engineering Studio on AWS
+
+Parameters:
+  PortalDomainName:
+    Description: (Optional) Domain Name for web portal domain that lives in Route53 in account (may be different from the Active Directory domain). Used to generate certs, leave blank to skip certificate generation.
+    Type: String
+    AllowedPattern: ^([a-zA-Z0-9]+[\\.-])+([a-zA-Z0-9])+$
+    Default: res.person.people.aws.dev
+
+  Keypair:
+    Description: EC2 Keypair to access management instance.
+    Type: AWS::EC2::KeyPair::KeyName
+    Default: enguard
+
+  EnvironmentName:
+    Description: (Optional) Provide name of the Environment, the name of the environment must start with "res-" and should be less than or equal to 10 characters. (required for generating certificates)
+    Type: String
+    Default: res-demo
+
+  AdminPassword:
+    Description: Active Directory Administrator Account Password.
+    Type: String
+    MinLength: 8
+    MaxLength: 64
+    AllowedPattern: (?=^.{8,64}$)((?=.*\d)(?=.*[A-Z])(?=.*[a-z])|(?=.*\d)(?=.*[^A-Za-z0-9\s])(?=.*[a-z])|(?=.*[^A-Za-z0-9\s])(?=.*[A-Z])(?=.*[a-z])|(?=.*\d)(?=.*[A-Z])(?=.*[^A-Za-z0-9\s]))^.*
+    NoEcho: true
+  
+  ServiceAccountPassword:
+    Description: Active Directory Service Account Password.
+    Type: String
+    MinLength: 8
+    MaxLength: 65
+    AllowedPattern: (?=^.{8,64}$)((?=.*\d)(?=.*[A-Z])(?=.*[a-z])|(?=.*\d)(?=.*[^A-Za-z0-9\s])(?=.*[a-z])|(?=.*[^A-Za-z0-9\s])(?=.*[A-Z])(?=.*[a-z])|(?=.*\d)(?=.*[A-Z])(?=.*[^A-Za-z0-9\s]))^.*
+    NoEcho: true
+
+  AdministratorEmail:
+    Type: String
+    Default: person@amazon.com
+
+  ClientIpCidr:
+    Description: CIDR for incoming RDP traffic for management instance.
+    Default: 127.0.0.1/32
+    Type: String
+    AllowedPattern: (\d{1,3})\.(\d{1,3})\.(\d{1,3})\.(\d{1,3})/(\d{1,2})
+    ConstraintDescription: ClientIP must be a valid IP or network range of the form x.x.x.x/x. specify your IP/NETMASK (e.g x.x.x/32 or x.x.x.x/24 for subnet range)
+
+Conditions:
+  UseEnvironmentName: !Not [!Equals [!Ref EnvironmentName, '']]
+
+Resources:
+  RESExternal:
+    Type: AWS::CloudFormation::Stack
+    Properties:
+      Parameters:
+        PortalDomainName: !Ref PortalDomainName
+        Keypair: !Ref Keypair
+        EnvironmentName: !If [UseEnvironmentName, !Ref EnvironmentName, '']
+        AdminPassword: !Ref AdminPassword
+        ServiceAccountPassword: !Ref ServiceAccountPassword
+        ClientIpCidr: !Ref ClientIpCidr
+      TemplateURL: https://pcluster-cfn-us-east-1.s3.us-east-1.amazonaws.com/artifacts/bi/bi.yaml
+
+  RES:
+    Type: AWS::CloudFormation::Stack
+    Properties:
+      Parameters:
+        EnvironmentName: !Ref EnvironmentName
+        AdministratorEmail: !Ref AdministratorEmail
+        SSHKeyPair: !Ref Keypair
+        ClientIp: !Ref ClientIpCidr
+        VpcId: !GetAtt [ RESExternal, Outputs.VpcId ]
+        PrivateSubnets: !GetAtt [ RESExternal, Outputs.PrivateSubnets ]
+        PublicSubnets: !GetAtt [ RESExternal, Outputs.PublicSubnets ]
+        ActiveDirectoryName: !GetAtt [ RESExternal, Outputs.ActiveDirectoryName ]
+        ADShortName: !GetAtt [ RESExternal, Outputs.ADShortName ]
+        LDAPBase: !GetAtt [ RESExternal, Outputs.LDAPBase ]
+        LDAPConnectionURI: !GetAtt [ RESExternal, Outputs.LDAPConnectionURI ]
+        SudoersGroupName: RESAdministrators
+        CustomDomainNameforVDI: !Sub
+          - vdi.${PortalDomainName}
+          - { PortalDomainName: !Ref PortalDomainName}
+        CustomDomainNameforWebApp: !Sub
+          - web.${PortalDomainName}
+          - { PortalDomainName: !Ref PortalDomainName}
+        ACMCertificateARNforWebApp: ''
+        PrivateKeySecretARNforVDI: !GetAtt [ RESExternal, Outputs.PrivateKeySecretArn ]
+        CertificateSecretARNforVDI: !GetAtt [ RESExternal, Outputs.CertificateSecretArn ]
+        ServiceAccountUsername: Admin
+        ServiceAccountPassword: !Ref AdminPassword
+        UsersOU: !GetAtt [ RESExternal, Outputs.UsersOU ]
+        GroupsOU: !GetAtt [ RESExternal, Outputs.GroupsOU ]
+        SudoersOU: !GetAtt [ RESExternal, Outputs.SudoersOU ]
+        ComputersOU: !GetAtt [ RESExternal, Outputs.ComputersOU ]
+        SharedHomeFileSystemId: !GetAtt [ RESExternal, Outputs.SharedHomeFilesystemId ]
+      TemplateURL: https://research-engineering-studio-us-east-1.s3.amazonaws.com/releases/2023.10b1/ResearchAndEngineeringStudio.template.json
