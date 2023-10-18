@@ -30,6 +30,7 @@ objectClass: person
 objectClass: organizationalPerson
 objectClass: user
 cn: user1
+sAMAccountName: user1
 name: user1
 userPrincipalName: user1@${DirectoryDomain}
 mail: user1@${DirectoryDomain}
@@ -46,6 +47,7 @@ objectClass: person
 objectClass: organizationalPerson
 objectClass: user
 cn: admin1
+sAMAccountName: admin1
 name: admin1
 userPrincipalName: admin1@${DirectoryDomain}
 mail: admin1@${DirectoryDomain}
@@ -62,6 +64,7 @@ objectClass: person
 objectClass: organizationalPerson
 objectClass: user
 cn: user2
+sAMAccountName: user2
 name: user2
 userPrincipalName: user2@${DirectoryDomain}
 mail: user2@${DirectoryDomain}
@@ -78,6 +81,7 @@ objectClass: person
 objectClass: organizationalPerson
 objectClass: user
 cn: admin2
+sAMAccountName: admin2
 name: admin2
 userPrincipalName: admin2@${DirectoryDomain}
 mail: admin2@${DirectoryDomain}
