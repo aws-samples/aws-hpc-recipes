@@ -97,7 +97,7 @@ Resources:
         VpcId: !GetAtt [ Networking, Outputs.VPC ]
         Subnet: {"Fn::Select": [0, { "Fn::Split" : [",", !GetAtt [ Networking, Outputs.PublicSubnets ]] }]}
         ClientIpCidr: !Ref ClientIpCidr
-        PSS3Path: pcluster-cfn-us-east-1/artifacts/service_account.ps1
+        PSS3Path: aws-hpc-recipes-dev/res/recipes/res/res_demo_env/assets/service_account.ps1
       TemplateURL: https://aws-hpc-recipes.s3.us-east-1.amazonaws.com/main/recipes/dir/demo_managed_ad/assets/windows_management_host.yaml
 
   Storage:
