@@ -74,6 +74,9 @@ Parameters:
     Type: String
     Default: hpc-networking
 
+Conditions: 
+  isUSEast1: !Equals [!Ref "AWS::Region", "us-east-1"]
+
 Transform: AWS::Serverless-2016-10-31
 
 Resources:
@@ -371,10 +374,15 @@ Resources:
   DhcpOptions:
     Type: AWS::EC2::DHCPOptions
     Properties:
-      DomainName: !Ref DomainName
+      DomainName: 
+        !If 
+          - isUSEast1 
+          - "ec2.internal"
+          - !Join [ ".", [!Ref "AWS::Region", "compute.internal"]]
       DomainNameServers: 
         - !GetAtt Prep.DnsIpAddress1
         - !GetAtt Prep.DnsIpAddress2
+        - AmazonProvidedDNS
 
   VPCDHCPOptionsAssociation:
     Type: AWS::EC2::VPCDHCPOptionsAssociation
