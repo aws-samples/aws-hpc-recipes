@@ -88,6 +88,7 @@ Conditions:
   CreateVPC: !Equals [!Ref Vpc, '']
   # CreateAD: !Equals [!Ref Ad, '']
   CreateAD: !Equals ['', '']
+  isUSEast1: !Equals [!Ref "AWS::Region", "us-east-1"]
 
 Resources:
   DisableImdsv1LaunchTemplate:
@@ -796,10 +797,15 @@ Resources:
   DhcpOptions:
     Type: AWS::EC2::DHCPOptions
     Properties:
-      DomainName: !Ref DomainName
+      DomainName:
+        !If 
+          - isUSEast1 
+          - "ec2.internal"
+          - !Join [ ".", [!Ref "AWS::Region", "compute.internal"]]
       DomainNameServers: 
         - !GetAtt Prep.DnsIpAddress1
         - !GetAtt Prep.DnsIpAddress2
+        - AmazonProvidedDNS
 
   VPCDHCPOptionsAssociation:
     Type: AWS::EC2::VPCDHCPOptionsAssociation
