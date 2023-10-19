@@ -214,7 +214,7 @@ Resources:
           DomainName: !GetAtt [ ManagedAD , Outputs.DomainName ]
           DomainAddr: !GetAtt [ ManagedAD , Outputs.DomainAddrLdap ]
           PasswordSecretArn: !GetAtt [ ManagedAD , Outputs.PasswordSecretArn ]
-          DomainReadOnlyUser: !GetAtt [ ManagedAD , Outputs.DomainReadOnlyUser ]
+          DomainReadOnlyUser: !GetAtt [ ManagedAD , Outputs.DomainServiceAccount ]
           AdditionalSssdConfigs:
             ldap_auth_disable_tls_never_use_in_production: True
         Scheduling:

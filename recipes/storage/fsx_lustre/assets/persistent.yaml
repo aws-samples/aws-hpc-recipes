@@ -55,171 +55,149 @@ Parameters:
 
 Resources:
 
-  LambdaExecutionRole:
-    Type: AWS::IAM::Role
-    Properties:
-      AssumeRolePolicyDocument:
-        Version: '2012-10-17'
-        Statement:
-        - Effect: Allow
-          Principal:
-            Service:
-            - lambda.amazonaws.com
-          Action:
-          - sts:AssumeRole
-      Path: "/"
-      Policies:
-      - PolicyName: root
-        PolicyDocument:
-          Version: '2012-10-17'
-          Statement:
-          - Effect: Allow
-            Action:
-            - logs:CreateLogGroup
-            - logs:CreateLogStream
-            - logs:PutLogEvents
-            Resource: arn:aws:logs:*:*:*
-          - Effect: Allow
-            Action:
-            - ec2:DescribeSubnets
-            - ec2:DescribeVpcs
-            Resource: "*"
+  LustreServersSG:
+      Type: AWS::EC2::SecurityGroup
+      Properties:
+        GroupDescription: Allow Cross Traffic from VPC to Lustre
+        SecurityGroupEgress:
+          - CidrIp: 0.0.0.0/0
+            Description: Allow all outbound traffic by default
+            IpProtocol: "-1"
+        VpcId: !Ref VpcId
 
-  GetAttFromParam:
-    Type: AWS::Lambda::Function
-    Properties: 
-      Description: Look up info from a VPC or subnet ID 
-      Handler: index.handler
-      MemorySize: 128
-      Role: !GetAtt LambdaExecutionRole.Arn
-      Runtime: "python3.9"
-      Timeout: 30
-      Code:
-        ZipFile: |
-          import json
-          import boto3
-          import cfnresponse
-          import logging
-          
-          def handler(event, context):
-            logger = logging.getLogger()
-            logger.setLevel(logging.INFO)
-            
-            # initialize our responses, assume failure by default
-            
-            response_data = {}
-            response_status = cfnresponse.FAILED
-            
-            logger.info('Received event: {}'.format(json.dumps(event)))
-            
-            if event['RequestType'] == 'Delete':
-              response_status = cfnresponse.SUCCESS
-              cfnresponse.send(event, context, response_status, response_data)
-            
-            try:
-              ec2=boto3.client('ec2')
-            except Exception as e:
-              logger.info('boto3.client failure: {}'.format(e))
-              cfnresponse.send(event, context, response_status, response_data)
-            
-            name_filter = event['ResourceProperties']['NameFilter']
-            name_filter_parts = name_filter.split('-')
-            resource_type=name_filter_parts[0]
-            
-            if resource_type == "vpc":
-              try:
-                vpcs=ec2.describe_vpcs(VpcIds=[name_filter])
-              except Exception as e:
-                logger.info('ec2.describe_vpcs failure: {}'.format(e))
-                cfnresponse.send(event, context, response_status, response_data)
-              
-              number_of_vpcs = len(vpcs['Vpcs'])
-              logger.info('number of vpcs returned: {}'.format(number_of_vpcs))
-              
-              if number_of_vpcs == 1:
-                CidrBlock = vpcs['Vpcs'][0]['CidrBlock']
-                response_data['CidrBlock'] = CidrBlock
-                logger.info('vpc CidrBlock {}'.format(CidrBlock))
-                response_status = cfnresponse.SUCCESS
-                cfnresponse.send(event, context, response_status, response_data)
-              
-              elif number_of_vpcs == 0:
-                logger.info('no matching vpcs for filter {}'.format(name_filter))
-                cfnresponse.send(event, context, response_status, response_data)
-              
-              else:
-                logger.info('multiple matching vpcs for filter {}'.format(name_filter))
-                cfnresponse.send(event, context, response_status, response_data)
-              
-            elif resource_type == "subnet":
-              try:
-                subnets = ec2.describe_subnets(SubnetIds=[name_filter])
-              except Exception as e:
-                logger.info('ec2.describe_subnets failure: {}'.format(e))
-                cfnresponse.send(event, context, response_status, response_data)
-              
-              number_of_subnets = len(subnets['Subnets'])
-              logger.info('number of subnets returned: {}'.format(number_of_subnets))
-              
-              if number_of_subnets == 1:
-                CidrBlock = subnets['Subnets'][0]['CidrBlock']
-                VpcId = subnets['Subnets'][0]['VpcId']
-                AvailabilityZone = subnets['Subnets'][0]['AvailabilityZone']
-                response_data['AvailabilityZone'] = AvailabilityZone
-                response_data['CidrBlock'] = CidrBlock
-                response_data['VpcId'] = VpcId
-                
-                logger.info('subnet AvailabilityZone {}'.format(AvailabilityZone))
-                logger.info('subnet CidrBlock {}'.format(CidrBlock))
-                logger.info('subnet VpcId {}'.format(VpcId))
-                
-                response_status = cfnresponse.SUCCESS
-                cfnresponse.send(event, context, response_status, response_data)
-                
-              elif number_of_subnets == 0:
-                logger.info('no matching subnet for filter {}'.format(name_filter))
-                cfnresponse.send(event, context, response_status, response_data)
-                
-              else:
-                logger.info('multiple matching subnets for filter {}'.format(name_filter))
-                cfnresponse.send(event, context, response_status, response_data)
-              
-            else:
-              logger.info('invalid resource type {}'.resource_type)
-              cfnresponse.send(event, context, response_status, response_data)
-
-# VpcInfo - Lambda-backed resource for looking up an Amazon VPC
-#
-# Parameters
-#
-# ServiceToken - a pointer to the AWS Lambda function
-# NameFilter - the VPC parameter which serves as a filter
-
-  VpcInfo:
-    Type: Custom::VpcInfo
-    Properties:
-      ServiceToken: !GetAtt GetAttFromParam.Arn
-      NameFilter: !Ref VpcId
-
-  FSxLsecurityGroup:
+  LustreClientsSG:
     Type: AWS::EC2::SecurityGroup
-    DeletionPolicy: Delete
-    UpdateReplacePolicy: Delete
-    Properties: 
-      GroupDescription: Allows FSx for Lustre traffic from ParallelCluster
+    Properties:
+      GroupDescription: Allow Cross Traffic from VPC to Lustre
       VpcId: !Ref VpcId
-      SecurityGroupIngress:
-        - IpProtocol: tcp
-          FromPort: 988
-          ToPort: 988
-          CidrIp: !GetAtt VpcInfo.CidrBlock
-        - IpProtocol: tcp
-          FromPort: 1021
-          ToPort: 1023
-          CidrIp: !GetAtt VpcInfo.CidrBlock
-      SecurityGroupEgress:
-        - IpProtocol: -1
-          CidrIp: !GetAtt VpcInfo.CidrBlock
+
+  LustreClientsSGfromLustreClients988:
+    Type: AWS::EC2::SecurityGroupIngress
+    Properties:
+      IpProtocol: tcp
+      Description: Allows Lustre traffic between Lustre clients
+      FromPort: 988
+      GroupId:
+        Fn::GetAtt:
+          - LustreClientsSG
+          - GroupId
+      SourceSecurityGroupId:
+        Fn::GetAtt:
+          - LustreClientsSG
+          - GroupId
+      ToPort: 988
+
+  LustreClientsSGxxFROMxxLustreServersSG988:
+    Type: AWS::EC2::SecurityGroupIngress
+    Properties:
+      IpProtocol: tcp
+      Description: Allows Lustre traffic between Amazon FSx for Lustre file servers and Lustre clients
+      FromPort: 988
+      GroupId:
+        Fn::GetAtt:
+          - LustreClientsSG
+          - GroupId
+      SourceSecurityGroupId:
+        Fn::GetAtt:
+          - LustreServersSG
+          - GroupId
+      ToPort: 988
+
+  LustreClientsSGfromLustreClients1021:
+    Type: AWS::EC2::SecurityGroupIngress
+    Properties:
+      IpProtocol: tcp
+      Description: Allows Lustre traffic between Amazon FSx for Lustre file servers
+      FromPort: 1021
+      GroupId:
+        Fn::GetAtt:
+          - LustreClientsSG
+          - GroupId
+      SourceSecurityGroupId:
+        Fn::GetAtt:
+          - LustreClientsSG
+          - GroupId
+      ToPort: 1023
+  
+  LustreClientsSGxxFROMxxLustreServersSG1021:
+    Type: AWS::EC2::SecurityGroupIngress
+    Properties:
+      IpProtocol: tcp
+      Description: Allows Lustre traffic between Amazon FSx for Lustre file servers and Lustre clients
+      FromPort: 1021
+      GroupId:
+        Fn::GetAtt:
+          - LustreClientsSG
+          - GroupId
+      SourceSecurityGroupId:
+        Fn::GetAtt:
+          - LustreServersSG
+          - GroupId
+      ToPort: 1023
+  
+  LustreClientsSGtoLustreClients988:
+    Type: AWS::EC2::SecurityGroupEgress
+    Properties:
+      GroupId:
+        Fn::GetAtt:
+          - LustreClientsSG
+          - GroupId
+      IpProtocol: tcp
+      Description: Allow Lustre traffic between Amazon FSx for Lustre file servers
+      DestinationSecurityGroupId:
+        Fn::GetAtt:
+          - LustreClientsSG
+          - GroupId
+      FromPort: 988
+      ToPort: 988
+  
+  LustreClientsSGtopclusterLustreServersSG:
+    Type: AWS::EC2::SecurityGroupEgress
+    Properties:
+      GroupId:
+        Fn::GetAtt:
+          - LustreClientsSG
+          - GroupId
+      IpProtocol: tcp
+      Description: Allow Lustre traffic between Amazon FSx for Lustre file servers and Lustre clients
+      DestinationSecurityGroupId:
+        Fn::GetAtt:
+          - LustreServersSG
+          - GroupId
+      FromPort: 988
+      ToPort: 988
+
+  LustreClientsSGtoLustreClients1021:
+    Type: AWS::EC2::SecurityGroupEgress
+    Properties:
+      GroupId:
+        Fn::GetAtt:
+          - LustreClientsSG
+          - GroupId
+      IpProtocol: tcp
+      Description: Allows Lustre traffic between Amazon FSx for Lustre file servers
+      DestinationSecurityGroupId:
+        Fn::GetAtt:
+          - LustreClientsSG
+          - GroupId
+      FromPort: 1021
+      ToPort: 1023
+
+  LustreClientsSGtoLustreServersSG:
+    Type: AWS::EC2::SecurityGroupEgress
+    Properties:
+      GroupId:
+        Fn::GetAtt:
+          - LustreClientsSG
+          - GroupId
+      IpProtocol: tcp
+      Description: Allows Lustre traffic between Amazon FSx for Lustre file servers and Lustre clients
+      DestinationSecurityGroupId:
+        Fn::GetAtt:
+          - LustreServersSG
+          - GroupId
+      FromPort: 1021
+      ToPort: 1023
 
   FSxLFilesystem:
     Type: AWS::FSx::FileSystem
@@ -231,7 +209,8 @@ Resources:
       FileSystemTypeVersion: !Ref LustreVersion
       StorageCapacity: !Ref Capacity
       SecurityGroupIds:
-        - !Ref FSxLsecurityGroup
+        - !Ref LustreServersSG
+        - !Ref LustreClientsSG
       SubnetIds:
         - !Ref SubnetId
       LustreConfiguration:
@@ -247,6 +226,6 @@ Outputs:
       Name: !Sub ${AWS::StackName}-FSxLustreFilesystemId
   FSxLustreSecurityGroupId:
     Description: The ID of the security group allowing access to FSxL filesystem
-    Value: !Ref FSxLsecurityGroup
+    Value: !Ref LustreClientsSG
     Export:
       Name: !Sub ${AWS::StackName}-FSxLustreSecurityGroupId

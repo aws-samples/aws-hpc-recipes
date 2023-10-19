@@ -5,6 +5,21 @@ The format is based on [Keep a Changelog](http://keepachangelog.com/)
 
 ## [Unreleased]
 
+### Added
+
+* New `security` namespace
+* Added `security/public_certs` recipe
+
+### Fixed
+
+### Changed
+
+* Updated EFS recipe to use self-referencing security group
+* Updated FSx for Lustre recipe to use self-referencing security group
+* Updated FSx for OpenZFS recipe to use self-referencing security group
+
+### Removed
+
 ## [1.0.0] - 2023-09-19
 
 ### Added

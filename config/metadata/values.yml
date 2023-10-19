@@ -9,6 +9,7 @@ namespace:
   ide: IDEs and GUIs
   net: Networking
   pcluster: AWS ParallelCluster
+  security: Security configuration
   scheduler: HPC scheduler
   storage: Storage
   training: Teaching and training recipes

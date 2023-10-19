@@ -1,0 +1,279 @@
+Description: A template for launching Microsoft Windows Management Hosts into a subnet that runs a bootup powershell script
+
+Metadata:
+  AWS::CloudFormation::Interface:
+    ParameterGroups:
+      - Label:
+          default: "Active Directory Configuration"
+        Parameters:
+          - DomainName
+          - DirectoryId
+          - DnsIpAddress1
+          - DnsIpAddress2
+          - DelegationUser
+          - DelegationPassword
+      - Label:
+          default: "Network Configuration"
+        Parameters:
+          - VpcId
+          - Subnet
+          - ClientIpCidr
+      - Label:
+          default: "Host Configuration"
+        Parameters:
+          - Keypair
+          - AdminNodeAmiId
+          - PSS3Path
+          - InstanceType
+
+Parameters:
+
+  PSS3Path:
+    Description: (Optional) An S3 Path (without the s3://) to a powershell script that will run as the delegation user after joining the domain.
+    Type: String
+
+  DomainName:
+    Description: Active Directory Domain Name. The supplied LDIF file which provides bootstrap users uses this domain. A different LDIF file needs to be provided for a different domain.
+    Type: String
+    Default: corp.res.com
+    AllowedPattern: ^([a-zA-Z0-9]+[\\.-])+([a-zA-Z0-9])+$
+
+  DirectoryId:
+    Description: ID for the AWS Managed Active Directory resource
+    Type: String
+
+  DnsIpAddress1:
+    Description: IP Address for a dns in the Directory specified in DirectoryId
+    Type: String
+
+  DnsIpAddress2:
+    Description: IP Address for a dns in the Directory specified in DirectoryId
+    Type: String
+
+  DelegationUser:
+    Description: User in the Active Directory that can delecate computer write access
+    Type: String
+    Default: Admin
+
+  DelegationPassword:
+    Description: User in the Active Directory that can delecate computer write access
+    Type: String
+    MinLength: 8
+    MaxLength: 64
+    AllowedPattern: (?=^.{8,64}$)((?=.*\d)(?=.*[A-Z])(?=.*[a-z])|(?=.*\d)(?=.*[^A-Za-z0-9\s])(?=.*[a-z])|(?=.*[^A-Za-z0-9\s])(?=.*[A-Z])(?=.*[a-z])|(?=.*\d)(?=.*[A-Z])(?=.*[^A-Za-z0-9\s]))^.*
+    NoEcho: true
+
+  Keypair:
+    Description: EC2 Keypair to access management instance.
+    Type: AWS::EC2::KeyPair::KeyName
+
+  AdminNodeAmiId:
+    Description: AMI for the Admin Node
+    Type: 'AWS::SSM::Parameter::Value<AWS::EC2::Image::Id>'
+    Default: '/aws/service/ami-windows-latest/Windows_Server-2022-English-Full-Base'
+
+  VpcId:
+    Description: VPC where you will deploy the EFS filesystem
+    Type: AWS::EC2::VPC::Id
+
+  Subnet:
+    Description: Subnet where to launch the instance.
+    Type: AWS::EC2::Subnet::Id
+
+  ClientIpCidr:
+    Description: CIDR for incoming RDP traffic for management instance.
+    Default: 127.0.0.1/32
+    Type: String
+    AllowedPattern: (\d{1,3})\.(\d{1,3})\.(\d{1,3})\.(\d{1,3})/(\d{1,2})
+    ConstraintDescription: ClientIP must be a valid IP or network range of the form x.x.x.x/x. specify your IP/NETMASK (e.g x.x.x/32 or x.x.x.x/24 for subnet range)
+
+  InstanceType:
+    Type: String
+    Default: t2.xlarge
+
+Resources:
+  InstanceRole:
+    Type: AWS::IAM::Role
+    Properties:
+      AssumeRolePolicyDocument:
+        Version: 2012-10-17
+        Statement:
+          - Effect: Allow
+            Action: sts:AssumeRole
+            Principal:
+              Service:
+                - ec2.amazonaws.com
+      ManagedPolicyArns:
+        - arn:aws:iam::aws:policy/AmazonSSMManagedInstanceCore
+        - arn:aws:iam::aws:policy/AmazonSSMDirectoryServiceAccess
+      Policies:
+        - PolicyName: AccessPSFile
+          PolicyDocument:
+            Statement:
+              - Sid: GetObjectPSS3Path
+                Action:
+                  - s3:*
+                Effect: Allow
+                Resource: !Sub
+                  - arn:${AWS::Partition}:s3:::${S3Path}
+                  - { S3Path: !Ref PSS3Path }
+              - Sid: ReadSecret
+                Action:
+                  - secretsmanager:GetResourcePolicy
+                  - secretsmanager:GetSecretValue
+                  - secretsmanager:DescribeSecret
+                  - secretsmanager:ListSecretVersionIds
+                Effect: Allow
+                Resource: !Ref DelegationPasswordSecret
+              - Sid: ListBucketPSS3Path
+                Action:
+                  - s3:List*
+                Effect: Allow
+                Resource: !Sub
+                  - arn:${AWS::Partition}:s3:::${Bucket}
+                  - { Bucket: !Select [0, !Split ['/', !Ref PSS3Path ]] }
+
+  InstanceProfile:
+    Type: AWS::IAM::InstanceProfile
+    Properties:
+      Roles:
+        - !Ref InstanceRole
+
+  DelegationPasswordSecret:
+    Type: AWS::SecretsManager::Secret
+    Properties:
+      Description: Secret string for delegation user
+      Name: !Sub
+        - DelegationPasswordSecret-${StackIdSuffix}
+        - { StackIdSuffix: !Select [2, !Split ['/', !Ref 'AWS::StackId']] }
+      SecretString: !Ref DelegationPassword
+
+  AWSJoinDirectoryServiceDomainAssociation:
+    Type: AWS::SSM::Association
+    Properties:
+      AssociationName: !Sub
+        - ${StackIdSuffix}-aws-join-directory-service-domain-association
+        - { StackIdSuffix: !Select [2, !Split ['/', !Ref 'AWS::StackId']] }
+      Name: AWS-JoinDirectoryServiceDomain
+      Parameters:
+        directoryId:
+          - !Ref DirectoryId
+        directoryName:
+          - !Ref DomainName
+        dnsIpAddresses:
+          - !Ref DnsIpAddress1
+          - !Ref DnsIpAddress2
+      Targets:
+        - Key: InstanceIds
+          Values:
+            - !Ref Instance
+      WaitForSuccessTimeoutSeconds: 300
+
+  InstanceSecurityGroup:
+    Type: AWS::EC2::SecurityGroup
+    Properties: 
+      GroupDescription: Allow RDP Access
+      VpcId: !Ref VpcId
+      SecurityGroupIngress:
+        - CidrIp: !Ref ClientIpCidr
+          Description: Allow inbound traffic for RDP
+          IpProtocol: tcp
+          FromPort: 3389
+          ToPort: 3389
+
+  Instance:
+    Type: AWS::EC2::Instance
+    # CreationPolicy:
+    #   ResourceSignal:
+    #     Timeout: PT15M
+    Properties:
+      Tags:
+        - Key: "Name"
+          Value: !Sub [ "AdDomainWindowsNode-${StackIdSuffix}", {StackIdSuffix: !Select [1, !Split ['/', !Ref 'AWS::StackId']]}]
+      IamInstanceProfile: !Ref InstanceProfile
+      ImageId: !Ref AdminNodeAmiId
+      InstanceType: !Ref InstanceType
+      KeyName: !Ref Keypair
+      NetworkInterfaces:
+        - DeviceIndex: 0
+          SubnetId: !Ref Subnet
+          GroupSet:
+            - !Ref InstanceSecurityGroup
+      UserData:
+        Fn::Base64:
+          !Sub
+            - |
+              <powershell>
+              Install-WindowsFeature RSAT-ADDS
+              Add-WindowsFeature AD-Domain-Services
+
+              if(!"${PSS3Path}") { return }
+
+              $path = "${PSS3Path}"
+              $bucket,$prefix = $path -split "/",2
+
+              $folder = "C:\Temp"
+              $dest_path = "$folder\$prefix" -replace '/','\'
+              $runner_path = "$folder\runner.ps1"
+
+              # Create temp folder where this user (local admin) can write and the domain-joined user can read
+              if(-not(Test-path "$folder"))
+              {
+                  mkdir $folder
+                  $acl = Get-Acl -Path $folder
+                  $allow_write = New-Object System.Security.AccessControl.FileSystemAccessRule("Users","Modify","3","0","Allow")
+                  $acl.SetAccessRule($allow_write)
+                  $acl | Set-Acl -Path $folder
+              }
+
+              $runner_script = @'
+              $dest_path = $args[0]
+              $task_name = "Setup domain task"
+                            $user = "${DomainName}\${DelegationUser}"
+                            $password = Get-SECSecretValue -SecretId "${SecretArn}" -Select SecretString
+              $pass = ConvertTo-SecureString -String "$password" -AsPlainText -Force
+              $cred = New-Object -Type PSCredential($user, $pass)
+              $action = New-ScheduledTaskAction -Execute "powershell" -Argument "-executionpolicy bypass -command `"$dest_path 2>&1 > c:\temp\task.log`""
+              $trigger = New-ScheduledTaskTrigger -AtStartup -RandomDelay 00:00:03
+
+              # Set  the task to run as a local administrator with highest level privileges
+              $settings = New-ScheduledTaskSettingsSet -StartWhenAvailable -AllowStartIfOnBatteries -RunOnlyIfNetworkAvailable
+              Register-ScheduledTask -Action $action -Settings $settings -Trigger $trigger -TaskName "$task_name" -Description "Runs a powershell script as the delegation user after connecting to the Active Directory domain." -User $user -Password $password
+              if($?) {
+                Start-ScheduledTask -TaskName "Setup domain task"
+                while ((Get-ScheduledTask -TaskName $task_name).State -eq 'Running') {
+                  Write-Verbose -Message "Waiting for sync to finish"
+                  Start-Sleep -Seconds  5
+                }
+                Unregister-ScheduledTask -TaskName $task_name -Confirm:$false # remove subtask
+                Unregister-ScheduledTask -TaskName "Setup domain" -Confirm:$false # remove the parent task that called us
+              }
+              '@
+
+              # if the bootstrap script doesn't exist, retrieve it
+              if(-not(Test-path "$dest_path" -PathType leaf)) {
+                  Get-S3Object -BucketName $bucket -KeyPrefix $prefix | Read-S3Object -Folder $folder
+              }
+
+              echo "Writing to: $runner_path for trampoline to $dest_path" 
+              Set-Content -Path $runner_path -Value $runner_script
+
+              #$action = New-ScheduledTaskAction -Execute "powershell" -Argument "-executionpolicy bypass -file $runner_path `"$dest_path`""
+              $action = New-ScheduledTaskAction -Execute "powershell" -Argument "-executionpolicy bypass -command `"$runner_path \`"$dest_path\`" 2>&1 > c:\temp\startup_task.log`""
+              $trigger =  New-ScheduledTaskTrigger -AtStartup -RandomDelay 00:00:30
+              # Set  the task to run as a local administrator with highest level privileges
+              $principal = New-ScheduledTaskPrincipal -UserID "NT AUTHORITY\SYSTEM" -RunLevel Highest  -LogonType ServiceAccount
+              $settings = New-ScheduledTaskSettingsSet -StartWhenAvailable
+              Register-ScheduledTask -Action $action -Settings $settings -Trigger $trigger -TaskName "Setup domain" -Description "Runs a powershell script as the delegation user after connecting to the Active Directory domain." -Principal $principal
+              </powershell>
+            - { PSS3Path: !Ref PSS3Path,
+                SecretArn: !Ref DelegationPasswordSecret,
+                DomainName: !Ref DomainName,
+                DelegationUser: !Ref DelegationUser
+                }
+Outputs:
+  ManagementHostId:
+    Value: !Ref Instance
+  ManagementHostPublicDns:
+    Description: Public DNS entry to access the management host.
+    Value: !GetAtt Instance.PublicDnsName
