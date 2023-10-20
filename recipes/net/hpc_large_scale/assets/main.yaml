@@ -64,6 +64,14 @@ Mappings:
       ZoneId1: euw1-az1
       ZoneId2: euw1-az2
       ZoneId3: euw1-az3
+    eu-west-2:
+      ZoneId1: euw2-az2
+      ZoneId2: euw2-az3
+      ZoneId3: euw2-az1
+    eu-west-3:
+      ZoneId1: euw3-az1
+      ZoneId2: euw3-az2
+      ZoneId3: euw3-az3
     eu-north-1:
       ZoneId1: eun1-az2
       ZoneId2: eun1-az1
@@ -92,6 +100,14 @@ Mappings:
       ZoneId1: aps1-az2
       ZoneId2: aps1-az3
       ZoneId3: aps1-az1
+    ap-southeast-1:
+      ZoneId1: apse1-az1
+      ZoneId2: apse1-az2
+      ZoneId3: apse1-az3
+    ap-southeast-2:
+      ZoneId1: apse2-az3
+      ZoneId2: apse2-az1
+      ZoneId3: apse2-az2
 
 Resources:
 
