@@ -290,15 +290,24 @@ Outputs:
     Value: ServiceAccount
   SharedHomeFilesystemId:
     Value: !GetAtt [ Storage, Outputs.EFSFilesystemId ]
-  UsersOU:
+    UsersOU:
     Description: The OU for all users who might join the system. The value provided here is based off of a supplied LDIF file.
-    Value: OU=Users,OU=RES,OU=corp,DC=corp,DC=res,DC=com
+    Value: !Sub
+      - OU=Users,OU=RES,OU=${ou},DC=${dc}
+      - { dc: !Join [",DC=", !Split [".", !Ref DomainName ]], ou:  !GetAtt [ DirectoryService, Outputs.DomainShortName ]}
   GroupsOU:
     Description: The OU for groups that users belong to who might join the system. The value provided here is based off of a supplied LDIF file.
-    Value: OU=Users,OU=RES,OU=corp,DC=corp,DC=res,DC=com
+    Value: !Sub
+      - OU=Users,OU=RES,OU=${ou},DC=${dc}
+      - { dc: !Join [",DC=", !Split [".", !Ref DomainName ]], ou:  !GetAtt [ DirectoryService, Outputs.DomainShortName ]}
   SudoersOU:
     Description: The OU for users who should have sudoers permission across all projects. The value provided here is based off of a supplied LDIF file.
-    Value: OU=Users,OU=RES,OU=corp,DC=corp,DC=res,DC=com
+    Value: !Sub
+      - OU=Users,OU=RES,OU=${ou},DC=${dc}
+      - { dc: !Join [",DC=", !Split [".", !Ref DomainName ]], ou:  !GetAtt [ DirectoryService, Outputs.DomainShortName ]}
   ComputersOU:
     Description: The OU for computers that join the AD. The value provided here is based off of a supplied LDIF file.
-    Value: OU=Computers,OU=RES,OU=corp,DC=corp,DC=res,DC=com
+    Value: !Sub
+      - OU=Computers,OU=RES,OU=${ou},DC=${dc}
+      - { dc: !Join [",DC=", !Split [".", !Ref DomainName ]], ou:  !GetAtt [ DirectoryService, Outputs.DomainShortName ]}
+  
