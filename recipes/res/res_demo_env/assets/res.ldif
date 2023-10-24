@@ -35,7 +35,7 @@ name: user1
 userPrincipalName: user1@${DirectoryDomain}
 mail: user1@${DirectoryDomain}
 uidNumber: 1001
-gidNumber: 1001
+gidNumber: 1006
 unixHomeDirectory: /home/user1
 loginShell: /bin/bash
 
@@ -52,7 +52,7 @@ name: admin1
 userPrincipalName: admin1@${DirectoryDomain}
 mail: admin1@${DirectoryDomain}
 uidNumber: 1002
-gidNumber: 1002
+gidNumber: 1006
 unixHomeDirectory: /home/admin1
 loginShell: /bin/bash
 
@@ -69,7 +69,7 @@ name: user2
 userPrincipalName: user2@${DirectoryDomain}
 mail: user2@${DirectoryDomain}
 uidNumber: 1003
-gidNumber: 1003
+gidNumber: 1007
 unixHomeDirectory: /home/user2
 loginShell: /bin/bash
 
@@ -86,7 +86,7 @@ name: admin2
 userPrincipalName: admin2@${DirectoryDomain}
 mail: admin2@${DirectoryDomain}
 uidNumber: 1004
-gidNumber: 1004
+gidNumber: 1007
 unixHomeDirectory: /home/admin2
 loginShell: /bin/bash
 
