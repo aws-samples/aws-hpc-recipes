@@ -10,6 +10,7 @@ Metadata:
           - DomainName
           - AdminPassword
           - ServiceAccountPassword
+          - AdDomainAdminNodeInstancetype
       - Label:
           default: "Default Active Directory User(s)"
         Parameters:
@@ -73,6 +74,10 @@ Parameters:
     Description: Name of the HPC large-scale networking stack. Requires stackname-PrivateSubnets export.
     Type: String
     Default: hpc-networking
+  AdDomainAdminNodeInstancetype:
+    Description: ec2 instance type for the AdDomainAdminNode
+    Type: String
+    Default: t3.micro
 
 Conditions: 
   isUSEast1: !Equals [!Ref "AWS::Region", "us-east-1"]
@@ -299,7 +304,8 @@ Resources:
       IamInstanceProfile:
         Ref: JoinProfile
       ImageId: !Ref AdminNodeAmiId
-      InstanceType: t2.micro
+      InstanceType:
+        Ref: AdDomainAdminNodeInstancetype
       KeyName: !Ref Keypair
       LaunchTemplate:
         LaunchTemplateId: !Ref 'DisableImdsv1LaunchTemplate'

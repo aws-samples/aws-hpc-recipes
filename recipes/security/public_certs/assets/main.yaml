@@ -13,6 +13,10 @@ Metadata:
         Parameters:
           - SubnetId
           - AdminNodeAmiId
+      - Label:
+          default: "Certificate Node"
+        Parameters:
+          - CertificateNodeInstancetype
 
 Parameters:
   DomainName:
@@ -27,6 +31,10 @@ Parameters:
     Description: AMI for the Admin Node
     Type: 'AWS::SSM::Parameter::Value<AWS::EC2::Image::Id>'
     Default: '/aws/service/ami-amazon-linux-latest/amzn2-ami-hvm-x86_64-gp2'
+  CertificateNodeInstancetype:
+    Description: ec2 instance type for the CertificateNode
+    Type: String
+    Default: t3.micro
 
 Transform: AWS::Serverless-2016-10-31
 
@@ -119,7 +127,8 @@ Resources:
       IamInstanceProfile:
         Ref: InstanceProfile
       ImageId: !Ref AdminNodeAmiId
-      InstanceType: t2.micro
+      InstanceType:
+        Ref: CertificateNodeInstancetype
       LaunchTemplate:
         LaunchTemplateId: !Ref 'DisableImdsv1LaunchTemplate'
         Version: !GetAtt 'DisableImdsv1LaunchTemplate.LatestVersionNumber'
