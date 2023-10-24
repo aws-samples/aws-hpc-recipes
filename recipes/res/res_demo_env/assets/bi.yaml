@@ -119,6 +119,8 @@ Resources:
       Tags:
         - Key: "res:EnvironmentName"
           Value: !Ref EnvironmentName
+        - Key: "res:ClusterName"
+          Value: !Ref EnvironmentName
         - Key: "res:ModuleName"
           Value: virtual-desktop-controller
 
