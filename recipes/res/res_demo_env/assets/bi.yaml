@@ -120,7 +120,7 @@ Resources:
         - Key: "res:EnvironmentName"
           Value: !Ref EnvironmentName
         - Key: "res:ModuleName"
-          Value: vdc-desktop-controller
+          Value: virtual-desktop-controller
 
 ##### Custom Operations
 
