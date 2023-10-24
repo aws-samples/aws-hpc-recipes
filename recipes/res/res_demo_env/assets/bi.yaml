@@ -290,7 +290,7 @@ Outputs:
     Value: ServiceAccount
   SharedHomeFilesystemId:
     Value: !GetAtt [ Storage, Outputs.EFSFilesystemId ]
-    UsersOU:
+  UsersOU:
     Description: The OU for all users who might join the system. The value provided here is based off of a supplied LDIF file.
     Value: !Sub
       - OU=Users,OU=RES,OU=${ou},DC=${dc}
