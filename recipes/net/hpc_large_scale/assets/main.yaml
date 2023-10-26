@@ -1,5 +1,29 @@
 AWSTemplateFormatVersion: '2010-09-09'
-Description: Create public and private subnets in three AZs. Default CIDR blocks allow 4096 IPs each. 
+Description: Create public and private subnets in two or three AZs. Specified CIDR blocks allow 4096 IPs each. 
+
+Metadata:
+  AWS::CloudFormation::Interface:
+    ParameterGroups:
+      - Label:
+          default: VPC
+        Parameters:
+          - CidrBlock
+      - Label:
+          default: Subnets A
+        Parameters:
+          - CidrPublicSubnetA
+          - CidrPrivateSubnetA
+      - Label:
+          default: Subnets B
+        Parameters:
+          - CidrPublicSubnetB
+          - CidrPrivateSubnetB
+      - Label:
+          default: Subnets C
+        Parameters:
+          - ProvisionSubnetsC
+          - CidrPublicSubnetC
+          - CidrPrivateSubnetC
 
 Parameters:
   CidrBlock:
@@ -37,6 +61,13 @@ Parameters:
     Default: 10.3.160.0/20
     Description: VPC CIDR Block for the Private Subnet C
     Type: String
+  ProvisionSubnetsC:
+    Type: String
+    Description: Provision optional 3rd set of subnets
+    Default: "true"
+    AllowedValues:
+         - "true"
+         - "false"
 
 Mappings: 
   RegionMap: 
@@ -109,6 +140,9 @@ Mappings:
       ZoneId2: apse2-az1
       ZoneId3: apse2-az2
 
+Conditions:
+     DoProvisionSubnetsC: !Equals [!Ref ProvisionSubnetsC, "true"]
+
 Resources:
 
   VPC:
@@ -151,6 +185,7 @@ Resources:
 
   PublicSubnetC:
     Type: AWS::EC2::Subnet
+    Condition: DoProvisionSubnetsC
     Properties:
       VpcId: !Ref VPC
       CidrBlock: !Ref CidrPublicSubnetC
@@ -199,6 +234,7 @@ Resources:
       RouteTableId: !Ref PublicRouteTable
 
   PublicSubnetCRouteTableAssociation:
+    Condition: DoProvisionSubnetsC
     Type: AWS::EC2::SubnetRouteTableAssociation
     Properties:
       SubnetId: !Ref PublicSubnetC
@@ -234,6 +270,7 @@ Resources:
 
   PrivateSubnetC:
     Type: AWS::EC2::Subnet
+    Condition: DoProvisionSubnetsC
     Properties:
       VpcId: !Ref VPC
       AvailabilityZone: !GetAtt AvailabiltyZone3.ZoneName
@@ -259,6 +296,7 @@ Resources:
       Domain: vpc
 
   NatGatewayCEIP:
+    Condition: DoProvisionSubnetsC
     Type: AWS::EC2::EIP
     DependsOn: AttachGateway
     Properties:
@@ -278,6 +316,7 @@ Resources:
 
   NatGatewayC:
     Type: AWS::EC2::NatGateway
+    Condition: DoProvisionSubnetsC
     Properties:
       AllocationId: !GetAtt NatGatewayCEIP.AllocationId
       SubnetId: !Ref PublicSubnetC
@@ -300,6 +339,7 @@ Resources:
 
   PrivateRouteTableC:
     Type: AWS::EC2::RouteTable
+    Condition: DoProvisionSubnetsC
     Properties:
       VpcId: !Ref VPC
       Tags:
@@ -322,6 +362,7 @@ Resources:
 
   DefaultPrivateRouteC:
     Type: AWS::EC2::Route
+    Condition: DoProvisionSubnetsC
     Properties:
       RouteTableId: !Ref PrivateRouteTableC
       DestinationCidrBlock: 0.0.0.0/0
@@ -341,6 +382,7 @@ Resources:
 
   PrivateSubnetCRouteTableAssociation:
     Type: AWS::EC2::SubnetRouteTableAssociation
+    Condition: DoProvisionSubnetsC
     Properties:
       RouteTableId: !Ref PrivateRouteTableC
       SubnetId: !Ref PrivateSubnetC
@@ -361,6 +403,7 @@ Resources:
 
   AvailabiltyZone3:
     Type: Custom::AvailabiltyZone
+    Condition: DoProvisionSubnetsC
     DependsOn: LogGroupGetAZLambdaFunction
     Properties:
       ServiceToken: !GetAtt GetAZLambdaFunction.Arn
@@ -474,7 +517,10 @@ Outputs:
       - ','
       - - !Ref PublicSubnetA
         - !Ref PublicSubnetB
-        - !Ref PublicSubnetC
+        - !If
+          - DoProvisionSubnetsC
+          - !Ref PublicSubnetC
+          - !Ref AWS::NoValue
     Description: ID of the public subnets
     Export:
       Name: !Sub ${AWS::StackName}-PublicSubnets
@@ -483,7 +529,10 @@ Outputs:
       - ','
       - - !Ref PrivateSubnetA
         - !Ref PrivateSubnetB
-        - !Ref PrivateSubnetC
+        - !If
+          - DoProvisionSubnetsC
+          - !Ref PrivateSubnetC
+          - !Ref AWS::NoValue
     Description: ID of the private subnets
     Export:
       Name: !Sub ${AWS::StackName}-PrivateSubnets
