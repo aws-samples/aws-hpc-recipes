@@ -1,0 +1,115 @@
+AWSTemplateFormatVersion: '2010-09-09'
+Description: Creates an EFS filesystem, mount targets, and a security group for access to the filesystem
+
+Metadata:
+  AWS::CloudFormation::Interface:
+    ParameterGroups:
+      - Label:
+          default: Filesystem Options
+        Parameters:
+          - AutomaticBackups
+      - Label:
+          default: Networking and Access
+        Parameters:
+          - VpcId
+          - SubnetIds
+
+Parameters:
+  VpcId:
+    Description: VPC where you will deploy the EFS filesystem
+    Type: AWS::EC2::VPC::Id
+  SubnetIds:
+    Description: Choose three subnets in different AZs in the VPC
+    Type: List<AWS::EC2::Subnet::Id>
+  AutomaticBackups:
+    Description: Automatic backups for the filesystem
+    Type: String
+    Default: DISABLED
+    AllowedValues:
+         - "ENABLED"
+         - "DISABLED"
+
+Resources:
+
+  EfsFilesystem:
+    Type: AWS::EFS::FileSystem
+    DeletionPolicy: Delete
+    UpdateReplacePolicy: Delete
+    Properties:
+      FileSystemPolicy:
+        Version: 2012-10-17
+        Id: efs-prevent-anonymous-access-policy
+        Statement:
+          - Sid: efs-statement
+            Effect: Allow
+            Principal:
+              AWS: '*'
+            Action:
+              - 'elasticfilesystem:ClientRootAccess'
+              - 'elasticfilesystem:ClientWrite'
+              - 'elasticfilesystem:ClientMount'
+            Condition:
+              Bool:
+                'elasticfilesystem:AccessedViaMountTarget': 'true'
+      BackupPolicy: 
+        Status: !Ref AutomaticBackups
+      Encrypted: false
+      ThroughputMode: elastic
+
+  # Security group
+  EfsSecurityGroup:
+    Type: AWS::EC2::SecurityGroup
+    Properties: 
+      GroupDescription: Allow Cross Traffic from VPC to EFS
+      VpcId: !Ref VpcId
+      SecurityGroupEgress:
+        - CidrIp: 0.0.0.0/0
+          Description: Allow all outbound traffic by default
+          IpProtocol: "-1"
+
+  # Clients join this group for access to the EFS file system
+  EfsClientSecurityGroup:
+    Type: AWS::EC2::SecurityGroup
+    Properties:
+      GroupDescription: Allow traffic to/from EFS from clients
+      VpcId: !Ref VpcId
+
+  EfsSecurityGroupInboundRule:
+    Type: 'AWS::EC2::SecurityGroupIngress'
+    Properties:
+      IpProtocol: tcp
+      Description: Allow incoming connection to EFS from members of security group
+      FromPort: 2049
+      ToPort: 2049
+      GroupId: !Ref EfsSecurityGroup
+      SourceSecurityGroupId: !Ref EfsClientSecurityGroup
+
+  EfsMountTarget1:
+    Type: AWS::EFS::MountTarget
+    Properties:
+         FileSystemId: !Ref EfsFilesystem
+         SecurityGroups:
+              - !Ref EfsSecurityGroup
+         SubnetId: !Select [ 0, !Ref SubnetIds ]
+
+  EfsMountTarget2:
+    Type: AWS::EFS::MountTarget
+    Properties:
+         FileSystemId: !Ref EfsFilesystem
+         SecurityGroups:
+              - !Ref EfsSecurityGroup
+         SubnetId: !Select [ 1, !Ref SubnetIds ]
+
+Outputs:
+  EFSFilesystemId:
+    Description: The ID of the EFS filesystem that has been created
+    Value: !Ref EfsFilesystem
+    Export:
+      Name: !Sub ${AWS::StackName}-EFSFilesystemId
+  SecurityGroupId:
+    Description: Security group allowing access to filesystem
+    Value: !Ref EfsClientSecurityGroup
+    Export:
+      Name: !Sub ${AWS::StackName}-SecurityGroupId
+
+# TODO: Add conditionals based on length of array for the 2nd and third mount target
