@@ -13,6 +13,7 @@ Metadata:
         Parameters:
           - VpcId
           - SubnetIds
+          - SubnetCount
 
 Parameters:
   VpcId:
@@ -28,6 +29,22 @@ Parameters:
     AllowedValues:
          - "ENABLED"
          - "DISABLED"
+  SubnetCount:
+    Description: Count of subnets selected in SubnetIds (must match)
+    Type: String
+    Default: "3"
+    AllowedValues:
+         - "2"
+         - "3"
+
+Conditions:
+  1AZCondition: !Or
+    - !Equals [!Ref 'SubnetCount', '1']
+    - !Condition '2AZCondition'
+  2AZCondition: !Or
+    - !Equals [!Ref 'SubnetCount', '2']
+    - !Condition '3AZCondition'
+  3AZCondition: !Equals [!Ref 'SubnetCount', '3']
 
 Resources:
 
@@ -86,6 +103,7 @@ Resources:
 
   EfsMountTarget1:
     Type: AWS::EFS::MountTarget
+    Condition: 1AZCondition
     Properties:
          FileSystemId: !Ref EfsFilesystem
          SecurityGroups:
@@ -94,6 +112,7 @@ Resources:
 
   EfsMountTarget2:
     Type: AWS::EFS::MountTarget
+    Condition: 2AZCondition
     Properties:
          FileSystemId: !Ref EfsFilesystem
          SecurityGroups:
@@ -102,6 +121,7 @@ Resources:
 
   EfsMountTarget3:
     Type: AWS::EFS::MountTarget
+    Condition: 3AZCondition
     Properties:
          FileSystemId: !Ref EfsFilesystem
          SecurityGroups:
