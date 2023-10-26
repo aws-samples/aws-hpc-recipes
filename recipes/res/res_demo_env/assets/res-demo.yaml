@@ -58,7 +58,7 @@ Resources:
         AdminPassword: !Ref AdminPassword
         ServiceAccountPassword: !Ref ServiceAccountPassword
         ClientIpCidr: !Ref ClientIpCidr
-      TemplateURL: https://aws-hpc-recipes-dev.s3.us-east-1.amazonaws.com/res/recipes/res/res_demo_env/assets/bi.yaml
+      TemplateURL: https://aws-hpc-recipes-dev.s3.us-east-1.amazonaws.com/res_uswest1_net/recipes/res/res_demo_env/assets/bi.yaml
 
   RES:
     Type: AWS::CloudFormation::Stack
