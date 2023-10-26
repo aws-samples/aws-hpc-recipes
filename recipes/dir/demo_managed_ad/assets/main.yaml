@@ -21,6 +21,7 @@ Metadata:
           default: "Management Instance"
         Parameters:
           - Keypair
+          - AllowedIps
           - AdminNodeAmiId
       - Label:
           default: "Networking"
@@ -65,9 +66,15 @@ Parameters:
   LDIFS3Path:
     Description: (Optional) An S3 Path (without the s3://) to an LDIF file that will be used during stack creation.
     Type: String
+    Default: ''
   Keypair:
     Description: EC2 Keypair to access management instance.
     Type: AWS::EC2::KeyPair::KeyName
+  AllowedIps:
+    Description: CIDR-formatted IP range for SSH access management instance.
+    Type: String
+    Default: 0.0.0.0/0
+    AllowedPattern: '((\d{1,3})\.){3}\d{1,3}/\d{1,2}'
   Vpc:
     Description: VPC ID to create the Directory Service in.
     Type: AWS::EC2::VPC::Id
@@ -89,6 +96,7 @@ Conditions:
   # CreateAD: !Equals [!Ref Ad, '']
   CreateAD: !Equals ['', '']
   isUSEast1: !Equals [!Ref "AWS::Region", "us-east-1"]
+  ImportLDIFS3: !Not [ !Equals [!Ref LDIFS3Path, ''] ]
 
 Resources:
   DisableImdsv1LaunchTemplate:
@@ -318,7 +326,7 @@ Resources:
           IpProtocol: "-1"
           ToPort: -1
       SecurityGroupIngress:
-        - CidrIp: 0.0.0.0/0
+        - CidrIp: !Ref AllowedIps
           FromPort: 22
           IpProtocol: tcp
           ToPort: 22
@@ -346,7 +354,6 @@ Resources:
                 Effect: Allow
                 Resource: !Sub
                   - arn:${AWS::Partition}:ds:${AWS::Region}:${AWS::AccountId}:directory/${DirectoryId}
-                  # - { DirectoryId: !If [CreateAD, !Ref Directory, !Ref Ad ] }
                   - { DirectoryId: !Ref Directory }
           PolicyName: ResetUserPassword
         - PolicyDocument:
@@ -377,7 +384,7 @@ Resources:
     Type: AWS::EC2::Instance
     CreationPolicy:
       ResourceSignal:
-        Timeout: PT15M
+        Timeout: PT30M
     Metadata:
       "AWS::CloudFormation::Init":
         configSets:
