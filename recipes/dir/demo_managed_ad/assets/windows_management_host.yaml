@@ -252,13 +252,12 @@ Resources:
 
               # if the bootstrap script doesn't exist, retrieve it
               if(-not(Test-path "$dest_path" -PathType leaf)) {
-                  Get-S3Object -BucketName $bucket -KeyPrefix $prefix | Read-S3Object -Folder $folder
+                  Read-S3Object -BucketName $bucket -Key $prefix -File $dest_path
               }
 
               echo "Writing to: $runner_path for trampoline to $dest_path" 
               Set-Content -Path $runner_path -Value $runner_script
 
-              #$action = New-ScheduledTaskAction -Execute "powershell" -Argument "-executionpolicy bypass -file $runner_path `"$dest_path`""
               $action = New-ScheduledTaskAction -Execute "powershell" -Argument "-executionpolicy bypass -command `"$runner_path \`"$dest_path\`" 2>&1 > c:\temp\startup_task.log`""
               $trigger =  New-ScheduledTaskTrigger -AtStartup -RandomDelay 00:00:30
               # Set  the task to run as a local administrator with highest level privileges
