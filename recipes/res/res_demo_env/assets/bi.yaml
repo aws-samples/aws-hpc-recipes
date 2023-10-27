@@ -81,6 +81,8 @@ Resources:
   Networking:
     Type: AWS::CloudFormation::Stack
     Properties:
+      Parameters:
+        ProvisionSubnetsC: "False"
       TemplateURL: https://aws-hpc-recipes.s3.us-east-1.amazonaws.com/main/recipes/net/hpc_large_scale/assets/main.yaml
 
   WindowsManagementHost:
@@ -105,6 +107,7 @@ Resources:
     Properties:
       Parameters:
         VpcId: !GetAtt [ Networking, Outputs.VPC ]
+        SubnetCount: 2
         SubnetIds: !GetAtt [ Networking, Outputs.PrivateSubnets ]
       TemplateURL: https://aws-hpc-recipes.s3.us-east-1.amazonaws.com/main/recipes/storage/efs_simple/assets/main.yaml
 
