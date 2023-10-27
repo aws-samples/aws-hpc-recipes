@@ -282,9 +282,11 @@ Outputs:
     Description: Please provide the short name in Active directory
     Value: !GetAtt [ DirectoryService, Outputs.DomainShortName ]
   LDAPConnectionURI:
-    Value: !GetAtt [ DirectoryService, Outputs.DomainAddrLdap ]
-  LDAPSConnectionURI:
-    Value: !GetAtt [ DirectoryService, Outputs.DomainAddrLdaps ]
+    Value: !Sub
+      - ldap://${DomainName}
+      - { DomainName: !Ref DomainName }
+  SudoersGroupName:
+    Value: RESAdministrators
   LDAPBase:
     Value: !Sub
       - dc=${dc}
