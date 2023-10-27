@@ -75,7 +75,7 @@ Parameters:
     Type: String
     Default: hpc-networking
   AdDomainAdminNodeInstancetype:
-    Description: ec2 instance type for the AdDomainAdminNode
+    Description: EC2 instance type for the Management Instance
     Type: String
     Default: t3.micro
 
