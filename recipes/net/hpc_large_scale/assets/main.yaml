@@ -64,10 +64,10 @@ Parameters:
   ProvisionSubnetsC:
     Type: String
     Description: Provision optional 3rd set of subnets
-    Default: "true"
+    Default: "True"
     AllowedValues:
-         - "true"
-         - "false"
+         - "True"
+         - "False"
 
 Mappings: 
   RegionMap: 
@@ -141,7 +141,7 @@ Mappings:
       ZoneId3: apse2-az2
 
 Conditions:
-     DoProvisionSubnetsC: !Equals [!Ref ProvisionSubnetsC, "true"]
+     DoProvisionSubnetsC: !Equals [!Ref ProvisionSubnetsC, "True"]
 
 Resources:
 
