@@ -281,7 +281,7 @@ Resources:
                 DomainName: !Ref DomainName,
                 DelegationUser: !Ref DelegationUser,
                 ServiceAccountName: !Ref ServiceAccountName,
-                DC: !Join [",DC", !Split [".", !Ref DomainName ]],
+                DC: !Join [",DC=", !Split [".", !Ref DomainName ]],
                 OU: !Select [0, !Split ['.', !Ref DomainName ]]
                 }
 Outputs:
