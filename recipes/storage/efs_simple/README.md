@@ -14,7 +14,9 @@ Follow the instructions in the [Large-scale HPC Networking Setup](../../net/hpc_
 
 There is only one template in this recipe, whichj creates a simple EFS filesystem. 
 
-* Create an [EFS Filesystem](https://console.aws.amazon.com/cloudformation/home?region=us-east-2#/stacks/create/review?stackName=efs-simple&templateURL=https://aws-hpc-recipes.s3.us-east-1.amazonaws.com/main/recipes/storage/efs_simple/assets/main.yaml)
+* Create an [EFS Filesystem](https://console.aws.amazon.com/cloudformation/home?region=us-east-2#/stacks/create/review?stackName=efs-simple&templateURL=https://aws-hpc-recipes.s3.us-east-1.amazonaws.com/main/recipes/storage/efs_simple/assets/main.yaml).
+
+You will be asked to select subnets in which to create EFS mount targets. Choose either 3 (recommended) or 2 subnets. Then, choose the corresponding number of subnets in **SubnetCount**. It must match or the template may fail to launch. 
 
 ### Use with AWS ParallelCluster
 

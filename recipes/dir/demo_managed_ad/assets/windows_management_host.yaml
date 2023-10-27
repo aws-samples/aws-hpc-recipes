@@ -11,6 +11,7 @@ Metadata:
           - DnsIpAddress1
           - DnsIpAddress2
           - DelegationUser
+          - ServiceAccountName
           - DelegationPassword
       - Label:
           default: "Network Configuration"
@@ -37,6 +38,12 @@ Parameters:
     Type: String
     Default: corp.res.com
     AllowedPattern: ^([a-zA-Z0-9]+[\\.-])+([a-zA-Z0-9])+$
+
+  ServiceAccountName:
+    Description: Username for the Service Account
+    Type: String
+    MinLength: 4
+    Default: ServiceAccount
 
   DirectoryId:
     Description: ID for the AWS Managed Active Directory resource
@@ -252,13 +259,16 @@ Resources:
 
               # if the bootstrap script doesn't exist, retrieve it
               if(-not(Test-path "$dest_path" -PathType leaf)) {
-                  Get-S3Object -BucketName $bucket -KeyPrefix $prefix | Read-S3Object -Folder $folder
+                  Read-S3Object -BucketName $bucket -Key $prefix -File $dest_path
+                  $service_account_name = "${ServiceAccountName}"
+                  $ou = "${OU}"
+                  $dc = "${DC}"
+                  (Get-Content $dest_path).Replace('${!ServiceAccount}', $service_account_name).Replace('${!OU}', $ou).Replace('${!DC}', $dc) | Set-Content $dest_path
               }
 
               echo "Writing to: $runner_path for trampoline to $dest_path" 
               Set-Content -Path $runner_path -Value $runner_script
 
-              #$action = New-ScheduledTaskAction -Execute "powershell" -Argument "-executionpolicy bypass -file $runner_path `"$dest_path`""
               $action = New-ScheduledTaskAction -Execute "powershell" -Argument "-executionpolicy bypass -command `"$runner_path \`"$dest_path\`" 2>&1 > c:\temp\startup_task.log`""
               $trigger =  New-ScheduledTaskTrigger -AtStartup -RandomDelay 00:00:30
               # Set  the task to run as a local administrator with highest level privileges
@@ -269,7 +279,10 @@ Resources:
             - { PSS3Path: !Ref PSS3Path,
                 SecretArn: !Ref DelegationPasswordSecret,
                 DomainName: !Ref DomainName,
-                DelegationUser: !Ref DelegationUser
+                DelegationUser: !Ref DelegationUser,
+                ServiceAccountName: !Ref ServiceAccountName,
+                DC: !Join [",DC", !Split [".", !Ref DomainName ]],
+                OU: !Select [0, !Split ['.', !Ref DomainName ]]
                 }
 Outputs:
   ManagementHostId:

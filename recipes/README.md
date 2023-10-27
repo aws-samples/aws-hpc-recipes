@@ -161,6 +161,11 @@ You can use an HPC Recipe for AWS in several ways:
 * **About**: Provision an FSx for OpenZFS filesystem and relevant security groups for use with ParallelCluster
 * **Usage**: [README.md](storage/fsx_openzfs/README.md)
 
+#### mountpoint_s3 ![tag](https://img.shields.io/badge/-beta-%23800080) ![tag](https://img.shields.io/badge/-parallelcluster-%23FF9900) ![tag](https://img.shields.io/badge/-s3-%237DCEA0) 
+
+* **About**: Configure AWS ParallelCluster to mount S3 buckets to directories using mountpoint-s3
+* **Usage**: [README.md](storage/mountpoint_s3/README.md)
+
 #### s3_demo ![tag](https://img.shields.io/badge/-s3-%237DCEA0) 
 
 * **About**: Create an Amazon S3 bucket using CloudFormation.
