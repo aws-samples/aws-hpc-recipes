@@ -1,8 +1,8 @@
 Import-Module -Name ActiveDirectory
 
-$service_account_name = "ServiceAccount"
-$computers_ou = "OU=Users,OU=corp,DC=corp,DC=res,DC=com"
-$users_ou = "OU=Users,OU=corp,DC=corp,DC=res,DC=com"
+$service_account_name = "${ServiceAccount}"
+$computers_ou = "OU=Computers,OU=RES,OU=${OU},DC=${DC}"
+$users_ou = "OU=Users,OU=${OU},DC=${DC}"
 $computer_write_group = "RES Service Account"
 
 echo "Running script to add service account to write computers"
