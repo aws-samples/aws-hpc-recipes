@@ -127,6 +127,15 @@ Resources:
         - Key: "res:ModuleName"
           Value: virtual-desktop-controller
 
+  ACMCertificate:
+    Condition: GenerateCerts
+    Type: AWS::CertificateManager::Certificate
+    Properties:
+      DomainName: !Ref PortalDomainName
+      ValidationMethod: DNS
+      SubjectAlternativeNames:
+        - !Sub ["*.${PortalDomainName}", {PortalDomainName: !Ref PortalDomainName }]
+
 ##### Custom Operations
 
   EFSSecurityGroupRole:
@@ -267,6 +276,10 @@ Outputs:
   PrivateKeySecretArn:
     Description: ARN for a secret that contains the generated certificate private key.
     Value: !GetAtt [ Certs, Outputs.PrivateKeySecretArn ]
+    Condition: GenerateCerts
+  ACMCertificateARNforWebApp:
+    Description: ARN for an ACM Certificate that is generated for the PortalDomainName
+    Value: !Ref ACMCertificate
     Condition: GenerateCerts
   EnvironmentName:
     Description: Name of Research and Engineering Studio environment.
