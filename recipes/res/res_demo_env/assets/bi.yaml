@@ -401,8 +401,8 @@ Outputs:
     Value: !Sub
       - dc=${dc}
       - { dc: !Join [",dc=", !Split [".", !Ref DomainName ]] }
-  RootUserName:
-    Value: ServiceAccount
+  ServiceAccountUserName:
+    Value: Admin
   SharedHomeFilesystemId:
     Value: !GetAtt [ Storage, Outputs.EFSFilesystemId ]
   UsersOU:
