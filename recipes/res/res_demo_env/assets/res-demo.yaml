@@ -2,7 +2,7 @@ Description: A demo CloudFormation stack for setting up Research and Engineering
 
 Parameters:
   PortalDomainName:
-    Description: (Optional) Domain Name for web portal domain that lives in Route53 in account (may be different from the Active Directory domain). Used to generate certs, leave blank to skip certificate generation.
+    Description: Domain Name for web portal domain that lives in Route53 in account (may be different from the Active Directory domain). Used to generate certificates.
     Type: String
     AllowedPattern: ^([a-zA-Z0-9]+[\\.-])+([a-zA-Z0-9])+$
     Default: res.person.people.aws.dev
@@ -13,25 +13,9 @@ Parameters:
     Default: enguard
 
   EnvironmentName:
-    Description: (Optional) Provide name of the Environment, the name of the environment must start with "res-" and should be less than or equal to 10 characters. (required for generating certificates)
+    Description: Provide name of the Environment, the name of the environment must start with "res-" and should be less than or equal to 10 characters. (required for generating certificates)
     Type: String
     Default: res-demo
-
-  AdminPassword:
-    Description: Active Directory Administrator Account Password.
-    Type: String
-    MinLength: 8
-    MaxLength: 64
-    AllowedPattern: (?=^.{8,64}$)((?=.*\d)(?=.*[A-Z])(?=.*[a-z])|(?=.*\d)(?=.*[^A-Za-z0-9\s])(?=.*[a-z])|(?=.*[^A-Za-z0-9\s])(?=.*[A-Z])(?=.*[a-z])|(?=.*\d)(?=.*[A-Z])(?=.*[^A-Za-z0-9\s]))^.*
-    NoEcho: true
-  
-  ServiceAccountPassword:
-    Description: Active Directory Service Account Password.
-    Type: String
-    MinLength: 8
-    MaxLength: 65
-    AllowedPattern: (?=^.{8,64}$)((?=.*\d)(?=.*[A-Z])(?=.*[a-z])|(?=.*\d)(?=.*[^A-Za-z0-9\s])(?=.*[a-z])|(?=.*[^A-Za-z0-9\s])(?=.*[A-Z])(?=.*[a-z])|(?=.*\d)(?=.*[A-Z])(?=.*[^A-Za-z0-9\s]))^.*
-    NoEcho: true
 
   AdministratorEmail:
     Type: String
@@ -48,6 +32,36 @@ Conditions:
   UseEnvironmentName: !Not [!Equals [!Ref EnvironmentName, '']]
 
 Resources:
+  AdminPassword:
+    Type: AWS::SecretsManager::Secret
+    Properties:
+      Description: Active Directory Administrator Account Password.
+      Name: !Sub [ "res-AdminPassword-${StackName}-${StackId}", {StackName: !Select [1, !Split ['/', !Ref 'AWS::StackId']], StackId: !Select [2, !Split ['/', !Ref 'AWS::StackId']]}]
+      GenerateSecretString:
+        SecretStringTemplate: '{"username": "res-admin"}'
+        GenerateStringKey: "password"
+        ExcludeCharacters: '"@/\(){}[]`|;:~'
+      Tags:
+        - Key: res:Deployment
+          Value: "true"
+        - Key: res:EnvironmentName
+          Value: !Ref EnvironmentName
+  
+  ServiceAccountPassword:
+    Type: AWS::SecretsManager::Secret
+    Properties:
+      Description: Active Directory Service Account Password.
+      Name: !Sub [ "res-ServiceAccountPassword-${StackName}-${StackId}", {StackName: !Select [1, !Split ['/', !Ref 'AWS::StackId']], StackId: !Select [2, !Split ['/', !Ref 'AWS::StackId']]}]
+      GenerateSecretString:
+        SecretStringTemplate: '{"username": "res-service-account"}'
+        GenerateStringKey: "password"
+        ExcludeCharacters: '"@/\(){}[]`|;:~'
+      Tags:
+        - Key: res:Deployment
+          Value: "true"
+        - Key: res:EnvironmentName
+          Value: !Ref EnvironmentName
+  
   RESExternal:
     Type: AWS::CloudFormation::Stack
     Properties:
@@ -86,7 +100,7 @@ Resources:
         PrivateKeySecretARNforVDI: !GetAtt [ RESExternal, Outputs.PrivateKeySecretArn ]
         CertificateSecretARNforVDI: !GetAtt [ RESExternal, Outputs.CertificateSecretArn ]
         ServiceAccountUsername: Admin
-        ServiceAccountPassword: !Ref AdminPassword
+        ServiceAccountPassword: !Sub "{{resolve:secretsmanager:${AdminPassword}:SecretString:password}}"
         UsersOU: !GetAtt [ RESExternal, Outputs.UsersOU ]
         GroupsOU: !GetAtt [ RESExternal, Outputs.GroupsOU ]
         SudoersOU: !GetAtt [ RESExternal, Outputs.SudoersOU ]

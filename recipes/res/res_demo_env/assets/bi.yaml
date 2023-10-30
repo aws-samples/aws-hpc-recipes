@@ -26,18 +26,18 @@ Parameters:
     Type: String
     MaxLength: 10
   AdminPassword:
-    Description: Active Directory Administrator Account Password.
+    Description: Provide the Active Directory Administrator Account Password Directly or Resource ARN to Secret Containing Password.
     Type: String
     MinLength: 8
-    MaxLength: 64
-    AllowedPattern: (?=^.{8,64}$)((?=.*\d)(?=.*[A-Z])(?=.*[a-z])|(?=.*\d)(?=.*[^A-Za-z0-9\s])(?=.*[a-z])|(?=.*[^A-Za-z0-9\s])(?=.*[A-Z])(?=.*[a-z])|(?=.*\d)(?=.*[A-Z])(?=.*[^A-Za-z0-9\s]))^.*
+    MaxLength: 2048
+    AllowedPattern: (arn:(aws(-cn|-us-gov)?):secretsmanager:(us(-gov)?|ap|ca|cn|eu|sa)-(central|(north|south)?(east|west)?)-\d:\d{12}:secret:[a-zA-Z0-9/_+=.@-]+)|(?=^.{8,64}$)((?=.*\d)(?=.*[A-Z])(?=.*[a-z])|(?=.*\d)(?=.*[^A-Za-z0-9\s])(?=.*[a-z])|(?=.*[^A-Za-z0-9\s])(?=.*[A-Z])(?=.*[a-z])|(?=.*\d)(?=.*[A-Z])(?=.*[^A-Za-z0-9\s]))^.*
     NoEcho: true
   ServiceAccountPassword:
-    Description: Active Directory Service Account Password.
+    Description: Provide the Active Directory Service Account Password Directly or Resource ARN to Secret Containing Password.
     Type: String
     MinLength: 8
-    MaxLength: 65
-    AllowedPattern: (?=^.{8,64}$)((?=.*\d)(?=.*[A-Z])(?=.*[a-z])|(?=.*\d)(?=.*[^A-Za-z0-9\s])(?=.*[a-z])|(?=.*[^A-Za-z0-9\s])(?=.*[A-Z])(?=.*[a-z])|(?=.*\d)(?=.*[A-Z])(?=.*[^A-Za-z0-9\s]))^.*
+    MaxLength: 2048
+    AllowedPattern: (arn:(aws(-cn|-us-gov)?):secretsmanager:(us(-gov)?|ap|ca|cn|eu|sa)-(central|(north|south)?(east|west)?)-\d:\d{12}:secret:[a-zA-Z0-9/_+=.@-]+)|(?=^.{8,64}$)((?=.*\d)(?=.*[A-Z])(?=.*[a-z])|(?=.*\d)(?=.*[^A-Za-z0-9\s])(?=.*[a-z])|(?=.*[^A-Za-z0-9\s])(?=.*[A-Z])(?=.*[a-z])|(?=.*\d)(?=.*[A-Z])(?=.*[^A-Za-z0-9\s]))^.*
     NoEcho: true
   Keypair:
     Description: EC2 Keypair to access management instance.
@@ -72,8 +72,8 @@ Resources:
     Properties:
       Parameters:
         DomainName: !Ref DomainName
-        AdminPassword: !Ref AdminPassword
-        ServiceAccountPassword: !Ref ServiceAccountPassword
+        AdminPassword: !GetAtt PasswordResolver.AdminPassword
+        ServiceAccountPassword: !GetAtt PasswordResolver.ServiceAccountPassword
         ServiceAccountName: ServiceAccount
         LDIFS3Path: !Ref LDIFS3Path
         Keypair: !Ref Keypair
@@ -97,7 +97,7 @@ Resources:
       Parameters:
         DomainName: !Ref DomainName
         DelegationUser: Admin
-        DelegationPassword: !Ref AdminPassword
+        DelegationPassword: !GetAtt PasswordResolver.AdminPassword
         DirectoryId: !GetAtt [ DirectoryService, Outputs.DirectoryId ]
         DnsIpAddress1: !GetAtt [ DirectoryService, Outputs.DnsIpAddress1 ]
         DnsIpAddress2: !GetAtt [ DirectoryService, Outputs.DnsIpAddress2 ]
@@ -268,6 +268,94 @@ Resources:
       ServiceToken: !GetAtt EFSSecurityGroupLambda.Arn
       VpcId: !GetAtt [ Networking, Outputs.VPC ]
       EfsId: !GetAtt [ Storage, Outputs.EFSFilesystemId ]
+
+  PasswordResolverRole:
+    Type: AWS::IAM::Role
+    Properties:
+      AssumeRolePolicyDocument:
+        Version: 2012-10-17
+        Statement:
+          - Action:
+              - sts:AssumeRole
+            Effect: Allow
+            Principal:
+              Service:
+                - lambda.amazonaws.com
+      Policies:
+        - PolicyName: AdminServicePassword
+          PolicyDocument:
+            Version: 2012-10-17
+            Statement:
+              - Effect: Allow
+                Action:
+                  - secretsmanager:GetSecretValue
+                Resource: '*'
+                Condition:
+                  StringEquals:
+                    secretsmanager:ResourceTag/res:Deployment:
+                      - "true"
+
+  PasswordResolverLambda:
+    Type: AWS::Lambda::Function
+    Properties:
+      Description: !Sub "${AWS::StackName}: custom resource handler to resolve password config for Admin and Service Account."
+      Handler: index.handler
+      MemorySize: 128
+      Role: !GetAtt PasswordResolverRole.Arn
+      Runtime: python3.9
+      Timeout: 300
+      TracingConfig:
+        Mode: Active
+      Code:
+        ZipFile: |
+          import re
+          import time
+          import json
+          import cfnresponse
+          import boto3
+          import random
+          import string
+          secrets = boto3.client("secretsmanager")
+
+          def create_physical_resource_id():
+              alnum = string.ascii_uppercase + string.ascii_lowercase + string.digits
+              return ''.join(random.choice(alnum) for _ in range(16))
+          
+          def handler(event, context):
+              admin_password = event['ResourceProperties']['AdminPassword']
+              service_account_password = event['ResourceProperties']['ServiceAccountPassword']
+
+              response_data = {}
+              reason = None
+              response_status = cfnresponse.SUCCESS
+
+              if event['RequestType'] == 'Create':
+                  try:
+                    response_data['Message'] = 'Resource creation successful!'
+                    physical_resource_id = create_physical_resource_id()
+
+                    secretsmanager_arn_regex_pattern = r"(arn:(aws(-cn|-us-gov)?):secretsmanager:(us(-gov)?|ap|ca|cn|eu|sa)-(central|(north|south)?(east|west)?)-\d:\d{12}:secret:[a-zA-Z0-9/_+=.@-]+)"
+                    admin_arn_match = re.search(secretsmanager_arn_regex_pattern, admin_password)
+                    service_account_arn_match = re.search(secretsmanager_arn_regex_pattern, service_account_password)
+
+                    resolved_admin_password = json.loads(secrets.get_secret_value(SecretId=admin_password)['SecretString'])["password"] if admin_arn_match else admin_password
+                    resolved_service_account_password = json.loads(secrets.get_secret_value(SecretId=service_account_password)['SecretString'])["password"] if service_account_arn_match else service_account_password
+
+                    # provide outputs
+                    response_data['AdminPassword'] = resolved_admin_password
+                    response_data['ServiceAccountPassword'] = resolved_service_account_password
+                  except:
+                    response_status = cfnresponse.FAILED
+              else:
+                  physical_resource_id = event['PhysicalResourceId']
+              cfnresponse.send(event, context, response_status, response_data, physical_resource_id, reason)
+
+  PasswordResolver:
+    Type: Custom::PasswordResolverLambda
+    Properties:
+      ServiceToken: !GetAtt PasswordResolverLambda.Arn
+      AdminPassword: !Ref AdminPassword
+      ServiceAccountPassword: !Ref ServiceAccountPassword
 
 Outputs:
   VpcId:
