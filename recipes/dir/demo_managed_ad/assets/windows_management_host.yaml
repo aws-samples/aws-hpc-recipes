@@ -19,6 +19,7 @@ Metadata:
           - VpcId
           - Subnet
           - ClientIpCidr
+          - ClientPrefixList
       - Label:
           default: "Host Configuration"
         Parameters:
@@ -94,9 +95,19 @@ Parameters:
     AllowedPattern: (\d{1,3})\.(\d{1,3})\.(\d{1,3})\.(\d{1,3})/(\d{1,2})
     ConstraintDescription: ClientIP must be a valid IP or network range of the form x.x.x.x/x. specify your IP/NETMASK (e.g x.x.x/32 or x.x.x.x/24 for subnet range)
 
+  ClientPrefixList:
+    Description: Prefix list IDs for incoming traffic for the management instance.
+    Default: ""
+    Type: String,
+    AllowedPattern: ^(pl-[a-z0-9]{8})?$
+    ConstraintDescription: Must be valid prefix lists, separated by commas, with no additional whitespace.
+
   InstanceType:
     Type: String
     Default: t2.xlarge
+
+Conditions:
+  AddPrefixList: !Not [!Equals [!Ref ClientPrefixList, '']]
 
 Resources:
   InstanceRole:
@@ -187,6 +198,15 @@ Resources:
           IpProtocol: tcp
           FromPort: 3389
           ToPort: 3389
+
+  InstanceSecurityGroupIngressPrefixList:
+    Condition: AddPrefixList
+    Type: AWS::EC2::SecurityGroupIngress
+    Properties:
+      FromPort: 3389
+      ToPort: 3389
+      GroupId: !GetAtt InstanceSecurityGroup.GroupId
+      SourcePrefixListId: !Ref ClientPrefixList
 
   Instance:
     Type: AWS::EC2::Instance
