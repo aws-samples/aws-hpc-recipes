@@ -100,7 +100,7 @@ Parameters:
     Default: ""
     Type: String
     AllowedPattern: ^(pl-[a-z0-9]{8,20})?$
-    ConstraintDescription: Must be a valid prefix list ID, which beings with pl-.
+    ConstraintDescription: Must be a valid prefix list ID, which begins with pl-.
 
   InstanceType:
     Type: String
