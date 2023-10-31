@@ -55,9 +55,19 @@ This is a small tutorial for managing Active Directory (AD) users and groups.
 - [Learn how to manage Users and Groups](users_and_groups.md)
 - The Managed AD had further instructions [here](../../../dir/demo_managed_ad/README.md)
 
-## Some common issues with the `bi.yaml` template
+## Some common issues and debugging techniques with the `bi.yaml` template
 
 These are some of the common issues when using the `bi.yaml` template.
+
+## The console log files
+
+The log files to examine in the instances will be:
+ - `/var/log/user-data.log`
+ - `/var/log/cfn-init-cmd.log`
+ - `/var/log/cfn-init.log`
+ - `/var/log/cfn-wire.log`
+
+ For further information, see the [CloudFormation Logs](https://aws.amazon.com/blogs/devops/view-cloudformation-logs-in-the-console/) post.
 
 ### Poor AD passwords
 
