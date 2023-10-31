@@ -104,7 +104,7 @@ Parameters:
 
   InstanceType:
     Type: String
-    Default: t2.xlarge
+    Default: t3.xlarge
 
 Conditions:
   AddPrefixList: !Not [!Equals [!Ref ClientPrefixList, '']]
