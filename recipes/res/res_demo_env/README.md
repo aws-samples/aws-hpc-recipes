@@ -6,7 +6,9 @@ Demonstration environment for RES on AWS. This recipe will create a number of ex
 
 ## Usage
 
-1. Launch the template: [![Launch stack](../../../docs/media/launch-stack.svg)](https://console.aws.amazon.com/cloudformation/home?region=us-east-1#/stacks/create/review?stackName=res-bi&templateURL=https://aws-hpc-recipes-dev.s3.us-east-1.amazonaws.com/res/recipes/res/res_demo_env/assets/bi.yaml)
+Launch the template: [![Launch stack](../../../docs/media/launch-stack.svg)](https://console.aws.amazon.com/cloudformation/home?region=us-east-1#/stacks/create/review?stackName=res-bi&templateURL=https://aws-hpc-recipes-dev.s3.us-east-1.amazonaws.com/res/recipes/res/res_demo_env/assets/bi.yaml)
+
+More usage and features can be found in [docs](docs/README.md).
 
 ### Parameters (Inputs)
 
