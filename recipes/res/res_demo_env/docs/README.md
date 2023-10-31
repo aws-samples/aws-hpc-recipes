@@ -20,6 +20,34 @@ The resources that the `bi.yaml` template creates are:
 
 In order to launch an entire cloud stack for a RES environment you can [launch a full RES stack](full_stack_usage.md). This will launch a cloud stack that includes the "Batteries Included" (`bi.yaml`) script then it automatically uses those outputs to install the Research And Engineering Studio (`ResearchAndEngineeringStudio.json`) template. 
 
+There are a number of RES template stack inputs that can be taken right from the `bi.yaml` root stack Outputs:
+ - EnvironmentName
+ - ActiveDirectoryName
+ - ADShortName
+ - LDAPBase
+ - LDAPConnectionURI
+ - UsersOU
+ - GroupsOU
+ - SudoersOU
+ - SudoersGroupName
+ - ComputersOU
+ - SharedHomeFilesystemId
+ - ACMCertificateARNforWebApp
+ - CertificateSecretARNforVDI
+ - PrivateKeySecretARNforVDI
+
+The pull down input parameters are:
+ - VpcId
+ - PrivateSubnets
+ - PublicSubnets
+
+These become automatically populated in the drop downs.
+
+These input parameters have to be manually added:
+ - ServiceAccountUsername: for a `bi.yaml` created environment this will be `admin`
+ - CustomDomainNameforWebApp: this comes from Route53's subdomains such as `web.person.people.aws.dev`
+ - CustomDomainNameforVDI: this comes from Route53's subdomains such as `vdc.person.people.aws.dev`
+
 ## Learn how to manage Users and Groups
 
 This is a small tutorial for managing Active Directory (AD) users and groups. 
@@ -27,3 +55,10 @@ This is a small tutorial for managing Active Directory (AD) users and groups.
 - [Learn how to manage Users and Groups](users_and_groups.md)
 - The Managed AD had further instructions [here](../../../dir/demo_managed_ad/README.md)
 
+## Some common issues with the `bi.yaml` template
+
+These are some of the common issues when using the `bi.yaml` template.
+
+### Poor AD passwords
+
+The passwords must meet password complexity requirements from the default AD [policy](https://learn.microsoft.com/en-us/windows/security/threat-protection/security-policy-settings/password-must-meet-complexity-requirements).
