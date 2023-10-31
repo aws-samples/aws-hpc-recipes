@@ -48,16 +48,16 @@ Parameters:
     Default: aws-hpc-recipes-dev/res/recipes/res/res_demo_env/assets/res.ldif
   ClientIpCidr:
     Description: CIDR for incoming RDP traffic for management instance.
-    Default: 127.0.0.1/32
+    Default: ""
     Type: String
-    AllowedPattern: (\d{1,3})\.(\d{1,3})\.(\d{1,3})\.(\d{1,3})/(\d{1,2})
+    AllowedPattern: ^((\d{1,3})\.(\d{1,3})\.(\d{1,3})\.(\d{1,3})/(\d{1,2}))?$
     ConstraintDescription: ClientIP must be a valid IP or network range of the form x.x.x.x/x. specify your IP/NETMASK (e.g x.x.x/32 or x.x.x.x/24 for subnet range)
   ClientPrefixList:
     Description: Prefix list ID for incoming traffic for the management instance.
     Default: ""
-    Type: String,
-    AllowedPattern: ^(pl-[a-z0-9]{8})?$
-    ConstraintDescription: Must be valid prefix lists, separated by commas, with no additional whitespace.
+    Type: String
+    AllowedPattern: ^(pl-[a-z0-9]{8,20})?$
+    ConstraintDescription: Must be a valid prefix list ID, which beings with pl-.
 
 Conditions:
   GenerateCerts: !Not [!Equals [!Ref PortalDomainName, '']]
