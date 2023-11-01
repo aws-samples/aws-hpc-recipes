@@ -82,10 +82,10 @@ Resources:
         CustomDomainNameforWebApp: !Sub
           - web.${PortalDomainName}
           - { PortalDomainName: !Ref PortalDomainName}
-        ACMCertificateARNforWebApp: ''
+        ACMCertificateARNforWebApp: !GetAtt [ RESExternal, Outputs.ACMCertificateARNforWebApp ]
         PrivateKeySecretARNforVDI: !GetAtt [ RESExternal, Outputs.PrivateKeySecretArn ]
         CertificateSecretARNforVDI: !GetAtt [ RESExternal, Outputs.CertificateSecretArn ]
-        ServiceAccountUsername: Admin
+        ServiceAccountUserName: !GetAtt [ RESExternal, Outputs.ServiceAccountUserName ]
         ServiceAccountPassword: !Ref AdminPassword
         UsersOU: !GetAtt [ RESExternal, Outputs.UsersOU ]
         GroupsOU: !GetAtt [ RESExternal, Outputs.GroupsOU ]
