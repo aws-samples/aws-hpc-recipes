@@ -13,12 +13,13 @@ Parameters:
     Default: enguard
 
   EnvironmentName:
-    Description: Provide name of the RES Environment. It must start with "res-", may not contain "aws", and entire name must be less than or equal to 10 characters (lowercase, numbers, hypens are permitted). Required to generate certificates and create RES stack.
+    Description: Provide name of the RES Environment. Required to generate certificates and create RES stack.
     Type: String
     Default: res-demo
     MinLength: 5
     MaxLength: 10
     AllowedPattern: ^(?!.*aws)res-[a-z0-9-]{1,6}$
+    ConstraintDescription: EnvironmentName must start with "res-", cannot contain "aws", and entire name must be less than or equal to 10 characters (lowercase, numbers, hypens are permitted).
 
   AdministratorEmail:
     Type: String
