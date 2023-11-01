@@ -13,13 +13,17 @@ Parameters:
     Default: enguard
 
   EnvironmentName:
-    Description: Provide name of the Environment, the name of the environment must start with "res-" and should be less than or equal to 10 characters. (required for generating certificates)
+    Description: Provide name of the RES Environment. It must start with "res-", may not contain "aws", and entire name must be less than or equal to 10 characters (lowercase, numbers, hypens are permitted). Required to generate certificates and create RES stack.
     Type: String
     Default: res-demo
+    MinLength: 5
+    MaxLength: 10
+    AllowedPattern: ^(?!.*aws)res-[a-z0-9-]{1,6}$
 
   AdministratorEmail:
     Type: String
     Default: person@amazon.com
+    AllowedPattern: ^[a-zA-Z0-9._%+-]+@[a-zA-Z0-9.-]+\.[a-zA-Z]{2,}$
 
   ClientIpCidr:
     Description: CIDR for incoming RDP traffic for management instance.
@@ -40,7 +44,7 @@ Resources:
       GenerateSecretString:
         SecretStringTemplate: '{"username": "res-admin"}'
         GenerateStringKey: "password"
-        ExcludeCharacters: '"@/\(){}[]`|;:~'
+        ExcludeCharacters: '"@/\(){}[]`|;:~#'
       Tags:
         - Key: res:Deployment
           Value: "true"
@@ -55,7 +59,7 @@ Resources:
       GenerateSecretString:
         SecretStringTemplate: '{"username": "res-service-account"}'
         GenerateStringKey: "password"
-        ExcludeCharacters: '"@/\(){}[]`|;:~'
+        ExcludeCharacters: '"@/\(){}[]`|;:~#'
       Tags:
         - Key: res:Deployment
           Value: "true"
