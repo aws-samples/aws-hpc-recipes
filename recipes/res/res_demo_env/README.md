@@ -24,7 +24,7 @@ As parameters to the automated stack:
 * `ClientIpCidr` - This should be the IP address that you will be accessing the site from. For instance, navigate to whatsmyip.org, select your IP address and use `[IPADDRESS]/32` to only allow access from your host.
 * `EnvironmentName` - If the PortalDomainName is provided, this name is used to add tags to the secrets that are generated so that they can be used within the environment. This will need to match the EnvironmentName parameter that is used when creating the RES stack later.
 * `PortalDomainName` - This is the value of a domain that exists in Route53 on the account. If this is provided, then a public certificate (and key file) will be generated and uploaded to Secrets Manager. If you have your own domain and certificates, this parameter (and the EnvironmentName) can be left blank.
-* `ClientPrefixList` - A prefix list that will be used to provide access to the AD management nodes.
+* `ClientPrefixList` - A prefix list that will be used to provide access to the AD management nodes. (This resource type can be managed in https://console.aws.amazon.com/vpcconsole/home#ManagedPrefixLists)
 
 ### Outputs
 
