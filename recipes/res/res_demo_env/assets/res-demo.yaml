@@ -111,3 +111,97 @@ Resources:
         ComputersOU: !GetAtt [ RESExternal, Outputs.ComputersOU ]
         SharedHomeFileSystemId: !GetAtt [ RESExternal, Outputs.SharedHomeFilesystemId ]
       TemplateURL: https://research-engineering-studio-us-east-1.s3.amazonaws.com/releases/2023.10b1/ResearchAndEngineeringStudio.template.json
+  LoadBalancerLookupFunction:
+    Type: AWS::Lambda::Function
+    Properties:
+      Handler: index.handler
+      Runtime: python3.11
+      Timeout: 10
+      Code:
+        ZipFile: |
+          import cfnresponse
+          import boto3
+          
+          client = boto3.client("dynamodb")
+          
+          def handler(event, context):
+            try:
+              if event.get("RequestType") != "Create":
+                cfnresponse.send(event, context, cfnresponse.SUCCESS, {})
+                return
+            
+              table_name = event["ResourceProperties"]["TableName"]
+            
+              alb_dns_name = client.get_item(
+                TableName=table_name,
+                Key={"key": {"S": "cluster.load_balancers.external_alb.load_balancer_dns_name"}},
+              )
+              
+              nlb_dns_name = client.get_item(
+                TableName=table_name,
+                Key={"key": {"S": "vdc.external_nlb.load_balancer_dns_name"}},
+              )
+              
+              response = {
+                "ALBDNSName": alb_dns_name["Item"]["value"]["S"],
+                "NLBDNSName": nlb_dns_name["Item"]["value"]["S"],
+              }
+              
+              cfnresponse.send(event, context, cfnresponse.SUCCESS, response)
+            except Exception as e:
+              cfnresponse.send(event, context, cfnresponse.FAILED, {"error": str(e)})
+      Role:
+        !GetAtt LoadBalancerLookupRole.Arn
+
+  LoadBalancerLookupResource:
+    Type: Custom::LoadBalancerLookup
+    DependsOn: RES
+    Properties:
+      ServiceToken: !GetAtt LoadBalancerLookupFunction.Arn
+      TableName: !Sub ${EnvironmentName}.cluster-settings
+
+  LoadBalancerLookupRole:
+    Type: AWS::IAM::Role
+    Properties:
+      AssumeRolePolicyDocument:
+        Version: "2012-10-17"
+        Statement:
+          - Effect: Allow
+            Principal:
+              Service:
+                - lambda.amazonaws.com
+            Action:
+              - "sts:AssumeRole"
+      Policies:
+        - PolicyName: LoadBalancerLookupRolePolicy
+          PolicyDocument:
+            Version: "2012-10-17"
+            Statement:
+              - Effect: Allow
+                Action:
+                  - "logs:CreateLogGroup"
+                  - "logs:CreateLogStream"
+                  - "logs:PutLogEvents"
+                Resource: !Sub arn:aws:logs:${AWS::Region}:${AWS::AccountId}:*
+              - Effect: Allow
+                Action:
+                  - "dynamodb:GetItem"
+                Resource: !Sub arn:aws:dynamodb:${AWS::Region}:${AWS::AccountId}:table/${EnvironmentName}.cluster-settings
+  RESWebAliasRecord:
+    Type: AWS::Route53::RecordSet
+    Properties:
+      HostedZoneName: !Sub ${PortalDomainName}.
+      Name: !Sub web.${PortalDomainName}.
+      Type: CNAME
+      TTL: 300
+      ResourceRecords:
+        - !GetAtt LoadBalancerLookupResource.ALBDNSName
+  RESVDIAliasRecord:
+    Type: AWS::Route53::RecordSet
+    Properties:
+      HostedZoneName: !Sub ${PortalDomainName}.
+      Name: !Sub vdi.${PortalDomainName}.
+      Type: CNAME
+      TTL: 300
+      ResourceRecords:
+        - !GetAtt LoadBalancerLookupResource.NLBDNSName
