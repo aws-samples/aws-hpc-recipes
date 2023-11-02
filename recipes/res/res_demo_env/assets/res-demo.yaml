@@ -103,7 +103,7 @@ Resources:
         ACMCertificateARNforWebApp: !GetAtt [ RESExternal, Outputs.ACMCertificateARNforWebApp ]
         PrivateKeySecretARNforVDI: !GetAtt [ RESExternal, Outputs.PrivateKeySecretArn ]
         CertificateSecretARNforVDI: !GetAtt [ RESExternal, Outputs.CertificateSecretArn ]
-        ServiceAccountUserName: !GetAtt [ RESExternal, Outputs.ServiceAccountUserName ]
+        ServiceAccountUsername: !GetAtt [ RESExternal, Outputs.ServiceAccountUsername ]
         ServiceAccountPassword: !Sub "{{resolve:secretsmanager:${AdminPassword}:SecretString:password}}"
         UsersOU: !GetAtt [ RESExternal, Outputs.UsersOU ]
         GroupsOU: !GetAtt [ RESExternal, Outputs.GroupsOU ]
