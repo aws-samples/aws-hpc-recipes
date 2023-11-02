@@ -53,6 +53,9 @@ Resources:
     DeletionPolicy: Delete
     UpdateReplacePolicy: Delete
     Properties:
+      FileSystemTags:
+        - Key: Name
+          Value: !Sub "${AWS::StackName}-efs"
       FileSystemPolicy:
         Version: 2012-10-17
         Id: efs-prevent-anonymous-access-policy
@@ -70,7 +73,7 @@ Resources:
                 'elasticfilesystem:AccessedViaMountTarget': 'true'
       BackupPolicy: 
         Status: !Ref AutomaticBackups
-      Encrypted: false
+      Encrypted: true
       ThroughputMode: elastic
 
   # Security group
@@ -78,6 +81,7 @@ Resources:
     Type: AWS::EC2::SecurityGroup
     Properties: 
       GroupDescription: Allow Cross Traffic from VPC to EFS
+      GroupName: !Sub '${AWS::StackName}-efs-security-group'
       VpcId: !Ref VpcId
       SecurityGroupEgress:
         - CidrIp: 0.0.0.0/0
@@ -87,6 +91,7 @@ Resources:
   # Clients join this group for access to the EFS file system
   EfsClientSecurityGroup:
     Type: AWS::EC2::SecurityGroup
+    GroupName: !Sub '${AWS::StackName}-efs-client-security-group'
     Properties:
       GroupDescription: Allow traffic to/from EFS from clients
       VpcId: !Ref VpcId
