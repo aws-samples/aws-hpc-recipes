@@ -44,7 +44,7 @@ The pull down input parameters are:
 These become automatically populated in the drop downs.
 
 These input parameters have to be manually added:
- - ServiceAccountUserName: for a `bi.yaml` created environment this will be `Admin`
+ - ServiceAccountUsername: for a `bi.yaml` created environment this will be `Admin`
  - CustomDomainNameforWebApp: this comes from Route53's subdomains such as `web.person.people.aws.dev`
  - CustomDomainNameforVDI: this comes from Route53's subdomains such as `vdc.person.people.aws.dev`
 
