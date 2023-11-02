@@ -72,3 +72,7 @@ The log files to examine in the instances will be:
 ### Poor AD passwords
 
 The passwords must meet password complexity requirements from the default AD [policy](https://learn.microsoft.com/en-us/windows/security/threat-protection/security-policy-settings/password-must-meet-complexity-requirements).
+
+### ACMCertificate stays In Progress
+
+It is possible that the certificate system needs a manual step to complete the full cloud stack. If the "ACMCertificate" resource stays in `CREATE_IN_PROGRESS` mode for more than fifteen minutes you might need to follow these [steps](finalize_certs.md).

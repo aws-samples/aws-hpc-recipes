@@ -1,6 +1,6 @@
 # Using the combination template
 
-The bi-res-demo.yaml file combines the cloud resources (aka Batteries Included) template and the RES installation template (ResearchAndEngineeringStudio.template.json). This combination template offers a few advantages:
+The [res-demo.yaml](../assets/res-demo.yaml) template combines the cloud resources (aka Batteries Included) template and the RES installation template. This combination template offers a few advantages:
 
 1. A single cloud stack helps building and tearing down the environment
 2. Fewer input parameters
@@ -21,12 +21,12 @@ The Keypair must be created in [EC2](https://console.aws.amazon.com/ec2#KeyPairs
 
 The passwords must meet password complexity requirements from the default AD [policy](https://learn.microsoft.com/en-us/windows/security/threat-protection/security-policy-settings/password-must-meet-complexity-requirements).
 
-For the IP CIDR, it is recommend to restrict the UI with your own IP/subnet (x.x.x.x/32 for your own ip or x.x.x.x/24 for range. Replace x.x.x.x with your own PUBLIC IP. You can get your public IP using tools such as https://ifconfig.co/).
+For the IP CIDR, it is recommend to restrict the UI with your own IP/subnet (`x.x.x.x/321` for your own ip or `x.x.x.x/24` for range. Replace `x.x.x.x` with your own PUBLIC IP. You can get your public IP using tools such as https://ifconfig.co/).
 
-![image](image_resdemo.png)
+![image](./binary/image_resdemo.png)
 
 Once the stack is finished the admin email should receive a message with a temporary password.
 
 For Example:
 
-![image](image_email.png)
+![image](./binary/image_email.png)

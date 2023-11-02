@@ -34,7 +34,7 @@ Finally, the users `admin1` and `admin2` will be given `sudo` access across all 
 
 The passwords for these users need to be set in the [DirectoryServices console](https://console.aws.amazon.com/directoryservicev2/home). Select the directory that was created as a part of the stack and select **Reset user password** from the **Actions** menu.
 
-![image](dirserv_reset.png)
+![image](./binary/dirserv_reset.png)
 
-![image](reset_user_password.png)
+![image](./binary/reset_user_password.png)
 
