@@ -144,8 +144,108 @@ Resources:
       ValidationMethod: DNS
       SubjectAlternativeNames:
         - !Sub ["*.${PortalDomainName}", {PortalDomainName: !Ref PortalDomainName }]
+      DomainValidationOptions:
+      - DomainName: !Ref PortalDomainName
+        HostedZoneId: !GetAtt HostedZoneResolver.HostedZoneId
 
 ##### Custom Operations
+
+  HostedZoneResolverRole:
+    Type: AWS::IAM::Role
+    Condition: GenerateCerts
+    Properties:
+      AssumeRolePolicyDocument:
+        Version: 2012-10-17
+        Statement:
+          - Action:
+              - sts:AssumeRole
+            Effect: Allow
+            Principal:
+              Service:
+                - lambda.amazonaws.com
+      Policies:
+        - PolicyName: LogOutput
+          PolicyDocument:
+            Version: 2012-10-17
+            Statement:
+              - Action:
+                - logs:CreateLogGroup
+                - logs:CreateLogStream
+                - logs:PutLogEvents
+                Effect: Allow
+                # Resource: !Sub arn:${AWS::Partition}:logs:${AWS::Region}:${AWS::AccountId}:log-group:/aws/lambda/${AWS::StackName}-Prep:*
+                Resource: '*'
+        - PolicyName: ListHostedZones
+          PolicyDocument:
+            Version: 2012-10-17
+            Statement:
+              - Effect: Allow
+                Action:
+                  - route53:ListHostedZones
+                Resource: '*'
+
+  HostedZoneResolverLambda:
+    Type: AWS::Lambda::Function
+    Condition: GenerateCerts
+    Properties:
+      Description: !Sub "${AWS::StackName}: custom resource handler to resolve hosted zones."
+      Handler: index.handler
+      MemorySize: 128
+      Role: !GetAtt HostedZoneResolverRole.Arn
+      Runtime: python3.9
+      Timeout: 300
+      TracingConfig:
+        Mode: Active
+      Code:
+        ZipFile: |
+          import cfnresponse
+          import boto3
+          import logging
+          import random
+          import string
+          import re
+          logger = logging.getLogger()
+          logger.setLevel(logging.INFO)
+          route53 = boto3.client("route53")
+
+          def create_physical_resource_id():
+              alnum = string.ascii_uppercase + string.ascii_lowercase + string.digits
+              return ''.join(random.choice(alnum) for _ in range(16))
+
+          def handler(event, context):
+            try:
+                print(event)
+                print( 'boto version {}'.format(boto3.__version__))
+
+                portal_domain_name = event['ResourceProperties']['PortalDomainName']
+
+                response_data = {}
+                reason = None
+                response_status = cfnresponse.SUCCESS
+
+                if event['RequestType'] == 'Create':
+                    response_data['Message'] = 'Resource creation successful!'
+                    physical_resource_id = create_physical_resource_id()
+
+                    # use route53 to find the right hosted zone
+                    zone_data = route53.list_hosted_zones()
+                    zones = filter(lambda x: f"{portal_domain_name}.".endswith(x['Name']), zone_data['HostedZones'])
+                    for zone in zones:
+                      zone_id = re.match(r'\/hostedzone\/(.*)', zone['Id']).groups(0)[0]
+                      logger.info(f"hosted zone = {zone} for portal_domain_name {portal_domain_name} with zone_id {zone_id}")
+                      response_data['HostedZoneId'] = zone_id
+                else:
+                    physical_resource_id = event['PhysicalResourceId']
+                cfnresponse.send(event, context, response_status, response_data, physical_resource_id, reason)
+            except Exception as e:
+              cfnresponse.send(event, context, cfnresponse.FAILED, {"error": str(e)})
+
+  HostedZoneResolver:
+    Type: Custom::HostedZoneResolver
+    Condition: GenerateCerts
+    Properties:
+      ServiceToken: !GetAtt HostedZoneResolverLambda.Arn
+      PortalDomainName: !Ref PortalDomainName
 
   EFSSecurityGroupRole:
     Type: AWS::IAM::Role
