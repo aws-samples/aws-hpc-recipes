@@ -13,8 +13,8 @@ Metadata:
           - LDIFS3Path
 
 Parameters:
-  DomainName:
-    Description: Active Directory Domain Name. The supplied LDIF file which provides bootstrap users uses this domain. A different LDIF file needs to be provided for a different domain.
+  RootDomainName:
+    Description: Active Directory Domain Name will be a subdomain of the provided RootDomainName, prefixed with either 'classic', 'gov', or 'china'. The supplied LDIF file which provides bootstrap users uses this domain. A different LDIF file needs to be provided for a different domain.
     Type: String
     Default: corp.res.com
     AllowedPattern: ^([a-zA-Z0-9]+[\\.-])+([a-zA-Z0-9])+$
@@ -65,6 +65,15 @@ Conditions:
   GenerateCerts: !Not [!Equals [!Ref PortalDomainName, '']]
   UseEnvironmentName: !Not [!Equals [!Ref EnvironmentName, '']]
 
+Mappings:
+  DomainNameMap:
+    aws:
+      Domain: 'classic'
+    aws-us-gov:
+      Domain: 'gov'
+    aws-cn:
+      Domain: 'china'
+
 Resources:
 
 ##### Nested stacks
@@ -73,7 +82,8 @@ Resources:
     Type: AWS::CloudFormation::Stack
     Properties:
       Parameters:
-        DomainName: !Ref DomainName
+        RootDomainName: !Ref RootDomainName
+        DomainName: !Join [ '', [!FindInMap [DomainNameMap, !Ref 'AWS::Partition', Domain], '.', !Ref RootDomainName]]
         AdminPassword: !GetAtt PasswordResolver.AdminPassword
         ServiceAccountPassword: !GetAtt PasswordResolver.ServiceAccountPassword
         ServiceAccountName: ServiceAccount
@@ -84,20 +94,20 @@ Resources:
         Vpc: !GetAtt [ Networking, Outputs.VPC ]
         PrivateSubnetOne: {"Fn::Select": [0, { "Fn::Split" : [",", !GetAtt [ Networking, Outputs.PrivateSubnets ]] }]}
         PrivateSubnetTwo: {"Fn::Select": [1, { "Fn::Split" : [",", !GetAtt [ Networking, Outputs.PrivateSubnets ]] }]}
-      TemplateURL: https://aws-hpc-recipes.s3.us-east-1.amazonaws.com/main/recipes/dir/demo_managed_ad/assets/main.yaml
+      TemplateURL: https://ingeniotemplates.s3.us-east-2.amazonaws.com/directory.yaml
 
   Networking:
     Type: AWS::CloudFormation::Stack
     Properties:
       Parameters:
         ProvisionSubnetsC: "False"
-      TemplateURL: https://aws-hpc-recipes.s3.us-east-1.amazonaws.com/main/recipes/net/hpc_large_scale/assets/main.yaml
+      TemplateURL: https://ingeniotemplates.s3.us-east-2.amazonaws.com/networking.yaml
 
   WindowsManagementHost:
     Type: AWS::CloudFormation::Stack
     Properties:
       Parameters:
-        DomainName: !Ref DomainName
+        DomainName: !Join [ '', [!FindInMap [DomainNameMap, !Ref 'AWS::Partition', Domain], '.', !Ref RootDomainName]]
         DelegationUser: Admin
         DelegationPassword: !GetAtt PasswordResolver.AdminPassword
         DirectoryId: !GetAtt [ DirectoryService, Outputs.DirectoryId ]
@@ -126,7 +136,7 @@ Resources:
     Properties:
       Parameters:
         SubnetId: {"Fn::Select": [0, { "Fn::Split" : [",", !GetAtt [ Networking, Outputs.PrivateSubnets ]] }]}
-        DomainName: !Ref PortalDomainName
+        DomainName: !Join [ '', [!FindInMap [DomainNameMap, !Ref 'AWS::Partition', Domain], '.', !Ref RootDomainName]]
       TemplateURL: https://aws-hpc-recipes.s3.us-east-1.amazonaws.com/main/recipes/security/public_certs/assets/main.yaml
       Tags:
         - Key: "res:EnvironmentName"
@@ -140,7 +150,7 @@ Resources:
     Condition: GenerateCerts
     Type: AWS::CertificateManager::Certificate
     Properties:
-      DomainName: !Ref PortalDomainName
+      DomainName: !Join [ '', [!FindInMap [DomainNameMap, !Ref 'AWS::Partition', Domain], '.', !Ref RootDomainName]]
       ValidationMethod: DNS
       SubjectAlternativeNames:
         - !Sub ["*.${PortalDomainName}", {PortalDomainName: !Ref PortalDomainName }]
@@ -387,20 +397,20 @@ Outputs:
     Value: !Ref Keypair
   ActiveDirectoryName:
     Description: Fully Qualified Domain Name (FQDN) for your Active Directory
-    Value: !Ref DomainName
+    Value: !Join [ '', [!FindInMap [DomainNameMap, !Ref 'AWS::Partition', Domain], '.', !Ref RootDomainName]]
   ADShortName:
     Description: Please provide the short name in Active directory
     Value: !GetAtt [ DirectoryService, Outputs.DomainShortName ]
   LDAPConnectionURI:
     Value: !Sub
       - ldap://${DomainName}
-      - { DomainName: !Ref DomainName }
+      - { DomainName: !Join [ '', [!FindInMap [DomainNameMap, !Ref 'AWS::Partition', Domain], '.', !Ref RootDomainName]] }
   SudoersGroupName:
     Value: RESAdministrators
   LDAPBase:
     Value: !Sub
       - dc=${dc}
-      - { dc: !Join [",dc=", !Split [".", !Ref DomainName ]] }
+      - { dc: !Join [",dc=", !Split [".", !Join [ '', [!FindInMap [DomainNameMap, !Ref 'AWS::Partition', Domain], '.', !Ref RootDomainName]] ]] }
   ServiceAccountUsername:
     Value: Admin
   SharedHomeFilesystemId:
@@ -409,20 +419,20 @@ Outputs:
     Description: The OU for all users who might join the system. The value provided here is based off of a supplied LDIF file.
     Value: !Sub
       - OU=Users,OU=RES,OU=${ou},DC=${dc}
-      - { dc: !Join [",DC=", !Split [".", !Ref DomainName ]], ou:  !GetAtt [ DirectoryService, Outputs.DomainShortName ]}
+      - { dc: !Join [",DC=", !Split [".", !Join [ '', [!FindInMap [DomainNameMap, !Ref 'AWS::Partition', Domain], '.', !Ref RootDomainName]] ]], ou:  !GetAtt [ DirectoryService, Outputs.DomainShortName ]}
   GroupsOU:
     Description: The OU for groups that users belong to who might join the system. The value provided here is based off of a supplied LDIF file.
     Value: !Sub
       - OU=Users,OU=RES,OU=${ou},DC=${dc}
-      - { dc: !Join [",DC=", !Split [".", !Ref DomainName ]], ou:  !GetAtt [ DirectoryService, Outputs.DomainShortName ]}
+      - { dc: !Join [",DC=", !Split [".", !Join [ '', [!FindInMap [DomainNameMap, !Ref 'AWS::Partition', Domain], '.', !Ref RootDomainName]] ]], ou:  !GetAtt [ DirectoryService, Outputs.DomainShortName ]}
   SudoersOU:
     Description: The OU for users who should have sudoers permission across all projects. The value provided here is based off of a supplied LDIF file.
     Value: !Sub
       - OU=Users,OU=RES,OU=${ou},DC=${dc}
-      - { dc: !Join [",DC=", !Split [".", !Ref DomainName ]], ou:  !GetAtt [ DirectoryService, Outputs.DomainShortName ]}
+      - { dc: !Join [",DC=", !Split [".", !Join [ '', [!FindInMap [DomainNameMap, !Ref 'AWS::Partition', Domain], '.', !Ref RootDomainName]] ]], ou:  !GetAtt [ DirectoryService, Outputs.DomainShortName ]}
   ComputersOU:
     Description: The OU for computers that join the AD. The value provided here is based off of a supplied LDIF file.
     Value: !Sub
       - OU=Computers,OU=RES,OU=${ou},DC=${dc}
-      - { dc: !Join [",DC=", !Split [".", !Ref DomainName ]], ou:  !GetAtt [ DirectoryService, Outputs.DomainShortName ]}
+      - { dc: !Join [",DC=", !Split [".", !Join [ '', [!FindInMap [DomainNameMap, !Ref 'AWS::Partition', Domain], '.', !Ref RootDomainName]] ]], ou:  !GetAtt [ DirectoryService, Outputs.DomainShortName ]}
   

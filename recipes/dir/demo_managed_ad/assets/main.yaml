@@ -7,6 +7,7 @@ Metadata:
       - Label:
           default: "Active Directory Configuration"
         Parameters:
+          - RootDomainName
           - DomainName
           - AdminPassword
           - ServiceAccountName
@@ -31,6 +32,11 @@ Metadata:
           - PrivateSubnetTwo
 
 Parameters:
+  RootDomainName:
+    Description: Active Directory Root Domain Name.
+    Type: String
+    Default: corp.pcluster.com
+    AllowedPattern: ^([a-zA-Z0-9]+[\\.-])+([a-zA-Z0-9])+$
   DomainName:
     Description: Active Directory Domain Name.
     Type: String
@@ -448,7 +454,7 @@ Resources:
 
               if [ "${LDIFS3Path}" != "" ]; then
                 echo "Running LDIF File..."
-                aws s3 cp s3://${LDIFS3Path} - | envsubst > /tmp/ldif.tmp
+                aws s3 cp s3://${LDIFS3Path} --region "${AWS::Region}" - | envsubst > /tmp/ldif.tmp
                 ldapmodify -x -h ${DirectoryDomain} -D "cn=Admin,ou=Users,ou=${OU},dc=${DC}" -w $ADMIN_PW -f /tmp/ldif.tmp
               fi
               
@@ -656,7 +662,7 @@ Resources:
   DNS:
     Type: AWS::Route53::HostedZone
     Properties:
-      Name: !Ref DomainName
+      Name: !Ref RootDomainName
       VPCs:
         - VPCId: !If [ CreateVPC, !Ref PclusterVpc, !Ref Vpc ]
           VPCRegion: !Ref AWS::Region
@@ -666,10 +672,9 @@ Resources:
     Properties:
       HostedZoneId: !Ref DNS
       Name: !Ref DomainName
-      AliasTarget:
-        DNSName: !GetAtt NetworkLoadBalancer.DNSName
-        HostedZoneId: !GetAtt NetworkLoadBalancer.CanonicalHostedZoneID
-      Type: A
+      ResourceRecords: [!GetAtt NetworkLoadBalancer.DNSName]
+      Type: CNAME
+      TTL: '900'
 
   NetworkLoadBalancerListener:
     Type: AWS::ElasticLoadBalancingV2::Listener
