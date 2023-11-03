@@ -94,14 +94,14 @@ Resources:
         Vpc: !GetAtt [ Networking, Outputs.VPC ]
         PrivateSubnetOne: {"Fn::Select": [0, { "Fn::Split" : [",", !GetAtt [ Networking, Outputs.PrivateSubnets ]] }]}
         PrivateSubnetTwo: {"Fn::Select": [1, { "Fn::Split" : [",", !GetAtt [ Networking, Outputs.PrivateSubnets ]] }]}
-      TemplateURL: https://ingeniotemplates.s3.us-east-2.amazonaws.com/directory.yaml
+      TemplateURL: https://aws-hpc-recipes.s3.us-east-1.amazonaws.com/main/recipes/dir/demo_managed_ad/assets/main.yaml
 
   Networking:
     Type: AWS::CloudFormation::Stack
     Properties:
       Parameters:
         ProvisionSubnetsC: "False"
-      TemplateURL: https://ingeniotemplates.s3.us-east-2.amazonaws.com/networking.yaml
+      TemplateURL: https://aws-hpc-recipes.s3.us-east-1.amazonaws.com/main/recipes/net/hpc_large_scale/assets/main.yaml
 
   WindowsManagementHost:
     Type: AWS::CloudFormation::Stack
