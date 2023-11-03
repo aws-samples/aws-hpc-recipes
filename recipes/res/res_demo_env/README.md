@@ -24,6 +24,7 @@ As parameters to the automated stack:
 * `ClientIpCidr` - This should be the IP address that you will be accessing the site from. For instance, navigate to whatsmyip.org, select your IP address and use `[IPADDRESS]/32` to only allow access from your host.
 * `EnvironmentName` - If the PortalDomainName is provided, this name is used to add tags to the secrets that are generated so that they can be used within the environment. This will need to match the EnvironmentName parameter that is used when creating the RES stack later.
 * `PortalDomainName` - This is the value of a domain that exists in Route53 on the account. If this is provided, then a public certificate (and key file) will be generated and uploaded to Secrets Manager. If you have your own domain and certificates, this parameter (and the EnvironmentName) can be left blank.
+* `ClientPrefixList` - A prefix list that will be used to provide access to the AD management nodes. (This resource type can be managed in https://console.aws.amazon.com/vpcconsole/home#ManagedPrefixLists)
 
 ### Outputs
 
@@ -42,7 +43,7 @@ The outputs from this automated stack are:
 - `PrivateKeySecretArn` -  If you use a public domain for your web portal, this is the ARN to a secret that stores the private key for your certificate. (e.g. `arn:aws:secretsmanager:us-east-1:111111111111:secret:PrivateKey-res-bi-aaja-Certs-O54JDHVEGGGG-d4skqx`)
 - `PrivateSubnets` - Subnets in different AZs where the infrastructure hosts will be launched (e.g. `subnet-087e569358aa1e42e,subnet-01e71d067188634bc,subnet-06e98217b3d18efaa`)
 - `PublicSubnets` -  Subnets in different AZs where the VDI instances will be launched (e.g. `subnet-009aef6594f358444,subnet-0bc368105f9eee1ec,subnet-07155ac2d0b74b78c`)
-- `RootUserName` - The username for a service account that is used to connect to AD. Note that this account must have access to create computers. (e.g. `ServiceAccount` or `admin`)
+- `ServiceAccountUsername` - The username for a service account that is used to connect to AD. Note that this account must have access to create computers. (e.g. `ServiceAccount` or `Admin`)
 - `SharedHomeFilesystemId` - An EFS Id to use for the shared home filesystem for Linux VDI hosts (e.g. `fs-041b7c1bd27f0c38e`)
 - `SudoersOU` - The OU for users who should have sudoers permission across all projects. The value provided here is based off of a supplied LDIF file. (e.g. `OU=Users,OU=RES,OU=corp,DC=corp,DC=res,DC=com`)
 - `UsersOU` - The OU for all users who might join the system. The value provided here is based off of a supplied LDIF file. (e.g. `OU=Users,OU=RES,OU=corp,DC=corp,DC=res,DC=com`)

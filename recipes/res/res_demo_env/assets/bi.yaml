@@ -55,11 +55,11 @@ Parameters:
     AllowedPattern: ^((\d{1,3})\.(\d{1,3})\.(\d{1,3})\.(\d{1,3})/(\d{1,2}))?$
     ConstraintDescription: ClientIP must be a valid IP or network range of the form x.x.x.x/x. specify your IP/NETMASK (e.g x.x.x/32 or x.x.x.x/24 for subnet range)
   ClientPrefixList:
-    Description: Prefix list IDs for incoming traffic for the management instance.
+    Description: (Optional) A valid prefix list ID for incoming traffic for the management instance. This allows more CIDR blocks to access the RES environment than a single block from `ClientIpCidr`
     Default: ""
     Type: String
     AllowedPattern: ^(pl-[a-z0-9]{8,20})?$
-    ConstraintDescription: Must be a valid prefix list ID, which begins with pl-.
+    ConstraintDescription: Must be a valid VPC Prefix List ID, which begins with `pl-`.  Prefix Lists can be configured at https://console.aws.amazon.com/vpcconsole/home#ManagedPrefixLists
 
 Conditions:
   GenerateCerts: !Not [!Equals [!Ref PortalDomainName, '']]
