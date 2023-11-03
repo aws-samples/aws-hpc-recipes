@@ -139,10 +139,6 @@ Mappings:
       ZoneId1: apse2-az3
       ZoneId2: apse2-az1
       ZoneId3: apse2-az2
-    us-gov-west-1:
-      ZoneId1: usgw1-az1
-      ZoneId2: usgw1-az2
-      ZoneId3: usgw1-az3
 
 Conditions:
      DoProvisionSubnetsC: !Equals [!Ref ProvisionSubnetsC, "True"]
