@@ -136,7 +136,7 @@ Resources:
     Properties:
       Parameters:
         SubnetId: {"Fn::Select": [0, { "Fn::Split" : [",", !GetAtt [ Networking, Outputs.PrivateSubnets ]] }]}
-        DomainName: !Join [ '', [!FindInMap [DomainNameMap, !Ref 'AWS::Partition', Domain], '.', !Ref RootDomainName]]
+        DomainName: !Ref PortalDomainName
       TemplateURL: https://aws-hpc-recipes.s3.us-east-1.amazonaws.com/main/recipes/security/public_certs/assets/main.yaml
       Tags:
         - Key: "res:EnvironmentName"
@@ -150,7 +150,7 @@ Resources:
     Condition: GenerateCerts
     Type: AWS::CertificateManager::Certificate
     Properties:
-      DomainName: !Join [ '', [!FindInMap [DomainNameMap, !Ref 'AWS::Partition', Domain], '.', !Ref RootDomainName]]
+      DomainName: !Ref PortalDomainName
       ValidationMethod: DNS
       SubjectAlternativeNames:
         - !Sub ["*.${PortalDomainName}", {PortalDomainName: !Ref PortalDomainName }]
