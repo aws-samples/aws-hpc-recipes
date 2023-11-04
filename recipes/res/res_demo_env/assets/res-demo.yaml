@@ -44,7 +44,7 @@ Resources:
       GenerateSecretString:
         SecretStringTemplate: '{"username": "res-admin"}'
         GenerateStringKey: "password"
-        ExcludeCharacters: '"@/\(){}[]`|;:~#'
+        ExcludePunctuation: true
       Tags:
         - Key: res:Deployment
           Value: "true"
@@ -59,7 +59,7 @@ Resources:
       GenerateSecretString:
         SecretStringTemplate: '{"username": "res-service-account"}'
         GenerateStringKey: "password"
-        ExcludeCharacters: '"@/\(){}[]`|;:~#'
+        ExcludePunctuation: true
       Tags:
         - Key: res:Deployment
           Value: "true"
