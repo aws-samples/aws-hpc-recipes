@@ -502,7 +502,7 @@ Outputs:
       - dc=${dc}
       - { dc: !Join [",dc=", !Split [".", !Ref DomainName ]] }
   ServiceAccountUsername:
-    Value: Admin
+    Value: ServiceAccount
   SharedHomeFilesystemId:
     Value: !GetAtt [ Storage, Outputs.EFSFilesystemId ]
   UsersOU:
