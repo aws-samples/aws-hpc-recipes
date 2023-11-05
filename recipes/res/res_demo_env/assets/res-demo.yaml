@@ -104,7 +104,7 @@ Resources:
         PrivateKeySecretARNforVDI: !GetAtt [ RESExternal, Outputs.PrivateKeySecretArn ]
         CertificateSecretARNforVDI: !GetAtt [ RESExternal, Outputs.CertificateSecretArn ]
         ServiceAccountUsername: !GetAtt [ RESExternal, Outputs.ServiceAccountUsername ]
-        ServiceAccountPassword: !Sub "{{resolve:secretsmanager:${AdminPassword}:SecretString:password}}"
+        ServiceAccountPassword: !Sub "{{resolve:secretsmanager:${ServiceAccountPassword}:SecretString:password}}"
         UsersOU: !GetAtt [ RESExternal, Outputs.UsersOU ]
         GroupsOU: !GetAtt [ RESExternal, Outputs.GroupsOU ]
         SudoersOU: !GetAtt [ RESExternal, Outputs.SudoersOU ]
