@@ -7,17 +7,22 @@ Metadata:
           default: "AD Configuration"
         Parameters:
           - DomainName
+          - SubDomain
           - AdminPassword
           - ServiceAccountPassword
           - Keypair
           - LDIFS3Path
 
 Parameters:
-  RootDomainName:
-    Description: Active Directory Domain Name will be a subdomain of the provided RootDomainName, prefixed with either 'classic', 'gov', or 'china'. The supplied LDIF file which provides bootstrap users uses this domain. A different LDIF file needs to be provided for a different domain.
+  DomainName:
+    Description: Active Directory Domain Name. The supplied LDIF file which provides bootstrap users uses this domain. A different LDIF file needs to be provided for a different domain.
     Type: String
     Default: corp.res.com
     AllowedPattern: ^([a-zA-Z0-9]+[\\.-])+([a-zA-Z0-9])+$
+  SubDomain:
+    Description: (Optional, but required for GovCloud regions) SubDomain for the Active Directory Domain Name. If provided, Active Directory Domain Name will be {SubDomain}.{DomainName}
+    Type: String
+    Default: ""
   PortalDomainName:
     Description: (Optional) Domain Name for web portal domain that lives in Route53 in account (may be different from the Active Directory domain). Used to generate certs, leave blank to skip certificate generation.
     Type: String
@@ -64,15 +69,7 @@ Parameters:
 Conditions:
   GenerateCerts: !Not [!Equals [!Ref PortalDomainName, '']]
   UseEnvironmentName: !Not [!Equals [!Ref EnvironmentName, '']]
-
-Mappings:
-  DomainNameMap:
-    aws:
-      Domain: 'classic'
-    aws-us-gov:
-      Domain: 'gov'
-    aws-cn:
-      Domain: 'china'
+  SubDomainNotProvided: !Equals [!Ref SubDomain, '']
 
 Resources:
 
@@ -82,8 +79,8 @@ Resources:
     Type: AWS::CloudFormation::Stack
     Properties:
       Parameters:
-        RootDomainName: !Ref RootDomainName
-        DomainName: !Join [ '', [!FindInMap [DomainNameMap, !Ref 'AWS::Partition', Domain], '.', !Ref RootDomainName]]
+        DomainName: !Ref DomainName
+        SubDomain: !Ref SubDomain
         AdminPassword: !GetAtt PasswordResolver.AdminPassword
         ServiceAccountPassword: !GetAtt PasswordResolver.ServiceAccountPassword
         ServiceAccountName: ServiceAccount
@@ -107,7 +104,7 @@ Resources:
     Type: AWS::CloudFormation::Stack
     Properties:
       Parameters:
-        DomainName: !Join [ '', [!FindInMap [DomainNameMap, !Ref 'AWS::Partition', Domain], '.', !Ref RootDomainName]]
+        DomainName: !If [ SubDomainNotProvided, !Ref DomainName, !Join [ ".", [ !Ref SubDomain, !Ref DomainName] ] ]
         DelegationUser: Admin
         DelegationPassword: !GetAtt PasswordResolver.AdminPassword
         DirectoryId: !GetAtt [ DirectoryService, Outputs.DirectoryId ]
@@ -397,20 +394,20 @@ Outputs:
     Value: !Ref Keypair
   ActiveDirectoryName:
     Description: Fully Qualified Domain Name (FQDN) for your Active Directory
-    Value: !Join [ '', [!FindInMap [DomainNameMap, !Ref 'AWS::Partition', Domain], '.', !Ref RootDomainName]]
+    Value: !If [ SubDomainNotProvided, !Ref DomainName, !Join [ ".", [ !Ref SubDomain, !Ref DomainName] ] ]
   ADShortName:
     Description: Please provide the short name in Active directory
     Value: !GetAtt [ DirectoryService, Outputs.DomainShortName ]
   LDAPConnectionURI:
     Value: !Sub
       - ldap://${DomainName}
-      - { DomainName: !Join [ '', [!FindInMap [DomainNameMap, !Ref 'AWS::Partition', Domain], '.', !Ref RootDomainName]] }
+      - { DomainName: !If [ SubDomainNotProvided, !Ref DomainName, !Join [ ".", [ !Ref SubDomain, !Ref DomainName] ] ] }
   SudoersGroupName:
     Value: RESAdministrators
   LDAPBase:
     Value: !Sub
       - dc=${dc}
-      - { dc: !Join [",dc=", !Split [".", !Join [ '', [!FindInMap [DomainNameMap, !Ref 'AWS::Partition', Domain], '.', !Ref RootDomainName]] ]] }
+      - { dc: !Join [",dc=", !Split [".", !If [ SubDomainNotProvided, !Ref DomainName, !Join [ ".", [ !Ref SubDomain, !Ref DomainName] ] ] ]] }
   ServiceAccountUsername:
     Value: Admin
   SharedHomeFilesystemId:
@@ -419,20 +416,20 @@ Outputs:
     Description: The OU for all users who might join the system. The value provided here is based off of a supplied LDIF file.
     Value: !Sub
       - OU=Users,OU=RES,OU=${ou},DC=${dc}
-      - { dc: !Join [",DC=", !Split [".", !Join [ '', [!FindInMap [DomainNameMap, !Ref 'AWS::Partition', Domain], '.', !Ref RootDomainName]] ]], ou:  !GetAtt [ DirectoryService, Outputs.DomainShortName ]}
+      - { dc: !Join [",DC=", !Split [".", !If [ SubDomainNotProvided, !Ref DomainName, !Join [ ".", [ !Ref SubDomain, !Ref DomainName]]]]], ou:  !GetAtt [ DirectoryService, Outputs.DomainShortName ]}
   GroupsOU:
     Description: The OU for groups that users belong to who might join the system. The value provided here is based off of a supplied LDIF file.
     Value: !Sub
       - OU=Users,OU=RES,OU=${ou},DC=${dc}
-      - { dc: !Join [",DC=", !Split [".", !Join [ '', [!FindInMap [DomainNameMap, !Ref 'AWS::Partition', Domain], '.', !Ref RootDomainName]] ]], ou:  !GetAtt [ DirectoryService, Outputs.DomainShortName ]}
+      - { dc: !Join [",DC=", !Split [".", !If [ SubDomainNotProvided, !Ref DomainName, !Join [ ".", [ !Ref SubDomain, !Ref DomainName]]]]], ou:  !GetAtt [ DirectoryService, Outputs.DomainShortName ]}
   SudoersOU:
     Description: The OU for users who should have sudoers permission across all projects. The value provided here is based off of a supplied LDIF file.
     Value: !Sub
       - OU=Users,OU=RES,OU=${ou},DC=${dc}
-      - { dc: !Join [",DC=", !Split [".", !Join [ '', [!FindInMap [DomainNameMap, !Ref 'AWS::Partition', Domain], '.', !Ref RootDomainName]] ]], ou:  !GetAtt [ DirectoryService, Outputs.DomainShortName ]}
+      - { dc: !Join [",DC=", !Split [".", !If [ SubDomainNotProvided, !Ref DomainName, !Join [ ".", [ !Ref SubDomain, !Ref DomainName]]]]], ou:  !GetAtt [ DirectoryService, Outputs.DomainShortName ]}
   ComputersOU:
     Description: The OU for computers that join the AD. The value provided here is based off of a supplied LDIF file.
     Value: !Sub
       - OU=Computers,OU=RES,OU=${ou},DC=${dc}
-      - { dc: !Join [",DC=", !Split [".", !Join [ '', [!FindInMap [DomainNameMap, !Ref 'AWS::Partition', Domain], '.', !Ref RootDomainName]] ]], ou:  !GetAtt [ DirectoryService, Outputs.DomainShortName ]}
+      - { dc: !Join [",DC=", !Split [".", !If [ SubDomainNotProvided, !Ref DomainName, !Join [ ".", [ !Ref SubDomain, !Ref DomainName]]]]], ou:  !GetAtt [ DirectoryService, Outputs.DomainShortName ]}
   
