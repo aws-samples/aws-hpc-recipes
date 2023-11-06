@@ -91,8 +91,8 @@ Resources:
   # Clients join this group for access to the EFS file system
   EfsClientSecurityGroup:
     Type: AWS::EC2::SecurityGroup
-    GroupName: !Sub '${AWS::StackName}-efs-client-security-group'
     Properties:
+      GroupName: !Sub '${AWS::StackName}-efs-client-security-group'
       GroupDescription: Allow traffic to/from EFS from clients
       VpcId: !Ref VpcId
 
