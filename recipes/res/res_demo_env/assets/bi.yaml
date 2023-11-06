@@ -95,6 +95,7 @@ Resources:
 
   Networking:
     Type: AWS::CloudFormation::Stack
+    DeletionPolicy: Retain
     Properties:
       Parameters:
         ProvisionSubnetsC: "False"
@@ -120,6 +121,7 @@ Resources:
 
   Storage:
     Type: AWS::CloudFormation::Stack
+    DeletionPolicy: Retain
     Properties:
       Parameters:
         VpcId: !GetAtt [ Networking, Outputs.VPC ]
