@@ -19,6 +19,7 @@ Metadata:
           - VpcId
           - Subnet
           - ClientIpCidr
+          - ClientPrefixList
       - Label:
           default: "Host Configuration"
         Parameters:
@@ -89,14 +90,25 @@ Parameters:
 
   ClientIpCidr:
     Description: CIDR for incoming RDP traffic for management instance.
-    Default: 127.0.0.1/32
+    Default: ""
     Type: String
-    AllowedPattern: (\d{1,3})\.(\d{1,3})\.(\d{1,3})\.(\d{1,3})/(\d{1,2})
+    AllowedPattern: ^((\d{1,3})\.(\d{1,3})\.(\d{1,3})\.(\d{1,3})/(\d{1,2}))?$
     ConstraintDescription: ClientIP must be a valid IP or network range of the form x.x.x.x/x. specify your IP/NETMASK (e.g x.x.x/32 or x.x.x.x/24 for subnet range)
+
+  ClientPrefixList:
+    Description: Prefix list IDs for incoming traffic for the management instance.
+    Default: ""
+    Type: String
+    AllowedPattern: ^(pl-[a-z0-9]{8,20})?$
+    ConstraintDescription: Must be a valid prefix list ID, which begins with pl-.
 
   InstanceType:
     Type: String
     Default: t3.xlarge
+
+Conditions:
+  AddPrefixList: !Not [!Equals [!Ref ClientPrefixList, '']]
+  AddCidrIngress: !Not [!Equals [!Ref ClientIpCidr, '']]
 
 Resources:
   InstanceRole:
@@ -181,12 +193,26 @@ Resources:
     Properties: 
       GroupDescription: Allow RDP Access
       VpcId: !Ref VpcId
-      SecurityGroupIngress:
-        - CidrIp: !Ref ClientIpCidr
-          Description: Allow inbound traffic for RDP
-          IpProtocol: tcp
-          FromPort: 3389
-          ToPort: 3389
+
+  InstanceSecurityGroupIngressClientCidr:
+    Condition: AddCidrIngress
+    Type: AWS::EC2::SecurityGroupIngress
+    Properties:
+      FromPort: 3389
+      ToPort: 3389
+      IpProtocol: tcp
+      GroupId: !GetAtt InstanceSecurityGroup.GroupId
+      CidrIp: !Ref ClientIpCidr
+
+  InstanceSecurityGroupIngressPrefixList:
+    Condition: AddPrefixList
+    Type: AWS::EC2::SecurityGroupIngress
+    Properties:
+      FromPort: 3389
+      ToPort: 3389
+      IpProtocol: tcp
+      GroupId: !GetAtt InstanceSecurityGroup.GroupId
+      SourcePrefixListId: !Ref ClientPrefixList
 
   Instance:
     Type: AWS::EC2::Instance
@@ -281,7 +307,7 @@ Resources:
                 DomainName: !Ref DomainName,
                 DelegationUser: !Ref DelegationUser,
                 ServiceAccountName: !Ref ServiceAccountName,
-                DC: !Join [",DC", !Split [".", !Ref DomainName ]],
+                DC: !Join [",DC=", !Split [".", !Ref DomainName ]],
                 OU: !Select [0, !Split ['.', !Ref DomainName ]]
                 }
 Outputs:
