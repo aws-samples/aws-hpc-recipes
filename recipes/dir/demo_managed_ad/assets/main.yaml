@@ -8,6 +8,7 @@ Metadata:
           default: "Active Directory Configuration"
         Parameters:
           - DomainName
+          - SubDomain
           - AdminPassword
           - ServiceAccountName
           - ServiceAccountPassword
@@ -37,6 +38,10 @@ Parameters:
     Type: String
     Default: corp.pcluster.com
     AllowedPattern: ^([a-zA-Z0-9]+[\\.-])+([a-zA-Z0-9])+$
+  SubDomain:
+    Description: (Optional, but required for GovCloud regions) SubDomain for the Active Directory Domain Name. If provided Active Directory Domain Name will be (SubDomain).(DomainName)
+    Type: String
+    Default: ""
   AdminPassword:
     Description: Active Directory Admin Password.
     Type: String
@@ -102,6 +107,9 @@ Conditions:
   CreateAD: !Equals ['', '']
   isUSEast1: !Equals [!Ref "AWS::Region", "us-east-1"]
   ImportLDIFS3: !Not [ !Equals [!Ref LDIFS3Path, ''] ]
+  SubDomainProvided: !Not [ !Equals [!Ref SubDomain, ''] ]
+  SubDomainNotProvided: !Equals [!Ref SubDomain, '']
+
 
 Resources:
   DisableImdsv1LaunchTemplate:
@@ -301,7 +309,7 @@ Resources:
     Type: AWS::DirectoryService::MicrosoftAD
     Condition: CreateAD
     Properties:
-      Name: !Ref DomainName
+      Name: !If [ SubDomainNotProvided, !Ref DomainName, !Join [ ".", [ !Ref SubDomain, !Ref DomainName] ] ]
       Password: !Ref AdminPassword
       Edition: Standard
       VpcSettings:
@@ -314,7 +322,7 @@ Resources:
     Type: Custom::PrepLambda
     Properties:
       ServiceToken: !GetAtt PrepLambda.Arn
-      DomainName:  !Ref DomainName
+      DomainName:  !If [ SubDomainNotProvided, !Ref DomainName, !Join [ ".", [ !Ref SubDomain, !Ref DomainName] ] ]
       Vpc: !If [CreateVPC, !Ref PclusterVpc, !Ref Vpc ]
       PrivateSubnetOne: !If [CreateVPC, !Ref PclusterVpcSubnet1, !Ref PrivateSubnetOne ]
       PrivateSubnetTwo: !If [CreateVPC, !Ref PclusterVpcSubnet2, !Ref PrivateSubnetTwo ]
@@ -455,7 +463,7 @@ Resources:
 
               if [ "${LDIFS3Path}" != "" ]; then
                 echo "Running LDIF File..."
-                aws s3 cp s3://${LDIFS3Path} - | envsubst > /tmp/ldif.tmp
+                aws s3 cp s3://${LDIFS3Path} --region "${AWS::Region}" - | envsubst > /tmp/ldif.tmp
                 ldapmodify -x -h ${DirectoryDomain} -D "cn=Admin,ou=Users,ou=${OU},dc=${DC}" -w $ADMIN_PW -f /tmp/ldif.tmp
               fi
               
@@ -482,7 +490,7 @@ Resources:
                 DomainCertificateSecretArn: !Ref DomainCertificateSecret,
                 DomainPrivateKeySecretArn: !Ref DomainPrivateKeySecret,
                 LDIFS3Path: !Ref LDIFS3Path,
-                DC: !Join [",dc=", !Split [".", !Ref DomainName ]],
+                DC: !Join [",dc=", !Split [".", !If [ SubDomainNotProvided, !Ref DomainName, !Join [ ".", [ !Ref SubDomain, !Ref DomainName] ] ] ]],
                 OU: !GetAtt Prep.DomainShortName
             }
 
@@ -668,8 +676,9 @@ Resources:
         - VPCId: !If [ CreateVPC, !Ref PclusterVpc, !Ref Vpc ]
           VPCRegion: !Ref AWS::Region
 
-  DNSRecord:
+  DNSARecord:
     Type: AWS::Route53::RecordSet
+    Condition: SubDomainNotProvided
     Properties:
       HostedZoneId: !Ref DNS
       Name: !Ref DomainName
@@ -677,6 +686,16 @@ Resources:
         DNSName: !GetAtt NetworkLoadBalancer.DNSName
         HostedZoneId: !GetAtt NetworkLoadBalancer.CanonicalHostedZoneID
       Type: A
+
+  DNSRecordCNAME:
+    Type: AWS::Route53::RecordSet
+    Condition: SubDomainProvided
+    Properties:
+      HostedZoneId: !Ref DNS
+      Name: !Join [ ".", [ !Ref SubDomain, !Ref DomainName] ]
+      ResourceRecords: [!GetAtt NetworkLoadBalancer.DNSName]
+      Type: CNAME
+      TTL: '900'
 
   NetworkLoadBalancerListener:
     Type: AWS::ElasticLoadBalancingV2::Listener
@@ -803,7 +822,7 @@ Resources:
       - Post
     Properties:
       ServiceToken: !GetAtt DomainCertificateSetupLambda.Arn
-      DomainName: !Ref DomainName
+      DomainName: !If [ SubDomainNotProvided, !Ref DomainName, !Join [ ".", [ !Ref SubDomain, !Ref DomainName] ] ]
       DomainCertificateSecretArn: !Ref DomainCertificateSecret
       DomainPrivateKeySecretArn: !Ref DomainPrivateKeySecret
 
@@ -953,7 +972,7 @@ Outputs:
     Export:
         Name: !Sub ${AWS::StackName}-PrivateSubnetIds
   DomainName:
-    Value: !Ref DomainName
+    Value: !If [ SubDomainNotProvided, !Ref DomainName, !Join [ ".", [ !Ref SubDomain, !Ref DomainName] ] ]
     Export:
         Name: !Sub ${AWS::StackName}-DomainName
   PasswordSecretArn:
@@ -974,7 +993,7 @@ Outputs:
     Description: Username for Service Account created during stack creation.
     Value: !Sub
       - cn=${service_account_name},ou=Users,ou=${ou},dc=${dc}
-      - { service_account_name: !Ref ServiceAccountName, dc: !Join [",dc=", !Split [".", !Ref DomainName ]], ou: !GetAtt Prep.DomainShortName }
+      - { service_account_name: !Ref ServiceAccountName, dc: !Join [",dc=", !Split [".", !If [ SubDomainNotProvided, !Ref DomainName, !Join [ ".", [ !Ref SubDomain, !Ref DomainName] ] ] ]], ou: !GetAtt Prep.DomainShortName }
     Export:
         Name: !Sub ${AWS::StackName}-DomainServiceAccount
   DnsIpAddress1:
@@ -988,7 +1007,9 @@ Outputs:
     Export:
         Name: !Sub ${AWS::StackName}-DomainAddrLdap
   DomainAddrLdaps:
-    Value: !Sub ldaps://${DomainName}
+    Value: !Sub
+      - ldaps://${DomainName}
+      - DomainName: !If [ SubDomainNotProvided, !Ref DomainName, !Join [ ".", [ !Ref SubDomain, !Ref DomainName] ] ]
     Export:
         Name: !Sub ${AWS::StackName}-DomainAddrLdaps
   DomainCertificateSecretReadPolicy:

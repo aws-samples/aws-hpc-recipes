@@ -94,6 +94,7 @@ Resources:
     Properties:
       GroupName: !Sub '${AWS::StackName}-efs-client-security-group'
       GroupDescription: Allow traffic to/from EFS from clients
+      GroupName: !Sub '${AWS::StackName}-efs-client-security-group'
       VpcId: !Ref VpcId
 
   EfsSecurityGroupInboundRule:
