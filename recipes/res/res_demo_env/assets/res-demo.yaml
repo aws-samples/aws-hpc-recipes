@@ -33,6 +33,13 @@ Parameters:
     AllowedPattern: (\d{1,3})\.(\d{1,3})\.(\d{1,3})\.(\d{1,3})/(\d{1,2})
     ConstraintDescription: ClientIP must be a valid IP or network range of the form x.x.x.x/x. specify your IP/NETMASK (e.g x.x.x/32 or x.x.x.x/24 for subnet range)
 
+  ClientPrefixList:
+    Description: PrefixList for client access.
+    Default: ''
+    Type: String
+    AllowedPattern: ^(pl-[a-z0-9]{8,20})?$
+    ConstraintDescription: Must match a prefix list (e.g. pl-aaa00112) or be empty.
+
 Conditions:
   UseEnvironmentName: !Not [!Equals [!Ref EnvironmentName, '']]
 
@@ -87,6 +94,7 @@ Resources:
         AdministratorEmail: !Ref AdministratorEmail
         SSHKeyPair: !Ref Keypair
         ClientIp: !Ref ClientIpCidr
+        ClientPrefixList: !Ref ClientPrefixList
         VpcId: !GetAtt [ RESExternal, Outputs.VpcId ]
         PrivateSubnets: !GetAtt [ RESExternal, Outputs.PrivateSubnets ]
         PublicSubnets: !GetAtt [ RESExternal, Outputs.PublicSubnets ]
@@ -111,7 +119,7 @@ Resources:
         SudoersOU: !GetAtt [ RESExternal, Outputs.SudoersOU ]
         ComputersOU: !GetAtt [ RESExternal, Outputs.ComputersOU ]
         SharedHomeFileSystemId: !GetAtt [ RESExternal, Outputs.SharedHomeFilesystemId ]
-      TemplateURL: https://research-engineering-studio-us-east-1.s3.amazonaws.com/releases/2023.11b1/ResearchAndEngineeringStudio.template.json
+      TemplateURL: https://research-engineering-studio-us-east-1.s3.amazonaws.com/releases/2023.11b2/ResearchAndEngineeringStudio.template.json
   LoadBalancerLookupFunction:
     Type: AWS::Lambda::Function
     Properties:
