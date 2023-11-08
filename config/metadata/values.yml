@@ -9,6 +9,7 @@ namespace:
   ide: IDEs and GUIs
   net: Networking
   pcluster: AWS ParallelCluster
+  pcs: AWS Parallel Computing Service
   security: Security configuration
   scheduler: HPC scheduler
   storage: Storage
@@ -35,6 +36,7 @@ tags:
   graviton: green
   aurora: green
   tranium: green
+  pcs: orange
   100: blue
   200: blue
   300: blue
