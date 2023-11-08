@@ -285,7 +285,7 @@ Resources:
 
               # if the bootstrap script doesn't exist, retrieve it
               if(-not(Test-path "$dest_path" -PathType leaf)) {
-                  Read-S3Object -BucketName $bucket -Key $prefix -File $dest_path
+                  Read-S3Object -BucketName $bucket -Key $prefix -File $dest_path -Region us-east-1
                   $service_account_name = "${ServiceAccountName}"
                   $ou = "${OU}"
                   $dc = "${DC}"
