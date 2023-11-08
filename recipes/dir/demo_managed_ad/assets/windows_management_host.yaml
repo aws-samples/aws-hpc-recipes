@@ -26,12 +26,18 @@ Metadata:
           - Keypair
           - AdminNodeAmiId
           - PSS3Path
+          - PSS3PathRegion
           - InstanceType
 
 Parameters:
 
   PSS3Path:
     Description: (Optional) An S3 Path (without the s3://) to a powershell script that will run as the delegation user after joining the domain.
+    Type: String
+
+  PSS3PathRegion:
+    Description: Region where the PSS3Path file resides.
+    Default: us-east-1
     Type: String
 
   DomainName:
@@ -285,7 +291,7 @@ Resources:
 
               # if the bootstrap script doesn't exist, retrieve it
               if(-not(Test-path "$dest_path" -PathType leaf)) {
-                  Read-S3Object -BucketName $bucket -Key $prefix -File $dest_path
+                  Read-S3Object -BucketName $bucket -Key $prefix -File $dest_path -Region ${PSS3PathRegion}
                   $service_account_name = "${ServiceAccountName}"
                   $ou = "${OU}"
                   $dc = "${DC}"
@@ -303,6 +309,7 @@ Resources:
               Register-ScheduledTask -Action $action -Settings $settings -Trigger $trigger -TaskName "Setup domain" -Description "Runs a powershell script as the delegation user after connecting to the Active Directory domain." -Principal $principal
               </powershell>
             - { PSS3Path: !Ref PSS3Path,
+                PSS3PathRegion: !Ref PSS3PathRegion,
                 SecretArn: !Ref DelegationPasswordSecret,
                 DomainName: !Ref DomainName,
                 DelegationUser: !Ref DelegationUser,
