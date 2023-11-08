@@ -43,7 +43,7 @@ Resources:
       Description: Active Directory Administrator Account Password.
       Name: !Sub [ "res-AdminPassword-${StackName}-${StackId}", {StackName: !Select [1, !Split ['/', !Ref 'AWS::StackId']], StackId: !Select [2, !Split ['/', !Ref 'AWS::StackId']]}]
       GenerateSecretString:
-        SecretStringTemplate: '{"username": "res-admin"}'
+        SecretStringTemplate: '{"username": "Admin"}'
         GenerateStringKey: "password"
         ExcludePunctuation: true
       Tags:
@@ -58,7 +58,7 @@ Resources:
       Description: Active Directory Service Account Password.
       Name: !Sub [ "res-ServiceAccountPassword-${StackName}-${StackId}", {StackName: !Select [1, !Split ['/', !Ref 'AWS::StackId']], StackId: !Select [2, !Split ['/', !Ref 'AWS::StackId']]}]
       GenerateSecretString:
-        SecretStringTemplate: '{"username": "res-service-account"}'
+        SecretStringTemplate: '{"username": "ServiceAccount"}'
         GenerateStringKey: "password"
         ExcludePunctuation: true
       Tags:
