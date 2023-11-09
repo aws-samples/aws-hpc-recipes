@@ -1,0 +1,216 @@
+Description: A demo CloudFormation stack for setting up Research and Engineering Studio on AWS
+
+Parameters:
+  PortalDomainName:
+    Description: Domain Name for web portal domain that lives in Route53 in account (may be different from the Active Directory domain). Used to generate certificates.
+    Type: String
+    AllowedPattern: ^([a-zA-Z0-9]+[\\.-])+([a-zA-Z0-9])+$
+    Default: res.person.people.aws.dev
+
+  Keypair:
+    Description: EC2 Keypair to access management instance.
+    Type: AWS::EC2::KeyPair::KeyName
+    Default: enguard
+
+  EnvironmentName:
+    Description: Provide name of the RES Environment. Required to generate certificates and create RES stack.
+    Type: String
+    Default: res-demo
+    MinLength: 5
+    MaxLength: 10
+    AllowedPattern: ^(?!.*aws)res-[a-z0-9-]{1,6}$
+    ConstraintDescription: EnvironmentName must start with "res-", cannot contain "aws", and entire name must be less than or equal to 10 characters (lowercase, numbers, hypens are permitted).
+
+  AdministratorEmail:
+    Type: String
+    Default: person@amazon.com
+    AllowedPattern: ^[a-zA-Z0-9._%+-]+@[a-zA-Z0-9.-]+\.[a-zA-Z]{2,}$
+
+  ClientIpCidr:
+    Description: CIDR for incoming RDP traffic for management instance.
+    Default: 127.0.0.1/32
+    Type: String
+    AllowedPattern: (\d{1,3})\.(\d{1,3})\.(\d{1,3})\.(\d{1,3})/(\d{1,2})
+    ConstraintDescription: ClientIP must be a valid IP or network range of the form x.x.x.x/x. specify your IP/NETMASK (e.g x.x.x/32 or x.x.x.x/24 for subnet range)
+
+  ClientPrefixList:
+    Description: PrefixList for client access.
+    Default: ''
+    Type: String
+    AllowedPattern: ^(pl-[a-z0-9]{8,20})?$
+    ConstraintDescription: Must match a prefix list (e.g. pl-aaa00112) or be empty.
+
+Conditions:
+  UseEnvironmentName: !Not [!Equals [!Ref EnvironmentName, '']]
+
+Resources:
+  AdminPassword:
+    Type: AWS::SecretsManager::Secret
+    Properties:
+      Description: Active Directory Administrator Account Password.
+      Name: !Sub [ "res-AdminPassword-${StackName}-${StackId}", {StackName: !Select [1, !Split ['/', !Ref 'AWS::StackId']], StackId: !Select [2, !Split ['/', !Ref 'AWS::StackId']]}]
+      GenerateSecretString:
+        SecretStringTemplate: '{"username": "Admin"}'
+        GenerateStringKey: "password"
+        ExcludePunctuation: true
+      Tags:
+        - Key: res:Deployment
+          Value: "true"
+        - Key: res:EnvironmentName
+          Value: !Ref EnvironmentName
+  
+  ServiceAccountPassword:
+    Type: AWS::SecretsManager::Secret
+    Properties:
+      Description: Active Directory Service Account Password.
+      Name: !Sub [ "res-ServiceAccountPassword-${StackName}-${StackId}", {StackName: !Select [1, !Split ['/', !Ref 'AWS::StackId']], StackId: !Select [2, !Split ['/', !Ref 'AWS::StackId']]}]
+      GenerateSecretString:
+        SecretStringTemplate: '{"username": "ServiceAccount"}'
+        GenerateStringKey: "password"
+        ExcludePunctuation: true
+      Tags:
+        - Key: res:Deployment
+          Value: "true"
+        - Key: res:EnvironmentName
+          Value: !Ref EnvironmentName
+  
+  RESExternal:
+    Type: AWS::CloudFormation::Stack
+    Properties:
+      Parameters:
+        PortalDomainName: !Ref PortalDomainName
+        Keypair: !Ref Keypair
+        EnvironmentName: !If [UseEnvironmentName, !Ref EnvironmentName, '']
+        AdminPassword: !Ref AdminPassword
+        ServiceAccountPassword: !Ref ServiceAccountPassword
+        ClientIpCidr: !Ref ClientIpCidr
+      TemplateURL: https://aws-hpc-recipes-dev.s3.us-east-1.amazonaws.com/res/recipes/res/res_demo_env/assets/bi.yaml
+
+  RES:
+    Type: AWS::CloudFormation::Stack
+    Properties:
+      Parameters:
+        EnvironmentName: !Ref EnvironmentName
+        AdministratorEmail: !Ref AdministratorEmail
+        SSHKeyPair: !Ref Keypair
+        ClientIp: !Ref ClientIpCidr
+        ClientPrefixList: !Ref ClientPrefixList
+        VpcId: !GetAtt [ RESExternal, Outputs.VpcId ]
+        PrivateSubnets: !GetAtt [ RESExternal, Outputs.PrivateSubnets ]
+        PublicSubnets: !GetAtt [ RESExternal, Outputs.PublicSubnets ]
+        ActiveDirectoryName: !GetAtt [ RESExternal, Outputs.ActiveDirectoryName ]
+        ADShortName: !GetAtt [ RESExternal, Outputs.ADShortName ]
+        LDAPBase: !GetAtt [ RESExternal, Outputs.LDAPBase ]
+        LDAPConnectionURI: !GetAtt [ RESExternal, Outputs.LDAPConnectionURI ]
+        SudoersGroupName: RESAdministrators
+        CustomDomainNameforVDI: !Sub
+          - vdi.${PortalDomainName}
+          - { PortalDomainName: !Ref PortalDomainName}
+        CustomDomainNameforWebApp: !Sub
+          - web.${PortalDomainName}
+          - { PortalDomainName: !Ref PortalDomainName}
+        ACMCertificateARNforWebApp: !GetAtt [ RESExternal, Outputs.ACMCertificateARNforWebApp ]
+        PrivateKeySecretARNforVDI: !GetAtt [ RESExternal, Outputs.PrivateKeySecretArn ]
+        CertificateSecretARNforVDI: !GetAtt [ RESExternal, Outputs.CertificateSecretArn ]
+        ServiceAccountUsername: !GetAtt [ RESExternal, Outputs.ServiceAccountUsername ]
+        ServiceAccountPassword: !Sub "{{resolve:secretsmanager:${ServiceAccountPassword}:SecretString:password}}"
+        UsersOU: !GetAtt [ RESExternal, Outputs.UsersOU ]
+        GroupsOU: !GetAtt [ RESExternal, Outputs.GroupsOU ]
+        SudoersOU: !GetAtt [ RESExternal, Outputs.SudoersOU ]
+        ComputersOU: !GetAtt [ RESExternal, Outputs.ComputersOU ]
+        SharedHomeFileSystemId: !GetAtt [ RESExternal, Outputs.SharedHomeFilesystemId ]
+      TemplateURL: https://research-engineering-studio-us-east-1.s3.amazonaws.com/releases/2023.11b2/ResearchAndEngineeringStudio.template.json
+  LoadBalancerLookupFunction:
+    Type: AWS::Lambda::Function
+    Properties:
+      Handler: index.handler
+      Runtime: python3.11
+      Timeout: 10
+      Code:
+        ZipFile: |
+          import cfnresponse
+          import boto3
+          
+          client = boto3.client("dynamodb")
+          
+          def handler(event, context):
+            try:
+              if event.get("RequestType") != "Create":
+                cfnresponse.send(event, context, cfnresponse.SUCCESS, {})
+                return
+            
+              table_name = event["ResourceProperties"]["TableName"]
+            
+              alb_dns_name = client.get_item(
+                TableName=table_name,
+                Key={"key": {"S": "cluster.load_balancers.external_alb.load_balancer_dns_name"}},
+              )
+              
+              nlb_dns_name = client.get_item(
+                TableName=table_name,
+                Key={"key": {"S": "vdc.external_nlb.load_balancer_dns_name"}},
+              )
+              
+              response = {
+                "ALBDNSName": alb_dns_name["Item"]["value"]["S"],
+                "NLBDNSName": nlb_dns_name["Item"]["value"]["S"],
+              }
+              
+              cfnresponse.send(event, context, cfnresponse.SUCCESS, response)
+            except Exception as e:
+              cfnresponse.send(event, context, cfnresponse.FAILED, {"error": str(e)})
+      Role:
+        !GetAtt LoadBalancerLookupRole.Arn
+
+  LoadBalancerLookupResource:
+    Type: Custom::LoadBalancerLookup
+    DependsOn: RES
+    Properties:
+      ServiceToken: !GetAtt LoadBalancerLookupFunction.Arn
+      TableName: !Sub ${EnvironmentName}.cluster-settings
+
+  LoadBalancerLookupRole:
+    Type: AWS::IAM::Role
+    Properties:
+      AssumeRolePolicyDocument:
+        Version: "2012-10-17"
+        Statement:
+          - Effect: Allow
+            Principal:
+              Service:
+                - lambda.amazonaws.com
+            Action:
+              - "sts:AssumeRole"
+      Policies:
+        - PolicyName: LoadBalancerLookupRolePolicy
+          PolicyDocument:
+            Version: "2012-10-17"
+            Statement:
+              - Effect: Allow
+                Action:
+                  - "logs:CreateLogGroup"
+                  - "logs:CreateLogStream"
+                  - "logs:PutLogEvents"
+                Resource: !Sub arn:${AWS::Partition}:logs:${AWS::Region}:${AWS::AccountId}:*
+              - Effect: Allow
+                Action:
+                  - "dynamodb:GetItem"
+                Resource: !Sub arn:${AWS::Partition}:dynamodb:${AWS::Region}:${AWS::AccountId}:table/${EnvironmentName}.cluster-settings
+  RESWebAliasRecord:
+    Type: AWS::Route53::RecordSet
+    Properties:
+      HostedZoneName: !Sub ${PortalDomainName}.
+      Name: !Sub web.${PortalDomainName}.
+      Type: CNAME
+      TTL: 300
+      ResourceRecords:
+        - !GetAtt LoadBalancerLookupResource.ALBDNSName
+  RESVDIAliasRecord:
+    Type: AWS::Route53::RecordSet
+    Properties:
+      HostedZoneName: !Sub ${PortalDomainName}.
+      Name: !Sub vdi.${PortalDomainName}.
+      Type: CNAME
+      TTL: 300
+      ResourceRecords:
+        - !GetAtt LoadBalancerLookupResource.NLBDNSName
