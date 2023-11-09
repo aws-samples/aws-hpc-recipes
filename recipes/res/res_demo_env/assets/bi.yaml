@@ -52,7 +52,7 @@ Parameters:
   LDIFS3Path:
     Description: (Optional) An S3 Path (without the s3://) to an LDIF file that will be used during stack creation.
     Type: String
-    Default: aws-hpc-recipes-dev/res/recipes/res/res_demo_env/assets/res.ldif
+    Default: aws-hpc-recipes/main/recipes/res/res_demo_env/assets/res.ldif
   ClientIpCidr:
     Description: CIDR for incoming RDP traffic for management instance.
     Default: ""
@@ -116,7 +116,7 @@ Resources:
         Subnet: {"Fn::Select": [0, { "Fn::Split" : [",", !GetAtt [ Networking, Outputs.PublicSubnets ]] }]}
         ClientIpCidr: !Ref ClientIpCidr
         ClientPrefixList: !Ref ClientPrefixList
-        PSS3Path: aws-hpc-recipes-dev/res/recipes/res/res_demo_env/assets/service_account.ps1
+        PSS3Path: aws-hpc-recipes/main/recipes/res/res_demo_env/assets/service_account.ps1
       TemplateURL: https://aws-hpc-recipes.s3.us-east-1.amazonaws.com/main/recipes/dir/demo_managed_ad/assets/windows_management_host.yaml
 
   Storage:
