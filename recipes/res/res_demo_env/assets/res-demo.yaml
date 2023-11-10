@@ -120,7 +120,7 @@ Resources:
         ComputersOU: !GetAtt [ RESExternal, Outputs.ComputersOU ]
         SharedHomeFileSystemId: !GetAtt [ RESExternal, Outputs.SharedHomeFilesystemId ]
         DomainTLSCertificateSecretArn: !GetAtt [ RESExternal, Outputs.DomainTLSCertificateSecretArn ]
-      TemplateURL: https://research-engineering-studio-us-east-1.s3.amazonaws.com/releases/2023.11b4/ResearchAndEngineeringStudio.template.json
+      TemplateURL: https://research-engineering-studio-us-east-1.s3.amazonaws.com/releases/2023.11/ResearchAndEngineeringStudio.template.json
   LoadBalancerLookupFunction:
     Type: AWS::Lambda::Function
     Properties:
