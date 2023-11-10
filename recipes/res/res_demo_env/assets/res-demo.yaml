@@ -119,7 +119,7 @@ Resources:
         SudoersOU: !GetAtt [ RESExternal, Outputs.SudoersOU ]
         ComputersOU: !GetAtt [ RESExternal, Outputs.ComputersOU ]
         SharedHomeFileSystemId: !GetAtt [ RESExternal, Outputs.SharedHomeFilesystemId ]
-      TemplateURL: https://research-engineering-studio-us-east-1.s3.amazonaws.com/releases/2023.11b2/ResearchAndEngineeringStudio.template.json
+      TemplateURL: https://research-engineering-studio-us-east-1.s3.amazonaws.com/releases/2023.11b3/ResearchAndEngineeringStudio.template.json
   LoadBalancerLookupFunction:
     Type: AWS::Lambda::Function
     Properties:
