@@ -37,7 +37,7 @@ Parameters:
 
   PSS3PathRegion:
     Description: Region where the PSS3Path file resides.
-    Default: us-east-1
+    Default: ""
     Type: String
 
   DomainName:
@@ -115,6 +115,8 @@ Parameters:
 Conditions:
   AddPrefixList: !Not [!Equals [!Ref ClientPrefixList, '']]
   AddCidrIngress: !Not [!Equals [!Ref ClientIpCidr, '']]
+  PSS3PathRegionProvided: !Not [!Equals [!Ref PSS3PathRegion, '']]
+  InGovCloud: !Equals [!Ref 'AWS::Partition', "aws-us-gov"]
 
 Resources:
   InstanceRole:
@@ -309,7 +311,7 @@ Resources:
               Register-ScheduledTask -Action $action -Settings $settings -Trigger $trigger -TaskName "Setup domain" -Description "Runs a powershell script as the delegation user after connecting to the Active Directory domain." -Principal $principal
               </powershell>
             - { PSS3Path: !Ref PSS3Path,
-                PSS3PathRegion: !Ref PSS3PathRegion,
+                PSS3PathRegion: !If [PSS3PathRegionProvided, !Ref PSS3PathRegion, !If [InGovCloud, "us-gov-west-1", "us-east-1"]],
                 SecretArn: !Ref DelegationPasswordSecret,
                 DomainName: !Ref DomainName,
                 DelegationUser: !Ref DelegationUser,
