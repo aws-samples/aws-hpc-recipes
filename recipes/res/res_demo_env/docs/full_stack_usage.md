@@ -1,6 +1,6 @@
-# Using the One-Click Demo template
+# Using the 'RES with Batteries Included' demo template
 
-The res-demo.yaml file combines the cloud resources (aka Batteries Included) template and the RES installation template (ResearchAndEngineeringStudio.template.json). This demo only works in commercial regions. One-Click Demo offers a few advantages:
+The `res-with-batteries-included.yaml` file combines the cloud resources Batteries Included (`bi.yaml`) template and the RES installation template (`ResearchAndEngineeringStudio.template.json`). This demo only works in commercial regions, but offers a few advantages:
 
 1. A single cloud stack helps building and tearing down the environment
 2. Fewer input parameters
