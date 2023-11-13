@@ -20,7 +20,7 @@ Parameters:
     Description: VPC where you will deploy the EFS filesystem
     Type: AWS::EC2::VPC::Id
   SubnetIds:
-    Description: Choose three subnets in different AZs in the VPC
+    Description: Choose two or three subnets in different AZs in the VPC
     Type: List<AWS::EC2::Subnet::Id>
   AutomaticBackups:
     Description: Automatic backups for the filesystem
@@ -92,7 +92,6 @@ Resources:
   EfsClientSecurityGroup:
     Type: AWS::EC2::SecurityGroup
     Properties:
-      GroupName: !Sub '${AWS::StackName}-efs-client-security-group'
       GroupDescription: Allow traffic to/from EFS from clients
       GroupName: !Sub '${AWS::StackName}-efs-client-security-group'
       VpcId: !Ref VpcId

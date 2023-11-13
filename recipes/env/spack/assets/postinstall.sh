@@ -125,10 +125,6 @@ download_spack() {
     fi
 }
 
-architecture() {
-    lscpu  | grep "Architecture:" | awk '{print $2}'
-}
-
 # zen3 EC2 instances (e.g. hpc6a) is misidentified as zen2 so zen3 packages are found under packages-zen2.yaml.
 target() {
     (
@@ -180,7 +176,9 @@ set_pcluster_defaults() {
 
     # Find suitable packages.yaml. If not for this architecture then for its parents.
     ( cp_packages_yaml "$(echo $(target) | sed -e 's?_avx512??1')" || download_packages_yaml "$(target)" )
-    eval "echo \"$(cat /tmp/packages.yaml)\"" > ${install_path}/etc/spack/packages.yaml
+    if [ "$(cat /tmp/packages.yaml)" != "404: Not Found" ]; then
+        eval "echo \"$(cat /tmp/packages.yaml)\"" > ${install_path}/etc/spack/packages.yaml
+    fi
 
     curl -Ls https://raw.githubusercontent.com/spack/spack-configs/main/AWS/parallelcluster/modules.yaml -o ${install_path}/etc/spack/modules.yaml
 }
@@ -212,8 +210,21 @@ setup_spack() {
     # Remove all autotools/buildtools packages. These versions need to be managed by spack or it will
     # eventually end up in a version mismatch (e.g. when compiling gmp).
     spack tags build-tools | xargs -I {} spack config --scope site rm packages:{}
+
+    # Remove gcc-12 if identified in ubuntu2204. There is no g++ for gfortran that goes with it and this will cause problems.
+    for compiler in $(spack compiler list | grep -v '-' |grep -v '=>' | xargs); do 
+        spack compiler info --scope=site ${compiler} 2>/dev/null | grep -q " None" && spack compiler rm --scope=site ${compiler}
+    done
+
     [ -z "${CI_PROJECT_DIR}" ] && spack mirror add --scope site "aws-pcluster" "https://binaries.spack.io/develop/aws-pcluster-$(target | sed -e 's?_avx512??1')"
-    spack buildcache keys --install --trust
+
+    # Newer gpg2 versions on Ainux2 will not be able to validate the key. This allows spack to accept the buildcache keys.
+    if [ "$(gpg --version | awk '/gpg/{print $3}')" == "2.0.22" ]; then
+        mkdir -m 700 -p ${SPACK_ROOT}/opt/spack/gpg
+        echo "openpgp" >> ${SPACK_ROOT}/opt/spack/gpg/gpg.conf
+    fi
+
+    spack buildcache keys -it
 }
 
 patch_compilers_yaml() {
@@ -227,7 +238,7 @@ patch_compilers_yaml() {
 
     # System ld is too old for amzn linux2
     spack_gcc_version=$(spack find --format '{version}' gcc)
-    binutils_path=$(spack find -p binutils | awk '/binutils/ {print $2}')
+    binutils_path=$(spack find -p binutils | awk '/binutils/ {print $2}' | head -n1)
     if [ -d "${binutils_path}" ] && [ -n "${spack_gcc_version}" ]; then python3 <<EOF
 import yaml
 
@@ -246,7 +257,7 @@ EOF
 
     # Oneapi needs extra_rpath to gcc libstdc++.so.6
     if oneapi_gcc_version=$(spack find --format '{compiler}' intel-oneapi-compilers | sed -e 's/=//g') && \
-            [ -n "${oneapi_gcc_version}" ] && oneapi_gcc_path=$(spack find -p "${oneapi_gcc_version}" | grep "${oneapi_gcc_version}" | awk '{print $2}') && \
+            [ -n "${oneapi_gcc_version}" ] && oneapi_gcc_path=$(spack find -p "${oneapi_gcc_version}" | grep "${oneapi_gcc_version}" | awk '{print $2}' | head -n1) && \
             [ -d "${oneapi_gcc_path}" ]; then  python3 <<EOF
 import yaml
 
@@ -310,39 +321,29 @@ install_packages() {
 
     # Compiler needed for all kinds of codes. It makes no sense not to install it.
     # Get gcc from buildcache
-    cache_zip=$(mktemp)
-    # TODO: Enable. It runs without error right now, but needs to be changed once bootstrap-gcc-cache is available
-    # [ -z "${CI_PROJECT_DIR}" ] && curl -L "" -o "${cache_zip}"
+
     # `gcc@12.3.0%gcc@7.3.1` is created as part of building the pipeline containers.
     # https://github.com/spack/gitlab-runners/pkgs/container/pcluster-amazonlinux-2/106126845?tag=v2023-07-01 produced the following hashes.
-    if [ "x86_64" == "$(architecture)" ]; then
+    if [ "x86_64" == "$(arch)" ]; then
         gcc_hash="yyvkvlgimaaxjhy32oa5x5eexqekrevc"
     else
         gcc_hash="jttj24nibqy5jsqf34as5m63umywfa3d"
     fi
-    if file -b "${cache_zip}"  | grep -q "Zip archive"; then
-        pushd "$(dirname "${cache_zip}")"
-        unzip -uq "${cache_zip}"
-        spack mirror add --scope=site bootstrap-gcc-cache file://"$PWD"/bootstrap-gcc-cache && \
-            spack buildcache update-index bootstrap-gcc-cache
-        popd
+    # TODO: Make this point to correct location once uploaded
+    GCC_BOOTSTRAP_CACHE="https://binaries.spack.io/some_location/$(arch)"
+    if curl -sf ${GCC_BOOTSTRAP_CACHE}/build_cache/index.json >/dev/null; then
+    # if aws s3 ls ${GCC_BOOTSTRAP_CACHE}/ | grep -q build_cache; then
+        spack mirror add --scope=site bootstrap-gcc-cache ${GCC_BOOTSTRAP_CACHE} && \
+            spack buildcache keys -it
     fi
 
-    spack install --no-check-signature /${gcc_hash} || spack install gcc
-
-    if spack mirror list | grep -q "bootstrap-gcc-cache"; then
-        pushd "$(dirname "${cache_zip}")"
-        spack mirror rm --scope=site bootstrap-gcc-cache
-        rm -rf bootstrap-gcc-cache "${cache_zip}"
-        popd
-    fi
-
+    spack install /${gcc_hash} 2>/dev/null || spack install gcc
     (
         spack load gcc
         spack compiler add --scope site
     )
 
-    if [ -z "${NO_INTEL_COMPILER}" ] && [ "x86_64" == "$(architecture)" ]
+    if [ -z "${NO_INTEL_COMPILER}" ] && [ "x86_64" == "$(arch)" ]
     then
         # Add oneapi@latest & intel@latest
         spack install intel-oneapi-compilers-classic
@@ -350,7 +351,7 @@ install_packages() {
     fi
 
     # TODO: Handle this compiler in pipeline once WRF package gets added
-    if [ -z "${CI_PROJECT_DIR}" ] && [ "aarch64" == "$(architecture)" ]
+    if [ -z "${CI_PROJECT_DIR}" ] && [ "aarch64" == "$(arch)" ]
     then
         spack install acfl
         (

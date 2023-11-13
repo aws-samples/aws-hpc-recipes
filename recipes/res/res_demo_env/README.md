@@ -47,5 +47,7 @@ The outputs from this automated stack are:
 - `SharedHomeFilesystemId` - An EFS Id to use for the shared home filesystem for Linux VDI hosts (e.g. `fs-041b7c1bd27f0c38e`)
 - `SudoersOU` - The OU for users who should have sudoers permission across all projects. The value provided here is based off of a supplied LDIF file. (e.g. `OU=Users,OU=RES,OU=corp,DC=corp,DC=res,DC=com`)
 - `UsersOU` - The OU for all users who might join the system. The value provided here is based off of a supplied LDIF file. (e.g. `OU=Users,OU=RES,OU=corp,DC=corp,DC=res,DC=com`)
-- `VpcId` - The Virtual Private C that the network resources have been created. (e.g. `vpc-011439ed80a3e6a3f`)
+- `VpcId` - The Virtual Private Cloud where the network resources have been created. (e.g. `vpc-011439ed80a3e6a3f`)
+
+## Cost Estimate
 
