@@ -1,11 +1,11 @@
-# Using the One-Click Demo template
+# Using the 'RES with Batteries Included' demo template
 
-The res-demo.yaml file combines the cloud resources (aka Batteries Included) template and the RES installation template (ResearchAndEngineeringStudio.template.json). This demo only works in commercial regions. One-Click Demo offers a few advantages:
+The `res-with-batteries-included.yaml` file combines the cloud resources Batteries Included (`bi.yaml`) template and the RES installation template (`ResearchAndEngineeringStudio.template.json`). This demo only works in commercial regions, but offers a few advantages:
 
 1. A single cloud stack helps building and tearing down the environment
 2. Fewer input parameters
 
-[![Launch the full stack](../../../../docs/media/launch-stack.svg)](https://console.aws.amazon.com/cloudformation/home?#/stacks/create/review?stackName=res-demo&templateURL=https://aws-hpc-recipes-dev.s3.us-east-1.amazonaws.com/res/recipes/res/res_demo_env/assets/res-demo.yaml)
+[![Launch the full stack](../../../../docs/media/launch-stack.svg)](https://console.aws.amazon.com/cloudformation/home?#/stacks/create/review?stackName=res-demo&templateURL=https://aws-hpc-recipes-dev.s3.us-east-1.amazonaws.com/res/recipes/res/res_demo_env/assets/res-with-batteries-included.yaml)
 
 The input parameters are:
 
