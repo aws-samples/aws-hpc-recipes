@@ -18,7 +18,7 @@ The resources that the `bi.yaml` template creates are:
 
 ## Launch a full RES stack
 
-In order to launch an entire cloud stack for a RES environment you can [launch a full RES stack](full_stack_usage.md). This will launch a cloud stack that includes the "Batteries Included" (`bi.yaml`) script then it automatically uses those outputs to install the Research And Engineering Studio [template](https://us-east-1.console.aws.amazon.com/cloudformation/home?region=us-east-1#/stacks/quickcreate?templateURL=https://research-engineering-studio-us-east-1.s3.amazonaws.com/releases/2023.10b1/ResearchAndEngineeringStudio1016.template.json). 
+In order to launch an entire cloud stack for a RES environment you can [launch a full RES stack](full_stack_usage.md). This will launch a cloud stack that includes the "Batteries Included" (`bi.yaml`) script then it automatically uses those outputs to install the Research And Engineering Studio [template](https://us-east-1.console.aws.amazon.com/cloudformation/home?region=us-east-1#/stacks/quickcreate?templateURL=https://research-engineering-studio-us-east-1.s3.amazonaws.com/releases/2023.11/ResearchAndEngineeringStudio.template.json). 
 
 There are a number of RES template stack inputs that can be taken right from the `bi.yaml` root stack Outputs:
  - EnvironmentName
