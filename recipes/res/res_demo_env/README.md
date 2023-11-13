@@ -8,7 +8,7 @@ Demonstration environment for RES on AWS. This recipe will create a number of ex
 
 Launch the "Batteries Included" (aka `bi.yaml`) template: [![Launch stack](../../../docs/media/launch-stack.svg)](https://console.aws.amazon.com/cloudformation/home?region=us-east-1#/stacks/create/review?stackName=res-bi&templateURL=https://aws-hpc-recipes-dev.s3.us-east-1.amazonaws.com/res/recipes/res/res_demo_env/assets/bi.yaml)
 
-After the `bi.yaml` template is finished it is possible to install the RES environment by the [RES Installer](https://us-east-1.console.aws.amazon.com/cloudformation/home?region=us-east-1#/stacks/quickcreate?templateURL=https://research-engineering-studio-us-east-1.s3.amazonaws.com/releases/2023.10b1/ResearchAndEngineeringStudio1016.template.json) stack.
+After the `bi.yaml` template is finished it is possible to install the RES environment by the [RES Installer](https://us-east-1.console.aws.amazon.com/cloudformation/home?region=us-east-1#/stacks/quickcreate?templateURL=https://research-engineering-studio-us-east-1.s3.amazonaws.com/releases/2023.11/ResearchAndEngineeringStudio.template.json) stack.
 
 More usage and features can be found in [docs](docs/README.md).
 
@@ -48,6 +48,4 @@ The outputs from this automated stack are:
 - `SudoersOU` - The OU for users who should have sudoers permission across all projects. The value provided here is based off of a supplied LDIF file. (e.g. `OU=Users,OU=RES,OU=corp,DC=corp,DC=res,DC=com`)
 - `UsersOU` - The OU for all users who might join the system. The value provided here is based off of a supplied LDIF file. (e.g. `OU=Users,OU=RES,OU=corp,DC=corp,DC=res,DC=com`)
 - `VpcId` - The Virtual Private C that the network resources have been created. (e.g. `vpc-011439ed80a3e6a3f`)
-
-## Cost Estimate
 
