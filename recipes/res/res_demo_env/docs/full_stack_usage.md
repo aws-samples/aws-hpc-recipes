@@ -5,7 +5,7 @@ The `res-with-batteries-included.yaml` file combines the cloud resources Batteri
 1. A single cloud stack helps building and tearing down the environment
 2. Fewer input parameters
 
-[![Launch the full stack](../../../../docs/media/launch-stack.svg)](https://console.aws.amazon.com/cloudformation/home?#/stacks/create/review?stackName=res-demo&templateURL=https://aws-hpc-recipes-dev.s3.us-east-1.amazonaws.com/res/recipes/res/res_demo_env/assets/res-with-batteries-included.yaml)
+[![Launch the full stack](../../../../docs/media/launch-stack.svg)](https://console.aws.amazon.com/cloudformation/home?#/stacks/create/review?stackName=res-demo&templateURL=https://aws-hpc-recipes-dev.s3.us-east-1.amazonaws.com/main/recipes/res/res_demo_env/assets/res-with-batteries-included.yaml)
 
 The input parameters are:
 
