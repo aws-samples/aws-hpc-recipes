@@ -7,13 +7,38 @@ The format is based on [Keep a Changelog](http://keepachangelog.com/)
 
 ### Added
 
-* New `security` namespace
-* Added `security/public_certs` recipe
-
 ### Fixed
 
 ### Changed
 
+
+### Removed
+
+## [1.1.0] - 2023-11-13
+
+### Added
+
+* New recipe to mount an S3 bucket under ParallelCluster using S3 Mountpoint
+* New recipe to build a Research and Engineering Studio on AWS demo environment
+* New recipe to generate certs for a Route53-hosted domain using LetsEncrypt
+
+### Fixed
+
+* ParallelCluster recipes installing version 3.7.x or higher no longer support Ubuntu18 in dropdowns
+* ParallelCluster recipes installing version 3.7.x or higher now support RHEL8 in dropdowns
+
+### Changed
+
+* HPC-scale networking recipe now supports GovCloud
+* It is now optional to deploy subnets in a third AZ in the HPC-scale networking recipe
+* The number of subnets in which EFS mount targets are created is now configurable
+* Most ParallelCluster recipes updated to version 3.7.2
+* Added support to restrict access to AD management node to an IP or CIDR block
+* Added support for populating AD with an LDIF file
+* Added support for DNS resolution of AD controllers
+* Added support for custom domains to AD recipe
+* Added optional Windows management host to AD recipe
+* Anonymous access to EFS filesystems is now prevented via a policy
 * Updated EFS recipe to use self-referencing security group
 * Updated FSx for Lustre recipe to use self-referencing security group
 * Updated FSx for OpenZFS recipe to use self-referencing security group
