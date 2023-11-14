@@ -74,6 +74,7 @@ Conditions:
   GenerateCerts: !Not [!Equals [!Ref PortalDomainName, '']]
   UseEnvironmentName: !Not [!Equals [!Ref EnvironmentName, '']]
   SubDomainNotProvided: !Equals [!Ref SubDomain, '']
+  InGovCloud: !Equals [!Ref 'AWS::Partition', "aws-us-gov"]
 
 Resources:
 
@@ -121,6 +122,7 @@ Resources:
         ClientIpCidr: !Ref ClientIpCidr
         ClientPrefixList: !Ref ClientPrefixList
         PSS3Path: aws-hpc-recipes/main/recipes/res/res_demo_env/assets/service_account.ps1
+        PSS3PathRegion: !If [InGovCloud, "us-gov-west-1", "us-east-1"]
       TemplateURL: https://aws-hpc-recipes.s3.us-east-1.amazonaws.com/main/recipes/dir/demo_managed_ad/assets/windows_management_host.yaml
 
   Storage:
