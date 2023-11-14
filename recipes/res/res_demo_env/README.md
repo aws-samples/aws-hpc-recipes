@@ -17,6 +17,7 @@ More usage and features can be found in [docs](docs/README.md).
 As parameters to the automated stack:
 
 * `DomainName` - This is the domain for the Active Directory (AD). The value `corp.res.com` corresponds to the domain that is used in the supplied LDIF file which sets up bootstrap users, so if you would like to use default users this needs remain as-is. Otherwise, you may change it (and provide a separate LDIF file). This doesn't need to match the domain used for AD.
+* `SubDomain` - (Optional, but required for GovCloud regions) SubDomain for the Active Directory Domain Name. If provided, Active Directory Domain Name will be {SubDomain}.{DomainName}
 * `AdminPassword` - This is the password for an AD administrator (username `admin`). This user is created in the AD for administration purposes and isn’t used beyond the initial bootstrapping phase. Note that both this password and ServiceAccountPassword must meet password complexity requirements from the default AD [policy](https://learn.microsoft.com/en-us/windows/security/threat-protection/security-policy-settings/password-must-meet-complexity-requirements).
 * `ServiceAccountPassword` - This is the password used to create a service account that is used for synchronization.
 * `Keypair` - This EC2 key pair is used to connect to the administrative instances.
@@ -25,6 +26,7 @@ As parameters to the automated stack:
 * `EnvironmentName` - If the PortalDomainName is provided, this name is used to add tags to the secrets that are generated so that they can be used within the environment. This will need to match the EnvironmentName parameter that is used when creating the RES stack later.
 * `PortalDomainName` - This is the value of a domain that exists in Route53 on the account. If this is provided, then a public certificate (and key file) will be generated and uploaded to Secrets Manager. If you have your own domain and certificates, this parameter (and the EnvironmentName) can be left blank.
 * `ClientPrefixList` - A prefix list that will be used to provide access to the AD management nodes. (This resource type can be managed in https://console.aws.amazon.com/vpcconsole/home#ManagedPrefixLists)
+* `DomainTLSCertificateSecretARN` - The certificate used to encrypt data between the Active Directory (as an AWS Secret ARN).
 
 ### Outputs
 
