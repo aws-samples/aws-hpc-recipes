@@ -29,3 +29,5 @@ Once the stack is finished the admin email should receive a message with a tempo
 For Example:
 
 ![image](image_email.png)
+
+You will need to configure an SSO service in order for RES users to log into the environment. This is a guide to set up the [AWS Identity Center](aws_identity_center.md) for the Batteries Included cloud stack.
