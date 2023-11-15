@@ -17,6 +17,7 @@ More usage and features can be found in [docs](docs/README.md).
 As parameters to the automated stack:
 
 * `DomainName` - This is the domain for the Active Directory (AD). The value `corp.res.com` corresponds to the domain that is used in the supplied LDIF file which sets up bootstrap users, so if you would like to use default users this needs remain as-is. Otherwise, you may change it (and provide a separate LDIF file). This doesn't need to match the domain used for AD.
+* `SubDomain` - (Optional, but required for GovCloud regions) SubDomain for the Active Directory Domain Name. If provided, Active Directory Domain Name will be {SubDomain}.{DomainName}
 * `AdminPassword` - This is the password for an AD administrator (username `admin`). This user is created in the AD for administration purposes and isn’t used beyond the initial bootstrapping phase. Note that both this password and ServiceAccountPassword must meet password complexity requirements from the default AD [policy](https://learn.microsoft.com/en-us/windows/security/threat-protection/security-policy-settings/password-must-meet-complexity-requirements).
 * `ServiceAccountPassword` - This is the password used to create a service account that is used for synchronization.
 * `Keypair` - This EC2 key pair is used to connect to the administrative instances.
