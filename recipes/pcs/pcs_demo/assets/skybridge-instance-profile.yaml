@@ -1,0 +1,42 @@
+AWSTemplateFormatVersion: 2010-09-09
+Description: Create a minimal PCS instance launch profile
+
+Resources:
+
+  PcsInstanceIamRole:
+    Type: AWS::IAM::Role
+    Properties:
+      RoleName: "PcsBasicInstanceIamRole"
+      Description: "AWS IAM role for PCS node group instances"
+      AssumeRolePolicyDocument:
+        Statement:
+          - Action: sts:AssumeRole
+            Effect: Allow
+            Principal:
+              Service: ec2.amazonaws.com
+        Version: "2012-10-17"
+      ManagedPolicyArns:
+           - "arn:aws:iam::aws:policy/AmazonSSMManagedInstanceCore"
+      Policies:
+        - PolicyDocument:
+            Version: "2012-10-17"
+            Statement:
+              - Action:
+                  - pcs:RegisterComputeNodeGroupInstance
+                Effect: Allow
+                Resource: "*"
+          PolicyName: PcsRegisterInstancePolicy
+
+  PcsInstanceProfile:
+    Type: AWS::IAM::InstanceProfile
+    Properties:
+      Roles:
+            - !Ref PcsInstanceIamRole
+      InstanceProfileName: PcsBasicInstanceProfile
+
+Outputs:
+  InstanceProfile:
+    Value: !Ref PcsInstanceProfile
+  InstanceProfileArn:
+    Value: !GetAtt PcsInstanceProfile.Arn
+

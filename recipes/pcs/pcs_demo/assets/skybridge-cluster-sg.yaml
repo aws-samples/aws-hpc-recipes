@@ -1,0 +1,37 @@
+AWSTemplateFormatVersion: 2010-09-09
+Description: Creates a security group that can be used when creating a Skybridge Cluster
+Parameters:
+  VpcId:
+    Description: VPC where the Skybridge Cluster will be deployed
+    Type: 'AWS::EC2::VPC::Id'
+Resources:
+  SkybridgeSecurityGroup:
+    Type: 'AWS::EC2::SecurityGroup'
+    Properties:
+      GroupDescription: Allow Cross Traffic from VPC to Skybridge
+      GroupName: !Sub '${AWS::StackName}-skybridge-security-group'
+      VpcId: !Ref VpcId
+      SecurityGroupEgress:
+        - CidrIp: 0.0.0.0/0
+          Description: Allow all outbound
+          IpProtocol: '-1'
+  SkybridgeSecurityGroupInboundRule:
+    Type: 'AWS::EC2::SecurityGroupIngress'
+    Properties:
+      IpProtocol: '-1'
+      Description: Allow incoming connection to Cluster from members of security group
+      GroupId: !Ref SkybridgeSecurityGroup
+      SourceSecurityGroupId: !Ref SkybridgeSecurityGroup
+  SkybridgeSecurityGroupOutboundRule:
+    Type: 'AWS::EC2::SecurityGroupEgress'
+    Properties:
+      IpProtocol: '-1'
+      Description: Allow outbound connection from Cluster to members of security group
+      GroupId: !Ref SkybridgeSecurityGroup
+      DestinationSecurityGroupId: !Ref SkybridgeSecurityGroup
+Outputs:
+  ClientSecurityGroupId:
+    Description: Security group allowing access to Cluster
+    Value: !Ref SkybridgeSecurityGroup
+    Export:
+      Name: !Sub '${AWS::StackName}-ClientSecurityGroupId'

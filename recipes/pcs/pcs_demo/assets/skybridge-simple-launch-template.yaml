@@ -1,0 +1,51 @@
+AWSTemplateFormatVersion: 2010-09-09
+Description: Create a launch template to support a compute node group
+
+Parameters:
+
+  LaunchTemplateName:
+    Type: String
+  NodeGroupSubnetId:
+    Type: AWS::EC2::Subnet::Id
+    Description: Subnet
+  NodeGroupSecurityGroupIds:
+    Type: List<AWS::EC2::SecurityGroup::Id>
+    Description: Security group(s)
+  KeyName:
+    Type: AWS::EC2::KeyPair::KeyName
+    Description: SSH keypair to log into node group instances
+  AmiId:
+    Type: String
+    Description: Optional AMI ID - leave blank if using a service-optimized AMI.
+
+Conditions:
+  SpecifyAmi: !Not [ !Equals [!Ref AmiId, ""] ]
+
+Resources:
+
+  LaunchTemplate:
+    Type: AWS::EC2::LaunchTemplate
+    Properties:
+      LaunchTemplateName: !Ref LaunchTemplateName
+      LaunchTemplateData:
+        KeyName: !Ref KeyName
+        ImageId:
+          !If
+          - SpecifyAmi
+          - !Ref AmiId
+          - !Ref "AWS::NoValue"
+        NetworkInterfaces:
+          - DeviceIndex: 0
+            SubnetId: !Ref NodeGroupSubnetId
+            Groups: !Ref NodeGroupSecurityGroupIds
+
+Outputs:
+  LaunchTemplateId:
+    Description: "Launch template Id"
+    Value: !Ref LaunchTemplate
+  DefaultVersionNumber:
+    Description: "Default version number"
+    Value: !GetAtt LaunchTemplate.DefaultVersionNumber
+  LatestVersionNumber:
+    Description: "Latest version number"
+    Value: !GetAtt LaunchTemplate.DefaultVersionNumber    
