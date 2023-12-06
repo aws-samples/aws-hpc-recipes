@@ -12,6 +12,7 @@ The format is based on [Keep a Changelog](http://keepachangelog.com/)
 ### Changed
 
 * efs_simple now supports launching in a single subnet
+* efs_simple now allows selection of throughput mode between elastic and bursting
 
 ### Removed
 

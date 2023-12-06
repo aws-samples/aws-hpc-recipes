@@ -8,6 +8,7 @@ Metadata:
           default: Filesystem Options
         Parameters:
           - AutomaticBackups
+          - ThroughtputMode
       - Label:
           default: Networking and Access
         Parameters:
@@ -37,6 +38,13 @@ Parameters:
          - "1"
          - "2"
          - "3"
+  ThroughtputMode:
+    Description: EFS filesystem throughput mode
+    Type: String
+    Default: "elastic"
+    AllowedValues:
+         - "elastic"
+         - "bursting"
 
 Conditions:
   1AZCondition: !Or
@@ -75,7 +83,7 @@ Resources:
       BackupPolicy: 
         Status: !Ref AutomaticBackups
       Encrypted: true
-      ThroughputMode: elastic
+      ThroughputMode: !Ref ThroughtputMode
 
   # Security group
   EfsSecurityGroup:
