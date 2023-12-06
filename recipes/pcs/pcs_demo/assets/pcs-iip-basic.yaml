@@ -1,12 +1,12 @@
 AWSTemplateFormatVersion: 2010-09-09
-Description: Create a minimal PCS instance launch profile
+Description: Minimal IAM instance profile for use with PCS Compute Node Groups
 
 Resources:
 
   PcsInstanceIamRole:
     Type: AWS::IAM::Role
     Properties:
-      RoleName: "PcsBasicInstanceIamRole"
+      RoleName: "MyPcsBasicInstanceIamRole"
       Description: "AWS IAM role for PCS node group instances"
       AssumeRolePolicyDocument:
         Statement:
@@ -17,6 +17,8 @@ Resources:
         Version: "2012-10-17"
       ManagedPolicyArns:
            - "arn:aws:iam::aws:policy/AmazonSSMManagedInstanceCore"
+           - "arn:aws:iam::aws:policy/CloudWatchAgentAdminPolicy"
+           - "arn:aws:iam::aws:policy/AmazonS3ReadOnlyAccess"
       Policies:
         - PolicyDocument:
             Version: "2012-10-17"
@@ -32,7 +34,7 @@ Resources:
     Properties:
       Roles:
             - !Ref PcsInstanceIamRole
-      InstanceProfileName: PcsBasicInstanceProfile
+      InstanceProfileName: MyPcsBasicInstanceProfile
 
 Outputs:
   InstanceProfile:
