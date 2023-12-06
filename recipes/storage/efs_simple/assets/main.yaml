@@ -20,7 +20,7 @@ Parameters:
     Description: VPC where you will deploy the EFS filesystem
     Type: AWS::EC2::VPC::Id
   SubnetIds:
-    Description: Choose two or three subnets in different AZs in the VPC
+    Description: Choose up to three subnets in different AZs in the VPC
     Type: List<AWS::EC2::Subnet::Id>
   AutomaticBackups:
     Description: Automatic backups for the filesystem
@@ -34,6 +34,7 @@ Parameters:
     Type: String
     Default: "3"
     AllowedValues:
+         - "1"
          - "2"
          - "3"
 

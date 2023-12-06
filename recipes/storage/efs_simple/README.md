@@ -6,17 +6,13 @@ This recipe shows how to use CloudFormation to set up an EFS filesystem, along w
 
 ## Usage
 
-### Configure a networking stack (optional)
-
-Follow the instructions in the [Large-scale HPC Networking Setup](../../net/hpc_large_scale/README.md) recipe. This will help ensure you have subnets configured in multiple Availablity Zones. You only need to do this once per Region you want to deploy clusters and their associated resources in. 
-
 ### Create an EFS filesystem
 
 There is only one template in this recipe, whichj creates a simple EFS filesystem. 
 
 * Create an [EFS Filesystem](https://console.aws.amazon.com/cloudformation/home?region=us-east-2#/stacks/create/review?stackName=efs-simple&templateURL=https://aws-hpc-recipes.s3.us-east-1.amazonaws.com/main/recipes/storage/efs_simple/assets/main.yaml).
 
-You will be asked to select subnets in which to create EFS mount targets. Choose either 3 (recommended) or 2 subnets. Then, choose the corresponding number of subnets in **SubnetCount**. It must match or the template may fail to launch. 
+You will be asked to select subnets in which to create EFS mount targets. Choose between 1 and 3 subnets. Then, choose the corresponding number of subnets in **SubnetCount**. It must match or the template may fail to launch. 
 
 ### Use with AWS ParallelCluster
 
@@ -36,7 +32,7 @@ SharedStorage:
       FileSystemId: fs-0123456789abcdef0
 ```
 
-3. Also, retrieve the `SecurityGroupId` from the CloudFormation stack output and add it to the `HeadNode` and `Scheduling` sections.
+3. Retrieve the `SecurityGroupId` from the CloudFormation stack output and add it to the `HeadNode` and `Scheduling` sections.
 
 ```yaml
 # Example of allowing head node access

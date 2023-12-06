@@ -11,6 +11,7 @@ The format is based on [Keep a Changelog](http://keepachangelog.com/)
 
 ### Changed
 
+* efs_simple now supports launching in a single subnet
 
 ### Removed
 
