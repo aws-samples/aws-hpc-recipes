@@ -1,6 +1,30 @@
 AWSTemplateFormatVersion: 2010-09-09
 Description: Create a launch template to support a compute node group
 
+
+Metadata:
+  AWS::CloudFormation::Interface:
+    ParameterGroups:
+      = Label:
+          default: Launch Template
+        Parameters:
+          - LaunchTemplateName
+      - Label:
+          default: Networking and Security
+        Parameters:
+          - NodeGroupSubnetId
+          - NodeGroupSecurityGroupIds
+          - KeyName
+      - Label:
+          default: Instance
+        Parameters:
+          - AmiId
+      - Label:
+          default: Filesystems
+        Parameters:
+          - EfsFilesystemId
+          - HostMountPoint
+
 Parameters:
 
   LaunchTemplateName:

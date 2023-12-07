@@ -17,7 +17,7 @@ Resources:
         Version: "2012-10-17"
       ManagedPolicyArns:
            - "arn:aws:iam::aws:policy/AmazonSSMManagedInstanceCore"
-           - "arn:aws:iam::aws:policy/CloudWatchAgentAdminPolicy"
+           - "arn:aws:iam::aws:policy/CloudWatchAgentServerPolicy"
            - "arn:aws:iam::aws:policy/AmazonS3ReadOnlyAccess"
       Policies:
         - PolicyDocument:
