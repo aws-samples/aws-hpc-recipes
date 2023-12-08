@@ -5,7 +5,7 @@ Description: Create a launch template to support a compute node group
 Metadata:
   AWS::CloudFormation::Interface:
     ParameterGroups:
-      = Label:
+      - Label:
           default: Launch Template
         Parameters:
           - LaunchTemplateName
