@@ -1,5 +1,5 @@
 AWSTemplateFormatVersion: 2010-09-09
-Description: Create a launch template to support a PCS compute node group
+Description: Creates a placement group and launch template to support a PCS compute node group with EFA
 
 
 Metadata:
@@ -13,11 +13,13 @@ Metadata:
           default: Networking
         Parameters:
           - NodeGroupSubnetId
+          - InterfaceType
       - Label:
           default: Security
         Parameters:
           - KeyName
           - VpcSecurityGroupId
+          - EfaSecurityGroupId
           - EfsClientSecurityGroupId
           - InboundAccessSecurityGroupId
       - Label:
@@ -43,12 +45,21 @@ Parameters:
   InboundAccessSecurityGroupId:
     Type: AWS::EC2::SecurityGroup::Id
     Description: Security group controlling inbound SSH access
+  EfaSecurityGroupId:
+    Type: AWS::EC2::SecurityGroup::Id
+    Description: Security group enabling EFA access on EC2 instances
   EfsClientSecurityGroupId:
     Type: AWS::EC2::SecurityGroup::Id
     Description: Security group allowing access to the EFS filesystem
   KeyName:
     Type: AWS::EC2::KeyPair::KeyName
     Description: SSH keypair to log into node group instances
+  InterfaceType:
+    Type: String
+    Description: Network interface type - instances must support EFA if selected
+    Default: "efa"
+    AllowedValues:
+         - "efa"
   AmiId:
     Type: String
     Description: Optional AMI ID - leave blank if using a service-optimized AMI.
@@ -64,6 +75,11 @@ Conditions:
   SpecifyAmi: !Not [ !Equals [!Ref AmiId, ""] ]
 
 Resources:
+
+  ClusterPlacementGroup:
+    Type: AWS::EC2::PlacementGroup
+    Properties:
+      Strategy: cluster
 
   LaunchTemplate:
     Type: AWS::EC2::LaunchTemplate
@@ -81,8 +97,12 @@ Resources:
             SubnetId: !Ref NodeGroupSubnetId
             Groups:
               - !Ref VpcSecurityGroupId
+              - !Ref EfaSecurityGroupId
               - !Ref InboundAccessSecurityGroupId
               - !Ref EfsClientSecurityGroupId
+            InterfaceType: !Ref InterfaceType
+        Placement:
+          GroupName: !Ref ClusterPlacementGroup
         UserData:
           Fn::Base64: !Sub |
             MIME-Version: 1.0

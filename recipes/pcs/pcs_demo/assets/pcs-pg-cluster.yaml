@@ -1,0 +1,15 @@
+AWSTemplateFormatVersion: 2010-09-09
+Description: Create an EC2 placement group support a PCS compute node group
+
+Resources:
+
+  ClusterPlacementGroup:
+    Type: AWS::EC2::PlacementGroup
+    Properties:
+      Strategy: cluster
+
+Outputs:
+  ClusterPlacementGroupName:
+    Description: "Placement group name"
+    Value: !Ref ClusterPlacementGroup
+
