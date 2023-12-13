@@ -146,6 +146,8 @@ Resources:
           Value: !Ref EnvironmentName
         - Key: "res:ModuleName"
           Value: virtual-desktop-controller
+        - Key: "bi:Deployment"
+          Value: "true"
 
   ACMCertificate:
     Condition: GenerateCerts
