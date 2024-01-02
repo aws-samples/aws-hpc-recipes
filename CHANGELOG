@@ -16,6 +16,7 @@ The format is based on [Keep a Changelog](http://keepachangelog.com/)
 * updated pcluster/latest to version 3.8.0
 * updated pcluster/try* to version 3.8.0
 * updated pcluster/pcui to version 3.8.0
+* demo_managed_ad now allows selection of AWS Managed Microsoft AD Enterprise edition
 
 ### Removed
 
