@@ -11,6 +11,7 @@ Metadata:
           - AdminPassword
           - ServiceAccountPassword
           - AdDomainAdminNodeInstancetype
+          - ManagedAdEdition
       - Label:
           default: "Default Active Directory User(s)"
         Parameters:
@@ -29,6 +30,13 @@ Metadata:
           - NetworkStackNameParameter
 
 Parameters:
+  ManagedAdEdition:
+    Description: Select an AWS Managed Microsoft AD edition.
+    Type: String
+    Default: Standard
+    AllowedValues:
+         - Standard
+         - Enterprise
   DomainName:
     Description: Active Directory Domain Name.
     Type: String
@@ -201,7 +209,7 @@ Resources:
     Properties:
       Name: !Ref DomainName
       Password: !Ref AdminPassword
-      Edition: Standard
+      Edition: !Ref ManagedAdEdition
       VpcSettings:
         SubnetIds:
           - {"Fn::Select": [0, { "Fn::Split" : [",", {"Fn::ImportValue" : {"Fn::Sub" : "${NetworkStackNameParameter}-PrivateSubnets"}}] }]}

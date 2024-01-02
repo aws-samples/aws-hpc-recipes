@@ -13,6 +13,7 @@ Metadata:
           - ServiceAccountName
           - ServiceAccountPassword
           - AdDomainAdminNodeInstancetype
+          - ManagedAdEdition
       - Label:
           default: "Default Active Directory User(s)"
         Parameters:
@@ -33,6 +34,13 @@ Metadata:
           - PrivateSubnetTwo
 
 Parameters:
+  ManagedAdEdition:
+    Description: Select an AWS Managed Microsoft AD edition.
+    Type: String
+    Default: Standard
+    AllowedValues:
+         - Standard
+         - Enterprise
   DomainName:
     Description: Active Directory Domain Name.
     Type: String
@@ -311,7 +319,7 @@ Resources:
     Properties:
       Name: !If [ SubDomainNotProvided, !Ref DomainName, !Join [ ".", [ !Ref SubDomain, !Ref DomainName] ] ]
       Password: !Ref AdminPassword
-      Edition: Standard
+      Edition: !Ref ManagedAdEdition
       VpcSettings:
         SubnetIds:
           - !If [CreateVPC, !Ref PclusterVpcSubnet1, !Ref PrivateSubnetOne ]
