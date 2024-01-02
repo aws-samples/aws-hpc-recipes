@@ -82,7 +82,7 @@ Parameters:
 Mappings:
   ParallelCluster:
     Constants:
-      Version: 3.7.2
+      Version: 3.8.0
   Recipes:
     Constants:
       Version: main

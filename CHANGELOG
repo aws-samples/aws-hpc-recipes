@@ -13,6 +13,9 @@ The format is based on [Keep a Changelog](http://keepachangelog.com/)
 
 * efs_simple now supports launching in a single subnet
 * efs_simple now allows selection of throughput mode between elastic and bursting
+* updated pcluster/latest to version 3.8.0
+* updated pcluster/try* to version 3.8.0
+* updated pcluster/pcui to version 3.8.0
 
 ### Removed
 
