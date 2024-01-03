@@ -36,6 +36,8 @@ Then select **Connect** to connect to the instance using AWS Session Manager whi
 
 ![image](https://github.com/charlesg3/aws-hpc-recipes/assets/6087509/5351d842-34c5-47a3-8fa0-7730acc8e903)
 
+**Note** If you chose **Yes** for the parameter **StopAdAdminInstance** in the CloudFormation template, the adminstrative instance may be in a stopped state. Choose **Instance state::Start instance** to bring it back online before connecting to it. You can shut the instance down again when you are done with your adminstrative actions. 
+
 This instance has the `adcli` and `ldapmodify`  CLI tools that allow you to update the ActiveDirectory to manage your groups and users.
 
 #### Adding Users and Groups

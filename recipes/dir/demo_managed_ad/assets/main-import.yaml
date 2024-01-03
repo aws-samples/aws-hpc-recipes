@@ -23,6 +23,7 @@ Metadata:
         Parameters:
           - Keypair
           - AllowedIps
+          - StopAdAdminInstance
           - AdminNodeAmiId
       - Label:
           default: "Networking"
@@ -92,6 +93,13 @@ Parameters:
     Description: EC2 instance type for the Management Instance
     Type: String
     Default: t3.micro
+  StopAdAdminInstance:
+    Description: Automatically stop the Management Instance to save costs
+    Type: String
+    Default: "No"
+    AllowedValues:
+         - "Yes"
+         - "No"
 
 Conditions: 
   isUSEast1: !Equals [!Ref "AWS::Region", "us-east-1"]
@@ -502,6 +510,7 @@ Resources:
               user_name = event['ResourceProperties']['UserName']
               user_password = event['ResourceProperties']['UserPassword']
               admin_password = event['ResourceProperties']['AdminPassword']
+              stop_ad_admin_instance = event['ResourceProperties']['StopAdAdminInstance'] == 'Yes'
 
               response_data = {}
               reason = None
@@ -514,7 +523,8 @@ Resources:
                   if user_name != "":
                     ds.reset_user_password(DirectoryId=directory_id, UserName=user_name, NewPassword=user_password)
                   ds.reset_user_password(DirectoryId=directory_id, UserName='Admin', NewPassword=admin_password)
-                  # ec2.stop_instances(InstanceIds=[instance_id])
+                  if stop_ad_admin_instance:
+                    ec2.stop_instances(InstanceIds=[instance_id])
 
               else:
                   physical_resource_id = event['PhysicalResourceId']
@@ -531,6 +541,7 @@ Resources:
       AdminPassword: !Ref AdminPassword
       ServiceAccountName: !Ref ServiceAccountName
       ServiceAccountPassword: !Ref ServiceAccountPassword
+      StopAdAdminInstance: !Ref StopAdAdminInstance
 
   PasswordSecret:
     Type: AWS::SecretsManager::Secret
