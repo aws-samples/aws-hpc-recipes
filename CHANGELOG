@@ -6,6 +6,7 @@ The format is based on [Keep a Changelog](http://keepachangelog.com/)
 ## [Unreleased]
 
 ### Added
+* added a helper script to hpc_networking to keep up with region launches
 
 ### Fixed
 
@@ -17,6 +18,7 @@ The format is based on [Keep a Changelog](http://keepachangelog.com/)
 * updated pcluster/try* to version 3.8.0
 * updated pcluster/pcui to version 3.8.0
 * demo_managed_ad now allows selection of AWS Managed Microsoft AD Enterprise edition
+* added support for ap-northeast-3 and sa-east-1 to hpc_networking
 
 ### Removed
 
