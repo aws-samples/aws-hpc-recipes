@@ -143,6 +143,14 @@ Mappings:
       ZoneId1: usgw1-az1
       ZoneId2: usgw1-az2
       ZoneId3: usgw1-az3
+    ap-northeast-3:
+      ZoneId1: apne3-az3
+      ZoneId2: apne3-az2
+      ZoneId3: apne3-az1
+    sa-east-1:
+      ZoneId1: sae1-az3
+      ZoneId2: sae1-az2
+      ZoneId3: sae1-az1
 
 Conditions:
      DoProvisionSubnetsC: !Equals [!Ref ProvisionSubnetsC, "True"]
