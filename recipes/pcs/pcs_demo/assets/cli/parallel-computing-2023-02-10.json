@@ -6,7 +6,7 @@
         "jsonVersion": "1.0",
         "protocol": "json",
         "ripServiceName": "pcs",
-        "serviceAbbreviation": "pcs",
+        "serviceAbbreviation": "PCS",
         "serviceFullName": "AWS Parallel Computing Service",
         "serviceId": "Parallel Computing",
         "signatureVersion": "v4",
@@ -593,6 +593,9 @@
                 "scheduler": {
                     "shape": "Scheduler"
                 },
+                "slurmConfiguration": {
+                    "shape": "SlurmConfiguration"
+                },
                 "status": {
                     "shape": "ClusterStatus"
                 },
@@ -601,6 +604,9 @@
                 },
                 "endpoints": {
                     "shape": "Endpoints"
+                },
+                "statusInfo": {
+                    "shape": "StatusInfo"
                 }
             }
         },
@@ -727,6 +733,12 @@
                 },
                 "instances": {
                     "shape": "InstanceList"
+                },
+                "slurmConfiguration": {
+                    "shape": "ComputeNodeGroupSlurmConfiguration"
+                },
+                "statusInfo": {
+                    "shape": "StatusInfo"
                 }
             }
         },
@@ -785,6 +797,14 @@
             "max": 25,
             "min": 1,
             "pattern": "[A-Za-z][A-Za-z0-9-]*"
+        },
+        "ComputeNodeGroupSlurmConfiguration": {
+            "type": "structure",
+            "members": {
+                "slurmCustomSettings": {
+                    "shape": "SlurmCustomSettings"
+                }
+            }
         },
         "ComputeNodeGroupStatus": {
             "type": "string",
@@ -892,6 +912,9 @@
                 },
                 "networking": {
                     "shape": "Networking"
+                },
+                "slurmConfiguration": {
+                    "shape": "SlurmConfiguration"
                 }
             },
             "documentation": "<pre><code>Mixin for all the metadata sent by the CAPI Building Block, including those needed for FAS. These are intended for internal use only and should never be exposed to the external customer </code></pre>"
@@ -967,6 +990,9 @@
                 },
                 "instances": {
                     "shape": "InstanceList"
+                },
+                "slurmConfiguration": {
+                    "shape": "ComputeNodeGroupSlurmConfiguration"
                 }
             },
             "documentation": "<pre><code>Mixin for all the metadata sent by the CAPI Building Block, including those needed for FAS. These are intended for internal use only and should never be exposed to the external customer </code></pre>"
@@ -1596,6 +1622,9 @@
                 },
                 "computeNodeGroupConfigurations": {
                     "shape": "ComputeNodeGroupConfigurationList"
+                },
+                "statusInfo": {
+                    "shape": "StatusInfo"
                 }
             }
         },
@@ -1833,6 +1862,56 @@
         "SharedSecret": {
             "type": "string",
             "sensitive": true
+        },
+        "SlurmConfiguration": {
+            "type": "structure",
+            "members": {
+                "scaleDownIdleTime": {
+                    "shape": "SlurmConfigurationScaleDownIdleTimeInteger"
+                },
+                "slurmCustomSettings": {
+                    "shape": "SlurmCustomSettings"
+                }
+            }
+        },
+        "SlurmConfigurationScaleDownIdleTimeInteger": {
+            "type": "integer",
+            "box": true,
+            "min": 1
+        },
+        "SlurmCustomSetting": {
+            "type": "structure",
+            "required": [
+                "parameterName",
+                "parameterValue"
+            ],
+            "members": {
+                "parameterName": {
+                    "shape": "String"
+                },
+                "parameterValue": {
+                    "shape": "String"
+                }
+            }
+        },
+        "SlurmCustomSettings": {
+            "type": "list",
+            "member": {
+                "shape": "SlurmCustomSetting"
+            },
+            "documentation": "<p>The settings to fine-tune the Slurm configuration</p>"
+        },
+        "StatusInfo": {
+            "type": "structure",
+            "members": {
+                "code": {
+                    "shape": "String"
+                },
+                "message": {
+                    "shape": "String"
+                }
+            },
+            "documentation": "<p>Code and translated message describing the resource status in async path.</p>"
         },
         "String": {
             "type": "string"
