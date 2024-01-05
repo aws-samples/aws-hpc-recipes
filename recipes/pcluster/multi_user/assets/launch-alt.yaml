@@ -154,7 +154,7 @@ Resources:
           PasswordLength: 32
           RequireEachIncludedType: True
  
-  ReadonlyPasswordSecret:
+  ServiceAccountPasswordSecret:
     Type: AWS::SecretsManager::Secret
     DeletionPolicy: Delete
     UpdateReplacePolicy: Delete
@@ -178,7 +178,7 @@ Resources:
       Parameters:
         DomainName: !Sub ${AWS::StackName}.ad.pcluster.com
         AdminPassword: !Sub "{{resolve:secretsmanager:${AdminPasswordSecret}}}"
-        ReadOnlyPassword: !Sub "{{resolve:secretsmanager:${ReadonlyPasswordSecret}}}"
+        ServiceAccountPassword: !Sub "{{resolve:secretsmanager:${ServiceAccountPasswordSecret}}}"
         UserName: !Ref UserName
         UserPassword: !Ref UserPassword
         Keypair: !Ref KeyName
@@ -186,7 +186,7 @@ Resources:
         PrivateSubnetOne: {"Fn::Select": [0, !Ref AdInstancesSubnetIds]}
         PrivateSubnetTwo: {"Fn::Select": [1, !Ref AdInstancesSubnetIds]}
       TemplateURL: !Sub
-        - https://aws-hpc-recipes.s3.us-east-1.${AWS::URLSuffix}/${Version}/recipes/dir/demo_managed_ad/assets/main.yaml
+        - https://aws-hpc-recipes.s3.us-east-1.amazonaws.com/${Version}/recipes/dir/demo_managed_ad/assets/main.yaml
         - { Version: !FindInMap [Recipes, Constants, Version] }
       TimeoutInMinutes: 60
 
