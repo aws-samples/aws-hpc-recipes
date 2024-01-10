@@ -151,6 +151,42 @@ Mappings:
       ZoneId1: sae1-az3
       ZoneId2: sae1-az2
       ZoneId3: sae1-az1
+    af-south-1:
+      ZoneId1: afs1-az3
+      ZoneId2: afs1-az2
+      ZoneId3: afs1-az1
+    ap-south-2:
+      ZoneId1: aps2-az3
+      ZoneId2: aps2-az2
+      ZoneId3: aps2-az1
+    ap-southeast-3:
+      ZoneId1: apse3-az3
+      ZoneId2: apse3-az2
+      ZoneId3: apse3-az1
+    ap-southeast-4:
+      ZoneId1: apse4-az3
+      ZoneId2: apse4-az2
+      ZoneId3: apse4-az1
+    ca-west-1:
+      ZoneId1: caw1-az3
+      ZoneId2: caw1-az2
+      ZoneId3: caw1-az1
+    eu-central-2:
+      ZoneId1: euc2-az3
+      ZoneId2: euc2-az2
+      ZoneId3: euc2-az1
+    eu-south-2:
+      ZoneId1: eus2-az3
+      ZoneId2: eus2-az2
+      ZoneId3: eus2-az1
+    il-central-1:
+      ZoneId1: ilc1-az3
+      ZoneId2: ilc1-az2
+      ZoneId3: ilc1-az1
+    me-central-1:
+      ZoneId1: mec1-az3
+      ZoneId2: mec1-az2
+      ZoneId3: mec1-az1
 
 Conditions:
      DoProvisionSubnetsC: !Equals [!Ref ProvisionSubnetsC, "True"]
