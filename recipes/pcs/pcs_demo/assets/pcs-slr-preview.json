@@ -219,7 +219,7 @@
                         "PolicyName": "pcsServicePolicy"
                     }
                 ],
-                "RoleName": "dpip-vendor-slr"
+                "RoleName": { "Fn::Sub" : "dpip-vendor-slr-${AWS::Region}" }
             }
         }
     }
