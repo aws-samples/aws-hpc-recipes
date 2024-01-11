@@ -28,6 +28,10 @@ Resources:
     Properties:
       LaunchTemplateName: !Ref LaunchTemplateName
       LaunchTemplateData:
+        MetadataOptions:
+          HttpEndpoint: enabled
+          HttpPutResponseHopLimit: 4
+          HttpTokens: required
         KeyName: !Ref KeyName
         ImageId:
           !If
