@@ -20,6 +20,7 @@ The format is based on [Keep a Changelog](http://keepachangelog.com/)
 * demo_managed_ad now allows selection of AWS Managed Microsoft AD Enterprise edition
 * added support for ap-northeast-3, sa-east-1, af-south-1, ap-south-2, ap-southeast-3, ap-southeast-4, ca-west-1, eu-central-2, eu-south-2, il-central-1, and me-central- to hpc_large_scale
 * added support for Stockholm region to tryhpc7a
+* added support for Sydney region to tryhpc6a
 
 ### Removed
 
