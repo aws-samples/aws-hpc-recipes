@@ -1,0 +1,78 @@
+AWSTemplateFormatVersion: '2010-09-09'
+
+Transform: 'AWS::LanguageExtensions'
+
+Parameters: 
+  FSxFileCacheId: 
+    Type: String
+    Description: FSx FileCache ID (fc-XXXXXXXX)
+    Default: ''
+
+  TargetCapacityToRelease:
+    Type: Number
+    Description: Quantity of capacity to free from cache (in GB)
+    Default: '1024'
+      
+  ReleaseSchedule:
+    Type: String
+    Description: "CRON Schedule for release. This default expression translates to 30 minutes after 8 am UTC every Sunday. To run the schedule every day of the week: cron(30 8 ? * * *). The field order is cron(Minutes Hours DayOfMonth Month DayOfWeek Year); * indicates EVERY, and ? indicates NO SPECIFIC VALUE."
+    Default: 'cron(30 8 ? * 1 *)'
+
+  ReleasePaths:
+    Type: List<String>
+    Description: "Paths to clear files from relative to the FileCache root (e.g., if you have filesystem mounted to /fsx and a data repository association that mounts s3 to /fsx/s3 (i.e., the DRA is /s3), then the path here should be /s3. List multiple DRA paths as a comma-separated list."
+    Default: "/s3"
+
+Resources: 
+
+  FSxFileCacheReleasePolicy:
+    Type: AWS::IAM::ManagedPolicy
+    Properties:
+      Path: '/fsx/'
+      Description: Policies needed for FSx CreateDataRepositoryTask
+      PolicyDocument:
+        Statement:
+          - Action:
+              - fsx:createDataRepositoryTask
+              # TagResource is required dependency to run CreateDataRepositoryTask
+              - fsx:TagResource
+            Effect: Allow
+            Resource:
+              - !Sub arn:${AWS::Partition}:fsx:${AWS::Region}:${AWS::AccountId}:file-cache/*
+              - !Sub arn:${AWS::Partition}:fsx:${AWS::Region}:${AWS::AccountId}:task/*
+        Version: '2012-10-17'
+
+  EventBridgeRoleFSxRelease:
+    Properties:
+      Description: Role to be used by EventBridge to run CreateDataRepositoryTask
+      AssumeRolePolicyDocument:
+        Statement:
+          - Action: sts:AssumeRole
+            Effect: Allow
+            Principal:
+              Service: scheduler.amazonaws.com
+        Version: '2012-10-17'
+      Path: '/fsx/'
+      ManagedPolicyArns:
+        - !Ref FSxFileCacheReleasePolicy
+    Type: AWS::IAM::Role
+
+  AutoReleaseFiles:
+    Type: AWS::Scheduler::Schedule
+    Properties:
+      FlexibleTimeWindow:
+        MaximumWindowInMinutes: 60
+        Mode: 'FLEXIBLE' # || 'OFF' (OFF requires that you comment out MaximumWindowInMinutes)
+      ScheduleExpression: !Ref ReleaseSchedule
+      ScheduleExpressionTimezone: 'UTC'
+      Target:
+        Arn: arn:aws:scheduler:::aws-sdk:fsx:createDataRepositoryTask
+        RoleArn: !GetAtt EventBridgeRoleFSxRelease.Arn
+        # Release 1TB of capacity in the cache
+        Input: !Sub [ '{ "FileCacheId": "${FSxFileCacheId}", "Report": { "Enabled": "false" }, "Type": "AUTO_RELEASE_DATA", "Paths": ${ReleasePathString}, "CapacityToRelease": ${TargetCapacityToRelease }', { ReleasePathString: { Fn::ToJsonString: !Ref ReleasePaths }}]
+
+Outputs: 
+  FSxAutoReleaseSchedule:
+    Value:
+      Ref: AutoReleaseFiles
+    Description: this is the EventBridge Schedule resource for auto-release
