@@ -47,6 +47,7 @@ Parameters:
     AllowedValues:
          - "us-east-2b"
          - "eu-west-1a"
+         - "eu-north-1b"
 
   ComputeInstanceMax12:
     Description: "Maximum # compute instances in queue q12x"
