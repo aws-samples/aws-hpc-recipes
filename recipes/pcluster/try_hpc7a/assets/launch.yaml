@@ -41,7 +41,7 @@ Parameters:
     Default: hpc7a-cluster
 
   AvailabilityZone:
-    Description: Availability zone where instances will be launched. HPC7a instances are available in the us-east-2b and eu-west-1a Availability Zones.
+    Description: Availability zone where instances will be launched. HPC7a instances are available in the Ohio, Ireland, and Stockholm regions.
     Type: AWS::EC2::AvailabilityZone::Name
     Default: us-east-2b
     AllowedValues:
