@@ -1,5 +1,6 @@
 AWSTemplateFormatVersion: 2010-09-09
-Description: Create a launch template to support a PCS compute node group mounting EFS
+Description: Create a launch template to support a PCS compute node group
+
 
 Metadata:
   AWS::CloudFormation::Interface:
@@ -92,17 +93,20 @@ Resources:
             Content-Type: multipart/mixed; boundary="==MYBOUNDARY=="
 
             --==MYBOUNDARY==
-            Content-Type: text/cloud-config; charset="us-ascii"
+            Content-Type: text/x-shellscript; charset="us-ascii"
             MIME-Version: 1.0
 
-            packages:
-            - amazon-efs-utils
-            
-            runcmd:
-            - mkdir -p ${HostMountPoint}
-            - echo "${EfsFilesystemId}:/ ${HostMountPoint} efs tls,_netdev" >> /etc/fstab
-            - mount -a -t efs defaults
-            - chmod a+rxw "${HostMountPoint}"
+            #!/bin/bash -xe
+            # Mount EFS on AL2 or other Fedora-adjacent OS
+            echo "Mounting ${EfsFilesystemId} at ${HostMountPoint}"
+            # yum install -y amazon-efs-utils
+            # yum install -y nfs-utils
+            mkdir -p "${HostMountPoint}"
+            test -f "/sbin/mount.efs" && printf "\n${EfsFilesystemId}:/ ${HostMountPoint} efs iam,tls,_netdev\n" >> /etc/fstab || printf "\n${EfsFilesystemId}.efs.${AWS::Region}.amazonaws.com:/ ${HostMountPoint} nfs4 nfsvers=4.1,rsize=1048576,wsize=1048576,hard,timeo=600,retrans=2,noresvport,_netdev 0 0\n" >> /etc/fstab
+            test -f "/sbin/mount.efs" && printf "\n[client-info]\nsource=liw\n" >> /etc/amazon/efs/efs-utils.conf
+            retryCnt=3; waitTime=10; while true; do mount -a -t efs,nfs4 defaults; if [ $? = 0 ] || [ $retryCnt -lt 1 ]; then echo File system mounted successfully; break; fi; echo File system not available, retrying to mount.; ((retryCnt--)); sleep $waitTime; done;
+            # Make mountpoint universally writeable
+            chmod a+rxw "${HostMountPoint}"
 
             --==MYBOUNDARY==
 

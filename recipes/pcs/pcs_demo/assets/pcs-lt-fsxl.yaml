@@ -1,5 +1,6 @@
 AWSTemplateFormatVersion: 2010-09-09
-Description: Create a launch template to support a PCS compute node group mounting EFS
+Description: Create a launch template to support a PCS compute node group mounting FSx for Lustre
+
 
 Metadata:
   AWS::CloudFormation::Interface:
@@ -17,7 +18,7 @@ Metadata:
         Parameters:
           - KeyName
           - VpcSecurityGroupId
-          - EfsClientSecurityGroupId
+          - FSxLustreClientSecurityGroupId
           - InboundAccessSecurityGroupId
       - Label:
           default: Instance
@@ -26,7 +27,7 @@ Metadata:
       - Label:
           default: Filesystems
         Parameters:
-          - EfsFilesystemId
+          - FSxLustreFilesystemId
           - HostMountPoint
 
 Parameters:
@@ -42,22 +43,22 @@ Parameters:
   InboundAccessSecurityGroupId:
     Type: AWS::EC2::SecurityGroup::Id
     Description: Security group controlling inbound SSH access
-  EfsClientSecurityGroupId:
+  FSxLustreClientSecurityGroupId:
     Type: AWS::EC2::SecurityGroup::Id
-    Description: Security group allowing access to the EFS filesystem
+    Description: Security group allowing access to the FSx for Lustre filesystem
   KeyName:
     Type: AWS::EC2::KeyPair::KeyName
     Description: SSH keypair to log into node group instances
   AmiId:
     Type: String
     Description: Optional AMI ID - leave blank if using a service-optimized AMI.
-  EfsFilesystemId:
+  FSxLustreFilesystemId:
     Type: String
-    Description: Amazon EFS Filesystem ID (must be accessible to NodeGroupSubnetId)
+    Description: Amazon FSx for Lustre Filesystem ID (must be accessible to NodeGroupSubnetId)
   HostMountPoint:
     Type: String
     Description: Mount path on the host
-    Default: "/shared"
+    Default: "/scratch"
 
 Conditions:
   SpecifyAmi: !Not [ !Equals [!Ref AmiId, ""] ]
@@ -85,7 +86,7 @@ Resources:
             Groups:
               - !Ref VpcSecurityGroupId
               - !Ref InboundAccessSecurityGroupId
-              - !Ref EfsClientSecurityGroupId
+              - !Ref FSxLustreClientSecurityGroupId
         UserData:
           Fn::Base64: !Sub |
             MIME-Version: 1.0
@@ -95,13 +96,10 @@ Resources:
             Content-Type: text/cloud-config; charset="us-ascii"
             MIME-Version: 1.0
 
-            packages:
-            - amazon-efs-utils
-            
             runcmd:
+            - amazon-linux-extras install -y lustre=latest
             - mkdir -p ${HostMountPoint}
-            - echo "${EfsFilesystemId}:/ ${HostMountPoint} efs tls,_netdev" >> /etc/fstab
-            - mount -a -t efs defaults
+            - mount -t lustre ${FSxLustreFilesystemId}.fsx.${AWS::Region}.amazonaws.com@tcp:fsx ${HostMountPoint}
             - chmod a+rxw "${HostMountPoint}"
 
             --==MYBOUNDARY==
