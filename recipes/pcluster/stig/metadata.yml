@@ -17,8 +17,8 @@ authors:
 # A list of tags you want to associate with the collection for indexing/searching. Tags have the same character requirements as namespace.
 tags:
   - parallelcluster
-  - ec2 image builder
-  - systems manager
+  - ec2imagebuilder
+  - systemsmanager
 # A list of file glob-like patterns used to filter any files or directories that should not be included in the S3 release. 
 build_ignore: []
 # Recipe type

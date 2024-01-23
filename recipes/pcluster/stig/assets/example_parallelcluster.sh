@@ -1,3 +1,4 @@
+#This command, starting from cat > example_parallelcluster.yaml << EOF and ending at EOF can be copy/paste into the CLI of a node with Parallelcluster installed. Ensure that you change the commented parameters to match your environment. 
 cat > example_parallelcluster.yaml << EOF
 Region: us-gov-west-1
 Image:
@@ -5,8 +6,10 @@ Image:
 HeadNode:
   InstanceType: c5a.4xlarge
   Networking:
+    #Edit the below line with your subnet id
     SubnetId: YOUR_SUBNET_ID
   Ssh:
+    #Edit the below line with your SSH Key Name that will be used to login to the cluster
     KeyName: YOUR_SSH_KEYNAME
   Iam:
     AdditionalIamPolicies:
@@ -56,6 +59,7 @@ Scheduling:
        Enabled: true
     Networking:
       SubnetIds:
+      #Edit the below line with your subnet id
       - YOUR_SUBNET_ID
       PlacementGroup:
         Enabled: true

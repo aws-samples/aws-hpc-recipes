@@ -13,7 +13,7 @@ Note: If you get an error saying that the region is not set, type ‘aws configu
     
 2.	You will see a list of supported AWS Parallelcluster baseline images. For purposes of this walkthrough we will be using the RHEL8 x86_64 AMI which at the time of publication is ami-0d5ac0f6d75765b20. Note that this process is the same for Amazon Linux 2 which is marked as alinux2 in the output of the previous command. 
 3.	Navigate to EC2 image builder in the AWS console and click on components. For filter-owner, select Amazon-managed and search for STIG. Recommend sorting by Creation time. Copy the ARN on the right hand side to your clipboard. For purposes of these instructions we will use arn:aws-us-gov:imagebuilder:us-gov-west-1:aws:component/stig-build-linux-high/2023.4.0 ![](recipes/pcluster/stig/images/EC2-Image-Builder-Components.PNG)
-4.	On the same node that has AWS Parallelcluster installed, create a yaml file with the build image configurations matching the above parameters. Change the instance type, component arn, subnet ID, security group ID, and parent image to match your desired options. An example configuration file can be found [here](recipes/pcluster/stig/assets/rhel8stighigh.yaml). 
+4.	On the same node that has AWS Parallelcluster installed, create a yaml file with the build image configurations matching the above parameters. Change the instance type, component arn, subnet ID, security group ID, and parent image to match your desired options. An example configuration file can be found [here](recipes/pcluster/stig/assets/rhel8stighigh.yaml). Inputting a 'cat' command is as simple as copy/paste into the CLI. Just ensure you have changed the parameters for YOUR_SUBNET_ID and YOUR_SECURITY_GROUP_ID according to your environment. Picture of inputting these commands can be found [here](recipes/pcluster/stig/assets/Cat-Command-and-Cluster-Launch.PNG).
 5.	On the same EC2 instance, run the following command to trigger the CloudFormation build: pcluster build-image --image-configuration rhel8stighigh.yaml --image-id rhel8
 6.	The process will take approximately 20-30 minutes to complete. You can type the following command to see when the build is completed: pcluster list-images --image-status AVAILABLE 
 
@@ -53,7 +53,7 @@ The process for Ubuntu 20.04 includes an extra step compared to RHEL8 and AL2 op
 You can type whoami to see the currently logged in user. Then type ls -ld within the current directory to see who has permissions. You may see the following: drwxr-xr-x. 2 root root (date)
 To change permissions on a folder, again using ssm-user as an example, we can type the following to change permissions on a folder: sudo chown ssm-user:ssm-user /usr/bin/hpc
 Once this is changed, you should be able to run the cat command successfully.
-2. If you get an error saying "Unable to find node executable" you can perform the following the command, "nvm install --lts=Hydrogen". If this doesn't work, perform the following series of commands
+2. If you get an error saying "Unable to find node executable" you can perform the following the command, "nvm install --lts=Gallium". If this doesn't work, perform the following series of commands
 curl -o- https://raw.githubusercontent.com/nvm-sh/nvm/v0.38.0/install.sh | bash
 chmod ug+x ~/.nvm/nvm.sh
 source ~/.nvm/nvm.sh
@@ -61,3 +61,7 @@ nvm install --lts
 node --version
 
 For users without Internet connectivity, you will want to pre position the current Node tar file into an S3 bucket and copy it over using 'aws s3 cp' AWS CLI command. https://nodejs.org/en/download
+The following is an example: aws s3 cp s3://(your_S3_bucket)/node-v20.10.0-linux-x64.tar.xz /tmp/
+          tar -xJf /tmp/node-v20.10.0-linux-x64.tar.xz -C /usr/local --strip-components=1
+
+3. For users with Internet connectivity, if your build is failing ensure that the subnet you are launching into actually has Internet access. You can launch a test EC2 instance in the same subnet and security group as your configuration file to check. Common issues can be that your public subnet may not be auto assigning public IPv4 addresses (https://docs.aws.amazon.com/vpc/latest/userguide/modify-subnets.html#subnet-public-ip), or your private subnet may not be properly configured to leverage a NAT device via routing.

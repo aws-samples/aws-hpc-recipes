@@ -15,14 +15,17 @@ sudo "/tmp/aws/install"
 sudo yum install -y httpd openscap-scanner openscap-utils scap-security-guide
 
 # Download RHEL Benchmark#
-sudo curl -O https://dl.dod.cyber.mil/wp-content/uploads/stigs/zip/U_RHEL_7_V3R13_STIG_SCAP_1-2_Benchmark.zip
-sudo unzip -o U_RHEL_7_V3R13_STIG_SCAP_1-2_Benchmark.zip
+sudo curl -O https://dl.dod.cyber.mil/wp-content/uploads/stigs/zip/U_RHEL_7_V3R14_STIG_SCAP_1-2_Benchmark.zip
+sudo unzip -o U_RHEL_7_V3R14_STIG_SCAP_1-2_Benchmark.zip
 
 # Check Benchmark
 sudo oscap info /usr/share/xml/scap/ssg/content/ssg-amzn2-xccdf.xml
 
-#Retrieve instance ID from EC2 metadata
-INSTANCE_ID=$(curl http://169.254.169.254/latest/meta-data/instance-id)
+#Retrieve instance ID from EC2 metadata using IMDSv2
+TOKEN=$(curl -X PUT "http://169.254.169.254/latest/api/token" -H "X-aws-ec2-metadata-token-ttl-seconds: 21600")
+
+# Use the token to access the instance ID metadata
+INSTANCE_ID=$(curl -H "X-aws-ec2-metadata-token: $TOKEN" http://169.254.169.254/latest/meta-data/instance-id)
 
 # Run evaluation of RHEL 7 Benchmark against EC2 Host and return results.xml and report.html in the current dir
 sudo oscap xccdf eval --profile stig-rhel7-disa --results-arf ./${INSTANCE_ID}_al2.xml --report ./${INSTANCE_ID}_al2.html /usr/share/xml/scap/ssg/content/ssg-amzn2-xccdf.xml
@@ -33,7 +36,7 @@ sudo oscap xccdf eval --profile stig-rhel7-disa --results-arf ./${INSTANCE_ID}_a
 aws s3 cp ./${INSTANCE_ID}_al2.html s3://pcluster-stig/results/${INSTANCE_ID}_al2.html
 
 # Remove xml and zip files
-rm -rf U_RHEL_7_V3R13_STIG_SCAP_1-2_Benchmark.xml
+rm -rf U_RHEL_7_V3R14_STIG_SCAP_1-2_Benchmark.xml
 EOF
 
 # Make setup.sh executable
