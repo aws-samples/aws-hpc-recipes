@@ -350,7 +350,7 @@ Resources:
               echo "Domain Name: ${DirectoryDomain}"
               echo "Domain Certificate Secret: ${DomainCertificateSecretArn}"
               echo "Domain Private Key Secret: ${DomainPrivateKeySecretArn}"
-              ADMIN_PW="${AdminPassword}"
+              ADMIN_PW='${AdminPassword}'
               echo "$ADMIN_PW" | sudo realm join -U Admin "${DirectoryDomain}"
               sleep 10
               echo "Creating Service Account..."
