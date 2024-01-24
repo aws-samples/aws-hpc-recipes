@@ -84,6 +84,7 @@ Resources:
         AdminPassword: !Ref AdminPassword
         ServiceAccountPassword: !Ref ServiceAccountPassword
         ClientIpCidr: !Ref ClientIpCidr
+        ClientPrefixList: !Ref ClientPrefixList
       TemplateURL: https://aws-hpc-recipes.s3.us-east-1.amazonaws.com/main/recipes/res/res_demo_env/assets/bi.yaml
 
   RES:
@@ -96,8 +97,10 @@ Resources:
         ClientIp: !Ref ClientIpCidr
         ClientPrefixList: !Ref ClientPrefixList
         VpcId: !GetAtt [ RESExternal, Outputs.VpcId ]
-        PrivateSubnets: !GetAtt [ RESExternal, Outputs.PrivateSubnets ]
-        PublicSubnets: !GetAtt [ RESExternal, Outputs.PublicSubnets ]
+        "LoadBalancerSubnets": !GetAtt [ RESExternal, Outputs.PublicSubnets ]
+        "InfrastructureHostSubnets": !GetAtt [ RESExternal, Outputs.PrivateSubnets ]
+        "VdiSubnets": !GetAtt [ RESExternal, Outputs.PrivateSubnets ]
+        "IsLoadBalancerInternetFacing": "true"
         ActiveDirectoryName: !GetAtt [ RESExternal, Outputs.ActiveDirectoryName ]
         ADShortName: !GetAtt [ RESExternal, Outputs.ADShortName ]
         LDAPBase: !GetAtt [ RESExternal, Outputs.LDAPBase ]
@@ -120,7 +123,9 @@ Resources:
         ComputersOU: !GetAtt [ RESExternal, Outputs.ComputersOU ]
         SharedHomeFileSystemId: !GetAtt [ RESExternal, Outputs.SharedHomeFilesystemId ]
         DomainTLSCertificateSecretArn: !GetAtt [ RESExternal, Outputs.DomainTLSCertificateSecretArn ]
-      TemplateURL: https://research-engineering-studio-us-east-1.s3.amazonaws.com/releases/2023.11/ResearchAndEngineeringStudio.template.json
+        InfrastructureHostAMI: ""
+        EnableLdapIDMapping: "True"
+      TemplateURL: https://research-engineering-studio-us-east-1.s3.amazonaws.com/releases/2024.01/ResearchAndEngineeringStudio.template.json
   LoadBalancerLookupFunction:
     Type: AWS::Lambda::Function
     Properties:
