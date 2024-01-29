@@ -97,10 +97,10 @@ Resources:
         ClientIp: !Ref ClientIpCidr
         ClientPrefixList: !Ref ClientPrefixList
         VpcId: !GetAtt [ RESExternal, Outputs.VpcId ]
-        "LoadBalancerSubnets": !GetAtt [ RESExternal, Outputs.PublicSubnets ]
-        "InfrastructureHostSubnets": !GetAtt [ RESExternal, Outputs.PrivateSubnets ]
-        "VdiSubnets": !GetAtt [ RESExternal, Outputs.PrivateSubnets ]
-        "IsLoadBalancerInternetFacing": "true"
+        LoadBalancerSubnets: !GetAtt [ RESExternal, Outputs.PublicSubnets ]
+        InfrastructureHostSubnets: !GetAtt [ RESExternal, Outputs.PrivateSubnets ]
+        VdiSubnets: !GetAtt [ RESExternal, Outputs.PrivateSubnets ]
+        IsLoadBalancerInternetFacing: "true"
         ActiveDirectoryName: !GetAtt [ RESExternal, Outputs.ActiveDirectoryName ]
         ADShortName: !GetAtt [ RESExternal, Outputs.ADShortName ]
         LDAPBase: !GetAtt [ RESExternal, Outputs.LDAPBase ]
