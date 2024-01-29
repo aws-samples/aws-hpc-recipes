@@ -7,6 +7,7 @@ The format is based on [Keep a Changelog](http://keepachangelog.com/)
 
 ### Added
 * added a helper script to hpc_networking to keep up with region launches
+* added pcluster/stig recipe to help with building STIG-compliant AMIs
 
 ### Fixed
 
