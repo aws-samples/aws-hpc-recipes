@@ -65,10 +65,6 @@ Parameters:
     Type: String
     AllowedPattern: ^(pl-[a-z0-9]{8,20})?$
     ConstraintDescription: Must be a valid VPC Prefix List ID, which begins with `pl-`.  Prefix Lists can be configured at https://console.aws.amazon.com/vpcconsole/home#ManagedPrefixLists
-  DomainTLSCertificateSecretArn:
-    Description: (Optional) Domain TLS Certificate Secret ARN
-    Default: ""
-    Type: String
 
 Conditions:
   GenerateCerts: !Not [!Equals [!Ref PortalDomainName, '']]
@@ -538,6 +534,4 @@ Outputs:
     Value: !Sub
       - OU=Computers,OU=RES,OU=${ou},DC=${dc}
       - { dc: !Join [",DC=", !Split [".", !If [ SubDomainNotProvided, !Ref DomainName, !Join [ ".", [ !Ref SubDomain, !Ref DomainName]]]]], ou:  !GetAtt [ DirectoryService, Outputs.DomainShortName ]}
-  DomainTLSCertificateSecretArn:
-    Description: Domain TLS Certificate Secret ARN
-    Value: !Ref DomainTLSCertificateSecretArn
+
