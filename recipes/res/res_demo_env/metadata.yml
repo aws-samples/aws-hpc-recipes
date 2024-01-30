@@ -2,9 +2,9 @@
 # The name of the recipe. This has the same character requirements as namespace.
 name: res_demo_env
 # The version of the recipe. Must be compatible with semantic versioning.
-version: "1.0.0"
+version: "2024.01"
 # A short summary description of the recipe
-description: Demonstration environment for RES on AWS.
+description: Research and Engineering Studio (RES) on AWS demo environment
 # The path to the README for the recipe relative to its root directory.
 readme: README.md
 # Optional URL for external documentation
@@ -21,10 +21,11 @@ tags:
   - efs
   - ad
   - sso
-  - beta
+  - ec2
+  - dcv
 # A list of file glob-like patterns used to filter any files or directories that should not be included in the S3 release. 
 build_ignore: []
 # Recipe type
-type: other
+type: cloudformation
 # Default asset path
 default: 

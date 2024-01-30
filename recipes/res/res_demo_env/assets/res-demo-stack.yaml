@@ -1,19 +1,30 @@
-Description: A demo CloudFormation stack for setting up Research and Engineering Studio on AWS
+Description: Research and Engineering Studio on AWS [version 2024.01] demo
+
+### Stack metadata
+Metadata:
+  AWS::CloudFormation::Interface:
+    ParameterGroups:
+      - Label:
+          default: RES Configuration
+        Parameters:
+          - EnvironmentName
+          - AdministratorEmail
+      - Label:
+          default: Access Management
+        Parameters:
+          - ClientIpCidr
+          - Keypair
+          - AdAdminIpCidr
 
 Parameters:
-  PortalDomainName:
-    Description: Domain Name for web portal domain that lives in Route53 in account (may be different from the Active Directory domain). Used to generate certificates.
-    Type: String
-    AllowedPattern: ^([a-zA-Z0-9]+[\\.-])+([a-zA-Z0-9])+$
-    Default: res.person.people.aws.dev
 
   Keypair:
     Description: EC2 Keypair to access management instance.
     Type: AWS::EC2::KeyPair::KeyName
-    Default: enguard
+    Default: ""
 
   EnvironmentName:
-    Description: Provide name of the RES Environment. Required to generate certificates and create RES stack.
+    Description: Provide name of the RES Environment. Must be unique for your account and AWS Region.
     Type: String
     Default: res-demo
     MinLength: 5
@@ -23,25 +34,24 @@ Parameters:
 
   AdministratorEmail:
     Type: String
-    Default: person@amazon.com
     AllowedPattern: ^[a-zA-Z0-9._%+-]+@[a-zA-Z0-9.-]+\.[a-zA-Z]{2,}$
 
   ClientIpCidr:
-    Description: CIDR for incoming RDP traffic for management instance.
+    Description: Default IP(s) allowed to directly access the Web UI and SSH into the bastion host. We recommend that you restrict it with your own IP/subnet (x.x.x.x/32 for your own ip or x.x.x.x/24 for range. Replace x.x.x.x with your own PUBLIC IP. You can get your public IP using tools such as https://ifconfig.co/)
+    Default: 0.0.0.0/0
+    Type: String
+    AllowedPattern: (\d{1,3})\.(\d{1,3})\.(\d{1,3})\.(\d{1,3})/(\d{1,2})
+    ConstraintDescription: Value must be a valid IP or network range of the form x.x.x.x/x.
+
+  AdAdminIpCidr:
+    Description: Default IP(s) allowed to access the AD admin host(s). We recommend that you restrict it with your own IP/subnet (x.x.x.x/32 for your own ip or x.x.x.x/24 for range. Replace x.x.x.x with your own PUBLIC IP. You can get your public IP using tools such as https://ifconfig.co/)
     Default: 127.0.0.1/32
     Type: String
     AllowedPattern: (\d{1,3})\.(\d{1,3})\.(\d{1,3})\.(\d{1,3})/(\d{1,2})
-    ConstraintDescription: ClientIP must be a valid IP or network range of the form x.x.x.x/x. specify your IP/NETMASK (e.g x.x.x/32 or x.x.x.x/24 for subnet range)
-
-  ClientPrefixList:
-    Description: PrefixList for client access.
-    Default: ''
-    Type: String
-    AllowedPattern: ^(pl-[a-z0-9]{8,20})?$
-    ConstraintDescription: Must match a prefix list (e.g. pl-aaa00112) or be empty.
+    ConstraintDescription: Value must be a valid IP or network range of the form x.x.x.x/x.
 
 Conditions:
-  UseEnvironmentName: !Not [!Equals [!Ref EnvironmentName, '']]
+  UseEnvironmentName: !Not [!Equals [!Ref EnvironmentName, ""]]
 
 Resources:
   AdminPassword:
@@ -78,13 +88,13 @@ Resources:
     Type: AWS::CloudFormation::Stack
     Properties:
       Parameters:
-        PortalDomainName: !Ref PortalDomainName
+        PortalDomainName: ""
         Keypair: !Ref Keypair
-        EnvironmentName: !If [UseEnvironmentName, !Ref EnvironmentName, '']
+        EnvironmentName: !If [UseEnvironmentName, !Ref EnvironmentName, ""]
         AdminPassword: !Ref AdminPassword
         ServiceAccountPassword: !Ref ServiceAccountPassword
-        ClientIpCidr: !Ref ClientIpCidr
-        ClientPrefixList: !Ref ClientPrefixList
+        ClientIpCidr: !Ref AdAdminIpCidr
+        # ClientPrefixList: !Ref ClientPrefixList
       TemplateURL: https://aws-hpc-recipes.s3.us-east-1.amazonaws.com/main/recipes/res/res_demo_env/assets/bi.yaml
 
   RES:
@@ -95,7 +105,13 @@ Resources:
         AdministratorEmail: !Ref AdministratorEmail
         SSHKeyPair: !Ref Keypair
         ClientIp: !Ref ClientIpCidr
-        ClientPrefixList: !Ref ClientPrefixList
+        ClientPrefixList: ""
+        CustomDomainNameforWebApp: ""
+        ACMCertificateARNforWebApp: ""
+        CustomDomainNameforVDI: ""
+        PrivateKeySecretARNforVDI: ""
+        CertificateSecretARNforVDI: ""
+        DomainTLSCertificateSecretArn: ""
         VpcId: !GetAtt [ RESExternal, Outputs.VpcId ]
         LoadBalancerSubnets: !GetAtt [ RESExternal, Outputs.PublicSubnets ]
         InfrastructureHostSubnets: !GetAtt [ RESExternal, Outputs.PrivateSubnets ]
@@ -106,15 +122,6 @@ Resources:
         LDAPBase: !GetAtt [ RESExternal, Outputs.LDAPBase ]
         LDAPConnectionURI: !GetAtt [ RESExternal, Outputs.LDAPConnectionURI ]
         SudoersGroupName: RESAdministrators
-        CustomDomainNameforVDI: !Sub
-          - vdi.${PortalDomainName}
-          - { PortalDomainName: !Ref PortalDomainName}
-        CustomDomainNameforWebApp: !Sub
-          - web.${PortalDomainName}
-          - { PortalDomainName: !Ref PortalDomainName}
-        ACMCertificateARNforWebApp: !GetAtt [ RESExternal, Outputs.ACMCertificateARNforWebApp ]
-        PrivateKeySecretARNforVDI: !GetAtt [ RESExternal, Outputs.PrivateKeySecretArn ]
-        CertificateSecretARNforVDI: !GetAtt [ RESExternal, Outputs.CertificateSecretArn ]
         ServiceAccountUsername: !GetAtt [ RESExternal, Outputs.ServiceAccountUsername ]
         ServiceAccountPassword: !Sub "{{resolve:secretsmanager:${ServiceAccountPassword}:SecretString:password}}"
         UsersOU: !GetAtt [ RESExternal, Outputs.UsersOU ]
@@ -122,10 +129,10 @@ Resources:
         SudoersOU: !GetAtt [ RESExternal, Outputs.SudoersOU ]
         ComputersOU: !GetAtt [ RESExternal, Outputs.ComputersOU ]
         SharedHomeFileSystemId: !GetAtt [ RESExternal, Outputs.SharedHomeFilesystemId ]
-        DomainTLSCertificateSecretArn: ""
         InfrastructureHostAMI: ""
         EnableLdapIDMapping: "True"
       TemplateURL: https://research-engineering-studio-us-east-1.s3.amazonaws.com/releases/2024.01/ResearchAndEngineeringStudio.template.json
+
   LoadBalancerLookupFunction:
     Type: AWS::Lambda::Function
     Properties:
@@ -202,21 +209,4 @@ Resources:
                 Action:
                   - "dynamodb:GetItem"
                 Resource: !Sub arn:${AWS::Partition}:dynamodb:${AWS::Region}:${AWS::AccountId}:table/${EnvironmentName}.cluster-settings
-  RESWebAliasRecord:
-    Type: AWS::Route53::RecordSet
-    Properties:
-      HostedZoneName: !Sub ${PortalDomainName}.
-      Name: !Sub web.${PortalDomainName}.
-      Type: CNAME
-      TTL: 300
-      ResourceRecords:
-        - !GetAtt LoadBalancerLookupResource.ALBDNSName
-  RESVDIAliasRecord:
-    Type: AWS::Route53::RecordSet
-    Properties:
-      HostedZoneName: !Sub ${PortalDomainName}.
-      Name: !Sub vdi.${PortalDomainName}.
-      Type: CNAME
-      TTL: 300
-      ResourceRecords:
-        - !GetAtt LoadBalancerLookupResource.NLBDNSName
+

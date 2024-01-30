@@ -26,12 +26,14 @@ Parameters:
   PortalDomainName:
     Description: (Optional) Domain Name for web portal domain that lives in Route53 in account (may be different from the Active Directory domain). Used to generate certs, leave blank to skip certificate generation.
     Type: String
+    Default: ""
   EnvironmentName:
     Description: (Optional) Provide name of the RES Environment. It must start with "res-", may not contain "aws", and entire name must be less than or equal to 10 characters (lowercase, numbers, hypens are permitted). Required to generate certificates.
     Type: String
     MinLength: 0
     MaxLength: 10
     AllowedPattern: $^|(^(?!.*aws)res-[a-z0-9-]{1,6}$)
+    Default: res-demo
   AdminPassword:
     Description: Provide the Active Directory Administrator Account Password Directly or Resource ARN to Secret Containing Password.
     Type: String
