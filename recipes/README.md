@@ -93,6 +93,11 @@ You can use an HPC Recipe for AWS in several ways:
 * **About**: Create an instance of AWS ParallelCluster with Slurm accounting enabled, using Amazon RDS as the DBMS.
 * **Usage**: [README.md](pcluster/slurm_accounting/README.md)
 
+#### stig ![tag](https://img.shields.io/badge/-ec2imagebuilder-%23AAB7B8) ![tag](https://img.shields.io/badge/-parallelcluster-%23FF9900) ![tag](https://img.shields.io/badge/-systemsmanager-%23AAB7B8) 
+
+* **About**: Includes files to accelerate STIG compliance for Parallelcluster images as well as scripts to verify OSCAP results
+* **Usage**: [README.md](pcluster/stig/README.md)
+
 #### try_hpc6a ![tag](https://img.shields.io/badge/-hpc6a-%23AAB7B8) ![tag](https://img.shields.io/badge/-parallelcluster-%23FF9900) ![tag](https://img.shields.io/badge/-x86_64-%23AAB7B8) 
 
 * **About**: Create a ParallelCluster system to try out Hpc6a instances.
@@ -121,9 +126,9 @@ You can use an HPC Recipe for AWS in several ways:
 
 ### :arrow_right: res: Research and Engineering Studio on AWS
 
-#### res_demo_env ![tag](https://img.shields.io/badge/-ad-%23AAB7B8) ![tag](https://img.shields.io/badge/-beta-%23800080) ![tag](https://img.shields.io/badge/-cognito-%237DCEA0) ![tag](https://img.shields.io/badge/-efs-%237DCEA0) ![tag](https://img.shields.io/badge/-res-%237DCEA0) ![tag](https://img.shields.io/badge/-sso-%23AAB7B8) 
+#### res_demo_env ![tag](https://img.shields.io/badge/-ad-%23AAB7B8) ![tag](https://img.shields.io/badge/-cognito-%237DCEA0) ![tag](https://img.shields.io/badge/-dcv-%23AAB7B8) ![tag](https://img.shields.io/badge/-ec2-%23AAB7B8) ![tag](https://img.shields.io/badge/-efs-%237DCEA0) ![tag](https://img.shields.io/badge/-res-%237DCEA0) ![tag](https://img.shields.io/badge/-sso-%23AAB7B8) 
 
-* **About**: Demonstration environment for RES on AWS.
+* **About**: Research and Engineering Studio (RES) on AWS demo environment
 * **Usage**: [README.md](res/res_demo_env/README.md)
 
 

@@ -13,6 +13,7 @@ Metadata:
           - Architecture
           - QueueName
           - ComputeInstanceMax
+          - ScalingStrategy
       - Label:
           default: Networking and Access
         Parameters:
@@ -50,6 +51,15 @@ Parameters:
     MinValue: 1
     Default: 10
 
+  ScalingStrategy:
+    Description: Choose how dynamic Slurm nodes scale up
+    Type: String
+    Default: all-or-nothing
+    AllowedValues:
+         - "all-or-nothing"
+         - "greedy-all-or-nothing"
+         - "best-effort"
+
   AllowedIps:
     Description: CIDR-formatted IP range for SSH connections to the cluster
     Type: String
@@ -82,7 +92,7 @@ Parameters:
 Mappings:
   ParallelCluster:
     Constants:
-      Version: 3.7.2
+      Version: 3.8.0
   Recipes:
     Constants:
       Version: main
@@ -154,6 +164,7 @@ Resources:
               - Policy: arn:aws:iam::aws:policy/AmazonSSMManagedInstanceCore
         Scheduling:
           Scheduler: slurm
+          ScalingStrategy: !Ref ScalingStrategy
           SlurmSettings:
             QueueUpdateStrategy: TERMINATE
           SlurmQueues:

@@ -11,8 +11,27 @@ The format is based on [Keep a Changelog](http://keepachangelog.com/)
 
 ### Changed
 
+## [1.2.0] - 2024-01-30
+
+### Added
+* added a helper script to hpc_networking to keep up with region launches
+* added pcluster/stig recipe to help with building STIG-compliant AMIs
+
+### Fixed
+
+### Changed
+
 * efs_simple now supports launching in a single subnet
 * efs_simple now allows selection of throughput mode between elastic and bursting
+* updated pcluster/latest to version 3.8.0
+* updated pcluster/try* to version 3.8.0
+* updated pcluster/pcui to version 3.8.0
+* demo_managed_ad now allows selection of AWS Managed Microsoft AD Enterprise edition
+* user may choose whether to stop the AD admin instance after creating an AD using demo_managed_ad
+* added support for ap-northeast-3, sa-east-1, af-south-1, ap-south-2, ap-southeast-3, ap-southeast-4, ca-west-1, eu-central-2, eu-south-2, il-central-1, and me-central- to hpc_large_scale
+* added support for Stockholm region to tryhpc7a
+* added support for Sydney region to tryhpc6a
+* updated to res_demo_env to RES version 2024.01
 
 ### Removed
 
