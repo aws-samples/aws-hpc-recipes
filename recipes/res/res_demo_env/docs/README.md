@@ -1,8 +1,10 @@
 # Research and Engineering Studio (RES) External Resources Documentation
 
+You can launch a stack that sets up External Resources for RES by clicking [this link](https://console.aws.amazon.com/cloudformation/home?region=us-east-2#/stacks/create/review?stackName=resexternal&templateURL=https://aws-hpc-recipes.s3.us-east-1.amazonaws.com/main/recipes/res/res_demo_env/assets/bi.yaml). After it has launched, you can deploy RES using its resources. See the RES [User Guide](https://docs.aws.amazon.com/res/latest/ug/deploy-the-product.html) for details.
+
 ## Info
 
-This template installs the required network resources needed to support a Research And Engineering Studio (RES) environment for evaluation purposes. It creates the following resources, using other HPC Recipes:
+This template installs networked resources needed to support a Research And Engineering Studio (RES) environment for evaluation purposes. It creates the following resources, using other HPC Recipes:
  1. Networking ([link](../../../net/hpc_large_scale/README.md)): A template that sets up networking resources such as security groups, internet gateway, and subnets inside a VPC
  2. Managed Directory ([link](../../../dir/demo_managed_ad/README.md)): A template that deploys a basic AWS Managed Microsoft Active Directory using a [LDIF](../assets/res.ldif) file to create users and groups
  3. Storage ([link](../../../storage/efs_simple/README.md)): A template that sets up an EFS file system that acts as a shared drive for RES desktop sessions to use; each user gets their own home subfolder

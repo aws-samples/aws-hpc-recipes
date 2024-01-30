@@ -15,7 +15,7 @@ This recipe uses a CloudFormation stack to launch a non-production installation 
 
 ![welcome-email](docs/welcome.png)
 
-#### Optional: Exploring the CloudFormation resources
+### Optional: Exploring the CloudFormation resources
 
 RES is deployed using interconnecting CloudFormation stacks. Here is an example of a RES deployment in a clean AWS account. 
 
@@ -25,11 +25,7 @@ The main stack, launched by the demo template above is named *demostack8* (**a**
 
 ## RES External Resources stack
 
-RES has several infrastructure depdendencies, such as networking, a directory service, EFS volumes, and management instances. The demo recipe above creates them using the RES External Resources template. You can use that stack directly to create a foundation upon which to install RES. 
-1. Learn more about its features and usage in the [docs](docs/README.md).
-2. Launch the RES External Resources template: [![Launch stack](../../../docs/media/launch-stack.svg)](https://console.aws.amazon.com/cloudformation/home?region=us-east-2#/stacks/create/review?stackName=resexternal&templateURL=https://aws-hpc-recipes.s3.us-east-1.amazonaws.com/main/recipes/res/res_demo_env/assets/bi.yaml)
-3. Deploy RES into cloud resources created by the RES External Resources stack. See the RES [User Guide](https://docs.aws.amazon.com/res/latest/ug/deploy-the-product.html) for details.
-
+RES has several infrastructure depdendencies, such as networking, a directory service, EFS volumes, and management instances. The demo recipe above creates them using the RES External Resources template. You can use that stack directly to create a foundation upon which to install RES. Learn more about its features and usage in the [docs](docs/README.md).
 
 ## Cleaning Up
 
