@@ -1,5 +1,6 @@
 
-Description: AWS Managed Microsoft Active Directory to support multi-user AWS ParallelCluster
+Description: AWS Managed Microsoft Active Directory to support multi-user AWS ParallelCluster, RES, or other application.
+Transform: AWS::Serverless-2016-10-31
 
 Metadata:
   AWS::CloudFormation::Interface:
@@ -15,7 +16,7 @@ Metadata:
           - AdDomainAdminNodeInstancetype
           - ManagedAdEdition
       - Label:
-          default: "Default Active Directory User(s)"
+          default: "Bootstrapping"
         Parameters:
           - UserName
           - UserPassword
@@ -35,6 +36,7 @@ Metadata:
           - PrivateSubnetTwo
 
 Parameters:
+
   ManagedAdEdition:
     Description: Select an AWS Managed Microsoft AD edition.
     Type: String
@@ -42,92 +44,107 @@ Parameters:
     AllowedValues:
          - Standard
          - Enterprise
+
   DomainName:
-    Description: Active Directory Domain Name.
+    Description: Active Directory domain name.
     Type: String
     Default: corp.pcluster.com
     AllowedPattern: ^([a-zA-Z0-9]+[\\.-])+([a-zA-Z0-9])+$
+
   SubDomain:
-    Description: (Optional, but required for GovCloud regions) SubDomain for the Active Directory Domain Name. If provided Active Directory Domain Name will be (SubDomain).(DomainName)
+    Description: (Optional, but required for GovCloud regions) SubDomain for the Active Directory domain name. If provided Active Directory Domain Name will be (SubDomain).(DomainName)
     Type: String
     Default: ""
+
   AdminPassword:
-    Description: Active Directory Admin Password.
+    Description: Active Directory admin password.
     Type: String
     MinLength: 8
     MaxLength: 64
     AllowedPattern: (?=^.{8,64}$)((?=.*\d)(?=.*[A-Z])(?=.*[a-z])|(?=.*\d)(?=.*[^A-Za-z0-9\s])(?=.*[a-z])|(?=.*[^A-Za-z0-9\s])(?=.*[A-Z])(?=.*[a-z])|(?=.*\d)(?=.*[A-Z])(?=.*[^A-Za-z0-9\s]))^.*
     NoEcho: true
+
   ServiceAccountName:
-    Description: Username for the Service Account
+    Description: Username for the service account
     Type: String
     MinLength: 4
     Default: ReadOnlyUser
+
   ServiceAccountPassword:
-    Description: Active Directory Service Account Password.
+    Description: Active Directory service account password.
     Type: String
     MinLength: 8
     MaxLength: 64
     AllowedPattern: (?=^.{8,64}$)((?=.*\d)(?=.*[A-Z])(?=.*[a-z])|(?=.*\d)(?=.*[^A-Za-z0-9\s])(?=.*[a-z])|(?=.*[^A-Za-z0-9\s])(?=.*[A-Z])(?=.*[a-z])|(?=.*\d)(?=.*[A-Z])(?=.*[^A-Za-z0-9\s]))^.*
     NoEcho: true
+
   UserName:
     Description: (Optional) Cluster user that is created in the Active Directory.
     Type: String
     Default: user000
+
   UserPassword:
-    Description: (Optional) Cluster user Password (Required if a UserName is provided).
+    Description: (Optional) Cluster user password (Required if a UserName is provided).
     Type: String
     NoEcho: true
+
   LDIFS3Path:
-    Description: (Optional) An S3 Path (without the s3://) to an LDIF file that will be used during stack creation.
+    Description: (Optional) An S3 Path (without the s3://) to an LDIF file that will be used to initialize the directory.
     Type: String
-    Default: ''
+    Default: ""
+
   Keypair:
-    Description: EC2 Keypair to access management instance.
+    Description: EC2 Keypair to access the AD management instance.
     Type: AWS::EC2::KeyPair::KeyName
+
   AllowedIps:
-    Description: CIDR-formatted IP range for SSH access management instance.
+    Description: CIDR-formatted IP range for SSH access to the AD management instance.
     Type: String
     Default: 0.0.0.0/0
     AllowedPattern: '((\d{1,3})\.){3}\d{1,3}/\d{1,2}'
+
   Vpc:
-    Description: VPC ID to create the Directory Service in.
+    Description: VPC ID where the AD will be created.
     Type: AWS::EC2::VPC::Id
+
   PrivateSubnetOne:
-    Description: Subnet ID of the first private subnet. 
+    Description: Subnet ID of the first private subnet in the VPC. 
     Type: AWS::EC2::Subnet::Id
+
   PrivateSubnetTwo:
-    Description: Subnet ID of the second private subnet.
+    Description: Subnet ID of the second private subnet in the VPC.
     Type: AWS::EC2::Subnet::Id
+
   AdminNodeAmiId:
-    Description: AMI for the Admin Node
+    Description: AMI for the AD management instance.
     Type: 'AWS::SSM::Parameter::Value<AWS::EC2::Image::Id>'
     Default: '/aws/service/ami-amazon-linux-latest/amzn2-ami-hvm-x86_64-gp2'
+
   AdDomainAdminNodeInstancetype:
-    Description: EC2 instance type for the Management Instance
+    Description: Instance type for the AD management instance.
     Type: String
     Default: t3.micro
+
   StopAdAdminInstance:
-    Description: Automatically stop the Management Instance to save costs
+    Description: Automatically stop the AD management instance to reduce costs.
     Type: String
     Default: "No"
     AllowedValues:
          - "Yes"
          - "No"
 
-Transform: AWS::Serverless-2016-10-31
-
 Conditions:
-  CreateVPC: !Equals [!Ref Vpc, '']
-  # CreateAD: !Equals [!Ref Ad, '']
-  CreateAD: !Equals ['', '']
+  CreateVPC: !Equals [!Ref Vpc, ""]
+  # CreateAD: !Equals [!Ref Ad, ""]
+  CreateAD: !Equals ["", ""]
   isUSEast1: !Equals [!Ref "AWS::Region", "us-east-1"]
-  ImportLDIFS3: !Not [ !Equals [!Ref LDIFS3Path, ''] ]
-  SubDomainProvided: !Not [ !Equals [!Ref SubDomain, ''] ]
-  SubDomainNotProvided: !Equals [!Ref SubDomain, '']
+  ImportLDIFS3: !Not [ !Equals [!Ref LDIFS3Path, ""] ]
+  SubDomainProvided: !Not [ !Equals [!Ref SubDomain, ""] ]
+  SubDomainNotProvided: !Equals [!Ref SubDomain, ""]
 
 
 Resources:
+
   DisableImdsv1LaunchTemplate:
     Type: AWS::EC2::LaunchTemplate
     Properties:
@@ -136,6 +153,7 @@ Resources:
           HttpEndpoint: enabled
           HttpPutResponseHopLimit: 4
           HttpTokens: required
+
   PrepRole:
     Type: AWS::IAM::Role
     Properties:
@@ -178,9 +196,11 @@ Resources:
       EnableDnsHostnames: true
       EnableDnsSupport: true
       InstanceTenancy: default
+
   PclusterVpcIGW:
     Type: AWS::EC2::InternetGateway
     Condition: CreateVPC
+
   PclusterVpcSubnet1Route:
     Type: AWS::EC2::Route
     Condition: CreateVPC
@@ -192,12 +212,14 @@ Resources:
         Ref: PclusterVpcIGW
       RouteTableId:
         Ref: PclusterVpcSubnet1RouteTable
+
   PclusterVpcSubnet1RouteTable:
     Type: AWS::EC2::RouteTable
     Condition: CreateVPC
     Properties:
       VpcId:
         Ref: PclusterVpc
+
   PclusterVpcSubnet1RTA:
     Type: AWS::EC2::SubnetRouteTableAssociation
     Condition: CreateVPC
@@ -206,6 +228,7 @@ Resources:
         Ref: PclusterVpcSubnet1RouteTable
       SubnetId:
         Ref: PclusterVpcSubnet1
+
   PclusterVpcSubnet1:
     Type: AWS::EC2::Subnet
     Condition: CreateVPC
@@ -215,6 +238,7 @@ Resources:
       MapPublicIpOnLaunch: true
       VpcId:
         Ref: PclusterVpc
+
   PclusterVpcSunet1Route:
     Type: AWS::EC2::Route
     Condition: CreateVPC
@@ -226,12 +250,14 @@ Resources:
         Ref: PclusterVpcIGW
       RouteTableId:
         Ref: PclusterVpcSubnet2RouteTable
+
   PclusterVpcSubnet2RouteTable:
     Type: AWS::EC2::RouteTable
     Condition: CreateVPC
     Properties:
       VpcId:
         Ref: PclusterVpc
+
   PclusterVpcSubnet2RTA:
     Type: AWS::EC2::SubnetRouteTableAssociation
     Condition: CreateVPC
@@ -240,6 +266,7 @@ Resources:
         Ref: PclusterVpcSubnet2RouteTable
       SubnetId:
         Ref: PclusterVpcSubnet2
+
   PclusterVpcSubnet2:
     Type: AWS::EC2::Subnet
     Condition: CreateVPC
@@ -249,6 +276,7 @@ Resources:
       MapPublicIpOnLaunch: true
       VpcId:
         Ref: PclusterVpc
+
   PclusterVpcGWA:
     Type: AWS::EC2::VPCGatewayAttachment
     Condition: CreateVPC
@@ -284,7 +312,7 @@ Resources:
 
           def create_physical_resource_id():
               alnum = string.ascii_uppercase + string.ascii_lowercase + string.digits
-              return ''.join(random.choice(alnum) for _ in range(16))
+              return "".join(random.choice(alnum) for _ in range(16))
 
           def handler(event, context):
               print(event)
@@ -361,7 +389,6 @@ Resources:
           ToPort: 22
       VpcId: !If [CreateVPC, !Ref PclusterVpc, !Ref Vpc ]
 
-
   JoinRole:
     Type: AWS::IAM::Role
     Properties:
@@ -403,6 +430,7 @@ Resources:
                   - !Ref DomainCertificateSecret
                   - !Ref DomainPrivateKeySecret
           PolicyName: PutDomainCertificateSecrets
+
   JoinProfile:
     Type: AWS::IAM::InstanceProfile
     Properties:
@@ -467,18 +495,38 @@ Resources:
               echo "Creating Service Account..."
               echo "$ADMIN_PW" | adcli create-user -x -U Admin --domain="${DirectoryDomain}" --display-name=${ServiceAccountName} ${ServiceAccountName}
               sleep 0.5
+
+              # We always create a demo user so it can be added to groups in the LDIF file. The 
+              # name of the user can be overridden by the CF template, but otherwise defaults to 
+              # demouser. The account will not have a password set unless one is provided. If you 
+              # really do not want it in your directory, and are using an LDIF, you can delete it 
+              # by including a changetype:delete record for the username in your LDIF.
+
+              echo "Creating demo user..."
+
+              # Default to 'demouser' unless set as a CloudFormation Parameter. 
+              # But.. 'demouser' will not be a usable account since its password 
+              # will not get reset in PostLambda
               if [ "${UserName}" != "" ]; then
-                echo "Creating User..."
-                echo "$ADMIN_PW" | adcli create-user -x -U Admin --domain="${DirectoryDomain}" --display-name="${UserName}" "${UserName}"
+                DemoAccountName="${UserName}"
+              else
+                DemoAccountName="demouser"
               fi
 
-              export DC="${DC}"
-              export OU="${OU}"
-              export DirectoryDomain="${DirectoryDomain}"
-              export ServiceAccountName="${ServiceAccountName}"
-
+              # Create the account out of band so it can referenced within the LDIF
+              echo "$ADMIN_PW" | adcli create-user -x -U Admin --domain="${DirectoryDomain}" --display-name="Demo Account" "$DemoAccountName"
+              
+              # Process the LDIF file if provided
               if [ "${LDIFS3Path}" != "" ]; then
-                echo "Running LDIF File..."
+                echo "Loading directory data from LDIF file [${LDIFS3Path} ]..."
+
+                # Export key variables so they are available for substiution in LDIF
+                export DC="${DC}"
+                export OU="${OU}"
+                export DirectoryDomain="${DirectoryDomain}"
+                export ServiceAccountName="${ServiceAccountName}"
+                export DemoAccountName="$DemoAccountName"
+
                 aws s3 cp s3://${LDIFS3Path} --region "${AWS::Region}" - | envsubst > /tmp/ldif.tmp
                 ldapmodify -x -h ${DirectoryDomain} -D "cn=Admin,ou=Users,ou=${OU},dc=${DC}" -w $ADMIN_PW -f /tmp/ldif.tmp
               fi
@@ -507,7 +555,7 @@ Resources:
                 DomainPrivateKeySecretArn: !Ref DomainPrivateKeySecret,
                 LDIFS3Path: !Ref LDIFS3Path,
                 DC: !Join [",dc=", !Split [".", !If [ SubDomainNotProvided, !Ref DomainName, !Join [ ".", [ !Ref SubDomain, !Ref DomainName] ] ] ]],
-                OU: !GetAtt Prep.DomainShortName
+                OU: !GetAtt Prep.DomainShortName,
             }
 
   PostRole:
@@ -581,7 +629,7 @@ Resources:
 
           def create_physical_resource_id():
               alnum = string.ascii_uppercase + string.ascii_lowercase + string.digits
-              return ''.join(random.choice(alnum) for _ in range(16))
+              return "".join(random.choice(alnum) for _ in range(16))
           
           def redact_keys(event: dict, redactions: set):
               ret = {}
@@ -612,10 +660,16 @@ Resources:
               if event['RequestType'] == 'Create':
                   response_data['Message'] = 'Resource creation successful!'
                   physical_resource_id = create_physical_resource_id()
-                  ds.reset_user_password(DirectoryId=directory_id, UserName=service_account_name, NewPassword=service_account_password)
-                  if user_name != "":
-                    ds.reset_user_password(DirectoryId=directory_id, UserName=user_name, NewPassword=user_password)
+
+                  # Change admin and bind passwords
                   ds.reset_user_password(DirectoryId=directory_id, UserName='Admin', NewPassword=admin_password)
+                  ds.reset_user_password(DirectoryId=directory_id, UserName=service_account_name, NewPassword=service_account_password)
+ 
+                  # Change the demo user password only if both are provided. This allows the demo user to be created 
+                  # by default in AdDomainAdminNode without forcing creation of a usable credential pair in the directory.
+                  if user_name != "" and user_password != "":
+                    ds.reset_user_password(DirectoryId=directory_id, UserName=user_name, NewPassword=user_password)
+ 
                   if stop_ad_admin_instance:
                     ec2.stop_instances(InstanceIds=[instance_id])
 
@@ -797,7 +851,7 @@ Resources:
 
           def create_physical_resource_id():
               alnum = string.ascii_uppercase + string.ascii_lowercase + string.digits
-              return ''.join(random.choice(alnum) for _ in range(16))
+              return "".join(random.choice(alnum) for _ in range(16))
 
           def import_certificate(certificate_secret_arn, private_key_secret_arn, tags):
             logger.info('Reading secrets from Secrets Manager...')
@@ -923,7 +977,7 @@ Resources:
 
           def create_physical_resource_id():
             alnum = string.ascii_uppercase + string.ascii_lowercase + string.digits
-            return ''.join(random.choice(alnum) for _ in range(16))
+            return "".join(random.choice(alnum) for _ in range(16))
 
           def delete_certificate(certificate_arn):
             logger.info(f"Deleting ACM certificate {certificate_arn}...")
