@@ -81,15 +81,15 @@ Parameters:
   UserName:
     Description: (Optional) Cluster user that is created in the Active Directory.
     Type: String
-    Default: user000
+    Default: ""
 
   UserPassword:
-    Description: (Optional) Cluster user password (Required if a UserName is provided).
+    Description: (Optional) Cluster user password (required if a UserName is provided).
     Type: String
     NoEcho: true
 
   LDIFS3Path:
-    Description: (Optional) An S3 Path (without the s3://) to an LDIF file that will be used to initialize the directory.
+    Description: (Optional) S3 Path (without the s3://) to an LDIF file that will be used to initialize the directory.
     Type: String
     Default: ""
 
