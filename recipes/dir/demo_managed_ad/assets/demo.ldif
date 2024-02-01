@@ -5,7 +5,7 @@ objectClass: top
 objectClass: person
 objectClass: organizationalPerson
 objectClass: user
-cn: user2
+cn: sampleuser1
 sAMAccountName: sampleuser1
 name: sampleuser1
 userPrincipalName: sampleuser1@${DirectoryDomain}
