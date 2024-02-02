@@ -8,8 +8,11 @@ The format is based on [Keep a Changelog](http://keepachangelog.com/)
 ### Added
 
 ### Fixed
+* demo_managed_ad no longer fails if demonstration user passwords are not provided
 
 ### Changed
+* added support to demo_managed_ad for a second demonstration user
+* added support to demo_managed_ad for including demonstration users in LDIF using variable substitution
 
 ## [1.2.0] - 2024-01-30
 
