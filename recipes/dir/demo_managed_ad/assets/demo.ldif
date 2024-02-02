@@ -33,4 +33,4 @@ member: CN=sampleuser1,OU=Users,OU=${OU},DC=${DC}
 dn: CN=samplegroup_1,OU=Users,OU=${OU},DC=${DC}
 changetype: modify
 add: member
-member: CN=${DemoAccountName},OU=Users,OU=${OU},DC=${DC}
+member: CN=${DemoAccountName1},OU=Users,OU=${OU},DC=${DC}

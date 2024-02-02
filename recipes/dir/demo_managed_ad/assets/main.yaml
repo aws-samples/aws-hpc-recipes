@@ -16,13 +16,15 @@ Metadata:
           - AdDomainAdminNodeInstancetype
           - ManagedAdEdition
       - Label:
-          default: "Bootstrapping"
+          default: "AD Bootstrapping"
         Parameters:
           - UserName
           - UserPassword
+          - UserName2
+          - UserPassword2
           - LDIFS3Path
       - Label:
-          default: "Management Instance"
+          default: "AD Management Instance"
         Parameters:
           - Keypair
           - AllowedIps
@@ -79,12 +81,22 @@ Parameters:
     NoEcho: true
 
   UserName:
-    Description: (Optional) Cluster user that is created in the Active Directory.
+    Description: (Optional) Application user that is created in the Active Directory.
     Type: String
     Default: ""
 
   UserPassword:
-    Description: (Optional) Cluster user password (required if a UserName is provided).
+    Description: (Optional) Application user password (required if a UserName is provided).
+    Type: String
+    NoEcho: true
+
+  UserName2:
+    Description: (Optional) Second application user that is created in the Active Directory.
+    Type: String
+    Default: ""
+
+  UserPassword2:
+    Description: (Optional) Second application user password (required if a UserName2 is provided).
     Type: String
     NoEcho: true
 
@@ -486,37 +498,50 @@ Resources:
               exec > >(tee /var/log/user-data.log|logger -t user-data -s 2>/dev/console) 2>&1
               yum update -y aws-cfn-bootstrap
               /opt/aws/bin/cfn-init -v --stack "${AWS::StackName}" --resource AdDomainAdminNode --configsets setup --region "${AWS::Region}"
+
               echo "Domain Name: ${DirectoryDomain}"
               echo "Domain Certificate Secret: ${DomainCertificateSecretArn}"
               echo "Domain Private Key Secret: ${DomainPrivateKeySecretArn}"
+              
               ADMIN_PW='${AdminPassword}'
               echo "$ADMIN_PW" | sudo realm join -U Admin "${DirectoryDomain}"
               sleep 10
+              
               echo "Creating Service Account..."
               echo "$ADMIN_PW" | adcli create-user -x -U Admin --domain="${DirectoryDomain}" --display-name=${ServiceAccountName} ${ServiceAccountName}
-              sleep 0.5
+              sleep 1.0
 
-              # We always create a demo user so it can be added to groups in the LDIF file. The 
-              # name of the user can be overridden by the CF template, but otherwise defaults to 
-              # demouser. The account will not have a password set unless one is provided. If you 
-              # really do not want it in your directory, and are using an LDIF, you can delete it 
-              # by including a changetype:delete record for the username in your LDIF.
+              # We always create demo users so they can be added to groups in the LDIF file. The 
+              # names of the users can be overridden by the CF template, but otherwise defaults to 
+              # demouser1 and demouser2. The accounts will not have a password set unless one is provided. 
+              # If you really do not want them in your AD, and are using an LDIF, you can delete them 
+              # by including a changetype:delete record for the user in your LDIF.
 
-              echo "Creating demo user..."
+              echo "Creating demo users..."
 
-              # Default to 'demouser' unless set as a CloudFormation Parameter. 
-              # But.. 'demouser' will not be a usable account since its password 
+              # Default to 'demouser1' unless set as a CloudFormation Parameter. 
+              # But.. 'demouser1' will not be a usable account since its password 
               # will not get reset in PostLambda
               if [ "${UserName}" != "" ]; then
-                DemoAccountName="${UserName}"
+                DemoAccountName1="${UserName}"
               else
-                DemoAccountName="demouser"
+                DemoAccountName1="demouser1"
+              fi
+
+              # Default to 'demouser2' unless set as a CloudFormation Parameter. 
+              # But.. 'demouser2' will not be a usable account since its password 
+              # will not get reset in PostLambda
+              if [ "${UserName2}" != "" ]; then
+                DemoAccountName2="${UserName2}"
+              else
+                DemoAccountName2="demouser2"
               fi
 
               # Create the account out of band so it can referenced within the LDIF
-              echo "$ADMIN_PW" | adcli create-user -x -U Admin --domain="${DirectoryDomain}" --display-name="Demo Account" "$DemoAccountName"
+              echo "$ADMIN_PW" | adcli create-user -x -U Admin --domain="${DirectoryDomain}" --display-name="Demo1" "$DemoAccountName1"
+              echo "$ADMIN_PW" | adcli create-user -x -U Admin --domain="${DirectoryDomain}" --display-name="Demo2" "$DemoAccountName2"
               
-              # Process the LDIF file if provided
+              # Ingest and process the LDIF file if provided
               if [ "${LDIFS3Path}" != "" ]; then
                 echo "Loading directory data from LDIF file [${LDIFS3Path} ]..."
 
@@ -525,9 +550,12 @@ Resources:
                 export OU="${OU}"
                 export DirectoryDomain="${DirectoryDomain}"
                 export ServiceAccountName="${ServiceAccountName}"
-                export DemoAccountName="$DemoAccountName"
+                export DemoAccountName1="$DemoAccountName1"
+                export DemoAccountName2="$DemoAccountName2"
 
+                # TODO - Gracefully handle leading s3:// string
                 aws s3 cp s3://${LDIFS3Path} --region "${AWS::Region}" - | envsubst > /tmp/ldif.tmp
+                # TODO - Log ldapmodify outputs to assist with debugging
                 ldapmodify -x -h ${DirectoryDomain} -D "cn=Admin,ou=Users,ou=${OU},dc=${DC}" -w $ADMIN_PW -f /tmp/ldif.tmp
               fi
               
@@ -551,6 +579,7 @@ Resources:
                 AdminPassword: !Ref AdminPassword,
                 ServiceAccountName: !Ref ServiceAccountName,
                 UserName: !Ref UserName,
+                UserName2: !Ref UserName2,
                 DomainCertificateSecretArn: !Ref DomainCertificateSecret,
                 DomainPrivateKeySecretArn: !Ref DomainPrivateKeySecret,
                 LDIFS3Path: !Ref LDIFS3Path,
@@ -641,16 +670,21 @@ Resources:
               return ret
           
           def handler(event, context):
-              print(redact_keys(event, {"ServiceAccountPassword", "UserPassword", "AdminPassword"}))
+              print(redact_keys(event, {"ServiceAccountPassword", "AdminPassword", "UserPassword", "UserPassword2"}))
               print( 'boto version {}'.format(boto3.__version__))
+              
               directory_id = event['ResourceProperties']['DirectoryId']
               instance_id = event['ResourceProperties']['AdminNodeInstanceId']
 
               service_account_name = event['ResourceProperties']['ServiceAccountName']
               service_account_password = event['ResourceProperties']['ServiceAccountPassword']
+              
               user_name = event['ResourceProperties']['UserName']
               user_password = event['ResourceProperties']['UserPassword']
+              user_name_2 = event['ResourceProperties']['UserName2']
+              user_password_2 = event['ResourceProperties']['UserPassword2']
               admin_password = event['ResourceProperties']['AdminPassword']
+
               stop_ad_admin_instance = event['ResourceProperties']['StopAdAdminInstance'] == 'Yes'
 
               response_data = {}
@@ -665,11 +699,17 @@ Resources:
                   ds.reset_user_password(DirectoryId=directory_id, UserName='Admin', NewPassword=admin_password)
                   ds.reset_user_password(DirectoryId=directory_id, UserName=service_account_name, NewPassword=service_account_password)
  
-                  # Change the demo user password only if both are provided. This allows the demo user to be created 
+                  # Change the first demo user password only if both are provided. This allows the demo user to be created 
                   # by default in AdDomainAdminNode without forcing creation of a usable credential pair in the directory.
                   if user_name != "" and user_password != "":
                     ds.reset_user_password(DirectoryId=directory_id, UserName=user_name, NewPassword=user_password)
  
+                  # Change the second demo user password only if both are provided. This allows the demo user to be created 
+                  # by default in AdDomainAdminNode without forcing creation of a usable credential pair in the directory.
+                  if user_name_2 != "" and user_password_2 != "":
+                    ds.reset_user_password(DirectoryId=directory_id, UserName=user_name_2, NewPassword=user_password_2)
+
+                  # Determines whether to stop the instance after Post in order to reduce costs
                   if stop_ad_admin_instance:
                     ec2.stop_instances(InstanceIds=[instance_id])
 
@@ -684,17 +724,19 @@ Resources:
       AdminNodeInstanceId: !Ref AdDomainAdminNode
       # DirectoryId: !If [CreateAD, !Ref Directory, !Ref Ad ]
       DirectoryId: !Ref Directory
-      UserName: !Ref UserName
-      UserPassword: !Ref UserPassword
       AdminPassword: !Ref AdminPassword
       ServiceAccountName: !Ref ServiceAccountName
       ServiceAccountPassword: !Ref ServiceAccountPassword
+      UserName: !Ref UserName
+      UserName2: !Ref UserName2
+      UserPassword: !Ref UserPassword
+      UserPassword2: !Ref UserPassword2
       StopAdAdminInstance: !Ref StopAdAdminInstance
 
   PasswordSecret:
     Type: AWS::SecretsManager::Secret
     Properties:
-      Description: Password for Microsoft Active Directory
+      Description: Service Account Password for Microsoft Active Directory
       Name: !Sub [ "PasswordSecret-${StackIdSuffix}", {StackIdSuffix: !Select [1, !Split ['/', !Ref 'AWS::StackId']]}]
       SecretString: !Ref ServiceAccountPassword
 
