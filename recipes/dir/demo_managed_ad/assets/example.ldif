@@ -1,5 +1,5 @@
 # Add a user
-dn: CN=myuser,OU=Users,OU=corp,DC=corp,DC=res,DC=com
+dn: CN=myuser,OU=Users,OU=corp,DC=corp,DC=pcluster,DC=com
 changetype: add
 objectClass: top
 objectClass: person
@@ -16,21 +16,21 @@ loginShell: /bin/bash
 userPassword: myuser.
 
 # Add a group and add above user to that group
-dn: CN=mygroup,OU=Users,OU=corp,DC=corp,DC=res,DC=com
+dn: CN=mygroup,OU=Users,OU=corp,DC=corp,DC=pcluster,DC=com
 changetype: add
 objectClass: top
 objectClass: group
 cn: mygroup
 description: mygroup
-distinguishedName: CN=mygroup,OU=Users,OU=corp,DC=corp,DC=res,DC=com
+distinguishedName: CN=mygroup,OU=Users,OU=corp,DC=corp,DC=pcluster,DC=com
 name: mygroup
 sAMAccountName: mygroup
-objectCategory: CN=Group,CN=Schema,CN=Configuration,DC=corp,DC=res,DC=com
+objectCategory: CN=Group,CN=Schema,CN=Configuration,DC=corp,DC=pcluster,DC=com
 gidNumber: 1002
-member: CN=myuser,OU=Users,OU=corp,DC=corp,DC=res,DC=com
+member: CN=myuser,OU=Users,OU=corp,DC=corp,DC=pcluster,DC=com
 
 # adding a member to a group
-#dn: CN=mygroup,OU=Users,OU=corp,DC=corp,DC=res,DC=com
+#dn: CN=mygroup,OU=Users,OU=corp,DC=corp,DC=pcluster,DC=com
 #changetype: modify
 #add: member
-#member: CN=myuser,OU=Users,OU=corp,DC=corp,DC=res,DC=com
+#member: CN=myuser,OU=Users,OU=corp,DC=corp,DC=pcluster,DC=com

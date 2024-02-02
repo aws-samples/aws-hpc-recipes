@@ -1,0 +1,36 @@
+# Create a sample user 
+dn: CN=sampleuser1,OU=Users,OU=${OU},DC=${DC}
+changetype: add
+objectClass: top
+objectClass: person
+objectClass: organizationalPerson
+objectClass: user
+cn: sampleuser1
+sAMAccountName: sampleuser1
+name: sampleuser1
+userPrincipalName: sampleuser1@${DirectoryDomain}
+mail: sampleuser1@${DirectoryDomain}
+uidNumber: 2000
+gidNumber: 2000
+unixHomeDirectory: /home/sampleuser1
+loginShell: /bin/bash
+
+# Create a sample group and add the sample user to it
+dn: CN=samplegroup_1,OU=Users,OU=${OU},DC=${DC}
+changetype: add
+objectClass: top
+objectClass: group
+cn: samplegroup_1
+description: samplegroup_1
+distinguishedName: CN=samplegroup_1,OU=Users,OU=${OU},DC=${DC}
+name: samplegroup_1
+sAMAccountName: samplegroup_1
+objectCategory: CN=Group,CN=Schema,CN=Configuration,DC=${DC}
+gidNumber: 3000
+member: CN=sampleuser1,OU=Users,OU=${OU},DC=${DC}
+
+# Add the pre-created demo user to the sample group
+dn: CN=samplegroup_1,OU=Users,OU=${OU},DC=${DC}
+changetype: modify
+add: member
+member: CN=${DemoAccountName1},OU=Users,OU=${OU},DC=${DC}

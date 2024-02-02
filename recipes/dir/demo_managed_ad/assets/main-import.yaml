@@ -1,5 +1,4 @@
-
-Description: AWS Managed Microsoft Active Directory to support multi-user AWS ParallelCluster. Relies on a compatible networking stack.
+Description: AWS Managed Microsoft Active Directory to support multi-user AWS ParallelCluster, RES, or other application. Relies on a compatible networking stack.
 
 Metadata:
   AWS::CloudFormation::Interface:
@@ -13,7 +12,7 @@ Metadata:
           - AdDomainAdminNodeInstancetype
           - ManagedAdEdition
       - Label:
-          default: "Default Active Directory User(s)"
+          default: "Active Directory Bootstrapping"
         Parameters:
           - UserName
           - UserPassword

@@ -2,7 +2,7 @@
 
 ## Info
 
-This recipes sets up a basic AWS Managed Microsoft AD deployment that can support a demonstration multi-user environment in AWS ParallelCluster or other products. 
+This recipes sets up a basic AWS Managed Microsoft AD deployment that can support a demonstration multi-user environment for AWS ParallelCluster or other products. 
 
 **Note** This template uses self-signed certificates to enable encrypted LDAP. Consult the documentation to learn [how to secure an AWS Managed Microsoft AD](https://docs.aws.amazon.com/directoryservice/latest/admin-guide/ms_ad_security.html).
 
@@ -16,15 +16,15 @@ You can include the Output values directly in a cluster configuration, as per th
 
 **Note** If you wish to import networking configuration directly from an existing CloudFormation stack, you can use the alternative [import template](https://console.aws.amazon.com/cloudformation/home?region=us-east-2#/stacks/create/review?stackName=managed-adb&templateURL=https://aws-hpc-recipes.s3.us-east-1.amazonaws.com/main/recipes/dir/demo_managed_ad/assets/main-import.yaml), providing the name of an active HPC Recipes for AWS networking stack.
 
-### User and Group Management via Linux Management Host
+### User and Group Management
 
-Once the stack has reached the `CREATE_COMPLETE` state, you can manage your groups and users via the Linux management host. 
+Once the stack has reached the `CREATE_COMPLETE` state, you can manage your groups and users via the default Linux management host, or using a Windows host as documented below. Also note that the parameters `UserName`, `UserPassword`, `UserName2`, and `UserPassword2` support creating demonstration users in the Active Directory without having to use the management host. This is helpful especially if you just want to get going and demonstrate an AD-powered multi-user environment. 
 
-#### Accessing the linux management host
+#### Accessing the Linux management host
 
-To access the management host, go to the AWS CloudFormation stack in the [AWS CloudFormation console](https://console.aws.amazon.com/cloudformation/home).
+By default, this template creates a Linux management host. This instance has the `aws`, `adcli` and `ldapmodify` CLI tools installed that allow you to manage users and groups in the Active Directory.
 
-Next go to the **Resources** tab and select the **AdDomainAdminNode** and click the **Physical ID** to open up the instance in the EC2 Console.
+To access the Linux management host, go to the AWS CloudFormation stack in the [AWS CloudFormation console](https://console.aws.amazon.com/cloudformation/home). Next go to the **Resources** tab and select the **AdDomainAdminNode** and click the **Physical ID** to open up the instance in the EC2 Console.
 
 ![image](https://github.com/charlesg3/aws-hpc-recipes/assets/6087509/df21afe9-0cb6-46ed-a85c-58f9082dc204)
 
@@ -36,9 +36,7 @@ Then select **Connect** to connect to the instance using AWS Session Manager whi
 
 ![image](https://github.com/charlesg3/aws-hpc-recipes/assets/6087509/5351d842-34c5-47a3-8fa0-7730acc8e903)
 
-**Note** If you chose **Yes** for the parameter **StopAdAdminInstance** in the CloudFormation template, the adminstrative instance may be in a stopped state. Choose **Instance state::Start instance** to bring it back online before connecting to it. You can shut the instance down again when you are done with your adminstrative actions. 
-
-This instance has the `adcli` and `ldapmodify`  CLI tools that allow you to update the ActiveDirectory to manage your groups and users.
+**Note** If you have chosen **Yes** for the parameter **StopAdAdminInstance** in the CloudFormation template, the Linux management host may be in a stopped state. Choose **Instance state::Start instance** to bring it back online before connecting to it. You can shut the instance down again when you are done with your adminstrative work. 
 
 #### Adding Users and Groups
 
@@ -65,30 +63,29 @@ modifying entry "CN=mygroup,OU=Users,OU=corp,DC=corp,DC=res,DC=com"
 You can search for the users that exist in your AD with the following command:
 
 ```
-$ ldapsearch "(&(objectClass=user))" -x -h corp.pcluster.com -b "DC=corp,DC=pcluster,DC=com" -D "CN=Admin,OU=Users,OU=CORP,DC=corp,DC=pcluster,DC=com -W"
+$ ldapsearch "(&(objectClass=user))" -x -h corp.pcluster.com -b "DC=corp,DC=pcluster,DC=com" -D "CN=Admin,OU=Users,OU=CORP,DC=corp,DC=pcluster,DC=com" -W
 ```
 
 You can search for the groups that exist in your AD with the following command:
 
 ```
-$ ldapsearch "(&(objectClass=group))" -x -h corp.pcluster.com -b "DC=corp,DC=pcluster,DC=com" -D "CN=Admin,OU=Users,OU=CORP,DC=corp,DC=pcluster,DC=com -W"
+$ ldapsearch "(&(objectClass=group))" -x -h corp.pcluster.com -b "DC=corp,DC=pcluster,DC=com" -D "CN=Admin,OU=Users,OU=CORP,DC=corp,DC=pcluster,DC=com" -W
 ```
 
-### User and Group Management via Windows Management Host
+### User and Group Management with a Windows Management Host
 
-There is a [Windows Management Host](ttps://console.aws.amazon.com/cloudformation/home?region=us-east-2#/stacks/create/review?stackName=managed-adb&templateURL=https://aws-hpc-recipes.s3.us-east-1.amazonaws.com/main/recipes/dir/demo_managed_ad/assets/main.yaml) stack that will launch a domain joined windows host. Additionally, this stack takes a parameter (`PSS3Path`) for an S3 path (without the `s3://`) to a powershell script that will be run on the `DeledationUser` after the instance has joined the domain. This is useful for automating the setup of your domain using powershell commands. The host will have RDP open to the ClientIpCidr and the host will run the script provided at the PSS3Path,
+You can use the [Windows Management Host](https://console.aws.amazon.com/cloudformation/home?region=us-east-2#/stacks/create/review?stackName=managed-adb&templateURL=https://aws-hpc-recipes.s3.us-east-1.amazonaws.com/main/recipes/dir/demo_managed_ad/assets/main.yaml) stack to launch a domain-joined Windows host. This stack accepts a parameter (`PSS3Path`) for an S3 path (without the `s3://`) to a Powershell script that will be run as the `DelegationUser` after the instance has joined the domain. This is useful for automating the setup of your domain using Powershell commands. The host will have RDP open to the ClientIpCidr and the host will run the script provided at the PSS3Path.
 
 **Note**: It will take some time (~10m) after your instance boots for it to join the domain. 
 
-#### Accessing the host
+#### Accessing the Windows management host
 
 You may access this instance by going to the Outputs tab and copying the **ManagementHostPublicDns**
 
 ![image](https://github.com/charlesg3/aws-hpc-recipes/assets/6087509/c09d785e-aff0-4844-9a95-cb27849d1699)
 
-Next, open your RDP client and use the dns entry from above to connect to the instance. The credentials will be Admin and the AdministratorPassword you provided when you created the Directory Service. Once you connect to the instance, you can open the **Active Directory Users and Computers** interface by choosing to run that from the start menu:
+Next, open your RDP client and use the DNS entry from above to connect to the instance. The credentials will be `Admin`` and the `AdministratorPassword`` you provided when you created the Directory Service. Once you connect to the instance, you can open the **Active Directory Users and Computers** interface by choosing to run that from the start menu:
 ![image](https://github.com/charlesg3/aws-hpc-recipes/assets/6087509/387f0abe-5db4-4d8d-aaff-9e42023f5dc9)
-
 
 You can also use the PowerShell commands like [Get-ADUser](https://learn.microsoft.com/en-us/powershell/module/activedirectory/get-aduser?view=windowsserver2022-ps) to access the directory:
 
@@ -170,9 +167,20 @@ member: CN=myuser,OU=Users,OU=corp,DC=corp,DC=pcluster,DC=com
 ```
 You can start with this file, upload it to an S3 bucket and provide the path to one of the templates to have the LDAP objects created when the stack starts.
 
+#### Variable subsitution in LDIF
+
+You can use the following variables in your LDIF file:
+* `OU` - maps to your domain's short name (e.g. `CORP`)
+* `DC` - maps to a DC-formatted version of `SubDomain` and `DomainName` (e.g. `DC=corp,dc=pcluster,dc=com` or `DC=ad,dc=corp,dc=pcluster,dc=com`)
+* `ServiceAccountName` - maps to `ServiceAccountName`
+* `$DemoAccountName1` - maps to `UserName` or `demouser1`
+* `$DemoAccountName2` - maps to `UserName2` or `demouser2`
+
+They will be automatically subsituted for the values you provided to the CloudFormation template. See [demo.ldif](assets/demo.ldif) for sample usage.
+
 ## Cost Estimate
 
-It will cost approximately $72.00 to run this directory service for a week. 
+It will cost approximately $72.00 to run the directory service stack for a week, if you have chosen the `Standard` edition of AWS Managed Microsoft AD and elected to shut down the Linux management instance after the stack has launched. 
 
 ## Cleaning Up
 
