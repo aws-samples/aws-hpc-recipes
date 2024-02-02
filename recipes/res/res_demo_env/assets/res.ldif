@@ -139,16 +139,11 @@ member: CN=admin2,OU=Users,OU=${OU},DC=${DC}
 # DemoAccountName2 comes from DemoAdminInAd in the demo stack by way of UserName2 in the BI stack.
 # The referenced accounts are created before LDIF is processed, when the directory is being bootstrapped.
 
-# Add the externally-created demo user to the sample group
+# Add the externally-created demo users to the first sample group
 dn: CN=group_1,OU=Users,OU=RES,OU=${OU},DC=${DC}
 changetype: modify
 add: member
 member: CN=${DemoAccountName1},OU=Users,OU=${OU},DC=${DC}
-
-# Add the externally-created admin user to the sample group
-dn: CN=group_1,OU=Users,OU=RES,OU=${OU},DC=${DC}
-changetype: modify
-add: member
 member: CN=${DemoAccountName2},OU=Users,OU=${OU},DC=${DC}
 
 # Add the externally-created admin user to the RESAdministrators group
