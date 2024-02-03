@@ -88,6 +88,7 @@ Parameters:
   UserPassword:
     Description: (Optional) Application user password (required if a UserName is provided).
     Type: String
+    Default: ""
     NoEcho: true
 
   UserName2:
@@ -98,6 +99,7 @@ Parameters:
   UserPassword2:
     Description: (Optional) Second application user password (required if a UserName2 is provided).
     Type: String
+    Default: ""
     NoEcho: true
 
   LDIFS3Path:

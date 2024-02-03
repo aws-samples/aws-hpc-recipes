@@ -62,6 +62,7 @@ Parameters:
   DemoUserPasswordInAd:
     Description: (Optional) Password for DemoUserNameInAd.
     Type: String
+    Default: ""
     NoEcho: true
   DemoAdminInAd:
     Description: (Optional) Application user created in the Active Directory and added to RESAdministrators group.
@@ -70,6 +71,7 @@ Parameters:
   DemoAdminPasswordInAd:
     Description: (Optional) Password for DemoAdminInAd.
     Type: String
+    Default: ""
     NoEcho: true
   LDIFS3Path:
     Description: (Optional) An S3 Path (without the s3://) to an LDIF file that will be used during stack creation.
