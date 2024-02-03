@@ -13,6 +13,7 @@ The format is based on [Keep a Changelog](http://keepachangelog.com/)
 ### Changed
 * added support to demo_managed_ad for a second demonstration user
 * added support to demo_managed_ad for including demonstration users in LDIF using variable substitution
+* added support to res_demo_env for configurable demonstration users and access control via VPC prefix list
 
 ## [1.2.0] - 2024-01-30
 
