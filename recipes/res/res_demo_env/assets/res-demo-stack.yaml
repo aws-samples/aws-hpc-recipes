@@ -14,6 +14,14 @@ Metadata:
           - Keypair
           - ClientIpCidr
           - AdAdminIpCidr
+          - InboundPrefixList
+      - Label:
+          default: (Optional) Demo Users
+        Parameters:
+          - DemoUserNameInAd
+          - DemoUserPasswordInAd
+          - DemoAdminInAd
+          - DemoAdminPasswordInAd
 
 Parameters:
 
@@ -55,6 +63,28 @@ Parameters:
     Type: String
     AllowedPattern: ^(pl-[a-z0-9]{8,20})?$
     ConstraintDescription: Must be a valid VPC Prefix List ID, which begins with `pl-` or be empty.
+
+  DemoUserNameInAd:
+    Description: (Optional) Application user created in the Active Directory.
+    Type: String
+    Default: ""
+
+  DemoUserPasswordInAd:
+    Description: (Optional) Password for DemoUserNameInAd.
+    Type: String
+    Default: ""
+    NoEcho: true
+
+  DemoAdminInAd:
+    Description: (Optional) Application user created in the Active Directory and granted RES adminstrator priveleges.
+    Type: String
+    Default: ""
+
+  DemoAdminPasswordInAd:
+    Description: (Optional) Password for DemoAdminInAd.
+    Type: String
+    Default: ""
+    NoEcho: true
 
 
 Conditions:
@@ -103,6 +133,10 @@ Resources:
         ServiceAccountPassword: !Ref ServiceAccountPassword
         ClientIpCidr: !Ref AdAdminIpCidr
         ClientPrefixList: !Ref InboundPrefixList
+        DemoUserNameInAd: !Ref DemoUserNameInAd
+        DemoUserPasswordInAd: !Ref DemoUserPasswordInAd
+        DemoAdminInAd: !Ref DemoAdminInAd
+        DemoAdminPasswordInAd: !Ref DemoAdminPasswordInAd
       TemplateURL: https://aws-hpc-recipes.s3.us-east-1.amazonaws.com/main/recipes/res/res_demo_env/assets/bi.yaml
 
   RES:
