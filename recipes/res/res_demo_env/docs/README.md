@@ -18,8 +18,13 @@ The template accepts the following Parameters:
 * `AdminPassword` - This is the password for an AD administrator (username `admin`). This user is created in the AD for administration purposes and isn’t used beyond the initial bootstrapping phase. Note that both this password and ServiceAccountPassword must meet password complexity requirements from the default AD [policy](https://learn.microsoft.com/en-us/windows/security/threat-protection/security-policy-settings/password-must-meet-complexity-requirements).
 * `ServiceAccountPassword` - This is the password used to create a service account that is used for synchronization.
 * `Keypair` - This EC2 key pair is used to connect to the administrative instances.
-* `LDIFS3Path` - This is an S3 path to an LDIF file that is imported during the bootstrapping phase of setting up the AD. For further information about the LDIF file see [here](https://github.com/aws-samples/aws-hpc-recipes/blob/main/recipes/dir/demo_managed_ad/README.md#ldif-support). This parameter is pre-populated with a file that creates a number of users in the AD.
-* `ClientIpCidr` - This should be the IP address that you will be accessing the site from. For instance, navigate to whatsmyip.org, select your IP address and use `[IPADDRESS]/32` to only allow access from your host.
+* `DemoUserNameInAd` - Username for a demo user created in AD
+* `DemoUserPasswordInAd` - Password for demo user
+* `DemoAdminInAd` - Username for a demo admin created in AD
+* `DemoAdminPasswordInAd` - Password for demo admin
+* `LDIFS3Path` - This is an S3 path to an LDIF file that is imported during the bootstrapping phase of setting up the AD. For further information about the LDIF file see [here](https://github.com/aws-samples/aws-hpc-recipes/blob/main/recipes/dir/demo_managed_ad/README.md#ldif-support). This parameter is pre-populated with a file that creates a number of users in the AD. The default LDIF file demonstrates use of variable substitution for OU, DC, bind user, and the demo accounts. 
+* `ClientIpCidr` - The IP address (or range) that you will be accessing the AD admin hosts from. For instance, navigate to whatsmyip.org, select your IP address and use `[IPADDRESS]/32` to only allow access from your host.
+* `ClientPrefixList` - A managed VPC Prefix list defining hosts you can access the Windows AD admin host from. 
 * `EnvironmentName` - If the PortalDomainName is provided, this name is used to add tags to the secrets that are generated so that they can be used within the environment. This will need to match the EnvironmentName parameter that is used when creating the RES stack later.
 * `PortalDomainName` - This is the value of a domain that exists in Route53 on the account. If this is provided, then a public certificate (and key file) will be generated and uploaded to Secrets Manager. If you have your own domain and certificates, this parameter (and the EnvironmentName) can be left blank.
 * `ClientPrefixList` - A prefix list that will be used to provide access to the AD management nodes. (This resource type can be managed in https://console.aws.amazon.com/vpcconsole/home#ManagedPrefixLists)
