@@ -1071,6 +1071,6 @@ Outputs:
         Name: !Sub ${AWS::StackName}-DirectoryId
   DomainManagementNodeId:
     Value: !Ref AdDomainAdminNode
-    Description: Instance ID for Active Directory Domain Management Node
+    Description: Instance ID for Linux Active Directory Domain Management Node
     Export:
         Name: !Sub ${AWS::StackName}-DomainManagementNodeId

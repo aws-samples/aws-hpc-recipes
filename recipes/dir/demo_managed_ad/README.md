@@ -79,17 +79,17 @@ $ ldapsearch "(&(objectClass=group))" -x -h corp.pcluster.com -b "DC=corp,DC=pcl
 
 ### User and Group Management via Windows Management Host
 
-There is a [Windows Management Host](ttps://console.aws.amazon.com/cloudformation/home?region=us-east-2#/stacks/create/review?stackName=managed-adb&templateURL=https://aws-hpc-recipes.s3.us-east-1.amazonaws.com/main/recipes/dir/demo_managed_ad/assets/main.yaml) stack that will launch a domain joined windows host. Additionally, this stack takes a parameter (`PSS3Path`) for an S3 path (without the `s3://`) to a powershell script that will be run on the `DeledationUser` after the instance has joined the domain. This is useful for automating the setup of your domain using powershell commands. The host will have RDP open to the ClientIpCidr and the host will run the script provided at the PSS3Path,
+There is a [Windows Management Host](https://console.aws.amazon.com/cloudformation/home?region=us-east-2#/stacks/create/review?stackName=managed-adb&templateURL=https://aws-hpc-recipes.s3.us-east-1.amazonaws.com/main/recipes/dir/demo_managed_ad/assets/windows_management_host.yaml) stack that will launch a domain-joined Windows host. This template accepts a parameter (`PSS3Path`) for an S3 path (without the `s3://`) to a powershell script that will be run on the `DelegationUser` after the instance has joined the domain. This is useful for automating the setup of your domain using powershell commands. The host will have RDP open to the **ClientIpCidr** and/or the VPC Prefix List provided for **ClientPrefixList**. You can configure the host to reduce costs by shutting down after it launches using **StopAdminInstance**.
 
-**Note**: It will take some time (~10m) after your instance boots for it to join the domain. 
+**Note**: It will take some time (~10m) after your Windows instance boots for it to join the domain. 
 
 #### Accessing the Windows host
 
-You may access this instance by going to the Outputs tab and copying the **ManagementHostPublicDns**
+You may access this instance by going to the Outputs tab and copying the **ManagementHostId**. Next, navigate to the EC2 console and search for the instance ID. Copy its **Public IPv4 address** and use that with your RDP client to connect to the instance. The access credentials will be `Admin` and the value for **AdministratorPassword** you provided when you created the AD. 
 
-![image](https://github.com/charlesg3/aws-hpc-recipes/assets/6087509/c09d785e-aff0-4844-9a95-cb27849d1699)
+**Note** If you haven chosen **Yes** for the parameter **StopAdminInstance** when you launched the CloudFormation template, the Windows instance may be in a stopped state. Choose **Instance state::Start instance** to bring it back online before connecting to it. You can shut the instance down again when you are done working with it. 
 
-Next, open your RDP client and use the DNS entry from above to connect to the instance. The credentials will be `Admin` and the value for **AdministratorPassword** you provided when you created the Directory Service. Once you connect to the instance, you can open the **Active Directory Users and Computers** interface by choosing to run that from the start menu:
+Once you connect to the instance, you may open the **Active Directory Users and Computers** interface by choosing to run that from the Windows Start menu:
 ![image](https://github.com/charlesg3/aws-hpc-recipes/assets/6087509/387f0abe-5db4-4d8d-aaff-9e42023f5dc9)
 
 You can also use the PowerShell commands like [Get-ADUser](https://learn.microsoft.com/en-us/powershell/module/activedirectory/get-aduser?view=windowsserver2022-ps) to access the directory:

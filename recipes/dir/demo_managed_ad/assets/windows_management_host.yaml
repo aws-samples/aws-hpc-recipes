@@ -25,6 +25,7 @@ Metadata:
         Parameters:
           - Keypair
           - AdminNodeAmiId
+          - StopAdminInstance
           - PSS3Path
           - PSS3PathRegion
           - InstanceType
@@ -111,6 +112,14 @@ Parameters:
   InstanceType:
     Type: String
     Default: t3.xlarge
+
+  StopAdminInstance:
+    Description: Automatically stop the management instance after launch to reduce costs.
+    Type: String
+    Default: "No"
+    AllowedValues:
+         - "Yes"
+         - "No"
 
 Conditions:
   AddPrefixList: !Not [!Equals [!Ref ClientPrefixList, '']]
@@ -317,9 +326,106 @@ Resources:
                 DC: !Join [",DC=", !Split [".", !Ref DomainName ]],
                 OU: !Select [0, !Split ['.', !Ref DomainName ]]
                 }
+
+  PostRole:
+    Type: AWS::IAM::Role
+    Properties:
+      AssumeRolePolicyDocument:
+        Version: 2012-10-17
+        Statement:
+          - Action:
+              - sts:AssumeRole
+            Effect: Allow
+            Principal:
+              Service:
+                - lambda.amazonaws.com
+      Policies:
+        - PolicyName: LogOutput
+          PolicyDocument:
+            Version: 2012-10-17
+            Statement:
+              - Action:
+                - logs:CreateLogGroup
+                - logs:CreateLogStream
+                - logs:PutLogEvents
+                Effect: Allow
+                Resource: '*'
+        - PolicyName: StopInstances
+          PolicyDocument:
+            Version: 2012-10-17
+            Statement:
+              - Effect: Allow
+                Action:
+                  - ec2:StopInstances
+                Resource: !Sub
+                  - arn:${AWS::Partition}:ec2:${AWS::Region}:${AWS::AccountId}:instance/${InstanceId}
+                  - { InstanceId: !Ref Instance }
+
+  PostLambda:
+    Type: AWS::Lambda::Function
+    Properties:
+      Description: !Sub "${AWS::StackName}: custom resource handler to finish setting up stack after other resources have been created."
+      Handler: index.handler
+      MemorySize: 128
+      Role: !GetAtt PostRole.Arn
+      Runtime: python3.9
+      Timeout: 300
+      TracingConfig:
+        Mode: Active
+      Code:
+        ZipFile: |
+          import time
+          import cfnresponse
+          import boto3
+          import logging
+          import random
+          import string
+          logger = logging.getLogger()
+          logger.setLevel(logging.INFO)
+
+          ec2 = boto3.client("ec2")
+
+          def create_physical_resource_id():
+              alnum = string.ascii_uppercase + string.ascii_lowercase + string.digits
+              return "".join(random.choice(alnum) for _ in range(16))
+
+          def redact_keys(event: dict, redactions: set):
+              ret = {}
+              for k in event.keys():
+                  if k in redactions:
+                      ret[k] = "[REDACTED]"
+                  else:
+                      ret[k] = redact_keys(event[k], redactions) if type(event[k]) is dict else event[k] # handle nesting
+              return ret
+          
+          def handler(event, context):
+              print( 'boto version {}'.format(boto3.__version__))
+
+              instance_id = event['ResourceProperties']['InstanceId']
+              stop_admin_instance = event['ResourceProperties']['StopAdminInstance'] == 'Yes'
+
+              response_data = {}
+              reason = None
+              response_status = cfnresponse.SUCCESS
+
+              if event['RequestType'] == 'Create':
+                  response_data['Message'] = 'Resource creation successful!'
+                  physical_resource_id = create_physical_resource_id()
+                  if stop_admin_instance:
+                    ec2.stop_instances(InstanceIds=[instance_id])
+              else:
+                  physical_resource_id = event['PhysicalResourceId']
+
+              cfnresponse.send(event, context, response_status, response_data, physical_resource_id, reason)
+
+  Post:
+    Type: Custom::PostLambda
+    Properties:
+      ServiceToken: !GetAtt PostLambda.Arn
+      InstanceId: !Ref Instance
+      StopAdminInstance: !Ref StopAdminInstance
+
 Outputs:
   ManagementHostId:
     Value: !Ref Instance
-  ManagementHostPublicDns:
-    Description: Public DNS entry to access the management host.
-    Value: !GetAtt Instance.PublicDnsName
+    Description: Instance ID for Windows Active Directory Domain Management Node
