@@ -122,8 +122,8 @@ Parameters:
          - "No"
 
 Conditions:
-  AddPrefixList: !Not [!Equals [!Ref ClientPrefixList, '']]
-  AddCidrIngress: !Not [!Equals [!Ref ClientIpCidr, '']]
+  AddPrefixList: !Not [!Equals [!Ref ClientPrefixList, ""]]
+  AddCidrIngress: !Not [!Equals [!Ref ClientIpCidr, ""]]
 
 Resources:
   InstanceRole:
