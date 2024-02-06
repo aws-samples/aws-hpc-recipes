@@ -18,17 +18,17 @@ Metadata:
         Parameters:
           - VpcId
           - Subnet
-          - ClientIpCidr
-          - ClientPrefixList
       - Label:
           default: "Host Configuration"
         Parameters:
           - Keypair
           - AdminNodeAmiId
-          - StopAdminInstance
+          - StopAdAdminInstance
           - PSS3Path
           - PSS3PathRegion
           - InstanceType
+          - ClientIpCidr
+          - ClientPrefixList
 
 Parameters:
 
@@ -113,7 +113,7 @@ Parameters:
     Type: String
     Default: t3.xlarge
 
-  StopAdminInstance:
+  StopAdAdminInstance:
     Description: Automatically stop the management instance after launch to reduce costs.
     Type: String
     Default: "No"
@@ -402,7 +402,7 @@ Resources:
               print( 'boto version {}'.format(boto3.__version__))
 
               instance_id = event['ResourceProperties']['InstanceId']
-              stop_admin_instance = event['ResourceProperties']['StopAdminInstance'] == 'Yes'
+              stop_admin_instance = event['ResourceProperties']['StopAdAdminInstance'] == 'Yes'
 
               response_data = {}
               reason = None
@@ -423,7 +423,7 @@ Resources:
     Properties:
       ServiceToken: !GetAtt PostLambda.Arn
       InstanceId: !Ref Instance
-      StopAdminInstance: !Ref StopAdminInstance
+      StopAdAdminInstance: !Ref StopAdAdminInstance
 
 Outputs:
   ManagementHostId:
