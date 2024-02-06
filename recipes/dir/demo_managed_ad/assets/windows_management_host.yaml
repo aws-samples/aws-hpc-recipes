@@ -87,11 +87,11 @@ Parameters:
     Default: '/aws/service/ami-windows-latest/Windows_Server-2022-English-Full-Base'
 
   VpcId:
-    Description: VPC where you will deploy the EFS filesystem
+    Description: VPC where you will create the AD and management instance(s).
     Type: AWS::EC2::VPC::Id
 
   Subnet:
-    Description: Subnet where to launch the instance.
+    Description: Subnet where to launch the AD management instance.
     Type: AWS::EC2::Subnet::Id
 
   ClientIpCidr:
@@ -102,7 +102,7 @@ Parameters:
     ConstraintDescription: ClientIP must be a valid IP or network range of the form x.x.x.x/x. specify your IP/NETMASK (e.g x.x.x/32 or x.x.x.x/24 for subnet range)
 
   ClientPrefixList:
-    Description: Prefix list IDs for incoming traffic for the management instance.
+    Description: Prefix list ID for incoming traffic for the management instance.
     Default: ""
     Type: String
     AllowedPattern: ^(pl-[a-z0-9]{8,20})?$
