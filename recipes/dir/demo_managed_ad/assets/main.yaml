@@ -12,27 +12,28 @@ Metadata:
           - AdminPassword
           - ServiceAccountName
           - ServiceAccountPassword
-          - AdDomainAdminNodeInstancetype
           - ManagedAdEdition
       - Label:
-          default: "Default Active Directory User(s)"
+          default: "Active Directory Bootstrapping"
         Parameters:
           - UserName
           - UserPassword
           - LDIFS3Path
       - Label:
-          default: "Management Instance"
-        Parameters:
-          - Keypair
-          - AllowedIps
-          - StopAdAdminInstance
-          - AdminNodeAmiId
-      - Label:
-          default: "Networking"
+          default: "Network Configuration"
         Parameters:
           - Vpc
           - PrivateSubnetOne
           - PrivateSubnetTwo
+          - AllowedIps
+          - ClientPrefixList
+      - Label:
+          default: "Host Configuration"
+        Parameters:
+          - Keypair
+          - AdminNodeAmiId
+          - StopAdAdminInstance
+          - AdDomainAdminNodeInstancetype
 
 Parameters:
   ManagedAdEdition:
@@ -73,42 +74,49 @@ Parameters:
   UserName:
     Description: (Optional) Cluster user that is created in the Active Directory.
     Type: String
-    Default: user000
+    Default: ""
   UserPassword:
     Description: (Optional) Cluster user Password (Required if a UserName is provided).
     Type: String
+    Default: ""
     NoEcho: true
   LDIFS3Path:
     Description: (Optional) An S3 Path (without the s3://) to an LDIF file that will be used during stack creation.
     Type: String
-    Default: ''
+    Default: ""
   Keypair:
-    Description: EC2 Keypair to access management instance.
+    Description: EC2 Keypair to access the management instance.
     Type: AWS::EC2::KeyPair::KeyName
   AllowedIps:
-    Description: CIDR-formatted IP range for SSH access management instance.
+    Description: (Optional) CIDR-formatted IP range for SSH access to the management instance.
     Type: String
-    Default: 0.0.0.0/0
-    AllowedPattern: '((\d{1,3})\.){3}\d{1,3}/\d{1,2}'
+    Default: ""
+    AllowedPattern: ^(((\d{1,3})\.){3}\d{1,3}/\d{1,2})?$
+  ClientPrefixList:
+    Description: (Optional) VPC Prefix List ID for incoming traffic to the management instance.
+    Default: ""
+    Type: String
+    AllowedPattern: ^(pl-[a-z0-9]{8,20})?$
+    ConstraintDescription: Must be a valid prefix list ID, which begins with pl-.
   Vpc:
-    Description: VPC ID to create the Directory Service in.
+    Description: VPC ID to create the AD and management instance(s) in.
     Type: AWS::EC2::VPC::Id
   PrivateSubnetOne:
-    Description: Subnet ID of the first private subnet. 
+    Description: Subnet ID of the first private subnet in the VPC. 
     Type: AWS::EC2::Subnet::Id
   PrivateSubnetTwo:
-    Description: Subnet ID of the second private subnet.
+    Description: Subnet ID of the second private subnet in the VPC.
     Type: AWS::EC2::Subnet::Id
   AdminNodeAmiId:
-    Description: AMI for the Admin Node
+    Description: AMI for the management instance.
     Type: 'AWS::SSM::Parameter::Value<AWS::EC2::Image::Id>'
     Default: '/aws/service/ami-amazon-linux-latest/amzn2-ami-hvm-x86_64-gp2'
   AdDomainAdminNodeInstancetype:
-    Description: EC2 instance type for the Management Instance
+    Description: EC2 instance type for the management instance.
     Type: String
     Default: t3.micro
   StopAdAdminInstance:
-    Description: Automatically stop the Management Instance to save costs
+    Description: Automatically stop the management instance to save costs.
     Type: String
     Default: "No"
     AllowedValues:
@@ -118,16 +126,18 @@ Parameters:
 Transform: AWS::Serverless-2016-10-31
 
 Conditions:
-  CreateVPC: !Equals [!Ref Vpc, '']
-  # CreateAD: !Equals [!Ref Ad, '']
-  CreateAD: !Equals ['', '']
+  CreateVPC: !Equals [!Ref Vpc, ""]
+  # CreateAD: !Equals [!Ref Ad, ""]
+  CreateAD: !Equals ["", ""]
   isUSEast1: !Equals [!Ref "AWS::Region", "us-east-1"]
-  ImportLDIFS3: !Not [ !Equals [!Ref LDIFS3Path, ''] ]
-  SubDomainProvided: !Not [ !Equals [!Ref SubDomain, ''] ]
-  SubDomainNotProvided: !Equals [!Ref SubDomain, '']
-
+  ImportLDIFS3: !Not [ !Equals [!Ref LDIFS3Path, ""] ]
+  SubDomainProvided: !Not [ !Equals [!Ref SubDomain, ""] ]
+  SubDomainNotProvided: !Equals [!Ref SubDomain, ""]
+  AddPrefixList: !Not [!Equals [!Ref ClientPrefixList, ""]]
+  AddCidrIngress: !Not [!Equals [!Ref AllowedIps, ""]]
 
 Resources:
+
   DisableImdsv1LaunchTemplate:
     Type: AWS::EC2::LaunchTemplate
     Properties:
@@ -136,6 +146,7 @@ Resources:
           HttpEndpoint: enabled
           HttpPutResponseHopLimit: 4
           HttpTokens: required
+
   PrepRole:
     Type: AWS::IAM::Role
     Properties:
@@ -284,7 +295,7 @@ Resources:
 
           def create_physical_resource_id():
               alnum = string.ascii_uppercase + string.ascii_lowercase + string.digits
-              return ''.join(random.choice(alnum) for _ in range(16))
+              return "".join(random.choice(alnum) for _ in range(16))
 
           def handler(event, context):
               print(event)
@@ -345,22 +356,41 @@ Resources:
       # DirectoryId: !If [CreateAD, !Ref Directory, !Ref Ad ]
       DirectoryId: !Ref Directory
 
-  AdDomainAdminNodeSecurityGroup:
+  InstanceSecurityGroup:
     Type: AWS::EC2::SecurityGroup
     Properties:
       GroupDescription: Allow SSH access
-      SecurityGroupEgress:
-        - CidrIp: 0.0.0.0/0
-          FromPort: -1
-          IpProtocol: "-1"
-          ToPort: -1
-      SecurityGroupIngress:
-        - CidrIp: !Ref AllowedIps
-          FromPort: 22
-          IpProtocol: tcp
-          ToPort: 22
       VpcId: !If [CreateVPC, !Ref PclusterVpc, !Ref Vpc ]
+      # SecurityGroupEgress:
+      #   - CidrIp: 0.0.0.0/0
+      #     FromPort: -1
+      #     IpProtocol: "-1"
+      #     ToPort: -1
+      # SecurityGroupIngress:
+      #   - CidrIp: !Ref AllowedIps
+      #     FromPort: 22
+      #     IpProtocol: tcp
+      #     ToPort: 22
 
+  InstanceSecurityGroupIngressClientCidr:
+    Condition: AddCidrIngress
+    Type: AWS::EC2::SecurityGroupIngress
+    Properties:
+      FromPort: 22
+      ToPort: 22
+      IpProtocol: tcp
+      GroupId: !GetAtt InstanceSecurityGroup.GroupId
+      CidrIp: !Ref AllowedIps
+
+  InstanceSecurityGroupIngressPrefixList:
+    Condition: AddPrefixList
+    Type: AWS::EC2::SecurityGroupIngress
+    Properties:
+      FromPort: 22
+      ToPort: 22
+      IpProtocol: tcp
+      GroupId: !GetAtt InstanceSecurityGroup.GroupId
+      SourcePrefixListId: !Ref ClientPrefixList
 
   JoinRole:
     Type: AWS::IAM::Role
@@ -444,7 +474,7 @@ Resources:
         LaunchTemplateId: !Ref 'DisableImdsv1LaunchTemplate'
         Version: !GetAtt 'DisableImdsv1LaunchTemplate.LatestVersionNumber'
       SecurityGroupIds:
-        - Ref: AdDomainAdminNodeSecurityGroup
+        - Ref: InstanceSecurityGroup
       SubnetId: !If [CreateVPC, !Ref PclusterVpcSubnet1, !Ref PrivateSubnetOne ]
       Tags:
         - Key: "Name"
@@ -581,7 +611,7 @@ Resources:
 
           def create_physical_resource_id():
               alnum = string.ascii_uppercase + string.ascii_lowercase + string.digits
-              return ''.join(random.choice(alnum) for _ in range(16))
+              return "".join(random.choice(alnum) for _ in range(16))
           
           def redact_keys(event: dict, redactions: set):
               ret = {}
@@ -797,7 +827,7 @@ Resources:
 
           def create_physical_resource_id():
               alnum = string.ascii_uppercase + string.ascii_lowercase + string.digits
-              return ''.join(random.choice(alnum) for _ in range(16))
+              return "".join(random.choice(alnum) for _ in range(16))
 
           def import_certificate(certificate_secret_arn, private_key_secret_arn, tags):
             logger.info('Reading secrets from Secrets Manager...')
@@ -923,7 +953,7 @@ Resources:
 
           def create_physical_resource_id():
             alnum = string.ascii_uppercase + string.ascii_lowercase + string.digits
-            return ''.join(random.choice(alnum) for _ in range(16))
+            return "".join(random.choice(alnum) for _ in range(16))
 
           def delete_certificate(certificate_arn):
             logger.info(f"Deleting ACM certificate {certificate_arn}...")
