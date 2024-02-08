@@ -92,6 +92,13 @@ Parameters:
     Type: String
     AllowedPattern: ^(pl-[a-z0-9]{8,20})?$
     ConstraintDescription: Must be a valid VPC Prefix List ID, which begins with `pl-`.  Prefix Lists can be configured at https://console.aws.amazon.com/vpcconsole/home#ManagedPrefixLists
+  EFSThroughputMode:
+    Description: (Optional) EFS filesystem throughput mode.
+    Type: String
+    Default: "bursting"
+    AllowedValues:
+      - "elastic"
+      - "bursting"
 
 Conditions:
   GenerateCerts: !Not [!Equals [!Ref PortalDomainName, '']]
@@ -158,6 +165,7 @@ Resources:
         VpcId: !GetAtt [ Networking, Outputs.VPC ]
         SubnetCount: 2
         SubnetIds: !GetAtt [ Networking, Outputs.PrivateSubnets ]
+        ThroughputMode: !Ref EFSThroughputMode
       TemplateURL: https://aws-hpc-recipes.s3.us-east-1.amazonaws.com/main/recipes/storage/efs_simple/assets/main.yaml
 
   Certs:
