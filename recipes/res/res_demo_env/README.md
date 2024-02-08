@@ -4,9 +4,14 @@
 
 This recipe uses a CloudFormation stack to launch a non-production installation of [Research and Engineering Studio (RES) on AWS](https://aws.amazon.com/hpc/res/) that you can use to try it out. It also includes a CloudFormation stack that can be used standalone to launch just the supporting infrastructure for RES (networking, directory service, storage, etc.)
 
-## Usage
+### Updates, fixes, and new features
 
 ### Launch RES
+* Feb 08, 2024 - You now have the option to configure the throughput mode for the underlying EFS file system that acts as the shared drive for RES desktop sessions. Use the default value of `bursting` to help prevent cost overrun.
+* Feb 04, 2024 - You now have the option to configure two AD users directly in the RES demo template, rather than having to use one of the AD administrative hosts. The first one will have "end-user" privileges in RES. Configure it by setting values for **DemoUserNameInAd** and **DemoUserPasswordInAd**. The second user will have RES administrator privileges. Configure it by setting values for **DemoAdminInAd** and **DemoAdminPasswordInAd**. If you don't configure these users, you can still manually manage RES users directly in AD. 
+* Feb 04, 2024 - You can now restrict inbound access to your RES environment and its Windows administrative hosts using a managed VPC Prefix List. This is especially helpful for cases where a corporate VPN you are targeting spans many CIDR blocks. 
+
+## Launch RES
 
 1. Ensure you have an Amazon EC2 [SSH key created](https://docs.aws.amazon.com/AWSEC2/latest/UserGuide/create-key-pairs.html#having-ec2-create-your-key-pair) in the Region where you want to launch RES.
 2. Launch the template: [![Launch stack](../../../docs/media/launch-stack.svg)](https://console.aws.amazon.com/cloudformation/home?region=us-east-2#/stacks/create/review?stackName=resdemostack&templateURL=https://aws-hpc-recipes.s3.us-east-1.amazonaws.com/main/recipes/res/res_demo_env/assets/res-demo-stack.yaml)
