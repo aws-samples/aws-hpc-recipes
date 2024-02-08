@@ -6,8 +6,9 @@ This recipe uses a CloudFormation stack to launch a non-production installation 
 
 ### Updates, fixes, and new features
 
-* Feb 04, 2023 - You now have the option to configure two AD users directly in the RES demo template, rather than having to use one of the AD administrative hosts. The first one will have "end-user" privileges in RES. Configure it by setting values for **DemoUserNameInAd** and **DemoUserPasswordInAd**. The second user will have RES administrator privileges. Configure it by setting values for **DemoAdminInAd** and **DemoAdminPasswordInAd**. If you don't configure these users, you can still manually manage RES users directly in AD. 
-* Feb 04, 2023 - You can now restrict inbound access to your RES environment and its Windows administrative hosts using a managed VPC Prefix List. This is especially helpful for cases where a corporate VPN you are targeting spans many CIDR blocks. 
+* Feb 08, 2024 - You now have the option to configure the throughput mode for the underlying EFS file system that acts as the shared drive for RES desktop sessions. Use the default value of `bursting` to help prevent cost overrun.
+* Feb 04, 2024 - You now have the option to configure two AD users directly in the RES demo template, rather than having to use one of the AD administrative hosts. The first one will have "end-user" privileges in RES. Configure it by setting values for **DemoUserNameInAd** and **DemoUserPasswordInAd**. The second user will have RES administrator privileges. Configure it by setting values for **DemoAdminInAd** and **DemoAdminPasswordInAd**. If you don't configure these users, you can still manually manage RES users directly in AD. 
+* Feb 04, 2024 - You can now restrict inbound access to your RES environment and its Windows administrative hosts using a managed VPC Prefix List. This is especially helpful for cases where a corporate VPN you are targeting spans many CIDR blocks. 
 
 ## Launch RES
 
