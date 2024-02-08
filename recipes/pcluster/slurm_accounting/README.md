@@ -29,7 +29,7 @@ You can either log in via SSH to the **HeadNodeIp** using the keypair you specif
 
 In this example, we create the accounting database as a resource in the CloudFormation template. When the stack is deleted, so is the accounting database. If you want your database to be persistent across cluster instances, or if you want to share it between clusters, you can import values from an existing database stack into your ParallelCluster deployment. 
 
-1. Run the the [Slurm Accounting Database](../../db/slurm_accounting_db/assets/serverless-database.yaml) quick-create. Take note of the name of the CloudFormation stack for the database. 
+1. Run the the [Slurm Accounting Database](../../db/slurm_accounting_db/README.md) quick-create. Take note of the name of the CloudFormation stack for the database. 
 2. Launch ParallelCluster using this alternative template: [![Launch stack](../../../docs/media/launch-stack.svg)](https://console.aws.amazon.com/cloudformation/home?region=us-east-2#/stacks/create/review?stackName=sacct-cluster-persistent&templateURL=https://aws-hpc-recipes.s3.us-east-1.amazonaws.com/main/recipes/pcluster/slurm_accounting/assets/launch-persistent.yaml)
 3. When prompted, provide the name of your database CloudFormation stack to **DatabaseStackNameParameter**
 
