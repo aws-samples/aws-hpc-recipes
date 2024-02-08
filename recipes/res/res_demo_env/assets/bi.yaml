@@ -1,4 +1,4 @@
-Description: A set of external resources that can be integrated into a Research and Engineering Studio Environment
+Description: A set of external resources that can support a Research and Engineering Studio Environment deployment
 
 Metadata:
   AWS::CloudFormation::Interface:
@@ -10,8 +10,14 @@ Metadata:
           - SubDomain
           - AdminPassword
           - ServiceAccountPassword
+      - Label:
+          default: "AD Management Host Configuration"
+        Parameters:
           - Keypair
           - LDIFS3Path
+          - ClientIpCidr
+          - ClientPrefixList
+          - StopAdAdminInstances
 
 Parameters:
   DomainName:
@@ -48,35 +54,50 @@ Parameters:
     MaxLength: 2048
     AllowedPattern: (arn:(aws(-cn|-us-gov)?):secretsmanager:(us(-gov)?|ap|ca|cn|eu|sa)-(central|(north|south)?(east|west)?)-\d:\d{12}:secret:[a-zA-Z0-9/_+=.@-]+)|(?=^.{8,64}$)((?=.*\d)(?=.*[A-Z])(?=.*[a-z])|(?=.*\d)(?=.*[^A-Za-z0-9\s])(?=.*[a-z])|(?=.*[^A-Za-z0-9\s])(?=.*[A-Z])(?=.*[a-z])|(?=.*\d)(?=.*[A-Z])(?=.*[^A-Za-z0-9\s]))^.*
     NoEcho: true
-  Keypair:
-    Description: EC2 Keypair to access management instance.
-    Type: AWS::EC2::KeyPair::KeyName
   LDIFS3Path:
     Description: (Optional) An S3 Path (without the s3://) to an LDIF file that will be used during stack creation.
     Type: String
-    Default: aws-hpc-recipes/main/recipes/res/res_demo_env/assets/res.ldif
+    Default: aws-hpc-recipes-dev/resprefix/recipes/res/res_demo_env/assets/res.ldif
+  StopAdAdminInstances:
+    Description: Automatically stop management instances to save costs.
+    Type: String
+    Default: "Yes"
+    AllowedValues:
+         - "Yes"
+         - "No"
+  Keypair:
+    Description: EC2 Keypair to access AD management instances.
+    Type: AWS::EC2::KeyPair::KeyName
   ClientIpCidr:
-    Description: CIDR for incoming RDP traffic for management instance.
+    Description: CIDR for incoming traffic to AD management instances.
     Default: ""
     Type: String
     AllowedPattern: ^((\d{1,3})\.(\d{1,3})\.(\d{1,3})\.(\d{1,3})/(\d{1,2}))?$
     ConstraintDescription: ClientIP must be a valid IP or network range of the form x.x.x.x/x. specify your IP/NETMASK (e.g x.x.x/32 or x.x.x.x/24 for subnet range)
   ClientPrefixList:
-    Description: (Optional) A valid prefix list ID for incoming traffic for the management instance. This allows more CIDR blocks to access the RES environment than a single block from `ClientIpCidr`
+    Description: (Optional) VPC Prefix List ID for incoming traffic to AD management instances.
     Default: ""
     Type: String
     AllowedPattern: ^(pl-[a-z0-9]{8,20})?$
     ConstraintDescription: Must be a valid VPC Prefix List ID, which begins with `pl-`.  Prefix Lists can be configured at https://console.aws.amazon.com/vpcconsole/home#ManagedPrefixLists
 
 Conditions:
-  GenerateCerts: !Not [!Equals [!Ref PortalDomainName, '']]
-  UseEnvironmentName: !Not [!Equals [!Ref EnvironmentName, '']]
-  SubDomainNotProvided: !Equals [!Ref SubDomain, '']
+  GenerateCerts: !Not [!Equals [!Ref PortalDomainName, ""]]
+  UseEnvironmentName: !Not [!Equals [!Ref EnvironmentName, ""]]
+  SubDomainNotProvided: !Equals [!Ref SubDomain, ""]
   InGovCloud: !Equals [!Ref 'AWS::Partition', "aws-us-gov"]
 
 Resources:
 
 ##### Nested stacks
+
+  Networking:
+    Type: AWS::CloudFormation::Stack
+    DeletionPolicy: Retain
+    Properties:
+      Parameters:
+        ProvisionSubnetsC: "False"
+      TemplateURL: https://aws-hpc-recipes-dev.s3.us-east-1.amazonaws.com/resprefix/recipes/net/hpc_large_scale/assets/main.yaml
 
   DirectoryService:
     Type: AWS::CloudFormation::Stack
@@ -89,20 +110,16 @@ Resources:
         ServiceAccountName: ServiceAccount
         LDIFS3Path: !Ref LDIFS3Path
         Keypair: !Ref Keypair
-        UserName: ''
-        UserPassword: ''
+        UserName: ""
+        UserPassword: ""
+# We don't pass these into the Directory Service stack because the Linux admin host is created in a private subnet.
+#        ClientIpCidr: !Ref ClientIpCidr
+#        ClientPrefixList: !Ref ClientPrefixList
+        StopAdAdminInstance: !Ref StopAdAdminInstances
         Vpc: !GetAtt [ Networking, Outputs.VPC ]
         PrivateSubnetOne: {"Fn::Select": [0, { "Fn::Split" : [",", !GetAtt [ Networking, Outputs.PrivateSubnets ]] }]}
         PrivateSubnetTwo: {"Fn::Select": [1, { "Fn::Split" : [",", !GetAtt [ Networking, Outputs.PrivateSubnets ]] }]}
-      TemplateURL: https://aws-hpc-recipes.s3.us-east-1.amazonaws.com/main/recipes/dir/demo_managed_ad/assets/main.yaml
-
-  Networking:
-    Type: AWS::CloudFormation::Stack
-    DeletionPolicy: Retain
-    Properties:
-      Parameters:
-        ProvisionSubnetsC: "False"
-      TemplateURL: https://aws-hpc-recipes.s3.us-east-1.amazonaws.com/main/recipes/net/hpc_large_scale/assets/main.yaml
+      TemplateURL: https://aws-hpc-recipes-dev.s3.us-east-1.amazonaws.com/resprefix/recipes/dir/demo_managed_ad/assets/main.yaml
 
   WindowsManagementHost:
     Type: AWS::CloudFormation::Stack
@@ -117,11 +134,12 @@ Resources:
         Keypair: !Ref Keypair
         VpcId: !GetAtt [ Networking, Outputs.VPC ]
         Subnet: {"Fn::Select": [0, { "Fn::Split" : [",", !GetAtt [ Networking, Outputs.PublicSubnets ]] }]}
+        StopAdAdminInstance: !Ref StopAdAdminInstances
         ClientIpCidr: !Ref ClientIpCidr
         ClientPrefixList: !Ref ClientPrefixList
-        PSS3Path: aws-hpc-recipes/main/recipes/res/res_demo_env/assets/service_account.ps1
+        PSS3Path: aws-hpc-recipes-dev/resprefix/recipes/res/res_demo_env/assets/service_account.ps1
         PSS3PathRegion: !If [InGovCloud, "us-gov-west-1", "us-east-1"]
-      TemplateURL: https://aws-hpc-recipes.s3.us-east-1.amazonaws.com/main/recipes/dir/demo_managed_ad/assets/windows_management_host.yaml
+      TemplateURL: https://aws-hpc-recipes-dev.s3.us-east-1.amazonaws.com/resprefix/recipes/dir/demo_managed_ad/assets/windows_management_host.yaml
 
   Storage:
     Type: AWS::CloudFormation::Stack
@@ -131,7 +149,7 @@ Resources:
         VpcId: !GetAtt [ Networking, Outputs.VPC ]
         SubnetCount: 2
         SubnetIds: !GetAtt [ Networking, Outputs.PrivateSubnets ]
-      TemplateURL: https://aws-hpc-recipes.s3.us-east-1.amazonaws.com/main/recipes/storage/efs_simple/assets/main.yaml
+      TemplateURL: https://aws-hpc-recipes-dev.s3.us-east-1.amazonaws.com/resprefix/recipes/storage/efs_simple/assets/main.yaml
 
   Certs:
     Condition: GenerateCerts
@@ -140,7 +158,7 @@ Resources:
       Parameters:
         SubnetId: {"Fn::Select": [0, { "Fn::Split" : [",", !GetAtt [ Networking, Outputs.PrivateSubnets ]] }]}
         DomainName: !Ref PortalDomainName
-      TemplateURL: https://aws-hpc-recipes.s3.us-east-1.amazonaws.com/main/recipes/security/public_certs/assets/main.yaml
+      TemplateURL: https://aws-hpc-recipes-dev.s3.us-east-1.amazonaws.com/resprefix/recipes/security/public_certs/assets/main.yaml
       Tags:
         - Key: "res:EnvironmentName"
           Value: !Ref EnvironmentName
@@ -225,7 +243,7 @@ Resources:
 
           def create_physical_resource_id():
               alnum = string.ascii_uppercase + string.ascii_lowercase + string.digits
-              return ''.join(random.choice(alnum) for _ in range(16))
+              return "".join(random.choice(alnum) for _ in range(16))
 
           def handler(event, context):
             try:
@@ -349,7 +367,7 @@ Resources:
 
           def create_physical_resource_id():
               alnum = string.ascii_uppercase + string.ascii_lowercase + string.digits
-              return ''.join(random.choice(alnum) for _ in range(16))
+              return "".join(random.choice(alnum) for _ in range(16))
 
           def handler(event, context):
               print(event)
@@ -436,7 +454,7 @@ Resources:
 
           def create_physical_resource_id():
               alnum = string.ascii_uppercase + string.ascii_lowercase + string.digits
-              return ''.join(random.choice(alnum) for _ in range(16))
+              return "".join(random.choice(alnum) for _ in range(16))
           
           def handler(event, context):
               admin_password = event['ResourceProperties']['AdminPassword']
