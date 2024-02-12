@@ -10,6 +10,11 @@ The format is based on [Keep a Changelog](http://keepachangelog.com/)
 ### Fixed
 
 ### Changed
+* In res_demo_env, you can now restrict inbound access using a CIDR or VPC Prefix List
+* In the res_demo_env external resources template, you can now configure inbound access using a CIDR or VPC Prefix List
+* In the res_demo_env external resources template, you can now configure whether the EFS storage uses elastic or burting throughput
+* In the res_demo_env external resources template, you can now configure whether the AD admin instances stop after launching
+* In res_demo_env, the AD admin instances automatically stop after launching to reduce costs
 
 ## [1.2.0] - 2024-01-30
 
