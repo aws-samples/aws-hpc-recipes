@@ -57,7 +57,7 @@ Parameters:
   LDIFS3Path:
     Description: (Optional) An S3 Path (without the s3://) to an LDIF file that will be used during stack creation.
     Type: String
-    Default: aws-hpc-recipes-dev/resprefix/recipes/res/res_demo_env/assets/res.ldif
+    Default: aws-hpc-recipes/main/recipes/res/res_demo_env/assets/res.ldif
   StopAdAdminInstances:
     Description: Automatically stop management instances to save costs.
     Type: String
@@ -104,7 +104,7 @@ Resources:
     Properties:
       Parameters:
         ProvisionSubnetsC: "False"
-      TemplateURL: https://aws-hpc-recipes-dev.s3.us-east-1.amazonaws.com/resprefix/recipes/net/hpc_large_scale/assets/main.yaml
+      TemplateURL: https://aws-hpc-recipes.s3.us-east-1.amazonaws.com/main/recipes/net/hpc_large_scale/assets/main.yaml
 
   DirectoryService:
     Type: AWS::CloudFormation::Stack
@@ -126,7 +126,7 @@ Resources:
         Vpc: !GetAtt [ Networking, Outputs.VPC ]
         PrivateSubnetOne: {"Fn::Select": [0, { "Fn::Split" : [",", !GetAtt [ Networking, Outputs.PrivateSubnets ]] }]}
         PrivateSubnetTwo: {"Fn::Select": [1, { "Fn::Split" : [",", !GetAtt [ Networking, Outputs.PrivateSubnets ]] }]}
-      TemplateURL: https://aws-hpc-recipes-dev.s3.us-east-1.amazonaws.com/resprefix/recipes/dir/demo_managed_ad/assets/main.yaml
+      TemplateURL: https://aws-hpc-recipes.s3.us-east-1.amazonaws.com/main/recipes/dir/demo_managed_ad/assets/main.yaml
 
   WindowsManagementHost:
     Type: AWS::CloudFormation::Stack
@@ -144,9 +144,9 @@ Resources:
         StopAdAdminInstance: !Ref StopAdAdminInstances
         ClientIpCidr: !Ref ClientIpCidr
         ClientPrefixList: !Ref ClientPrefixList
-        PSS3Path: aws-hpc-recipes-dev/resprefix/recipes/res/res_demo_env/assets/service_account.ps1
+        PSS3Path: aws-hpc-recipes/main/recipes/res/res_demo_env/assets/service_account.ps1
         PSS3PathRegion: !If [InGovCloud, "us-gov-west-1", "us-east-1"]
-      TemplateURL: https://aws-hpc-recipes-dev.s3.us-east-1.amazonaws.com/resprefix/recipes/dir/demo_managed_ad/assets/windows_management_host.yaml
+      TemplateURL: https://aws-hpc-recipes.s3.us-east-1.amazonaws.com/main/recipes/dir/demo_managed_ad/assets/windows_management_host.yaml
 
   Storage:
     Type: AWS::CloudFormation::Stack
@@ -157,7 +157,7 @@ Resources:
         SubnetCount: 2
         SubnetIds: !GetAtt [ Networking, Outputs.PrivateSubnets ]
         ThroughputMode: !Ref EFSThroughputMode
-      TemplateURL: https://aws-hpc-recipes-dev.s3.us-east-1.amazonaws.com/resprefix/recipes/storage/efs_simple/assets/main.yaml
+      TemplateURL: https://aws-hpc-recipes.s3.us-east-1.amazonaws.com/main/recipes/storage/efs_simple/assets/main.yaml
 
   Certs:
     Condition: GenerateCerts
@@ -166,7 +166,7 @@ Resources:
       Parameters:
         SubnetId: {"Fn::Select": [0, { "Fn::Split" : [",", !GetAtt [ Networking, Outputs.PrivateSubnets ]] }]}
         DomainName: !Ref PortalDomainName
-      TemplateURL: https://aws-hpc-recipes-dev.s3.us-east-1.amazonaws.com/resprefix/recipes/security/public_certs/assets/main.yaml
+      TemplateURL: https://aws-hpc-recipes.s3.us-east-1.amazonaws.com/main/recipes/security/public_certs/assets/main.yaml
       Tags:
         - Key: "res:EnvironmentName"
           Value: !Ref EnvironmentName
