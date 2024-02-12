@@ -2,45 +2,46 @@
 
 ## Info
 
-This recipes sets up a basic AWS Managed Microsoft AD deployment that can support a demonstration multi-user environment in AWS ParallelCluster or other products. 
+This recipe sets up an AWS Managed Microsoft AD deployment that can support demonstrations of multi-user AWS ParallelCluster, Research and Engineering Studio, or other products. 
 
 **Note** This template uses self-signed certificates to enable encrypted LDAP. Consult the documentation to learn [how to secure an AWS Managed Microsoft AD](https://docs.aws.amazon.com/directoryservice/latest/admin-guide/ms_ad_security.html).
 
 ## Usage
 
 1. Launch the template: [![Launch stack](../../../docs/media/launch-stack.svg)](https://console.aws.amazon.com/cloudformation/home?region=us-east-2#/stacks/create/review?stackName=managed-ad&templateURL=https://aws-hpc-recipes.s3.us-east-1.amazonaws.com/main/recipes/dir/demo_managed_ad/assets/main.yaml)
-2. Follow the instructions in the AWS CloudFormation console. Choose the VPC and subnets where your AWS ParallelCluster or other AD-using applications will be deployed. If you are launching the management host in a public subnet and wish to restrict the IPs allowed to connect to it via SSH, replace the default value in **AllowedIps** with your own CIDR block.
-3. Monitor the status of the stack. When its status is `CREATE_COMPLETE`, navigate to its **Outputs** tab. You will find several values you can use to create a ParallelCluster instance or other product.
-
-You can include the Output values directly in a cluster configuration, as per the [ParallelCluster documentation](https://docs.aws.amazon.com/parallelcluster/latest/ug/multi-user-v3.html). Alternatively, if you are deploying a cluster with AWS CloudFormation, these values have been exported so you may import them into your template using the `[Fn::Import](https://docs.aws.amazon.com/AWSCloudFormation/latest/UserGuide/intrinsic-function-reference-importvalue.html)` intrinsic function. 
-
-**Note** If you wish to import networking configuration directly from an existing CloudFormation stack, you can use the alternative [import template](https://console.aws.amazon.com/cloudformation/home?region=us-east-2#/stacks/create/review?stackName=managed-adb&templateURL=https://aws-hpc-recipes.s3.us-east-1.amazonaws.com/main/recipes/dir/demo_managed_ad/assets/main-import.yaml), providing the name of an active HPC Recipes for AWS networking stack.
+2. Follow the instructions in the AWS CloudFormation console.
+    * Choose the VPC and subnets where your AD will be deployed. If you are launching the management host in a public subnet and wish to restrict the IPs allowed to connect to it via SSH, you can either provide a value for **AllowedIps** that maps to your own local IP address or network, or you can provide a AWS VPC Prefix List. Either will restrict inbound access to port 22 to the range(s) of IP addresses you have specified.
+    * There are three settings to help control costs in this template. 1) You can choose the "Standard" edition of Microsoft Active Directory. 2) You can opt to shut the management instance off after it completes initializing your AD with **StopAdAdminInstance**. 3) You can change the EC2 instance type for the Linux management host using **AdDomainAdminNodeInstancetype**.
+    * You can create a single AD user directly from the CloudFormation template by setting the **UserName** and **UserPassword** parameters. You may also bootstrap the directory using an LDIF file (see below for details).
+3. Monitor the status of the stack. When its status is `CREATE_COMPLETE`, navigate to its **Outputs** tab. You will find several values you can use to connect a ParallelCluster instance or other product.
 
 ### User and Group Management via Linux Management Host
 
-Once the stack has reached the `CREATE_COMPLETE` state, you can manage your groups and users via the Linux management host. 
+Once the stack has reached the `CREATE_COMPLETE` state, you can manage your groups and users via a Linux management host that is created automatically for you. 
 
-#### Accessing the linux management host
+#### Accessing the Linux host using SSM
 
-To access the management host, go to the AWS CloudFormation stack in the [AWS CloudFormation console](https://console.aws.amazon.com/cloudformation/home).
-
-Next go to the **Resources** tab and select the **AdDomainAdminNode** and click the **Physical ID** to open up the instance in the EC2 Console.
+To access the Linux host, go to the AWS CloudFormation stack in the [AWS CloudFormation console](https://console.aws.amazon.com/cloudformation/home). Next go to the **Resources** tab and select the **AdDomainAdminNode** and click **Physical ID** to open up the instance in the EC2 Console.
 
 ![image](https://github.com/charlesg3/aws-hpc-recipes/assets/6087509/df21afe9-0cb6-46ed-a85c-58f9082dc204)
 
-From the EC2 Console, select the instance an click **Connect**
+From the EC2 Console, select the instance and click **Connect**
 
 ![image](https://github.com/charlesg3/aws-hpc-recipes/assets/6087509/f141a6a4-5edd-416d-981d-386fb5170c24)
 
-Then select **Connect** to connect to the instance using AWS Session Manager which will bring up a console to this instance.
+Then select **Connect** to connect to the instance using AWS Session Manager which will bring up a web-based console on this instance.
 
 ![image](https://github.com/charlesg3/aws-hpc-recipes/assets/6087509/5351d842-34c5-47a3-8fa0-7730acc8e903)
 
-**Note** If you chose **Yes** for the parameter **StopAdAdminInstance** in the CloudFormation template, the adminstrative instance may be in a stopped state. Choose **Instance state::Start instance** to bring it back online before connecting to it. You can shut the instance down again when you are done with your adminstrative actions. 
+#### Accessing the Linux host using SSH
 
-This instance has the `adcli` and `ldapmodify`  CLI tools that allow you to update the ActiveDirectory to manage your groups and users.
+Follow the same instructions as for accessing the host by SSM, until you get to the **Connect** step. There, select **SSH Client** to get directions on how to connect with SSH. 
+
+**Note** If you haven chosen **Yes** for the parameter **StopAdAdminInstance** whe  you launched the CloudFormation template, the Linux instance may be in a stopped state. Choose **Instance state::Start instance** to bring it back online before connecting to it. You can shut the instance down again when you are done working with it. 
 
 #### Adding Users and Groups
+
+This instance has the `adcli` and `ldapmodify`  CLI tools that allow you to update the ActiveDirectory to manage your groups and users.
 
 In the following example we use the `adcli` commands in the management host described above to add a new group `mygroup` a new user `myuser` and add the user to the group. Additionally we use the `ldapmodify` command which accepts LDIF format to add the `gidNumber` property to the group.
 
@@ -65,30 +66,31 @@ modifying entry "CN=mygroup,OU=Users,OU=corp,DC=corp,DC=res,DC=com"
 You can search for the users that exist in your AD with the following command:
 
 ```
-$ ldapsearch "(&(objectClass=user))" -x -h corp.pcluster.com -b "DC=corp,DC=pcluster,DC=com" -D "CN=Admin,OU=Users,OU=CORP,DC=corp,DC=pcluster,DC=com -W"
+$ ldapsearch "(&(objectClass=user))" -x -h corp.pcluster.com -b "DC=corp,DC=pcluster,DC=com" -D "CN=Admin,OU=Users,OU=CORP,DC=corp,DC=pcluster,DC=com" -W
 ```
 
 You can search for the groups that exist in your AD with the following command:
 
 ```
-$ ldapsearch "(&(objectClass=group))" -x -h corp.pcluster.com -b "DC=corp,DC=pcluster,DC=com" -D "CN=Admin,OU=Users,OU=CORP,DC=corp,DC=pcluster,DC=com -W"
+$ ldapsearch "(&(objectClass=group))" -x -h corp.pcluster.com -b "DC=corp,DC=pcluster,DC=com" -D "CN=Admin,OU=Users,OU=CORP,DC=corp,DC=pcluster,DC=com" -W
 ```
+
+**Note** If you choose another domain name for your AD besides `corp.pcluster.com` you will need to change the `DC` values in the examples shown above. 
 
 ### User and Group Management via Windows Management Host
 
-There is a [Windows Management Host](ttps://console.aws.amazon.com/cloudformation/home?region=us-east-2#/stacks/create/review?stackName=managed-adb&templateURL=https://aws-hpc-recipes.s3.us-east-1.amazonaws.com/main/recipes/dir/demo_managed_ad/assets/main.yaml) stack that will launch a domain joined windows host. Additionally, this stack takes a parameter (`PSS3Path`) for an S3 path (without the `s3://`) to a powershell script that will be run on the `DeledationUser` after the instance has joined the domain. This is useful for automating the setup of your domain using powershell commands. The host will have RDP open to the ClientIpCidr and the host will run the script provided at the PSS3Path,
+There is a [Windows Management Host](https://console.aws.amazon.com/cloudformation/home?region=us-east-2#/stacks/create/review?stackName=managed-adb&templateURL=https://aws-hpc-recipes.s3.us-east-1.amazonaws.com/main/recipes/dir/demo_managed_ad/assets/windows_management_host.yaml) stack that will launch a domain-joined Windows host. This template accepts a parameter (`PSS3Path`) for an S3 path (without the `s3://`) to a powershell script that will be run on the `DelegationUser` after the instance has joined the domain. This is useful for automating the setup of your domain using powershell commands. The host will have RDP open to the **ClientIpCidr** and/or the VPC Prefix List provided for **ClientPrefixList**. You can configure the host to reduce costs by shutting down after it launches using **StopAdAdminInstance**.
 
-**Note**: It will take some time (~10m) after your instance boots for it to join the domain. 
+**Note**: It will take some time (~10m) after your Windows instance boots for it to join the domain. 
 
-#### Accessing the host
+#### Accessing the Windows host
 
-You may access this instance by going to the Outputs tab and copying the **ManagementHostPublicDns**
+You may access this instance by going to the Outputs tab and copying the **ManagementHostId**. Next, navigate to the EC2 console and search for the instance ID. Copy its **Public IPv4 address** and use that with your RDP client to connect to the instance. The access credentials will be `Admin` and the value for **AdministratorPassword** you provided when you created the AD. 
 
-![image](https://github.com/charlesg3/aws-hpc-recipes/assets/6087509/c09d785e-aff0-4844-9a95-cb27849d1699)
+**Note** If you haven chosen **Yes** for the parameter **StopAdAdminInstance** when you launched the CloudFormation template, the Windows instance may be in a stopped state. Choose **Instance state::Start instance** to bring it back online before connecting to it. You can shut the instance down again when you are done working with it. 
 
-Next, open your RDP client and use the dns entry from above to connect to the instance. The credentials will be Admin and the AdministratorPassword you provided when you created the Directory Service. Once you connect to the instance, you can open the **Active Directory Users and Computers** interface by choosing to run that from the start menu:
+Once you connect to the instance, you may open the **Active Directory Users and Computers** interface by choosing to run that from the Windows Start menu:
 ![image](https://github.com/charlesg3/aws-hpc-recipes/assets/6087509/387f0abe-5db4-4d8d-aaff-9e42023f5dc9)
-
 
 You can also use the PowerShell commands like [Get-ADUser](https://learn.microsoft.com/en-us/powershell/module/activedirectory/get-aduser?view=windowsserver2022-ps) to access the directory:
 
@@ -96,7 +98,7 @@ You can also use the PowerShell commands like [Get-ADUser](https://learn.microso
 
 ##### Troubleshooting
 
-The agent’s error log is located at `C:\ProgramData\Amazon\EC2Launch\log\agent.log`  and will specify where the bootstrap script is stored as well as its error output. 
+The EC2 launch agent’s error log is located at `C:\ProgramData\Amazon\EC2Launch\log\agent.log` and will specify where the bootstrap script is stored, as well as its error output. 
 
 For example:
 
@@ -121,7 +123,7 @@ For example:
 2023-10-07 22:42:27 Info: Success: Completed wallpaper configuration.
 ```
 
-##### Accessing the management host as non-domain user
+##### Accessing the Windows management host as non-domain user
 
 To access the instance as a non-domain host, open the [CloudFormation console](https://console.aws.amazon.com/cloudformation/home#/stacks), select your Windows Management Host stack and go to the **Resources** tab.
 
@@ -131,7 +133,7 @@ Open the instance in the EC2 console by selecting it, then select it from the li
 
 ### LDIF Support
 
-Both of the recipes provided here accept a parameter for an `LDIFS3Path`. This parameter is an S3 path (without the `s3://` prefix) to an LDIF file that will be imported on stack creation. This file must be accessible by the management host.
+The AD recipe provided here accept a parameter for an `LDIFS3Path`. This parameter is an S3 path (without the `s3://` prefix) to an LDIF file that will be imported on stack creation. This file must be accessible by the management host.
 
 LDIF (LDAP data interchange format) is a standard text-based format used to represent LDAP objects and updates. Providing this file can bootstrap the users and groups in your environment in an automated way.
 
