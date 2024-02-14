@@ -576,8 +576,8 @@ Resources:
           PortMappings:
             - ContainerPort: 1389
               Protocol: tcp
-            # - ContainerPort: 1636
-            #   Protocol: tcp              
+            - ContainerPort: 1636
+              Protocol: tcp              
       Volumes:
         - Name: data-volume
           EFSVolumeConfiguration:
@@ -624,7 +624,6 @@ Resources:
       - EFSMountTargetOne
       - EFSMountTargetTwo
       - DomainCertificateSetupLambda
-      - ServiceListener1636
     Properties:
       ServiceName: 'openldap'
       Cluster: !Ref Cluster
@@ -645,12 +644,12 @@ Resources:
             - !Ref SubnetTwo
       TaskDefinition: !Ref 'TaskDefinition'
       LoadBalancers:
-          #  - ContainerName: 'openldap'
-          #    ContainerPort: 1389
-          #    TargetGroupArn: !Ref ServiceTargetGroup1389
            - ContainerName: 'openldap'
              ContainerPort: 1389
-             TargetGroupArn: !Ref ServiceTargetGroup1636
+             TargetGroupArn: !Ref ServiceTargetGroup1389
+          #  - ContainerName: 'openldap'
+          #    ContainerPort: 1636
+          #    TargetGroupArn: !Ref ServiceTargetGroup1636
 
   # Security group that limits network access
   # to the task
@@ -661,36 +660,17 @@ Resources:
       VpcId: !Ref VpcId
 
   # LDAP high port
-  # ServiceTargetGroup1389:
-  #   Type: AWS::ElasticLoadBalancingV2::TargetGroup
-  #   Properties:
-  #     HealthCheckEnabled: true
-  #     HealthCheckIntervalSeconds: 120
-  #     HealthCheckTimeoutSeconds: 30
-  #     HealthCheckPort: 1389
-  #     HealthCheckProtocol: TCP
-  #     HealthyThresholdCount: 3
-  #     UnhealthyThresholdCount: 10
-  #     Port: 1389
-  #     Protocol: TCP
-  #     TargetType: ip
-  #     VpcId: !Ref VpcId
-  #     TargetGroupAttributes:
-  #       - Key: deregistration_delay.timeout_seconds
-  #         Value: 60
-
-  # LDAPS high port
-  ServiceTargetGroup1636:
+  ServiceTargetGroup1389:
     Type: AWS::ElasticLoadBalancingV2::TargetGroup
     Properties:
       HealthCheckEnabled: true
       HealthCheckIntervalSeconds: 120
-      HealthCheckTimeoutSeconds: 10
-      HealthCheckPort: 1636
+      HealthCheckTimeoutSeconds: 30
+      HealthCheckPort: 1389
       HealthCheckProtocol: TCP
       HealthyThresholdCount: 3
-      UnhealthyThresholdCount: 3
-      Port: 1636
+      UnhealthyThresholdCount: 10
+      Port: 1389
       Protocol: TCP
       TargetType: ip
       VpcId: !Ref VpcId
@@ -707,6 +687,25 @@ Resources:
       GroupId: !Ref ServiceSecurityGroup
       IpProtocol: -1
       SourceSecurityGroupId: !Ref 'PublicLoadBalancerSG'
+
+  # # LDAPS high port
+  # ServiceTargetGroup1636:
+  #   Type: AWS::ElasticLoadBalancingV2::TargetGroup
+  #   Properties:
+  #     HealthCheckEnabled: true
+  #     HealthCheckIntervalSeconds: 120
+  #     HealthCheckTimeoutSeconds: 30
+  #     HealthCheckPort: 1389
+  #     HealthCheckProtocol: TCP
+  #     HealthyThresholdCount: 3
+  #     UnhealthyThresholdCount: 10
+  #     Port: 1636
+  #     Protocol: TCP
+  #     TargetType: ip
+  #     VpcId: !Ref VpcId
+  #     TargetGroupAttributes:
+  #       - Key: deregistration_delay.timeout_seconds
+  #         Value: 60
 
   # A public facing load balancer, this is used as ingress for
   # public facing internet traffic.
@@ -732,28 +731,26 @@ Resources:
         - !Ref SubnetTwo
       Type: network
 
-  # ServiceListener1389:
-  #   Type: AWS::ElasticLoadBalancingV2::Listener
-  #   Properties: 
-  #     DefaultActions: 
-  #       - Type: "forward"
-  #         TargetGroupArn: !Ref ServiceTargetGroup1389
-  #     LoadBalancerArn: !Ref PublicLoadBalancer
-  #     Port: 1389
-  #     Protocol: TCP
-
-  ServiceListener1636:
+  ServiceListener1389:
     Type: AWS::ElasticLoadBalancingV2::Listener
     Properties: 
       DefaultActions: 
         - Type: "forward"
-          TargetGroupArn: !Ref ServiceTargetGroup1636
+          TargetGroupArn: !Ref ServiceTargetGroup1389
       LoadBalancerArn: !Ref PublicLoadBalancer
-      Port: 1636
-      Protocol: TLS
-      SslPolicy: ELBSecurityPolicy-TLS-1-2-2017-01
-      Certificates:
-        - CertificateArn: !GetAtt DomainCertificateSetup.DomainCertificateArn
+      Port: 1389
+      Protocol: TCP
+
+  # ServiceListener1636:
+  #   Type: AWS::ElasticLoadBalancingV2::Listener
+  #   Properties: 
+  #     DefaultActions: 
+  #       - Type: "forward"
+  #         TargetGroupArn: !Ref ServiceTargetGroup1636
+  #     LoadBalancerArn: !Ref ServiceLoadBalancer
+  #     Port: 1636
+  #     Protocol: TCP
+
 
   DNS:
     Type: AWS::Route53::HostedZone

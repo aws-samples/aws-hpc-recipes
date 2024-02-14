@@ -576,8 +576,8 @@ Resources:
           PortMappings:
             - ContainerPort: 1389
               Protocol: tcp
-            # - ContainerPort: 1636
-            #   Protocol: tcp              
+            - ContainerPort: 1636
+              Protocol: tcp              
       Volumes:
         - Name: data-volume
           EFSVolumeConfiguration:
@@ -624,6 +624,7 @@ Resources:
       - EFSMountTargetOne
       - EFSMountTargetTwo
       - DomainCertificateSetupLambda
+      - ServiceListener1389
       - ServiceListener1636
     Properties:
       ServiceName: 'openldap'
@@ -644,10 +645,11 @@ Resources:
             - !Ref SubnetOne
             - !Ref SubnetTwo
       TaskDefinition: !Ref 'TaskDefinition'
+      # 1389 is serviced by two load balancers - one provides LDAP, the other LDAPS
       LoadBalancers:
-          #  - ContainerName: 'openldap'
-          #    ContainerPort: 1389
-          #    TargetGroupArn: !Ref ServiceTargetGroup1389
+           - ContainerName: 'openldap'
+             ContainerPort: 1389
+             TargetGroupArn: !Ref ServiceTargetGroup1389
            - ContainerName: 'openldap'
              ContainerPort: 1389
              TargetGroupArn: !Ref ServiceTargetGroup1636
@@ -661,23 +663,23 @@ Resources:
       VpcId: !Ref VpcId
 
   # LDAP high port
-  # ServiceTargetGroup1389:
-  #   Type: AWS::ElasticLoadBalancingV2::TargetGroup
-  #   Properties:
-  #     HealthCheckEnabled: true
-  #     HealthCheckIntervalSeconds: 120
-  #     HealthCheckTimeoutSeconds: 30
-  #     HealthCheckPort: 1389
-  #     HealthCheckProtocol: TCP
-  #     HealthyThresholdCount: 3
-  #     UnhealthyThresholdCount: 10
-  #     Port: 1389
-  #     Protocol: TCP
-  #     TargetType: ip
-  #     VpcId: !Ref VpcId
-  #     TargetGroupAttributes:
-  #       - Key: deregistration_delay.timeout_seconds
-  #         Value: 60
+  ServiceTargetGroup1389:
+    Type: AWS::ElasticLoadBalancingV2::TargetGroup
+    Properties:
+      HealthCheckEnabled: true
+      HealthCheckIntervalSeconds: 120
+      HealthCheckTimeoutSeconds: 30
+      HealthCheckPort: 1389
+      HealthCheckProtocol: TCP
+      HealthyThresholdCount: 3
+      UnhealthyThresholdCount: 10
+      Port: 1389
+      Protocol: TCP
+      TargetType: ip
+      VpcId: !Ref VpcId
+      TargetGroupAttributes:
+        - Key: deregistration_delay.timeout_seconds
+          Value: 60
 
   # LDAPS high port
   ServiceTargetGroup1636:
@@ -685,11 +687,11 @@ Resources:
     Properties:
       HealthCheckEnabled: true
       HealthCheckIntervalSeconds: 120
-      HealthCheckTimeoutSeconds: 10
+      HealthCheckTimeoutSeconds: 30
       HealthCheckPort: 1636
       HealthCheckProtocol: TCP
       HealthyThresholdCount: 3
-      UnhealthyThresholdCount: 3
+      UnhealthyThresholdCount: 10
       Port: 1636
       Protocol: TCP
       TargetType: ip
@@ -732,15 +734,15 @@ Resources:
         - !Ref SubnetTwo
       Type: network
 
-  # ServiceListener1389:
-  #   Type: AWS::ElasticLoadBalancingV2::Listener
-  #   Properties: 
-  #     DefaultActions: 
-  #       - Type: "forward"
-  #         TargetGroupArn: !Ref ServiceTargetGroup1389
-  #     LoadBalancerArn: !Ref PublicLoadBalancer
-  #     Port: 1389
-  #     Protocol: TCP
+  ServiceListener1389:
+    Type: AWS::ElasticLoadBalancingV2::Listener
+    Properties: 
+      DefaultActions: 
+        - Type: "forward"
+          TargetGroupArn: !Ref ServiceTargetGroup1389
+      LoadBalancerArn: !Ref PublicLoadBalancer
+      Port: 1389
+      Protocol: TCP
 
   ServiceListener1636:
     Type: AWS::ElasticLoadBalancingV2::Listener
