@@ -402,7 +402,8 @@ Resources:
               print( 'boto version {}'.format(boto3.__version__))
 
               instance_id = event['ResourceProperties']['InstanceId']
-              stop_admin_instance = event['ResourceProperties']['StopAdAdminInstance'] == 'Yes'
+              # stop_admin_instance = event['ResourceProperties']['StopAdAdminInstance'] == 'Yes'
+              stop_admin_instance = False
 
               response_data = {}
               reason = None
