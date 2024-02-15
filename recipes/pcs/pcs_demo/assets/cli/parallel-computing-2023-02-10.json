@@ -47,7 +47,6 @@
                     "shape": "AccessDeniedException"
                 }
             ],
-            "documentation": "<p>Creates a new PCS cluster.</p>",
             "idempotent": true
         },
         "CreateComputeNodeGroup": {
@@ -85,7 +84,6 @@
                     "shape": "AccessDeniedException"
                 }
             ],
-            "documentation": "<p>Creates a managed PCS node group that can be associated with a cluster through one or more job queues or as part of the login fleet.</p> <p>A node group represents a managed set of cluster nodes. A node group includes both the definition of the compute properties and its lifecycle management.</p>",
             "idempotent": true
         },
         "CreateQueue": {
@@ -123,7 +121,6 @@
                     "shape": "AccessDeniedException"
                 }
             ],
-            "documentation": "<p>Creates a cluster job queue. When you create a job queue, you associate one or more NodeGroups to the queue. One NodeGroup can be also mapped to multiple job queues.</p>",
             "idempotent": true
         },
         "DeleteCluster": {
@@ -158,7 +155,6 @@
                     "shape": "AccessDeniedException"
                 }
             ],
-            "documentation": "<p>Deletes a PCS cluster and all its linked resources, including compute and login instances running in the customer's VPC.</p>",
             "idempotent": true
         },
         "DeleteComputeNodeGroup": {
@@ -193,7 +189,6 @@
                     "shape": "AccessDeniedException"
                 }
             ],
-            "documentation": "<p>Deletes a cluster compute node group. A compute node group can be deleted only if it does not belong to any job queue.</p>",
             "idempotent": true
         },
         "DeleteQueue": {
@@ -228,7 +223,6 @@
                     "shape": "AccessDeniedException"
                 }
             ],
-            "documentation": "<p>Deletes a cluster job queue. All nodes belonging to the deleted job queue are terminated unless the node group is associated with multiple queues.</p>",
             "idempotent": true
         },
         "GetCluster": {
@@ -262,8 +256,7 @@
                 {
                     "shape": "AccessDeniedException"
                 }
-            ],
-            "documentation": "<p>Returns descriptive information about a PCS cluster.</p>"
+            ]
         },
         "GetComputeNodeGroup": {
             "name": "GetComputeNodeGroup",
@@ -296,8 +289,7 @@
                 {
                     "shape": "AccessDeniedException"
                 }
-            ],
-            "documentation": "<p>Returns descriptive information about a cluster ComputeNodeGroup.</p>"
+            ]
         },
         "GetQueue": {
             "name": "GetQueue",
@@ -330,8 +322,7 @@
                 {
                     "shape": "AccessDeniedException"
                 }
-            ],
-            "documentation": "<p>Returns descriptive information about a PCS Queue.</p>"
+            ]
         },
         "ListClusters": {
             "name": "ListClusters",
@@ -364,8 +355,7 @@
                 {
                     "shape": "AccessDeniedException"
                 }
-            ],
-            "documentation": "<p>Lists the PCS clusters in your AWS account in the specified Region.</p>"
+            ]
         },
         "ListComputeNodeGroupInstances": {
             "name": "ListComputeNodeGroupInstances",
@@ -398,8 +388,7 @@
                 {
                     "shape": "AccessDeniedException"
                 }
-            ],
-            "documentation": "<p>Returns descriptive information about instances belonging to a cluster ComputeNodeGroup.</p>"
+            ]
         },
         "ListComputeNodeGroups": {
             "name": "ListComputeNodeGroups",
@@ -432,8 +421,7 @@
                 {
                     "shape": "AccessDeniedException"
                 }
-            ],
-            "documentation": "<p>Lists the compute node groups for a PCS cluster.</p>"
+            ]
         },
         "ListQueues": {
             "name": "ListQueues",
@@ -466,8 +454,7 @@
                 {
                     "shape": "AccessDeniedException"
                 }
-            ],
-            "documentation": "<p>Lists the job queues for a PCS clusters.</p>"
+            ]
         },
         "LockServiceLinkedRole": {
             "name": "LockServiceLinkedRole",
@@ -489,7 +476,6 @@
                     "shape": "ServiceLinkedRoleLockServiceException"
                 }
             ],
-            "documentation": "<p>Lock PCS Service Linked Role used by IAM, for deletion.</p>",
             "internalonly": true
         },
         "RegisterComputeNodeGroupInstance": {
@@ -511,8 +497,7 @@
                 {
                     "shape": "AccessDeniedException"
                 }
-            ],
-            "documentation": "<p>This API will allow the instances to get the configuration setting they need in order to register with the scheduler controller.</p>"
+            ]
         },
         "UnlockServiceLinkedRole": {
             "name": "UnlockServiceLinkedRole",
@@ -534,7 +519,6 @@
                     "shape": "ServiceLinkedRoleLockServiceException"
                 }
             ],
-            "documentation": "<p>Unlock PCS Service Linked Role used by IAM.</p>",
             "internalonly": true
         },
         "UpdateCluster": {
@@ -572,7 +556,6 @@
                     "shape": "AccessDeniedException"
                 }
             ],
-            "documentation": "<p>Update cluster configurations and it might require replacement of the cluster with all the node instances under the cluster to be drained.</p>",
             "idempotent": true
         },
         "UpdateComputeNodeGroup": {
@@ -610,7 +593,6 @@
                     "shape": "AccessDeniedException"
                 }
             ],
-            "documentation": "<p>Updates a node group including both the definition of the compute properties and its lifecycle management.</p>",
             "idempotent": true
         },
         "UpdateQueue": {
@@ -648,7 +630,6 @@
                     "shape": "AccessDeniedException"
                 }
             ],
-            "documentation": "<p>Updates a cluster job queue by updating compute node groups associated.</p>",
             "idempotent": true
         }
     },
@@ -669,7 +650,8 @@
             "type": "string",
             "enum": [
                 "lowest-price",
-                "capacity-optimized"
+                "capacity-optimized",
+                "price-capacity-optimized"
             ]
         },
         "AmiType": {
@@ -707,6 +689,9 @@
                 "scheduler": {
                     "shape": "Scheduler"
                 },
+                "size": {
+                    "shape": "Size"
+                },
                 "slurmConfiguration": {
                     "shape": "SlurmConfiguration"
                 },
@@ -718,12 +703,14 @@
                 },
                 "endpoints": {
                     "shape": "Endpoints"
+                },
+                "errorInfos": {
+                    "shape": "ErrorInfoList"
                 }
             }
         },
         "ClusterIdentifier": {
             "type": "string",
-            "documentation": "<p>A name up to 40 characters long or a uuid.</p>",
             "pattern": "([A-Za-z][A-Za-z0-9-]{1,40}|[0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{12})"
         },
         "ClusterList": {
@@ -794,7 +781,7 @@
                 "subnetIds",
                 "customLaunchTemplate",
                 "iamInstanceProfile",
-                "scalingConfig",
+                "scalingConfiguration",
                 "instances"
             ],
             "members": {
@@ -820,8 +807,7 @@
                     "shape": "ComputeNodeGroupStatus"
                 },
                 "amiType": {
-                    "shape": "AmiType",
-                    "documentation": "<p>The AMI type for the node group. If you specify launchTemplate, and your launch template uses a custom AMI, then don't specify amiType.</p>"
+                    "shape": "AmiType"
                 },
                 "subnetIds": {
                     "shape": "SubnetIdList"
@@ -833,20 +819,22 @@
                     "shape": "AllocationStrategyType"
                 },
                 "customLaunchTemplate": {
-                    "shape": "CustomLaunchTemplate",
-                    "documentation": "<p>An object representing a node group's launch template specification. This provides full control on instance launch attributes. When specified you cannot use any other node group parameters that control instance launch settings.</p>"
+                    "shape": "CustomLaunchTemplate"
                 },
                 "iamInstanceProfile": {
                     "shape": "IamInstanceProfile"
                 },
-                "scalingConfig": {
-                    "shape": "ScalingConfig"
+                "scalingConfiguration": {
+                    "shape": "ScalingConfiguration"
                 },
                 "instances": {
                     "shape": "InstanceList"
                 },
                 "slurmConfiguration": {
                     "shape": "ComputeNodeGroupSlurmConfiguration"
+                },
+                "errorInfos": {
+                    "shape": "ErrorInfoList"
                 }
             }
         },
@@ -866,7 +854,6 @@
         },
         "ComputeNodeGroupIdentifier": {
             "type": "string",
-            "documentation": "<p>A name up to 25 characters long or a uuid.</p>",
             "pattern": "([A-Za-z][A-Za-z0-9-]{1,25}|[0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{12})"
         },
         "ComputeNodeGroupInstance": {
@@ -992,31 +979,32 @@
             "members": {
                 "capiAwsAccountId": {
                     "shape": "String",
-                    "documentation": "<pre><code>AwsAccountId of the calling customer </code></pre>",
                     "internalonly": true
                 },
                 "awsEc2InstanceArn": {
                     "shape": "String",
-                    "documentation": "<pre><code>AwsEc2InstanceArn of the calling ec2 instance </code></pre>",
+                    "internalonly": true
+                },
+                "capiAwsPayerToken": {
+                    "shape": "String",
                     "internalonly": true
                 },
                 "capiEncryptedFasToken": {
                     "shape": "SensitiveString",
-                    "documentation": "<p>Encrypted FAS session credentials</p>",
                     "internalonly": true
                 },
                 "capiEncryptedFasDataKey": {
                     "shape": "SensitiveString",
-                    "documentation": "<p>Encrypted DataKey for decrypting FAS credentials</p>",
                     "internalonly": true
                 },
                 "clusterName": {
-                    "shape": "ClusterName",
-                    "documentation": "<p>The unique name to give to your cluster.</p>"
+                    "shape": "ClusterName"
                 },
                 "scheduler": {
-                    "shape": "Scheduler",
-                    "documentation": "<p>The scheduler configuration for the cluster being created.</p>"
+                    "shape": "Scheduler"
+                },
+                "size": {
+                    "shape": "Size"
                 },
                 "networking": {
                     "shape": "Networking"
@@ -1024,8 +1012,7 @@
                 "slurmConfiguration": {
                     "shape": "SlurmConfiguration"
                 }
-            },
-            "documentation": "<pre><code>Mixin for all the metadata sent by the CAPI Building Block, including those needed for FAS. These are intended for internal use only and should never be exposed to the external customer </code></pre>"
+            }
         },
         "CreateClusterResponse": {
             "type": "structure",
@@ -1043,28 +1030,28 @@
                 "subnetIds",
                 "customLaunchTemplate",
                 "iamInstanceProfile",
-                "scalingConfig",
+                "scalingConfiguration",
                 "instances"
             ],
             "members": {
                 "capiAwsAccountId": {
                     "shape": "String",
-                    "documentation": "<pre><code>AwsAccountId of the calling customer </code></pre>",
                     "internalonly": true
                 },
                 "awsEc2InstanceArn": {
                     "shape": "String",
-                    "documentation": "<pre><code>AwsEc2InstanceArn of the calling ec2 instance </code></pre>",
+                    "internalonly": true
+                },
+                "capiAwsPayerToken": {
+                    "shape": "String",
                     "internalonly": true
                 },
                 "capiEncryptedFasToken": {
                     "shape": "SensitiveString",
-                    "documentation": "<p>Encrypted FAS session credentials</p>",
                     "internalonly": true
                 },
                 "capiEncryptedFasDataKey": {
                     "shape": "SensitiveString",
-                    "documentation": "<p>Encrypted DataKey for decrypting FAS credentials</p>",
                     "internalonly": true
                 },
                 "clusterIdentifier": {
@@ -1074,8 +1061,7 @@
                     "shape": "ComputeNodeGroupName"
                 },
                 "amiType": {
-                    "shape": "AmiType",
-                    "documentation": "<p>The AMI type for the node group. If you specify launchTemplate, and your launch template uses a custom AMI, then don't specify amiType.</p>"
+                    "shape": "AmiType"
                 },
                 "subnetIds": {
                     "shape": "StringList"
@@ -1087,14 +1073,13 @@
                     "shape": "AllocationStrategyType"
                 },
                 "customLaunchTemplate": {
-                    "shape": "CustomLaunchTemplate",
-                    "documentation": "<p>An object representing a node group's launch template specification. This provides full control on instance launch attributes. When specified you cannot use any other node group parameters that control instance launch settings.</p>"
+                    "shape": "CustomLaunchTemplate"
                 },
                 "iamInstanceProfile": {
                     "shape": "IamInstanceProfile"
                 },
-                "scalingConfig": {
-                    "shape": "ScalingConfig"
+                "scalingConfiguration": {
+                    "shape": "ScalingConfiguration"
                 },
                 "instances": {
                     "shape": "InstanceList"
@@ -1102,8 +1087,7 @@
                 "slurmConfiguration": {
                     "shape": "ComputeNodeGroupSlurmConfiguration"
                 }
-            },
-            "documentation": "<pre><code>Mixin for all the metadata sent by the CAPI Building Block, including those needed for FAS. These are intended for internal use only and should never be exposed to the external customer </code></pre>"
+            }
         },
         "CreateComputeNodeGroupResponse": {
             "type": "structure",
@@ -1122,22 +1106,22 @@
             "members": {
                 "capiAwsAccountId": {
                     "shape": "String",
-                    "documentation": "<pre><code>AwsAccountId of the calling customer </code></pre>",
                     "internalonly": true
                 },
                 "awsEc2InstanceArn": {
                     "shape": "String",
-                    "documentation": "<pre><code>AwsEc2InstanceArn of the calling ec2 instance </code></pre>",
+                    "internalonly": true
+                },
+                "capiAwsPayerToken": {
+                    "shape": "String",
                     "internalonly": true
                 },
                 "capiEncryptedFasToken": {
                     "shape": "SensitiveString",
-                    "documentation": "<p>Encrypted FAS session credentials</p>",
                     "internalonly": true
                 },
                 "capiEncryptedFasDataKey": {
                     "shape": "SensitiveString",
-                    "documentation": "<p>Encrypted DataKey for decrypting FAS credentials</p>",
                     "internalonly": true
                 },
                 "clusterIdentifier": {
@@ -1149,8 +1133,7 @@
                 "computeNodeGroupConfigurations": {
                     "shape": "ComputeNodeGroupConfigurationList"
                 }
-            },
-            "documentation": "<pre><code>Mixin for all the metadata sent by the CAPI Building Block, including those needed for FAS. These are intended for internal use only and should never be exposed to the external customer </code></pre>"
+            }
         },
         "CreateQueueResponse": {
             "type": "structure",
@@ -1183,29 +1166,28 @@
             "members": {
                 "capiAwsAccountId": {
                     "shape": "String",
-                    "documentation": "<pre><code>AwsAccountId of the calling customer </code></pre>",
                     "internalonly": true
                 },
                 "awsEc2InstanceArn": {
                     "shape": "String",
-                    "documentation": "<pre><code>AwsEc2InstanceArn of the calling ec2 instance </code></pre>",
+                    "internalonly": true
+                },
+                "capiAwsPayerToken": {
+                    "shape": "String",
                     "internalonly": true
                 },
                 "capiEncryptedFasToken": {
                     "shape": "SensitiveString",
-                    "documentation": "<p>Encrypted FAS session credentials</p>",
                     "internalonly": true
                 },
                 "capiEncryptedFasDataKey": {
                     "shape": "SensitiveString",
-                    "documentation": "<p>Encrypted DataKey for decrypting FAS credentials</p>",
                     "internalonly": true
                 },
                 "clusterIdentifier": {
                     "shape": "ClusterIdentifier"
                 }
-            },
-            "documentation": "<pre><code>Mixin for all the metadata sent by the CAPI Building Block, including those needed for FAS. These are intended for internal use only and should never be exposed to the external customer </code></pre>"
+            }
         },
         "DeleteClusterResponse": {
             "type": "structure",
@@ -1220,22 +1202,22 @@
             "members": {
                 "capiAwsAccountId": {
                     "shape": "String",
-                    "documentation": "<pre><code>AwsAccountId of the calling customer </code></pre>",
                     "internalonly": true
                 },
                 "awsEc2InstanceArn": {
                     "shape": "String",
-                    "documentation": "<pre><code>AwsEc2InstanceArn of the calling ec2 instance </code></pre>",
+                    "internalonly": true
+                },
+                "capiAwsPayerToken": {
+                    "shape": "String",
                     "internalonly": true
                 },
                 "capiEncryptedFasToken": {
                     "shape": "SensitiveString",
-                    "documentation": "<p>Encrypted FAS session credentials</p>",
                     "internalonly": true
                 },
                 "capiEncryptedFasDataKey": {
                     "shape": "SensitiveString",
-                    "documentation": "<p>Encrypted DataKey for decrypting FAS credentials</p>",
                     "internalonly": true
                 },
                 "clusterIdentifier": {
@@ -1244,8 +1226,7 @@
                 "computeNodeGroupIdentifier": {
                     "shape": "ComputeNodeGroupIdentifier"
                 }
-            },
-            "documentation": "<pre><code>Mixin for all the metadata sent by the CAPI Building Block, including those needed for FAS. These are intended for internal use only and should never be exposed to the external customer </code></pre>"
+            }
         },
         "DeleteComputeNodeGroupResponse": {
             "type": "structure",
@@ -1260,22 +1241,22 @@
             "members": {
                 "capiAwsAccountId": {
                     "shape": "String",
-                    "documentation": "<pre><code>AwsAccountId of the calling customer </code></pre>",
                     "internalonly": true
                 },
                 "awsEc2InstanceArn": {
                     "shape": "String",
-                    "documentation": "<pre><code>AwsEc2InstanceArn of the calling ec2 instance </code></pre>",
+                    "internalonly": true
+                },
+                "capiAwsPayerToken": {
+                    "shape": "String",
                     "internalonly": true
                 },
                 "capiEncryptedFasToken": {
                     "shape": "SensitiveString",
-                    "documentation": "<p>Encrypted FAS session credentials</p>",
                     "internalonly": true
                 },
                 "capiEncryptedFasDataKey": {
                     "shape": "SensitiveString",
-                    "documentation": "<p>Encrypted DataKey for decrypting FAS credentials</p>",
                     "internalonly": true
                 },
                 "clusterIdentifier": {
@@ -1284,8 +1265,7 @@
                 "queueIdentifier": {
                     "shape": "QueueIdentifier"
                 }
-            },
-            "documentation": "<pre><code>Mixin for all the metadata sent by the CAPI Building Block, including those needed for FAS. These are intended for internal use only and should never be exposed to the external customer </code></pre>"
+            }
         },
         "DeleteQueueResponse": {
             "type": "structure",
@@ -1325,8 +1305,24 @@
             "type": "list",
             "member": {
                 "shape": "Endpoint"
-            },
-            "documentation": "<p>The endpoints for your scheduler APIs or controller nodes.</p>"
+            }
+        },
+        "ErrorInfo": {
+            "type": "structure",
+            "members": {
+                "code": {
+                    "shape": "String"
+                },
+                "message": {
+                    "shape": "String"
+                }
+            }
+        },
+        "ErrorInfoList": {
+            "type": "list",
+            "member": {
+                "shape": "ErrorInfo"
+            }
         },
         "GetClusterRequest": {
             "type": "structure",
@@ -1336,19 +1332,20 @@
             "members": {
                 "capiAwsAccountId": {
                     "shape": "String",
-                    "documentation": "<pre><code>AwsAccountId of the calling customer </code></pre>",
                     "internalonly": true
                 },
                 "awsEc2InstanceArn": {
                     "shape": "String",
-                    "documentation": "<pre><code>AwsEc2InstanceArn of the calling ec2 instance </code></pre>",
+                    "internalonly": true
+                },
+                "capiAwsPayerToken": {
+                    "shape": "String",
                     "internalonly": true
                 },
                 "clusterIdentifier": {
                     "shape": "ClusterIdentifier"
                 }
-            },
-            "documentation": "<pre><code>Mixin for all the metadata sent by the CAPI Building Block. These are intended for internal use only and should never be exposed to the external customer </code></pre>"
+            }
         },
         "GetClusterResponse": {
             "type": "structure",
@@ -1367,12 +1364,14 @@
             "members": {
                 "capiAwsAccountId": {
                     "shape": "String",
-                    "documentation": "<pre><code>AwsAccountId of the calling customer </code></pre>",
                     "internalonly": true
                 },
                 "awsEc2InstanceArn": {
                     "shape": "String",
-                    "documentation": "<pre><code>AwsEc2InstanceArn of the calling ec2 instance </code></pre>",
+                    "internalonly": true
+                },
+                "capiAwsPayerToken": {
+                    "shape": "String",
                     "internalonly": true
                 },
                 "clusterIdentifier": {
@@ -1381,8 +1380,7 @@
                 "computeNodeGroupIdentifier": {
                     "shape": "ComputeNodeGroupIdentifier"
                 }
-            },
-            "documentation": "<pre><code>Mixin for all the metadata sent by the CAPI Building Block. These are intended for internal use only and should never be exposed to the external customer </code></pre>"
+            }
         },
         "GetComputeNodeGroupResponse": {
             "type": "structure",
@@ -1401,12 +1399,14 @@
             "members": {
                 "capiAwsAccountId": {
                     "shape": "String",
-                    "documentation": "<pre><code>AwsAccountId of the calling customer </code></pre>",
                     "internalonly": true
                 },
                 "awsEc2InstanceArn": {
                     "shape": "String",
-                    "documentation": "<pre><code>AwsEc2InstanceArn of the calling ec2 instance </code></pre>",
+                    "internalonly": true
+                },
+                "capiAwsPayerToken": {
+                    "shape": "String",
                     "internalonly": true
                 },
                 "clusterIdentifier": {
@@ -1415,8 +1415,7 @@
                 "queueIdentifier": {
                     "shape": "QueueIdentifier"
                 }
-            },
-            "documentation": "<pre><code>Mixin for all the metadata sent by the CAPI Building Block. These are intended for internal use only and should never be exposed to the external customer </code></pre>"
+            }
         },
         "GetQueueResponse": {
             "type": "structure",
@@ -1473,12 +1472,14 @@
             "members": {
                 "capiAwsAccountId": {
                     "shape": "String",
-                    "documentation": "<pre><code>AwsAccountId of the calling customer </code></pre>",
                     "internalonly": true
                 },
                 "awsEc2InstanceArn": {
                     "shape": "String",
-                    "documentation": "<pre><code>AwsEc2InstanceArn of the calling ec2 instance </code></pre>",
+                    "internalonly": true
+                },
+                "capiAwsPayerToken": {
+                    "shape": "String",
                     "internalonly": true
                 },
                 "nextToken": {
@@ -1487,8 +1488,7 @@
                 "maxResults": {
                     "shape": "MaxResults"
                 }
-            },
-            "documentation": "<pre><code>Mixin for all the metadata sent by the CAPI Building Block. These are intended for internal use only and should never be exposed to the external customer </code></pre>"
+            }
         },
         "ListClustersResponse": {
             "type": "structure",
@@ -1513,12 +1513,14 @@
             "members": {
                 "capiAwsAccountId": {
                     "shape": "String",
-                    "documentation": "<pre><code>AwsAccountId of the calling customer </code></pre>",
                     "internalonly": true
                 },
                 "awsEc2InstanceArn": {
                     "shape": "String",
-                    "documentation": "<pre><code>AwsEc2InstanceArn of the calling ec2 instance </code></pre>",
+                    "internalonly": true
+                },
+                "capiAwsPayerToken": {
+                    "shape": "String",
                     "internalonly": true
                 },
                 "clusterIdentifier": {
@@ -1533,8 +1535,7 @@
                 "maxResults": {
                     "shape": "MaxResults"
                 }
-            },
-            "documentation": "<pre><code>Mixin for all the metadata sent by the CAPI Building Block. These are intended for internal use only and should never be exposed to the external customer </code></pre>"
+            }
         },
         "ListComputeNodeGroupInstancesResponse": {
             "type": "structure",
@@ -1555,12 +1556,14 @@
             "members": {
                 "capiAwsAccountId": {
                     "shape": "String",
-                    "documentation": "<pre><code>AwsAccountId of the calling customer </code></pre>",
                     "internalonly": true
                 },
                 "awsEc2InstanceArn": {
                     "shape": "String",
-                    "documentation": "<pre><code>AwsEc2InstanceArn of the calling ec2 instance </code></pre>",
+                    "internalonly": true
+                },
+                "capiAwsPayerToken": {
+                    "shape": "String",
                     "internalonly": true
                 },
                 "clusterIdentifier": {
@@ -1572,8 +1575,7 @@
                 "maxResults": {
                     "shape": "MaxResults"
                 }
-            },
-            "documentation": "<pre><code>Mixin for all the metadata sent by the CAPI Building Block. These are intended for internal use only and should never be exposed to the external customer </code></pre>"
+            }
         },
         "ListComputeNodeGroupsResponse": {
             "type": "structure",
@@ -1597,12 +1599,14 @@
             "members": {
                 "capiAwsAccountId": {
                     "shape": "String",
-                    "documentation": "<pre><code>AwsAccountId of the calling customer </code></pre>",
                     "internalonly": true
                 },
                 "awsEc2InstanceArn": {
                     "shape": "String",
-                    "documentation": "<pre><code>AwsEc2InstanceArn of the calling ec2 instance </code></pre>",
+                    "internalonly": true
+                },
+                "capiAwsPayerToken": {
+                    "shape": "String",
                     "internalonly": true
                 },
                 "clusterIdentifier": {
@@ -1614,8 +1618,7 @@
                 "maxResults": {
                     "shape": "MaxResults"
                 }
-            },
-            "documentation": "<pre><code>Mixin for all the metadata sent by the CAPI Building Block. These are intended for internal use only and should never be exposed to the external customer </code></pre>"
+            }
         },
         "ListQueuesResponse": {
             "type": "structure",
@@ -1673,15 +1676,12 @@
             "type": "structure",
             "members": {
                 "subnetIds": {
-                    "shape": "SubnetIdList",
-                    "documentation": "<p>Specify subnets for your PCS nodes. PCS creates cross-account elastic network interfaces in these subnets to allow communication between your nodes and the Slurm control plane.</p>"
+                    "shape": "SubnetIdList"
                 },
                 "securityGroupIds": {
-                    "shape": "SecurityGroupIdList",
-                    "documentation": "<p>Specify one or more security groups for the cross-account elastic network interfaces that PCS creates and that allow communication between your nodes and the Slurm control plane.</p>"
+                    "shape": "SecurityGroupIdList"
                 }
-            },
-            "documentation": "<p>The networking configuration that's used by the cluster control plane.</p>"
+            }
         },
         "PurchaseOption": {
             "type": "string",
@@ -1726,12 +1726,14 @@
                 },
                 "computeNodeGroupConfigurations": {
                     "shape": "ComputeNodeGroupConfigurationList"
+                },
+                "errorInfos": {
+                    "shape": "ErrorInfoList"
                 }
             }
         },
         "QueueIdentifier": {
             "type": "string",
-            "documentation": "<p>A name up to 25 characters long or a uuid.</p>",
             "pattern": "([A-Za-z][A-Za-z0-9-]{1,25}|[0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{12})"
         },
         "QueueList": {
@@ -1802,34 +1804,31 @@
             "members": {
                 "capiAwsAccountId": {
                     "shape": "String",
-                    "documentation": "<pre><code>AwsAccountId of the calling customer </code></pre>",
                     "internalonly": true
                 },
                 "awsEc2InstanceArn": {
                     "shape": "String",
-                    "documentation": "<pre><code>AwsEc2InstanceArn of the calling ec2 instance </code></pre>",
+                    "internalonly": true
+                },
+                "capiAwsPayerToken": {
+                    "shape": "String",
                     "internalonly": true
                 },
                 "capiEncryptedFasToken": {
                     "shape": "SensitiveString",
-                    "documentation": "<p>Encrypted FAS session credentials</p>",
                     "internalonly": true
                 },
                 "capiEncryptedFasDataKey": {
                     "shape": "SensitiveString",
-                    "documentation": "<p>Encrypted DataKey for decrypting FAS credentials</p>",
                     "internalonly": true
                 },
                 "clusterIdentifier": {
-                    "shape": "ClusterIdentifier",
-                    "documentation": "<p>The cluster id assigned to your cluster.</p>"
+                    "shape": "ClusterIdentifier"
                 },
                 "bootstrapId": {
-                    "shape": "String",
-                    "documentation": "<p>Client generated id to allow for retries during worker node bootstrap.</p>"
+                    "shape": "String"
                 }
-            },
-            "documentation": "<pre><code>Mixin for all the metadata sent by the CAPI Building Block, including those needed for FAS. These are intended for internal use only and should never be exposed to the external customer </code></pre>"
+            }
         },
         "RegisterComputeNodeGroupInstanceResponse": {
             "type": "structure",
@@ -1870,16 +1869,26 @@
             },
             "exception": true
         },
-        "ScalingConfig": {
+        "ScalingConfiguration": {
             "type": "structure",
             "members": {
                 "minInstanceCount": {
-                    "shape": "Integer"
+                    "shape": "ScalingConfigurationMinInstanceCountInteger"
                 },
                 "maxInstanceCount": {
-                    "shape": "Integer"
+                    "shape": "ScalingConfigurationMaxInstanceCountInteger"
                 }
             }
+        },
+        "ScalingConfigurationMaxInstanceCountInteger": {
+            "type": "integer",
+            "box": true,
+            "min": 0
+        },
+        "ScalingConfigurationMinInstanceCountInteger": {
+            "type": "integer",
+            "box": true,
+            "min": 0
         },
         "Scheduler": {
             "type": "structure",
@@ -1964,6 +1973,14 @@
             "type": "string",
             "sensitive": true
         },
+        "Size": {
+            "type": "string",
+            "enum": [
+                "SMALL",
+                "MEDIUM",
+                "LARGE"
+            ]
+        },
         "SlurmConfiguration": {
             "type": "structure",
             "members": {
@@ -1999,8 +2016,7 @@
             "type": "list",
             "member": {
                 "shape": "SlurmCustomSetting"
-            },
-            "documentation": "<p>The settings to fine-tune the Slurm configuration</p>"
+            }
         },
         "String": {
             "type": "string"
@@ -2038,7 +2054,6 @@
                     "shape": "Integer"
                 }
             },
-            "documentation": "<p>ThrottlingException will be thrown when request was denied due to request throttling.</p>",
             "exception": true,
             "retryable": {
                 "throttling": false
@@ -2070,22 +2085,22 @@
             "members": {
                 "capiAwsAccountId": {
                     "shape": "String",
-                    "documentation": "<pre><code>AwsAccountId of the calling customer </code></pre>",
                     "internalonly": true
                 },
                 "awsEc2InstanceArn": {
                     "shape": "String",
-                    "documentation": "<pre><code>AwsEc2InstanceArn of the calling ec2 instance </code></pre>",
+                    "internalonly": true
+                },
+                "capiAwsPayerToken": {
+                    "shape": "String",
                     "internalonly": true
                 },
                 "capiEncryptedFasToken": {
                     "shape": "SensitiveString",
-                    "documentation": "<p>Encrypted FAS session credentials</p>",
                     "internalonly": true
                 },
                 "capiEncryptedFasDataKey": {
                     "shape": "SensitiveString",
-                    "documentation": "<p>Encrypted DataKey for decrypting FAS credentials</p>",
                     "internalonly": true
                 },
                 "clusterIdentifier": {
@@ -2097,8 +2112,7 @@
                 "slurmConfiguration": {
                     "shape": "SlurmConfiguration"
                 }
-            },
-            "documentation": "<pre><code>Mixin for all the metadata sent by the CAPI Building Block, including those needed for FAS. These are intended for internal use only and should never be exposed to the external customer </code></pre>"
+            }
         },
         "UpdateClusterResponse": {
             "type": "structure",
@@ -2112,31 +2126,27 @@
             "type": "structure",
             "required": [
                 "clusterIdentifier",
-                "computeNodeGroupIdentifier",
-                "subnetIds",
-                "customLaunchTemplate",
-                "scalingConfig",
-                "iamInstanceProfile"
+                "computeNodeGroupIdentifier"
             ],
             "members": {
                 "capiAwsAccountId": {
                     "shape": "String",
-                    "documentation": "<pre><code>AwsAccountId of the calling customer </code></pre>",
                     "internalonly": true
                 },
                 "awsEc2InstanceArn": {
                     "shape": "String",
-                    "documentation": "<pre><code>AwsEc2InstanceArn of the calling ec2 instance </code></pre>",
+                    "internalonly": true
+                },
+                "capiAwsPayerToken": {
+                    "shape": "String",
                     "internalonly": true
                 },
                 "capiEncryptedFasToken": {
                     "shape": "SensitiveString",
-                    "documentation": "<p>Encrypted FAS session credentials</p>",
                     "internalonly": true
                 },
                 "capiEncryptedFasDataKey": {
                     "shape": "SensitiveString",
-                    "documentation": "<p>Encrypted DataKey for decrypting FAS credentials</p>",
                     "internalonly": true
                 },
                 "clusterIdentifier": {
@@ -2146,15 +2156,13 @@
                     "shape": "ComputeNodeGroupIdentifier"
                 },
                 "amiType": {
-                    "shape": "AmiType",
-                    "documentation": "<p>The AMI type for the node group. If you specify launchTemplate, and your launch template uses a custom AMI, then don't specify amiType.</p>"
+                    "shape": "AmiType"
                 },
                 "subnetIds": {
                     "shape": "StringList"
                 },
                 "customLaunchTemplate": {
-                    "shape": "CustomLaunchTemplate",
-                    "documentation": "<p>An object representing a node group's launch template specification. This provides full control on instance launch attributes. When specified you cannot use any other node group parameters that control instance launch settings.</p>"
+                    "shape": "CustomLaunchTemplate"
                 },
                 "purchaseOption": {
                     "shape": "PurchaseOption"
@@ -2162,8 +2170,8 @@
                 "allocationStrategy": {
                     "shape": "AllocationStrategyType"
                 },
-                "scalingConfig": {
-                    "shape": "ScalingConfig"
+                "scalingConfiguration": {
+                    "shape": "ScalingConfiguration"
                 },
                 "iamInstanceProfile": {
                     "shape": "IamInstanceProfile"
@@ -2171,8 +2179,7 @@
                 "slurmConfiguration": {
                     "shape": "ComputeNodeGroupSlurmConfiguration"
                 }
-            },
-            "documentation": "<pre><code>Mixin for all the metadata sent by the CAPI Building Block, including those needed for FAS. These are intended for internal use only and should never be exposed to the external customer </code></pre>"
+            }
         },
         "UpdateComputeNodeGroupResponse": {
             "type": "structure",
@@ -2191,22 +2198,22 @@
             "members": {
                 "capiAwsAccountId": {
                     "shape": "String",
-                    "documentation": "<pre><code>AwsAccountId of the calling customer </code></pre>",
                     "internalonly": true
                 },
                 "awsEc2InstanceArn": {
                     "shape": "String",
-                    "documentation": "<pre><code>AwsEc2InstanceArn of the calling ec2 instance </code></pre>",
+                    "internalonly": true
+                },
+                "capiAwsPayerToken": {
+                    "shape": "String",
                     "internalonly": true
                 },
                 "capiEncryptedFasToken": {
                     "shape": "SensitiveString",
-                    "documentation": "<p>Encrypted FAS session credentials</p>",
                     "internalonly": true
                 },
                 "capiEncryptedFasDataKey": {
                     "shape": "SensitiveString",
-                    "documentation": "<p>Encrypted DataKey for decrypting FAS credentials</p>",
                     "internalonly": true
                 },
                 "clusterIdentifier": {
@@ -2218,8 +2225,7 @@
                 "computeNodeGroupConfigurations": {
                     "shape": "ComputeNodeGroupConfigurationList"
                 }
-            },
-            "documentation": "<pre><code>Mixin for all the metadata sent by the CAPI Building Block, including those needed for FAS. These are intended for internal use only and should never be exposed to the external customer </code></pre>"
+            }
         },
         "UpdateQueueResponse": {
             "type": "structure",
@@ -2309,6 +2315,5 @@
         "stringType": {
             "type": "string"
         }
-    },
-    "documentation": "<p>Management APIs for AWS Parallel Computing Service</p>"
+    }
 }
