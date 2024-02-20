@@ -12,7 +12,11 @@ This recipe includes a single CloudFormation template that generates a certifica
 
 It uses the [acme.sh](https://github.com/acmesh-official/acme.sh) script to geneate the certs.
 
-### Usage
+## Renewal
+
+The certificate is renewed and the corresponding Certificate and PrivateKey .pems are updated every 60 days as part of the renew process. It uses the [acme.sh](https://github.com/acmesh-official/acme.sh) script to geneate the certs.
+
+## Usage
 
 You can launch this template by following this quick-create link:
 
@@ -20,7 +24,11 @@ You can launch this template by following this quick-create link:
 
 If you don't wish to use the quick-create link, you can also download the [assets/main.yaml](assets/main.yaml) file and uploading it to the [AWS CloudFormation console](https://console.aws.amazon.com/cloudformation).
 
-**NOTE**: The certificate lifetime is 60 days and there is no mechanism for renewal. This is for demonstration purposes and a more complete solution is needed for certificate renewal.
+**NOTE**: The certificate lifetime is 60 days.
+
+## Subscribing to certificate renewals
+
+The Certificate secret and the PrivateKey secret represented by the CertificateArn and PrivateKeySecretArn will be updated at renewal. UpdateSecret events on the Secrets can be used to get notified of certificate renewal.
 
 ## Cost Estimate
 

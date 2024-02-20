@@ -16,6 +16,7 @@ The format is based on [Keep a Changelog](http://keepachangelog.com/)
 * In the res_demo_env external resources template, you can now configure whether the EFS storage uses elastic or burting throughput
 * In the res_demo_env external resources template, you can now configure whether the AD admin instances stop after launching
 * In res_demo_env, the AD admin instances automatically stop after launching to reduce costs
+* The public_certs recipe can now automatically renew LetsEncrypt TLS certificates
 * Bumped res_demo_env RES version to 2024.01.01
 
 ## [1.2.0] - 2024-01-30
