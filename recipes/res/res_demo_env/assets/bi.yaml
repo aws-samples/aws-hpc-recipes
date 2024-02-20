@@ -69,13 +69,13 @@ Parameters:
     Description: EC2 Keypair to access AD management instances.
     Type: AWS::EC2::KeyPair::KeyName
   ClientIpCidr:
-    Description: CIDR controlling incoming RDP traffic to Windows AD management instance.
+    Description: CIDR controlling incoming traffic to AD management instances.
     Default: ""
     Type: String
     AllowedPattern: ^((\d{1,3})\.(\d{1,3})\.(\d{1,3})\.(\d{1,3})/(\d{1,2}))?$
     ConstraintDescription: ClientIP must be a valid IP or network range of the form x.x.x.x/x. specify your IP/NETMASK (e.g x.x.x/32 or x.x.x.x/24 for subnet range)
   ClientPrefixList:
-    Description: (Optional) VPC Prefix List ID controlling incoming RDP traffic to Windows AD management instance.
+    Description: (Optional) VPC Prefix List ID controlling incoming traffic to AD management instances.
     Default: ""
     Type: String
     AllowedPattern: ^(pl-[a-z0-9]{8,20})?$
@@ -119,9 +119,8 @@ Resources:
         Keypair: !Ref Keypair
         UserName: ""
         UserPassword: ""
-# We don't pass these into the Directory Service stack because the Linux admin host is created in a private subnet.
-#        ClientIpCidr: !Ref ClientIpCidr
-#        ClientPrefixList: !Ref ClientPrefixList
+        ClientIpCidr: !Ref ClientIpCidr
+        ClientPrefixList: !Ref ClientPrefixList
         # StopAdAdminInstance: !Ref StopAdAdminInstances
         Vpc: !GetAtt [ Networking, Outputs.VPC ]
         PrivateSubnetOne: {"Fn::Select": [0, { "Fn::Split" : [",", !GetAtt [ Networking, Outputs.PrivateSubnets ]] }]}
