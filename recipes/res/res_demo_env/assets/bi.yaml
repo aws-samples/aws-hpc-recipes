@@ -119,7 +119,7 @@ Resources:
         Keypair: !Ref Keypair
         UserName: ""
         UserPassword: ""
-        ClientIpCidr: !Ref ClientIpCidr
+        AllowedIps: !Ref ClientIpCidr
         ClientPrefixList: !Ref ClientPrefixList
         # StopAdAdminInstance: !Ref StopAdAdminInstances
         Vpc: !GetAtt [ Networking, Outputs.VPC ]
