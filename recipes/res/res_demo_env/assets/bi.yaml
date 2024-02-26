@@ -87,12 +87,20 @@ Parameters:
     AllowedValues:
       - "elastic"
       - "bursting"
+  RetainStorageResources:
+    Description: (Optional) Retain the home file system and the RES VPC on RES deletion. Provide `True` to eliminate risk of accidentally deleting data.
+    Type: String
+    Default: "True"
+    AllowedValues:
+      - "True"
+      - "False"
 
 Conditions:
   GenerateCerts: !Not [!Equals [!Ref PortalDomainName, ""]]
   UseEnvironmentName: !Not [!Equals [!Ref EnvironmentName, ""]]
   SubDomainNotProvided: !Equals [!Ref SubDomain, ""]
   InGovCloud: !Equals [!Ref 'AWS::Partition', "aws-us-gov"]
+  RetainStorageAndNetworking: !Equals [!Ref RetainStorageResources, "True"]
 
 Resources:
 
@@ -100,7 +108,7 @@ Resources:
 
   Networking:
     Type: AWS::CloudFormation::Stack
-    DeletionPolicy: Retain
+    DeletionPolicy: !If [ RetainStorageAndNetworking, Retain, Delete ]
     Properties:
       Parameters:
         ProvisionSubnetsC: "False"
@@ -149,7 +157,7 @@ Resources:
 
   Storage:
     Type: AWS::CloudFormation::Stack
-    DeletionPolicy: Retain
+    DeletionPolicy: !If [ RetainStorageAndNetworking, Retain, Delete ]
     Properties:
       Parameters:
         VpcId: !GetAtt [ Networking, Outputs.VPC ]
