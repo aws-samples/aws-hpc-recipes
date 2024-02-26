@@ -60,8 +60,11 @@
 10.	Select Upload a template file and click on the “isolated-hpc.yml” file and then select Next  
 ![](images/CloudFormation-upload.PNG)
 11.	On the specify stack details page
+
     a. Provide a name for your stack and select the Keypair you created in Step 5
+
     b. Leave the ParallelClusterEC2InstanceAmiId as the default value
+
 12.	On the configure stack options page, select Next
 13.	On the review page, acknowledge the fact that AWS Cloudformation might create IAM resources and select Submit
 14.	You can view the stack’s progress through the CloudFormation page.
@@ -161,7 +164,7 @@
 
 ![](images/S3-Bucket-List-AD.PNG)
 
--	For example, using the bucket shown above which is “hpc-ad-int” I would put that in the Replace with section. Then select Replace All and you will replace 43 occurrences in the file. 
+-	For example, using the bucket shown above which is “hpc-ad-int” I would put that in the Replace with section. Then select Replace All and you will replace 42 occurrences in the file. 
     
 ![](images/notepad-replace-AD.PNG) 
 
@@ -205,7 +208,7 @@
     
     a.	From the CLI of the ParallelClusterAdminNode, type ‘ssh user000@HEAD_NODE_PRIVATE_IP’. You can find the IP of the head node by navigating to EC2->Instances->Check the box next to head node and you will see the IP address on the bottom right as shown below. 
     
-    ![](/images/private-IP-ad.PNG) 
+    ![](images/private-IP-ad.PNG) 
 
 18. Input the password you created before the CloudFormation template was launched. You are now logged into the head node.  
 
