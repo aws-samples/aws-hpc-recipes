@@ -3,7 +3,7 @@
 
 ### Isolated HPC Deployment Guide
 
-![](/Images/isolated-cluster.PNG)
+![](images/isolated-cluster.PNG)
 
 1.	Browse [here](/isolated-hpc.yml) and download “isolated-hpc.yml” 
 2.	Browse [here](/assets/pcluster-installer-bundle-3.8.0.480-node-v18.17.1-Linux_x86_64-signed.zip) and download “pcluster-installer-bundle-3.8.0.480-node-v18.17.1-Linux_x86_64-signed”
