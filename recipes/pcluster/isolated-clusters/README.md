@@ -5,8 +5,8 @@
 
 ![](images/isolated-cluster.PNG)
 
-1.	Browse [here](/isolated-hpc.yml) and download “isolated-hpc.yml” 
-2.	Browse [here](/assets/pcluster-installer-bundle-3.8.0.480-node-v18.17.1-Linux_x86_64-signed.zip) and download “pcluster-installer-bundle-3.8.0.480-node-v18.17.1-Linux_x86_64-signed”
+1.	Browse [here](isolated-hpc.yml) and download “isolated-hpc.yml” 
+2.	Browse [here](assets/pcluster-installer-bundle-3.8.0.480-node-v18.17.1-Linux_x86_64-signed.zip) and download “pcluster-installer-bundle-3.8.0.480-node-v18.17.1-Linux_x86_64-signed”
 3.	Create an S3 bucket
 
     a.	Navigate to S3 in the AWS Management Console
@@ -29,7 +29,7 @@
 
     d.	Add the file. Your bucket should look like the below, except the S3 bucket name will be different.  
 
-    ![](/images/S3-Files-Uploaded.PNG) 
+    ![](images/S3-Files-Uploaded.PNG) 
 5.	Create an EC2 key pair that can be used to SSH into the instances. If you have already created an EC2 key pair in your account and want to use it for this cluster, you can continue to step 6.
 
     a.	Navigate to EC2
@@ -48,17 +48,17 @@
 
 6.	Open the “isolated-hpc.yml” file that should be in your Downloads folder on your local computer using a text editor of choice such as Notepad++. 
 7.	Press Cntrl+F to bring up the search bar and select the Replace tab. For Find what, type “your-s3-bucket” without the quotes. For Replace with, enter the name of the S3 bucket you created in step 3. If you forgot, or closed the previous tab, you can navigate to S3->Buckets and find the bucket name as shown below.  
-![](/images/S3-Bucket-List.PNG)
+![](images/S3-Bucket-List.PNG)
 
 
     a.	For example, using the bucket shown above which is “hpc-isolated” I would put that in the Replace with section. Then select Replace All and you will replace 2 occurrences in the file. 
     
-    ![](/images/notepad-replace.PNG) 
+    ![](images/notepad-replace.PNG) 
 
 8.	Save the “isolated-hpc-ad-integration.yml” file
 9.	In the AWS Management Console, navigate to CloudFormation and on the right hand side select Create stack->With new resources (standard)
 10.	Select Upload a template file and click on the “isolated-hpc.yml” file and then select Next  
-![](/images/CloudFormation-upload.PNG)
+![](images/CloudFormation-upload.PNG)
 11.	On the specify stack details page
     a. Provide a name for your stack and select the Keypair you created in Step 5
     b. Leave the ParallelClusterEC2InstanceAmiId as the default value
@@ -70,14 +70,14 @@
 
     b.	Once the stack marked “IsolatedCluster” is CREATE_COMPLETE the process is finished  
 
-![](/images/stack-complete.PNG)
+![](images/stack-complete.PNG)
 
 15.	You have successfully deployed the infrastructure needed to run ParallelCluster in an isolated environment and launched a sample cluster. 
 16. You can now login to the ParallelCluster Admin, Head, and Compute nodes using Systems Manager
     
     a.	Navigate to EC2->Instances and select the box next to the instance you want to login to. Then select Connect. 
 
-    ![](/images/EC2-Connect.PNG)
+    ![](images/EC2-Connect.PNG)
 
     b.	Select Session Manager and click on Connect
 
@@ -106,10 +106,10 @@
 
 ### Isolated HPC with AD Integration Deployment Guide
 
-![](/images/isolated-cluster-AD.PNG)
+![](images/isolated-cluster-AD.PNG)
 
-1.	Browse [here](/isolated-hpc-ad-integration.yml) and download the “isolated-hpc-ad-integration.yml” file
-2.	Browse [here](/assets) and download all the files located in the assets folder (there are 37 in total)
+1.	Browse [here](isolated-hpc-ad-integration.yml) and download the “isolated-hpc-ad-integration.yml” file
+2.	Browse [here](assets) and download all the files located in the assets folder (there are 37 in total)
 
     a. For future reference, these files were initially downloaded on an EC2 instance with Internet access using the command 'sudo yum install --downloadonly --downloaddir=. sssd realmd oddjob oddjob-mkhomedir adcli samba-common samba-common-tools krb5-workstation openldap-clients policycoreutils-python3 openssl'
     
@@ -137,7 +137,7 @@
     
     d.	Add all 37 files. Your bucket should look like the below, except the S3 bucket name will be different.  
 
-    ![](/images/S3-Files-Uploaded-AD.PNG)
+    ![](images/S3-Files-Uploaded-AD.PNG)
 5.	Create an EC2 key pair that can be used to SSH into the instances. If you have already created an EC2 key pair in your account and want to use it for this cluster, you can continue to step 6.
    
     a.	Navigate to EC2
@@ -159,16 +159,16 @@
 6.	Open the “isolated-hpc-ad-integration.yml” file that should be in your Downloads folder on your local computer using a text editor of choice such as Notepad++. 
 7.	Press Cntrl+F to bring up the search bar and select the Replace tab. For Find what, type “your-s3-bucket” without the quotes. For Replace with, enter the name of the S3 bucket you created in step 3. If you forgot, or closed the previous tab, you can navigate to S3->Buckets and find the bucket name as shown below.  
 
-![](/images/S3-Bucket-List-AD.PNG)
+![](images/S3-Bucket-List-AD.PNG)
 
 -	For example, using the bucket shown above which is “hpc-ad-int” I would put that in the Replace with section. Then select Replace All and you will replace 43 occurrences in the file. 
     
-![](/images/notepad-replace-AD.PNG) 
+![](images/notepad-replace-AD.PNG) 
 
 8.	Save the “isolated-hpc-ad-integration.yml” file
 9.	In the AWS Management Console, navigate to CloudFormation and on the right hand side select Create stack->With new resources (standard)
 10.	Select Upload a template file and click on the “isolated-hpc-ad-integration.yml” file and then select Next 
-![](/images/CloudFormation-upload-AD.PNG) 
+![](images/CloudFormation-upload-AD.PNG) 
 11.	On the Specify stack details page
     
     a.	Provide a stack name
@@ -187,7 +187,7 @@
    
     a.	Total time for the process to complete is approximately 1 hour. The initial stack used to provision the environment with the VPC, route tables, subnets, Active Directory, etc will take approximately 45 minutes to complete. Once complete, you will see a second stack automatically launch to provision the ParallelCluster Head and Compute Nodes. This will take approximately 15-20 minutes to complete.
     
-    ![](/images/AD-stack-complete.PNG)
+    ![](images/AD-stack-complete.PNG)
 
    
     b.	Once the stack marked “IsolatedClusterWithAD” is CREATE_COMPLETE the process is finished 
@@ -197,7 +197,7 @@
    
     a.	Navigate to EC2->Instances and select the box next to instance named ParallelClusterAdminNode. Then select Connect.  
    
-    ![](/images/EC2-Connect-AD.PNG)
+    ![](images/EC2-Connect-AD.PNG)
    
     b.	Select Session Manager and click on Connect
 
@@ -209,7 +209,7 @@
 
 18. Input the password you created before the CloudFormation template was launched. You are now logged into the head node.  
 
-![](/images/head-node-login-ad.PNG)
+![](images/head-node-login-ad.PNG)
 
 19.	You can also launch new clusters from the CLI of the ParrallelClusterAdminNode
    
