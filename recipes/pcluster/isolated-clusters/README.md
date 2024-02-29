@@ -113,9 +113,9 @@
 
 1.	Browse [here](isolated-hpc-ad-integration.yml) and download the “isolated-hpc-ad-integration.yml” file
 2.	Browse [here](assets/pcluster-installer-bundle-3.8.0.480-node-v18.17.1-Linux_x86_64-signed.zip) and download the "pcluster-installer-bundle-3.8.0.480-node-v18.17.1-Linux_x86_64-signed.zip" zip file
-3.  You will need to download files necessary to manage Active Directory so that users and groups can be created
+3.  You will need to download files necessary to manage Active Directory so that users can be created
 
-    a. On a Linux machine with Internet access, download files using 'sudo yum install -y --downloadonly --downloaddir=. sssd realmd oddjob oddjob-mkhomedir adcli samba-common samba-common-tools krb5-workstation openldap-clients policycoreutils-python3 openssl'
+    a. On a Linux machine with Internet access, download these files using 'sudo yum install -y --downloadonly --downloaddir=. sssd realmd oddjob oddjob-mkhomedir adcli samba-common samba-common-tools krb5-workstation openldap-clients policycoreutils-python3 openssl'
 
     b. There should be 36 files that are downloaded and will look similar to the below with certain versions being different in the future 
 
@@ -137,7 +137,7 @@
     
     a.  If you are using the AWS CLI, you can use the following command to mass copy the rpm files - aws s3 cp ./ s3://your-s3-bucket/ --recursive --include "*.rpm"	
 
-        i. Make sure you change the 'your-s3-bucket' to match the name of the bucket you just created
+       - Make sure you change the 'your-s3-bucket' to match the name of the bucket you just created
     
     b.  If you are using the Management Consolole, click on the newly created S3 bucket
     
