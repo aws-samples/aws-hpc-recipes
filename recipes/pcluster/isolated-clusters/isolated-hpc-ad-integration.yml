@@ -1021,42 +1021,7 @@ Resources:
               #!/bin/bash
               mkdir /usr/bin/directory
               cd /usr/bin/directory
-              aws s3 cp s3://your-s3-bucket/adcli-0.9.1-10.amzn2023.0.3.x86_64.rpm .              
-              aws s3 cp s3://your-s3-bucket/libsmbclient-4.17.12-1.amzn2023.0.1.x86_64.rpm .    
-              aws s3 cp s3://your-s3-bucket/samba-common-libs-4.17.12-1.amzn2023.0.1.x86_64.rpm .
-              aws s3 cp s3://your-s3-bucket/authselect-1.2.3-1.amzn2023.0.2.x86_64.rpm .         
-              aws s3 cp s3://your-s3-bucket/libwbclient-4.17.12-1.amzn2023.0.1.x86_64.rpm .        
-              aws s3 cp s3://your-s3-bucket/samba-common-tools-4.17.12-1.amzn2023.0.1.x86_64.rpm .
-              aws s3 cp s3://your-s3-bucket/authselect-libs-1.2.3-1.amzn2023.0.2.x86_64.rpm .      
-              aws s3 cp s3://your-s3-bucket/oddjob-0.34.7-2.amzn2023.0.3.x86_64.rpm .              
-              aws s3 cp s3://your-s3-bucket/samba-ldb-ldap-modules-4.17.12-1.amzn2023.0.1.x86_64.rpm . 
-              aws s3 cp s3://your-s3-bucket/avahi-libs-0.8-14.amzn2023.0.12.x86_64.rpm .          
-              aws s3 cp s3://your-s3-bucket/oddjob-mkhomedir-0.34.7-2.amzn2023.0.3.x86_64.rpm .    
-              aws s3 cp s3://your-s3-bucket/samba-libs-4.17.12-1.amzn2023.0.1.x86_64.rpm . 
-              aws s3 cp s3://your-s3-bucket/cyrus-sasl-gssapi-2.1.27-18.amzn2023.0.3.x86_64.rpm . 
-              aws s3 cp s3://your-s3-bucket/openldap-clients-2.4.57-6.amzn2023.0.6.x86_64.rpm .   
-              aws s3 cp s3://your-s3-bucket/sssd-2.5.0-1.amzn2023.0.3.x86_64.rpm . 
-              aws s3 cp s3://your-s3-bucket/dbus-tools-1.12.28-1.amzn2023.0.1.x86_64.rpm .        
-              aws s3 cp s3://your-s3-bucket/openldap-compat-2.4.57-6.amzn2023.0.6.x86_64.rpm .   
-              aws s3 cp s3://your-s3-bucket/sssd-ad-2.5.0-1.amzn2023.0.3.x86_64.rpm .
-              aws s3 cp s3://your-s3-bucket/krb5-pkinit-1.21-3.amzn2023.0.3.x86_64.rpm .           
-              aws s3 cp s3://your-s3-bucket/polkit-0.117-11.amzn2023.x86_64.rpm .                   
-              aws s3 cp s3://your-s3-bucket/sssd-common-pac-2.5.0-1.amzn2023.0.3.x86_64.rpm . 
-              aws s3 cp s3://your-s3-bucket/krb5-workstation-1.21-3.amzn2023.0.3.x86_64.rpm .       
-              aws s3 cp s3://your-s3-bucket/polkit-libs-0.117-11.amzn2023.x86_64.rpm .             
-              aws s3 cp s3://your-s3-bucket/sssd-ipa-2.5.0-1.amzn2023.0.3.x86_64.rpm . 
-              aws s3 cp s3://your-s3-bucket/libicu-67.1-7.amzn2023.0.3.x86_64.rpm .               
-              aws s3 cp s3://your-s3-bucket/polkit-pkla-compat-0.1-19.amzn2023.0.2.x86_64.rpm .   
-              aws s3 cp s3://your-s3-bucket/sssd-krb5-2.5.0-1.amzn2023.0.3.x86_64.rpm . 
-              aws s3 cp s3://your-s3-bucket/libipa_hbac-2.5.0-1.amzn2023.0.3.x86_64.rpm .          
-              aws s3 cp s3://your-s3-bucket/realmd-0.17.0-9.amzn2023.0.4.x86_64.rpm .            
-              aws s3 cp s3://your-s3-bucket/sssd-krb5-common-2.5.0-1.amzn2023.0.3.x86_64.rpm . 
-              aws s3 cp s3://your-s3-bucket/libkadm5-1.21-3.amzn2023.0.3.x86_64.rpm .               
-              aws s3 cp s3://your-s3-bucket/samba-client-libs-4.17.12-1.amzn2023.0.1.x86_64.rpm . 
-              aws s3 cp s3://your-s3-bucket/sssd-ldap-2.5.0-1.amzn2023.0.3.x86_64.rpm . 
-              aws s3 cp s3://your-s3-bucket/libnetapi-4.17.12-1.amzn2023.0.1.x86_64.rpm .          
-              aws s3 cp s3://your-s3-bucket/samba-common-4.17.12-1.amzn2023.0.1.noarch.rpm .      
-              aws s3 cp s3://your-s3-bucket/sssd-proxy-2.5.0-1.amzn2023.0.3.x86_64.rpm . 
+              aws s3 cp s3://your-s3-bucket . --recursive --exclude "*" --include "*.rpm"
               rpm -ivh *.rpm
               exec > >(tee /var/log/user-data.log|logger -t user-data -s 2>/dev/console) 2>&1
               echo "Domain Name: ${DirectoryDomain}"

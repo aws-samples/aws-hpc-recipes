@@ -112,11 +112,14 @@
 ![](images/isolated-cluster-AD.PNG)
 
 1.	Browse [here](isolated-hpc-ad-integration.yml) and download the “isolated-hpc-ad-integration.yml” file
-2.	Browse [here](assets) and download all the files located in the assets folder (there are 37 in total)
+2.	Browse [here](assets/pcluster-installer-bundle-3.8.0.480-node-v18.17.1-Linux_x86_64-signed.zip) and download the "pcluster-installer-bundle-3.8.0.480-node-v18.17.1-Linux_x86_64-signed.zip" zip file
+3.  You will need to download files necessary to manage Active Directory so that users and groups can be created
 
-    a. For future reference, these files were initially downloaded on an EC2 instance with Internet access using the command 'sudo yum install --downloadonly --downloaddir=. sssd realmd oddjob oddjob-mkhomedir adcli samba-common samba-common-tools krb5-workstation openldap-clients policycoreutils-python3 openssl'
-    
-    b. The rpm files were then manually copied over to an S3 bucket that is then used within the CloudFormation template.
+    a. On a Linux machine with Internet access, download files using 'sudo yum install -y --downloadonly --downloaddir=. sssd realmd oddjob oddjob-mkhomedir adcli samba-common samba-common-tools krb5-workstation openldap-clients policycoreutils-python3 openssl'
+
+    b. There should be 36 files that are downloaded and will look similar to the below with certain versions being different in the future 
+
+    ![](images/rpm-download.PNG)
 
 3.	Create an S3 bucket 
 
@@ -130,9 +133,13 @@
 
     e.	Select Create bucket
 
-4.	Upload all 37 files from Step 2 to the newly created S3 bucket. You do NOT need to upload the “isolated-hpc-ad-integration.yml” file to the S3 bucket.
+4.	Upload all 37 files from Steps 2 and 3 to the newly created S3 bucket. You do NOT need to upload the “isolated-hpc-ad-integration.yml” file to the S3 bucket from Step 1.
     
-    a.	Click on the newly created S3 bucket
+    a.  If you are using the AWS CLI, you can use the following command to mass copy the rpm files - aws s3 cp ./ s3://your-s3-bucket/ --recursive --include "*.rpm"	
+
+        i. Make sure you change the 'your-s3-bucket' to match the name of the bucket you just created
+    
+    b.  If you are using the Management Consolole, click on the newly created S3 bucket
     
     b.	Select Upload
     
@@ -164,7 +171,7 @@
 
 ![](images/S3-Bucket-List-AD.PNG)
 
--	For example, using the bucket shown above which is “hpc-ad-int” I would put that in the Replace with section. Then select Replace All and you will replace 42 occurrences in the file. 
+-	For example, using the bucket shown above which is “hpc-ad-int” I would put that in the Replace with section. Then select Replace All and you will replace 7 occurrences in the file. 
     
 ![](images/notepad-replace-AD.PNG) 
 
