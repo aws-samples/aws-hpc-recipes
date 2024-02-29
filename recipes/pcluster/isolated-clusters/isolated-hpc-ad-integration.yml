@@ -463,6 +463,7 @@ Resources:
                   - s3:GetObject
                 Effect: Allow
                 Resource:
+                  - !Sub 'arn:${AWS::Partition}:s3:::your-s3-bucket'
                   - !Sub 'arn:${AWS::Partition}:s3:::your-s3-bucket/*'
           PolicyName: S3GetAccess
    

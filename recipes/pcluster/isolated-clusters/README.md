@@ -171,7 +171,7 @@
 
 ![](images/S3-Bucket-List-AD.PNG)
 
--	For example, using the bucket shown above which is “hpc-ad-int” I would put that in the Replace with section. Then select Replace All and you will replace 7 occurrences in the file. 
+-	For example, using the bucket shown above which is “hpc-ad-int” I would put that in the Replace with section. Then select Replace All and you will replace 8 occurrences in the file. 
     
 ![](images/notepad-replace-AD.PNG) 
 
