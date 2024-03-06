@@ -126,6 +126,15 @@ Conditions:
   AddCidrIngress: !Not [!Equals [!Ref ClientIpCidr, ""]]
 
 Resources:
+
+  DisableImdsv1LaunchTemplate:
+    Type: AWS::EC2::LaunchTemplate
+    Properties:
+      LaunchTemplateData:
+        MetadataOptions:
+          HttpEndpoint: enabled
+          HttpTokens: required
+
   InstanceRole:
     Type: AWS::IAM::Role
     Properties:
@@ -242,6 +251,9 @@ Resources:
       ImageId: !Ref AdminNodeAmiId
       InstanceType: !Ref InstanceType
       KeyName: !Ref Keypair
+      LaunchTemplate:
+        LaunchTemplateId: !Ref 'DisableImdsv1LaunchTemplate'
+        Version: !GetAtt 'DisableImdsv1LaunchTemplate.LatestVersionNumber'
       NetworkInterfaces:
         - DeviceIndex: 0
           SubnetId: !Ref Subnet
