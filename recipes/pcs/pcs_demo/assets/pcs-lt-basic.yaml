@@ -14,12 +14,6 @@ Parameters:
   KeyName:
     Type: AWS::EC2::KeyPair::KeyName
     Description: SSH keypair to log into node group instances
-  AmiId:
-    Type: String
-    Description: Optional AMI ID - leave blank if using a service-optimized AMI.
-
-Conditions:
-  SpecifyAmi: !Not [ !Equals [!Ref AmiId, ""] ]
 
 Resources:
 
@@ -33,11 +27,6 @@ Resources:
           HttpPutResponseHopLimit: 4
           HttpTokens: required
         KeyName: !Ref KeyName
-        ImageId:
-          !If
-          - SpecifyAmi
-          - !Ref AmiId
-          - !Ref "AWS::NoValue"
         NetworkInterfaces:
           - DeviceIndex: 0
             SubnetId: !Ref NodeGroupSubnetId

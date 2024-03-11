@@ -11,11 +11,11 @@ Resources:
     Type: 'AWS::EC2::SecurityGroup'
     Properties:
       GroupDescription: Allow cross traffic from VPC to PCS
-      GroupName: !Sub '${AWS::StackName}-skybridge-security-group'
+      GroupName: !Sub '${AWS::StackName}-skybridge-cluster-security-group'
       VpcId: !Ref VpcId
       SecurityGroupEgress:
         - CidrIp: 0.0.0.0/0
-          Description: Allow all outbound
+          Description: Allow all outbound connections
           IpProtocol: '-1'
   PcsSecurityGroupInboundRule:
     Type: 'AWS::EC2::SecurityGroupIngress'
@@ -34,7 +34,7 @@ Resources:
 
 Outputs:
   ClientSecurityGroupId:
-    Description: Security group allowing access to Cluster
+    Description: PCS Cluster security group
     Value: !Ref PcsSecurityGroup
     Export:
       Name: !Sub '${AWS::StackName}-ClientSecurityGroupId'

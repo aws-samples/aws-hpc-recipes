@@ -48,9 +48,6 @@ Parameters:
   KeyName:
     Type: AWS::EC2::KeyPair::KeyName
     Description: SSH keypair to log into node group instances
-  AmiId:
-    Type: String
-    Description: Optional AMI ID - leave blank if using a service-optimized AMI.
   EfsFilesystemId:
     Type: String
     Description: Amazon EFS Filesystem ID (must be accessible to NodeGroupSubnetId)
@@ -58,9 +55,6 @@ Parameters:
     Type: String
     Description: Mount path on the host
     Default: "/shared"
-
-Conditions:
-  SpecifyAmi: !Not [ !Equals [!Ref AmiId, ""] ]
 
 Resources:
 
@@ -74,11 +68,6 @@ Resources:
           HttpPutResponseHopLimit: 4
           HttpTokens: required
         KeyName: !Ref KeyName
-        ImageId:
-          !If
-          - SpecifyAmi
-          - !Ref AmiId
-          - !Ref "AWS::NoValue"
         NetworkInterfaces:
           - DeviceIndex: 0
             SubnetId: !Ref NodeGroupSubnetId
@@ -102,7 +91,6 @@ Resources:
             - mkdir -p ${HostMountPoint}
             - echo "${EfsFilesystemId}:/ ${HostMountPoint} efs tls,_netdev" >> /etc/fstab
             - mount -a -t efs defaults
-            - chmod a+rxw "${HostMountPoint}"
 
             --==MYBOUNDARY==
 
