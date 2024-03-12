@@ -19,7 +19,7 @@ If you don't wish to use the quick-create link, you can also download the [asset
 ### 2. Trigger automation
 
 1. Download [1-create-ami.sh](recipes/pcluster/login_node_for_res/assets/1-create-ami.sh).
-2. Run `1-create-ami.sh` once your Login Node is ready for snapshot.
+2. Run `1-create-ami.sh` once your Login Node is ready for snapshot. Update the following parameters accordingly.
    1. `PC_CLUSTER_NAME` = ParallelCluster cluster name
    2. `RES_STACK_NAME` = RES Stack name
 
@@ -60,7 +60,7 @@ Use the following steps to create a ParallelCluster LoginNode Software Stack in 
 3.  Select **Register Software Stack**
     1.  **Name**: LoginNode-<cluster-name>
     2.  **Description**: LoginNode for cluster <cluster-name>
-    3.  **AMI ID**: <Output from `createami`>
+    3.  **AMI ID**: <Output from `1-create-ami.sh`>
     4.  **Operating System**: <Select the OS used for the ParallelCluster - e.g. alinux2>
     5.  **Min Storage Size**: 40GB
     6.  **Min Ram**: 10GB
