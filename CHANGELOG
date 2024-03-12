@@ -18,6 +18,9 @@ The format is based on [Keep a Changelog](http://keepachangelog.com/)
 * In res_demo_env, the AD admin instances automatically stop after launching to reduce costs
 * The public_certs recipe can now automatically renew LetsEncrypt TLS certificates
 * Bumped res_demo_env RES version to 2024.01.01
+* In public_certs, LetsEncrypt TLS certificates are now renewed every 60 days
+* In res_demo_env, it is now optional whether EFS storage and VPC are retained when deleting the stack
+* In demo_managed_ad, Windows AD management host now uses IMDS v2
 
 ## [1.2.0] - 2024-01-30
 
