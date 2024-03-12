@@ -2,7 +2,7 @@
 
 ## Info
 
-This recipe allows enables the creation an of a [ParallelCluster Login node](https://docs.aws.amazon.com/parallelcluster/latest/ug/login-nodes-v3.html) AMI compatible with [Researcn and Engineering Studio (RES)](https://github.com/aws/res). This allows for a software stack to be created within RES that can integrate with ParallelCluster.
+This recipe allows enables the creation an of a [ParallelCluster Login node](https://docs.aws.amazon.com/parallelcluster/latest/ug/login-nodes-v3.html) AMI compatible with [Research and Engineering Studio (RES)](https://github.com/aws/res). This allows for a software stack to be created within RES that can integrate with ParallelCluster.
 
 ## Usage
 
@@ -12,7 +12,7 @@ You can launch this template by following this quick-create link:
 
 - Create [Login Node AMI for RES](https://console.aws.amazon.com/cloudformation/home?region=us-east-1#/stacks/create/review?stackName=loginnode-for-res&templateURL=https://aws-hpc-recipes.s3.us-east-1.amazonaws.com/main/recipes/pcluster/login_node_for_res/assets/main.yaml)
 
-If you don't wish to use the quick-create link, you can also download the [assets/main.yaml](assets/main.yaml) file and uploading it to the [AWS CloudFormation console](https://console.aws.amazon.com/cloudformation).
+If you don't wish to use the quick-create link, you can also download the [assets/main.yaml](assets/main.yaml) file and uploading it to [AWS CloudFormation console](https://console.aws.amazon.com/cloudformation).
 
 ### 2. Trigger automation
 
