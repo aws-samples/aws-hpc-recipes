@@ -10,9 +10,7 @@ This recipe allows enables the creation an of a [ParallelCluster Login node](htt
 
 You can launch this template by following this quick-create link:
 
-- Create [Login Node AMI for RES](https://console.aws.amazon.com/cloudformation/home?region=us-east-1#/stacks/create/review?stackName=loginnode-for-res&templateURL=https://aws-hpc-recipes.s3.us-east-1.amazonaws.com/main/recipes/pcluster/login_nodes_ami_for_res/assets/main.yaml)
-
-TODO: How do I get my template up to aws-hpc-recipes
+- Create [Login Node AMI for RES](https://console.aws.amazon.com/cloudformation/home?region=us-east-1#/stacks/create/review?stackName=loginnode-for-res&templateURL=https://aws-hpc-recipes.s3.us-east-1.amazonaws.com/main/recipes/pcluster/login_node_for_res/assets/main.yaml)
 
 If you don't wish to use the quick-create link, you can also download the [assets/main.yaml](assets/main.yaml) file and uploading it to the [AWS CloudFormation console](https://console.aws.amazon.com/cloudformation).
 
