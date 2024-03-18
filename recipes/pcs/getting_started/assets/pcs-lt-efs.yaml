@@ -1,0 +1,92 @@
+AWSTemplateFormatVersion: 2010-09-09
+Description: Create a launch template to support a PCS compute node group mounting EFS
+
+Metadata:
+  AWS::CloudFormation::Interface:
+    ParameterGroups:
+      - Label:
+          default: Launch Template
+        Parameters:
+          - LaunchTemplateName
+      - Label:
+          default: Networking
+        Parameters:
+          - NodeGroupSubnetId
+      - Label:
+          default: Security
+        Parameters:
+          - KeyName
+          - VpcSecurityGroupId
+      - Label:
+          default: Filesystems
+        Parameters:
+          - EfsFilesystemId
+          - HostMountPoint
+
+Parameters:
+
+  LaunchTemplateName:
+    Type: String
+  NodeGroupSubnetId:
+    Type: AWS::EC2::Subnet::Id
+    Description: Subnet
+  VpcSecurityGroupId:
+    Type: AWS::EC2::SecurityGroup::Id
+    Description: Security allowing access within the VPC
+  KeyName:
+    Type: AWS::EC2::KeyPair::KeyName
+    Description: SSH keypair to log into node group instances
+  EfsFilesystemId:
+    Type: String
+    Description: Amazon EFS Filesystem ID (must be accessible to NodeGroupSubnetId)
+  HostMountPoint:
+    Type: String
+    Description: Mount path on the host
+    Default: "/shared"
+
+Resources:
+
+  LaunchTemplate:
+    Type: AWS::EC2::LaunchTemplate
+    Properties:
+      LaunchTemplateName: !Ref LaunchTemplateName
+      LaunchTemplateData:
+        MetadataOptions:
+          HttpEndpoint: enabled
+          HttpPutResponseHopLimit: 4
+          HttpTokens: required
+        KeyName: !Ref KeyName
+        NetworkInterfaces:
+          - DeviceIndex: 0
+            SubnetId: !Ref NodeGroupSubnetId
+            Groups:
+              - !Ref VpcSecurityGroupId
+        UserData:
+          Fn::Base64: !Sub |
+            MIME-Version: 1.0
+            Content-Type: multipart/mixed; boundary="==MYBOUNDARY=="
+
+            --==MYBOUNDARY==
+            Content-Type: text/cloud-config; charset="us-ascii"
+            MIME-Version: 1.0
+
+            packages:
+            - amazon-efs-utils
+            
+            runcmd:
+            - mkdir -p ${HostMountPoint}
+            - echo "${EfsFilesystemId}:/ ${HostMountPoint} efs tls,_netdev" >> /etc/fstab
+            - mount -a -t efs defaults
+
+            --==MYBOUNDARY==
+
+Outputs:
+  LaunchTemplateId:
+    Description: "Launch template Id"
+    Value: !Ref LaunchTemplate
+  DefaultVersionNumber:
+    Description: "Default version number"
+    Value: !GetAtt LaunchTemplate.DefaultVersionNumber
+  LatestVersionNumber:
+    Description: "Latest version number"
+    Value: !GetAtt LaunchTemplate.DefaultVersionNumber    
