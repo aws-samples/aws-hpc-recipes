@@ -214,19 +214,7 @@ Resources:
       SecurityGroupIds:
         - !Ref VpcEndpointSecurityGroup
       PrivateDnsEnabled: true
-  
-  KMSEndpoint:
-    Type: 'AWS::EC2::VPCEndpoint'
-    Properties:
-      VpcId: !Ref PclusterVpc
-      ServiceName: !Sub 'com.amazonaws.${AWS::Region}.kms'
-      VpcEndpointType: 'Interface'
-      SubnetIds:
-        - !Ref IsolatedHPCSubnet
-      SecurityGroupIds:
-        - !Ref VpcEndpointSecurityGroup
-      PrivateDnsEnabled: true
-      
+     
   AutoscalingEndpoint:
     Type: 'AWS::EC2::VPCEndpoint'
     Properties:
@@ -238,54 +226,6 @@ Resources:
       SecurityGroupIds:
         - !Ref VpcEndpointSecurityGroup
       PrivateDnsEnabled: true  
-
-  EFSEndpoint:
-    Type: 'AWS::EC2::VPCEndpoint'
-    Properties:
-      VpcId: !Ref PclusterVpc
-      ServiceName: !Sub 'com.amazonaws.${AWS::Region}.elasticfilesystem'
-      VpcEndpointType: 'Interface'
-      SubnetIds:
-        - !Ref IsolatedHPCSubnet
-      SecurityGroupIds:
-        - !Ref VpcEndpointSecurityGroup
-      PrivateDnsEnabled: true    
-
-  FSxEndpoint:
-    Type: 'AWS::EC2::VPCEndpoint'
-    Properties:
-      VpcId: !Ref PclusterVpc
-      ServiceName: !Sub 'com.amazonaws.${AWS::Region}.fsx'
-      VpcEndpointType: 'Interface'
-      SubnetIds:
-        - !Ref IsolatedHPCSubnet
-      SecurityGroupIds:
-        - !Ref VpcEndpointSecurityGroup
-      PrivateDnsEnabled: true      
-      
-  EBSEndpoint:
-    Type: 'AWS::EC2::VPCEndpoint'
-    Properties:
-      VpcId: !Ref PclusterVpc
-      ServiceName: !Sub 'com.amazonaws.${AWS::Region}.ebs'
-      VpcEndpointType: 'Interface'
-      SubnetIds:
-        - !Ref IsolatedHPCSubnet
-      SecurityGroupIds:
-        - !Ref VpcEndpointSecurityGroup
-      PrivateDnsEnabled: true
-  
-  ImageBuilderEndpoint:
-    Type: 'AWS::EC2::VPCEndpoint'
-    Properties:
-      VpcId: !Ref PclusterVpc
-      ServiceName: !Sub 'com.amazonaws.${AWS::Region}.imagebuilder'
-      VpcEndpointType: 'Interface'
-      SubnetIds:
-        - !Ref IsolatedHPCSubnet
-      SecurityGroupIds:
-        - !Ref VpcEndpointSecurityGroup
-      PrivateDnsEnabled: true
   
   EC2MessagesEndpoint:
     Type: 'AWS::EC2::VPCEndpoint'
@@ -678,6 +618,14 @@ Resources:
                     - 'iam:PutRolePolicy'
                 Resource: 
                     - !Sub 'arn:${AWS::Partition}:iam::${AWS::AccountId}:role/parallelcluster/*'
+              - Sid: 'S3GetAccess'
+                Effect: Allow
+                Action: 
+                    - 's3:ListBucket'
+                    - 's3:GetObject'
+                Resource: 
+                    - !Sub 'arn:${AWS::Partition}:s3:::your-s3-bucket'
+                    - !Sub 'arn:${AWS::Partition}:s3:::your-s3-bucket/*'
               - Sid: 'IamPolicy'
                 Effect: Allow
                 Action: 
@@ -731,9 +679,9 @@ Resources:
           # Install AWS ParallelCluster
           mkdir /usr/bin/pcluster
           # Change the path of the bucket to match yours
-          aws s3 cp s3://your-s3-bucket/pcluster-installer-bundle-3.8.0.480-node-v18.17.1-Linux_x86_64-signed.zip /usr/bin/pcluster
+          aws s3 cp s3://your-s3-bucket /usr/bin/pcluster --recursive --exclude "*" --include "*.zip" 
           cd /usr/bin/pcluster
-          sudo unzip pcluster-installer-bundle-3.8.0.480-node-v18.17.1-Linux_x86_64-signed.zip -d pcluster-installer-bundle
+          sudo unzip *.zip -d pcluster-installer-bundle
           cd pcluster-installer-bundle
           sudo chmod +x install_pcluster.sh
           sudo bash install_pcluster.sh

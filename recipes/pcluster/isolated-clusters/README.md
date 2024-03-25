@@ -6,7 +6,7 @@
 ![](images/isolated-cluster.PNG)
 
 1.	Browse [here](isolated-hpc.yml) and download “isolated-hpc.yml” 
-2.	Browse [here](assets/pcluster-installer-bundle-3.8.0.480-node-v18.17.1-Linux_x86_64-signed.zip) and download “pcluster-installer-bundle-3.8.0.480-node-v18.17.1-Linux_x86_64-signed”
+2.	Browse [here](https://docs.aws.amazon.com/parallelcluster/latest/ug/install-v3-install-standalone.html) and download the latest pcluster installer that is contained in step 1 of the Linux x86 (64-bit) instructions. This will download a zip file to your local machine.
 3.	Create an S3 bucket
 
     a.	Navigate to S3 in the AWS Management Console
@@ -19,7 +19,7 @@
 
     e.	Select Create bucket
 
-4.	Upload “pcluster-installer-bundle-3.8.0.480-node-v18.17.1-Linux_x86_64-signed” to your newly created S3 bucket. You do NOT need to upload the “isolated-hpc.yml” file.
+4.	Upload the pcluster installer zip folder to your newly created S3 bucket. You do NOT need to upload the “isolated-hpc.yml” file.
 
     a.	Click on the newly created S3 bucket
 
@@ -51,7 +51,7 @@
 ![](images/S3-Bucket-List.PNG)
 
 
-    a.	For example, using the bucket shown above which is “hpc-isolated” I would put that in the Replace with section. Then select Replace All and you will replace 2 occurrences in the file. 
+    a.	For example, using the bucket shown above which is “hpc-isolated” I would put that in the Replace with section. Then select Replace All and you will replace 4 occurrences in the file. 
     
     ![](images/notepad-replace.PNG) 
 
@@ -112,7 +112,7 @@
 ![](images/isolated-cluster-AD.PNG)
 
 1.	Browse [here](isolated-hpc-ad-integration.yml) and download the “isolated-hpc-ad-integration.yml” file
-2.	Browse [here](assets/pcluster-installer-bundle-3.8.0.480-node-v18.17.1-Linux_x86_64-signed.zip) and download the "pcluster-installer-bundle-3.8.0.480-node-v18.17.1-Linux_x86_64-signed.zip" zip file
+2.	Browse [here](https://docs.aws.amazon.com/parallelcluster/latest/ug/install-v3-install-standalone.html) and download the latest pcluster installer that is contained in step 1 of the Linux x86 (64-bit) instructions. This will download a zip file to your local machine.
 3.  You will need to download files necessary to manage Active Directory so that users can be created
 
     a. On a Linux machine with Internet access, download these files using 'sudo yum install -y --downloadonly --downloaddir=. sssd realmd oddjob oddjob-mkhomedir adcli samba-common samba-common-tools krb5-workstation openldap-clients policycoreutils-python3 openssl'
@@ -171,7 +171,7 @@
 
 ![](images/S3-Bucket-List-AD.PNG)
 
--	For example, using the bucket shown above which is “hpc-ad-int” I would put that in the Replace with section. Then select Replace All and you will replace 8 occurrences in the file. 
+-	For example, using the bucket shown above which is “hpc-ad-int” I would put that in the Replace with section. Then select Replace All and you will replace 9 occurrences in the file. 
     
 ![](images/notepad-replace-AD.PNG) 
 

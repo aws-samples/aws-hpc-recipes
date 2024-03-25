@@ -305,20 +305,6 @@ Resources:
         - !Ref IsolatedHPCSubnetTwo
       PrivateDnsEnabled: true
         
-  KMSEndpoint:
-    Type: 'AWS::EC2::VPCEndpoint'
-    Condition: CreateVPC
-    DependsOn: NetworkLoadBalancer
-    Properties:
-      VpcId: !Ref PclusterVpc
-      ServiceName: !Sub 'com.amazonaws.${AWS::Region}.kms'
-      VpcEndpointType: 'Interface'
-      SecurityGroupIds: 
-        - !GetAtt VpcEndpointSecurityGroup.GroupId      
-      SubnetIds:
-        - !Ref IsolatedHPCSubnetTwo
-      PrivateDnsEnabled: true
-        
   AutoscalingEndpoint:
     Type: 'AWS::EC2::VPCEndpoint'
     Condition: CreateVPC
@@ -346,48 +332,6 @@ Resources:
       SubnetIds:
         - !Ref IsolatedHPCSubnetTwo
       PrivateDnsEnabled: true    
-        
-  FSxEndpoint:
-    Type: 'AWS::EC2::VPCEndpoint'
-    Condition: CreateVPC
-    DependsOn: NetworkLoadBalancer
-    Properties:
-      VpcId: !Ref PclusterVpc
-      ServiceName: !Sub 'com.amazonaws.${AWS::Region}.fsx'
-      VpcEndpointType: 'Interface'
-      SecurityGroupIds: 
-        - !GetAtt VpcEndpointSecurityGroup.GroupId      
-      SubnetIds:
-        - !Ref IsolatedHPCSubnetTwo
-      PrivateDnsEnabled: true      
-        
-  EBSEndpoint:
-    Type: 'AWS::EC2::VPCEndpoint'
-    Condition: CreateVPC
-    DependsOn: NetworkLoadBalancer
-    Properties:
-      VpcId: !Ref PclusterVpc
-      ServiceName: !Sub 'com.amazonaws.${AWS::Region}.ebs'
-      VpcEndpointType: 'Interface'
-      SecurityGroupIds: 
-        - !GetAtt VpcEndpointSecurityGroup.GroupId      
-      SubnetIds:
-        - !Ref IsolatedHPCSubnetTwo
-      PrivateDnsEnabled: true
-        
-  ImageBuilderEndpoint:
-    Type: 'AWS::EC2::VPCEndpoint'
-    Condition: CreateVPC
-    DependsOn: NetworkLoadBalancer
-    Properties:
-      VpcId: !Ref PclusterVpc
-      ServiceName: !Sub 'com.amazonaws.${AWS::Region}.imagebuilder'
-      VpcEndpointType: 'Interface'
-      SecurityGroupIds: 
-        - !GetAtt VpcEndpointSecurityGroup.GroupId      
-      SubnetIds:
-        - !Ref IsolatedHPCSubnetTwo
-      PrivateDnsEnabled: true
   
   EC2MessagesEndpoint:
     Type: 'AWS::EC2::VPCEndpoint'
@@ -617,6 +561,7 @@ Resources:
                 Action: 
                     - 's3:*'
                 Resource: 
+                    - !Sub 'arn:${AWS::Partition}:s3:::your-s3-bucket'
                     - !Sub 'arn:${AWS::Partition}:s3:::your-s3-bucket/*'
                     - !Sub 'arn:${AWS::Partition}:s3:::parallelcluster-*'
                     - !Sub 'arn:${AWS::Partition}:s3:::aws-parallelcluster-*'
@@ -809,7 +754,7 @@ Resources:
                     - 's3:DeleteObject'
                     - 's3:DeleteObjectVersion'
                 Resource: 
-                    - !Sub 'arn:${AWS::Partition}:s3:::parallelcluster-*/*'                 
+                    - !Sub 'arn:${AWS::Partition}:s3:::parallelcluster-*/*'
               - Sid: 'CreateServiceLinkedRole'
                 Effect: Allow
                 Action: 
@@ -1169,8 +1114,8 @@ Resources:
               export AWS_DEFAULT_REGION=${AWS::Region}
               EOF
               aws s3 cp active-directory.head.post.sh s3://your-s3-bucket/active-directory.head.post.sh --region us-gov-west-1
-              aws s3 cp s3://your-s3-bucket/pcluster-installer-bundle-3.8.0.480-node-v18.17.1-Linux_x86_64-signed.zip /usr/bin/pcluster
-              sudo unzip pcluster-installer-bundle-3.8.0.480-node-v18.17.1-Linux_x86_64-signed.zip -d pcluster-installer-bundle
+              aws s3 cp s3://your-s3-bucket /usr/bin/pcluster --recursive --exclude "*" --include "*.zip"
+              sudo unzip *.zip -d pcluster-installer-bundle
               cd pcluster-installer-bundle
               sudo chmod +x install_pcluster.sh
               sudo bash install_pcluster.sh
