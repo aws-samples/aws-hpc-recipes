@@ -7,6 +7,7 @@ The format is based on [Keep a Changelog](http://keepachangelog.com/)
 
 ### Added
 * New recipe: pcluster/login_node_for_res which provides a ParallelCluster LoginNode for Research and Engineering Studio
+* New recipe: pcluster/decoupled_storage which demonstrates the decoupled storage feature in PC 3.9
 
 ### Fixed
 * Updated Python runtime in hpc_large_scale to python3.9
