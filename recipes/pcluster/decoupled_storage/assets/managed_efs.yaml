@@ -19,10 +19,6 @@ Metadata:
           - NetworkStackNameParameter
           - KeyName
           - AllowedIps
-      - Label:
-          default: Amazon EFS
-        Parameters:
-          - EfsStackNameParameter
 
 Conditions:
   GovCloud: !Equals [!Ref AWS::Partition, 'aws-us-gov']
@@ -34,11 +30,6 @@ Parameters:
     Description: Name of an HPC Recipes large-scale networking stack
     Type: String
     Default: hpc-networking
-
-  EfsStackNameParameter:
-    Description: Name of an HPC Recipes EFS filesystem stack
-    Type: String
-    Default: efs-simple
 
   QueueName:
     Description: Name of the default Slurm queue
@@ -52,8 +43,9 @@ Parameters:
     Default: 10
 
   AllowedIps:
-    Description: CIDR-formatted IP range for SSH connections to the cluster. If you want to allow access from all IP addresses, enter "0.0.0.0/0". However, we recommend you use a more restricitve setting, such as your own IP address. 
+    Description: CIDR-formatted IP range for SSH connections to the cluster. We recommend you use a more restricitve setting, such as your own IP address. 
     Type: String
+    Default: '0.0.0.0/0'
     AllowedPattern: ^(?:(?:25[0-5]|2[0-4][0-9]|[01]?[0-9][0-9]?).){3}(?:25[0-5]|2[0-4][0-9]|[01]?[0-9][0-9]?)(/([0-9]|[1-2][0-9]|3[0-2]))$
     ConstraintDescription: 'Must be IPv4 CIDR notation: X.X.X.X/X' 
 
@@ -130,8 +122,6 @@ Resources:
           SharedStorageType: 'Efs'
           Networking:
             SubnetId: {"Fn::Select": [0, { "Fn::Split" : [",", {"Fn::ImportValue" : {"Fn::Sub" : "${NetworkStackNameParameter}-PublicSubnets"}}] }]}
-            AdditionalSecurityGroups:
-              - {"Fn::ImportValue" : {"Fn::Sub" : "${EfsStackNameParameter}-SecurityGroupId"}}
           Ssh:
             KeyName: !Ref KeyName
             AllowedIps: !Ref AllowedIps
@@ -153,11 +143,17 @@ Resources:
             Networking:
               SubnetIds:
                - {"Fn::Select": [0, { "Fn::Split" : [",", {"Fn::ImportValue" : {"Fn::Sub" : "${NetworkStackNameParameter}-PrivateSubnets"}}] }]}
-              AdditionalSecurityGroups:
-                - {"Fn::ImportValue" : {"Fn::Sub" : "${EfsStackNameParameter}-SecurityGroupId"}}
-        SharedStorage:
-          - Name: Efs0
-            StorageType: Efs
-            MountDir: /home
-            EfsSettings:
-              FileSystemId: {"Fn::ImportValue" : {"Fn::Sub" : "${EfsStackNameParameter}-EFSFilesystemId"}}
+
+Outputs:
+  SystemManagerUrl:
+    Description: URL to access the HeadNode via SystemManager
+    Value: !Sub
+      - https://${ConsoleDomain}/systems-manager/session-manager/${InstanceId}?region=${AWS::Region}
+      - { ConsoleDomain: !If [ GovCloud, 'console.amazonaws-us-gov.com', !If [ China, 'console.amazonaws.cn', !Sub '${AWS::Region}.console.aws.amazon.com']],
+          InstanceId: !GetAtt [ PclusterCluster, headNode.instanceId ]
+        }
+    Export:
+      Name: !Sub ${AWS::StackName}-SystemManagerUrl
+  ValidationMessages:
+    Description: Warnings from cluster create or update operations.
+    Value: !GetAtt PclusterCluster.validationMessages
