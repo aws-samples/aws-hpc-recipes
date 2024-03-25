@@ -15,7 +15,6 @@ Metadata:
       - Label:
           default: Security
         Parameters:
-          - KeyName
           - VpcSecurityGroupId
       - Label:
           default: Filesystems
@@ -27,15 +26,13 @@ Parameters:
 
   LaunchTemplateName:
     Type: String
+    Default: "MyBasicAwsPcsLaunchTemplate"
   NodeGroupSubnetId:
     Type: AWS::EC2::Subnet::Id
     Description: Subnet
   VpcSecurityGroupId:
     Type: AWS::EC2::SecurityGroup::Id
-    Description: Security allowing access within the VPC
-  KeyName:
-    Type: AWS::EC2::KeyPair::KeyName
-    Description: SSH keypair to log into node group instances
+    Description: Security group allowing access within the VPC
   EfsFilesystemId:
     Type: String
     Description: Amazon EFS Filesystem ID (must be accessible to NodeGroupSubnetId)
@@ -55,7 +52,6 @@ Resources:
           HttpEndpoint: enabled
           HttpPutResponseHopLimit: 4
           HttpTokens: required
-        KeyName: !Ref KeyName
         NetworkInterfaces:
           - DeviceIndex: 0
             SubnetId: !Ref NodeGroupSubnetId
