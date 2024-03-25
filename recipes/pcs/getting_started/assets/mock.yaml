@@ -1,0 +1,196 @@
+AWSTemplateFormatVersion: '2010-09-09'
+Description: >
+  Deploy the Getting Started with AwS PCS example cluster.
+
+### Stack metadata
+Metadata:
+  AWS::CloudFormation::Interface:
+    ParameterGroups:
+      - Label:
+          default: Cluster configuration
+        Parameters:
+          - ClusterName
+          - Architecture
+
+Parameters:
+  ClusterName:
+    Description: Name of cluster. Must be unique in the Region.
+    Type: String
+    Default: my-pcs-cluster
+
+  Architecture:
+    Type: String
+    Default: Graviton
+    AllowedValues:
+      - Graviton
+      - GPU
+      - x86
+    Description: Choose a compute node architecture.
+  
+Mappings:
+  Recipes:
+    Constants:
+      Version: 'main'
+      Bucket: 'aws-hpc-recipes.s3.us-east-1.amazonaws.com'
+  SsmParameterForArchitecture:
+    SampleAmiId:
+      Graviton: '/aws/service/pcs/sample-ami/amzn2/arm64/ami-slurm-23.11'
+      GPU: '/aws/service/pcs/sample-ami/amzn2/x86_64/ami-slurm-23.11'
+      x86: '/aws/service/pcs/sample-ami/amzn2/x86_64/ami-slurm-23.11'
+  InstanceTypeForArchitecture:
+    LoginNodes:
+      Graviton: c7g.large
+      GPU: c6i.xlarge
+      x86: c6i.xlarge
+    ComputeNodes:
+      Graviton: c7g.xlarge
+      GPU: g5.xlarge
+      x86: c6i.xlarge
+
+Resources:
+
+  PcsVpc:
+    Type: AWS::CloudFormation::Stack
+    Properties:
+      Parameters:
+        ProvisionSubnetsC: "False"
+      TemplateURL: !Sub 
+        - 'https://${Bucket}/${Version}/recipes/net/hpc_large_scale/assets/main.yaml'
+        - Bucket: !FindInMap [Recipes, Constants, 'Bucket']
+          Version: !FindInMap [Recipes, Constants, 'Version']
+
+  PcsEfs:
+    Type: AWS::CloudFormation::Stack
+    Properties:
+      Parameters:
+        VpcId: !GetAtt [ PcsVpc, Outputs.VPC ]
+        SubnetCount: 2
+        SubnetIds: !GetAtt [ PcsVpc, Outputs.PrivateSubnets ]
+      TemplateURL: !Sub 
+        - 'https://${Bucket}/${Version}/recipes/storage/efs_simple/assets/main.yaml'
+        - Bucket: !FindInMap [Recipes, Constants, 'Bucket']
+          Version: !FindInMap [Recipes, Constants, 'Version']
+
+  PcsCluster:
+    Type: AWS::PCS::Cluster
+    Properties: 
+      ClusterName: !Ref ClusterName
+      Scheduler:
+        Type: SLURM
+        Version: '23.11'
+      Size: 'SMALL'
+      PcsVpc:
+        SubnetIds: !GetAtt [ PcsVpc, Outputs.PrivateSubnets ]
+        SecurityGroupIds:
+          - !GetAtt [ PcsVpc, Outputs.SecurityGroup ]
+
+  PcsLoginNodeGroup:
+    Type: AWS::PCS::ComputeNodeGroup
+    Properties:
+      ClusterIdentifier: !Ref PcsCluster
+      ComputeNodeGroupName: 'login'
+      SubnetIds:
+        - !GetAtt [ PcsVpc, Outputs.DefaultPrivateSubnet ]
+      IamInstanceProfileArn: !GetAtt [PcsInstanceProfile, 'Arn']
+      Instances:
+        - !FindInMap [ InstanceTypeForArchitecture, LoginNode, !Ref Architecture ]
+      CustomLaunchTemplate:
+        Id: !Ref PcsCngLaunchTemplate
+        Version: '$Latest'
+      AmiId: !Sub
+        - "{{resolve:ssm:${SsmParameterName}}}"
+        - SsmParameterName: !FindInMap [SsmParameterForArchitecture, SampleAmiId, !Ref Architecture]
+      ScalingConfiguration:
+        MinInstanceCount: 1
+        MaxInstanceCount: 1
+
+  PcsComputeNodeGroup:
+    Type: AWS::PCS::ComputeNodeGroup
+    Properties:
+      ClusterIdentifier: !Ref PcsCluster
+      ComputeNodeGroupName: 'compute'
+      SubnetIds:
+        - !GetAtt [ PcsVpc, Outputs.DefaultPrivateSubnet ]
+      IamInstanceProfileArn: !GetAtt [PcsInstanceProfile, 'Arn']
+      Instances:
+        - !FindInMap [ InstanceTypeForArchitecture, LoginNode, !Ref Architecture ]
+      CustomLaunchTemplate:
+        Id: !Ref PcsCngLaunchTemplate
+        Version: '$Latest'
+      AmiId: !Sub
+        - "{{resolve:ssm:${SsmParameterName}}}"
+        - SsmParameterName: !FindInMap [SsmParameterForArchitecture, SampleAmiId, !Ref Architecture]
+      ScalingConfiguration:
+        MinInstanceCount: 0
+        MaxInstanceCount: 4
+  
+  PcsInstanceIamRole:
+    Type: AWS::IAM::Role
+    Properties:
+      RoleName: !Sub '${AWS::StackName}-AWSPCS-role'
+      Description: "AWS IAM role for PCS node group instances"
+      AssumeRolePolicyDocument:
+        Statement:
+          - Action: sts:AssumeRole
+            Effect: Allow
+            Principal:
+              Service: ec2.amazonaws.com
+        Version: "2012-10-17"
+      ManagedPolicyArns:
+           - "arn:aws:iam::aws:policy/AmazonSSMManagedInstanceCore"
+      Policies:
+        - PolicyDocument:
+            Version: "2012-10-17"
+            Statement:
+              - Action:
+                  - pcs:RegisterComputeNodeGroupInstance
+                Effect: Allow
+                Resource: "*"
+          PolicyName: !Sub '${AWS::StackName}-AWSPCS-policy'
+
+  PcsInstanceProfile:
+    Type: AWS::IAM::InstanceProfile
+    Properties:
+      Roles:
+        - !Ref PcsInstanceIamRole
+      InstanceProfileName: !Sub '${AWS::StackName}-AWSPCS-profile'
+
+  PcsCngLaunchTemplate:
+      Type: AWS::EC2::LaunchTemplate
+      Properties:
+        LaunchTemplateName: !Sub '${AWS::StackName}-AWSPCS-launch-template'
+        LaunchTemplateData:
+          MetadataOptions:
+            HttpEndpoint: enabled
+            HttpPutResponseHopLimit: 4
+            HttpTokens: required
+          NetworkInterfaces:
+            - DeviceIndex: 0
+              SubnetId: !GetAtt [ PcsVpc, Outputs.DefaultPrivateSubnet ]
+              Groups:
+                - !GetAtt [ PcsVpc, Outputs.SecurityGroup ]
+          UserData:
+            Fn::Base64: !Sub 
+            - |
+              MIME-Version: 1.0
+              Content-Type: multipart/mixed; boundary="==MYBOUNDARY=="
+
+              --==MYBOUNDARY==
+              Content-Type: text/cloud-config; charset="us-ascii"
+              MIME-Version: 1.0
+
+              packages:
+              - amazon-efs-utils
+              
+              runcmd:
+              - mkdir -p ${HostMountPoint}
+              - echo "${EfsFilesystemId}:/ ${HostMountPoint} efs tls,_netdev" >> /etc/fstab
+              - mount -a -t efs defaults
+              - chmod a+rwx /shared
+
+              --==MYBOUNDARY==
+
+            - { 
+                EfsFilesystemId: !GetAtt [PcsEfs, Outputs.EFSFilesystemId],
+                HostMountPoint: '/shared'
+              }
