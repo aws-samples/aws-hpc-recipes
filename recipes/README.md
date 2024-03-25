@@ -63,6 +63,11 @@ You can use an HPC Recipe for AWS in several ways:
 
 ### :arrow_right: pcluster: AWS ParallelCluster
 
+#### decoupled_storage ![tag](https://img.shields.io/badge/-beta-%23800080) ![tag](https://img.shields.io/badge/-efs-%237DCEA0) ![tag](https://img.shields.io/badge/-fsx-%237DCEA0) ![tag](https://img.shields.io/badge/-pcluster-%23AAB7B8) 
+
+* **About**: Demonstrate decoupled shared storage using Amazon EFS.
+* **Usage**: [README.md](pcluster/decoupled_storage/README.md)
+
 #### latest ![tag](https://img.shields.io/badge/-core-%23146EB4) ![tag](https://img.shields.io/badge/-parallelcluster-%23FF9900) 
 
 * **About**: Quick demo of the latest ParallelCluster release
