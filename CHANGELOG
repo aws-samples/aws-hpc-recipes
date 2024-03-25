@@ -10,6 +10,7 @@ The format is based on [Keep a Changelog](http://keepachangelog.com/)
 
 ### Fixed
 * Updated Python runtime in hpc_large_scale to python3.9
+* In mountpoint_s3, point to proper location for mountpoint-s3 on Github
 
 ### Changed
 * In res_demo_env, you can now restrict inbound access using a CIDR or VPC Prefix List
