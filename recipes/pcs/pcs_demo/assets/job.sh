@@ -1,6 +1,6 @@
 #!/bin/bash
 
-#SBATCH -J testjob
+#SBATCH -J test
 #SBATCH -o test-%j.out   # Write the standard output to file named 'test-<job_number>.out'
 #SBATCH -e test-%j.err   # Write the standard error to file named 'test-<job_number>.err'
 
