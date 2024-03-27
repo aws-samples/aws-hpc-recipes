@@ -77,6 +77,7 @@ Resources:
             - mkdir -p ${HostMountPoint}
             - echo "${EfsFilesystemId}:/ ${HostMountPoint} efs tls,_netdev" >> /etc/fstab
             - mount -a -t efs defaults
+            - chmod a+rwx ${HostMountPoint}
 
             --==MYBOUNDARY==
 
