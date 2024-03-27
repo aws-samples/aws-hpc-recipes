@@ -1,12 +1,16 @@
-# Login Node AMI for Research and Engineering Studio (RES)
+# Login Node for Research and Engineering Studio (RES)
 
 ## Info
 
-This recipe allows enables the creation an of a [ParallelCluster Login node](https://docs.aws.amazon.com/parallelcluster/latest/ug/login-nodes-v3.html) AMI compatible with [Research and Engineering Studio (RES)](https://github.com/aws/res). This allows for a software stack to be created within RES that can integrate with ParallelCluster.
+This recipe allows the creation of a [ParallelCluster Login node](https://docs.aws.amazon.com/parallelcluster/latest/ug/login-nodes-v3.html) AMI compatible with [Research and Engineering Studio (RES)](https://github.com/aws/res). The Login Node AMI can be used in a RES software stack in RES that can integrate with ParallelCluster.
 
 ## Usage
 
-### 1. Deploy Login Node AMI automation
+### 1. Create RES compatible Login Node
+
+The following steps should be done for the ParallelCluster environment to create a RES compatible ParallelCluster Login Node.
+
+#### 1.1. Deploy Login Node AMI automation
 
 You can launch this template by following this quick-create link:
 
@@ -14,7 +18,9 @@ You can launch this template by following this quick-create link:
 
 If you don't wish to use the quick-create link, you can also download the [assets/main.yaml](assets/main.yaml) file and uploading it to [AWS CloudFormation console](https://console.aws.amazon.com/cloudformation).
 
-### 2. Trigger automation
+#### 1.2. Trigger automation
+
+Trigger an SSM automation which will create an AMI of a running LoginNode of a ParallelCluster.
 
 1. Download [1-create-ami.sh](recipes/pcluster/login_node_for_res/assets/1-create-ami.sh).
 2. Run `1-create-ami.sh` once your Login Node is ready for snapshot. Update the following parameters accordingly.
@@ -49,7 +55,7 @@ _sample output_
 Done!
 ```
 
-### 3. Create Software stack in Research and Engineering Studio (RES) for Login Node
+#### 1.3. Create Software stack in Research and Engineering Studio (RES) for Login Node
 
 Use the following steps to create a ParallelCluster LoginNode Software Stack in RES.
 
@@ -65,13 +71,16 @@ Use the following steps to create a ParallelCluster LoginNode Software Stack in 
     7.  Select Project(s) to associate the stack
     8.  Select **Submit**
 
-Deploy a new Desktop for the ParallelCluster LoginNode
+### 2. Deploy RES desktop Login Node
 
-### 4. Post-Deployment steps
+1.  Using the new RES software stack deploy a new desktop using the newly created software stack created above.
 
-Once the LoginNode Desktop has been provisioned run the following command to allow the desktop to bootstrap properly.
+### 3. Post-Deployment steps
 
-**Note:** `INSTANCE_ID` can be found under _Actions -> Show Info_ for the
+Once the Login Node Desktop has been provisioned run the following command to allow the desktop to bootstrap properly.  
+This step should be done for each LoginNode desktop instance that's created.
+
+**Note:** `INSTANCE_ID` can be found under _Actions -> Show Info_ on the RES desktop instance
 
 ```bash
 aws ssm send-command \
