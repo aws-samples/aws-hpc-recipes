@@ -1,0 +1,93 @@
+AWSTemplateFormatVersion: 2010-09-09
+Description: Create a launch template to support a PCS compute node group mounting EFS
+
+Metadata:
+  AWS::CloudFormation::Interface:
+    ParameterGroups:
+      - Label:
+          default: Launch Template
+        Parameters:
+          - LaunchTemplateName
+      - Label:
+          default: Security
+        Parameters:
+          - KeyName
+          - VpcSecurityGroupId
+          - EfsClientSecurityGroupId
+          - InboundAccessSecurityGroupId
+      - Label:
+          default: Filesystems
+        Parameters:
+          - EfsFilesystemId
+          - HostMountPoint
+
+Parameters:
+
+  LaunchTemplateName:
+    Type: String
+  VpcSecurityGroupId:
+    Type: AWS::EC2::SecurityGroup::Id
+    Description: Security allowing access within the VPC
+  InboundAccessSecurityGroupId:
+    Type: AWS::EC2::SecurityGroup::Id
+    Description: Security group enabling inbound SSH access
+  EfsClientSecurityGroupId:
+    Type: AWS::EC2::SecurityGroup::Id
+    Description: Security group enabling access to the EFS filesystem
+  KeyName:
+    Type: AWS::EC2::KeyPair::KeyName
+    Description: SSH keypair to log into node group instances
+  EfsFilesystemId:
+    Type: String
+    Description: Amazon EFS Filesystem ID
+  HostMountPoint:
+    Type: String
+    Description: Mount path on the host
+    Default: "/shared"
+
+Resources:
+
+  LaunchTemplate:
+    Type: AWS::EC2::LaunchTemplate
+    Properties:
+      LaunchTemplateName: !Ref LaunchTemplateName
+      LaunchTemplateData:
+        MetadataOptions:
+          HttpEndpoint: enabled
+          HttpPutResponseHopLimit: 4
+          HttpTokens: required
+        KeyName: !Ref KeyName
+        SecurityGroupIds:
+             - !Ref VpcSecurityGroupId
+             - !Ref InboundAccessSecurityGroupId
+             - !Ref EfsClientSecurityGroupId
+        UserData:
+          Fn::Base64: !Sub |
+            MIME-Version: 1.0
+            Content-Type: multipart/mixed; boundary="==MYBOUNDARY=="
+
+            --==MYBOUNDARY==
+            Content-Type: text/cloud-config; charset="us-ascii"
+            MIME-Version: 1.0
+
+            packages:
+            - amazon-efs-utils
+            
+            runcmd:
+            - mkdir -p ${HostMountPoint}
+            - echo "${EfsFilesystemId}:/ ${HostMountPoint} efs tls,_netdev" >> /etc/fstab
+            - mount -a -t efs defaults
+            - chmod a+rwx ${HostMountPoint}
+
+            --==MYBOUNDARY==
+
+Outputs:
+  LaunchTemplateId:
+    Description: "Launch template Id"
+    Value: !Ref LaunchTemplate
+  DefaultVersionNumber:
+    Description: "Default version number"
+    Value: !GetAtt LaunchTemplate.DefaultVersionNumber
+  LatestVersionNumber:
+    Description: "Latest version number"
+    Value: !GetAtt LaunchTemplate.DefaultVersionNumber    
