@@ -16,13 +16,13 @@ You can launch this template by following this quick-create link:
 
 - Create [Login Node AMI for RES](https://console.aws.amazon.com/cloudformation/home?region=us-east-1#/stacks/create/review?stackName=loginnode-for-res&templateURL=https://aws-hpc-recipes.s3.us-east-1.amazonaws.com/main/recipes/pcluster/login_node_for_res/assets/main.yaml)
 
-If you don't wish to use the quick-create link, you can also download the [assets/main.yaml](assets/main.yaml) file and uploading it to [AWS CloudFormation console](https://console.aws.amazon.com/cloudformation).
+If you don't wish to use the quick-create link, you can also download the [assets/main.yml](assets/main.yaml) file and uploading it to [AWS CloudFormation console](https://console.aws.amazon.com/cloudformation).
 
 #### 1.2. Trigger automation
 
 Trigger an SSM automation to create an AMI of a LoginNode for ParallelCluster.
 
-1. Download [1-create-ami.sh](recipes/pcluster/login_node_for_res/assets/1-create-ami.sh).
+1. Download [1-create-ami.sh](assets/1-create-ami.sh).
 2. Run `1-create-ami.sh` once your Login Node is ready for snapshot. Update the following parameters accordingly.
    1. `PC_CLUSTER_NAME` = ParallelCluster cluster name
    2. `RES_STACK_NAME` = RES Stack name
