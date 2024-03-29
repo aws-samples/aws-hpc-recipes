@@ -361,16 +361,6 @@ Resources:
     Properties:
       GroupDescription: Allow SSH access
       VpcId: !If [CreateVPC, !Ref PclusterVpc, !Ref Vpc ]
-      # SecurityGroupEgress:
-      #   - CidrIp: 0.0.0.0/0
-      #     FromPort: -1
-      #     IpProtocol: "-1"
-      #     ToPort: -1
-      # SecurityGroupIngress:
-      #   - CidrIp: !Ref AllowedIps
-      #     FromPort: 22
-      #     IpProtocol: tcp
-      #     ToPort: 22
 
   InstanceSecurityGroupIngressClientCidr:
     Condition: AddCidrIngress
