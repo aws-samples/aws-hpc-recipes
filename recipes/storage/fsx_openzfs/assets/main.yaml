@@ -72,6 +72,7 @@ Resources:
     Type: AWS::EC2::SecurityGroup
     Properties: 
       GroupDescription: 'Allows traffic to FSx for OpenZFS filesystem'
+      GroupName: !Sub '${AWS::StackName}-fsxzfs-security-group'
       VpcId: !Ref VpcId
 
   # Clients join this group for access to an FSx for OpenZFS filesystem or volume
@@ -79,6 +80,7 @@ Resources:
     Type: AWS::EC2::SecurityGroup
     Properties:
       GroupDescription: 'Clients join this group for access to FSx for OpenZFS filesystem or volume'
+      GroupName: !Sub '${AWS::StackName}-fsxzfs-client-security-group'
       VpcId: !Ref VpcId
 
   ZfsServerSGInboundRule2049tcp:
