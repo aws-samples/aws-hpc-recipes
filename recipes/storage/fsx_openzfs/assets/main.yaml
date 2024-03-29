@@ -81,7 +81,6 @@ Resources:
       GroupDescription: 'Clients join this group for access to FSx for OpenZFS filesystem or volume'
       VpcId: !Ref VpcId
 
-  # Server inbound rules
   ZfsServerSGInboundRule2049tcp:
     Type: 'AWS::EC2::SecurityGroupIngress'
     Properties:
@@ -136,62 +135,21 @@ Resources:
       ToPort: 20003
       GroupId: !Ref ZfsServerSG
       SourceSecurityGroupId: !Ref ZfsClientSG
+  ZfsServerSGOutboundRuleClientSGAll:
+    Type: 'AWS::EC2::SecurityGroupEgress'
+    Properties:
+      Description: Allow egress to client from server
+      IpProtocol: -1
+      GroupId: !Ref ZfsServerSG
+      DestinationSecurityGroupId: !Ref ZfsClientSG
+  ZfsClientSGOutboundRuleServerSGAll:
+    Type: 'AWS::EC2::SecurityGroupEgress'
+    Properties:
+      Description: Allow egress to server from client
+      IpProtocol: -1
+      GroupId: !Ref ZfsClientSG
+      DestinationSecurityGroupId: !Ref ZfsServerSG
 
-  # Client outbound rules
-  ZfsClientSGInboundRule2049tcp:
-    Type: 'AWS::EC2::SecurityGroupEgress'
-    Properties:
-      IpProtocol: tcp
-      Description: Allow outgoing TCP connection from clients to NFS server daemon on port 2049
-      FromPort: 2049
-      ToPort: 2049
-      GroupId: !Ref ZfsClientSG
-      DestinationSecurityGroupId: !Ref ZfsClientSG
-  ZfsClientSGInboundRule2049udp:
-    Type: 'AWS::EC2::SecurityGroupEgress'
-    Properties:
-      IpProtocol: udp
-      Description: Allow outgoing UDP connection from clients to NFS server daemon on port 2049
-      FromPort: 2049
-      ToPort: 2049
-      GroupId: !Ref ZfsClientSG
-      DestinationSecurityGroupId: !Ref ZfsClientSG
-  ZfsClientSGInboundRule111tcp:
-    Type: 'AWS::EC2::SecurityGroupEgress'
-    Properties:
-      IpProtocol: tcp
-      Description: Allow outgoing TCP remote procedure call from client to NFS server on port 111
-      FromPort: 111
-      ToPort: 111
-      GroupId: !Ref ZfsClientSG
-      DestinationSecurityGroupId: !Ref ZfsClientSG
-  ZfsClientSGInboundRule111udp:
-    Type: 'AWS::EC2::SecurityGroupEgress'
-    Properties:
-      IpProtocol: udp
-      Description: Allow outgoing UDP remote procedure call from client to NFS server on port 111
-      FromPort: 111
-      ToPort: 111
-      GroupId: !Ref ZfsClientSG
-      DestinationSecurityGroupId: !Ref ZfsClientSG
-  ZfsClientSGInboundRule20001tcp:
-    Type: 'AWS::EC2::SecurityGroupEgress'
-    Properties:
-      IpProtocol: tcp
-      Description: Allow outgoing TCP traffic from client to NFS mount, status monitor, and lock daemons (ports 20001-20003)
-      FromPort: 20001
-      ToPort: 20003
-      GroupId: !Ref ZfsClientSG
-      DestinationSecurityGroupId: !Ref ZfsClientSG
-  ZfsClientSGInboundRule20001udp:
-    Type: 'AWS::EC2::SecurityGroupEgress'
-    Properties:
-      IpProtocol: udp
-      Description: Allow outgoing UDP traffic from client to NFS mount, status monitor, and lock daemons (ports 20001-20003
-      FromPort: 20001
-      ToPort: 20003
-      GroupId: !Ref ZfsClientSG
-      DestinationSecurityGroupId: !Ref ZfsClientSG
 
   FSxOpenZFSFilesystem:
     Type: AWS::FSx::FileSystem
@@ -228,7 +186,7 @@ Outputs:
     Export:
       Name: !Sub ${AWS::StackName}-FSxOpenZFSRootVolumeId
   FSxOpenZFSSecurityGroupId:
-    Description: Clients join this grouo for access to the FSx for OpenZFS filesystem or mount
+    Description: Clients join this group for access to the FSx for OpenZFS filesystem or mount
     Value: !Ref ZfsClientSG
     Export:
       Name: !Sub ${AWS::StackName}-FSxOpenZFSSecurityGroupId
