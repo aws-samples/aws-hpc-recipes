@@ -1,5 +1,5 @@
 AWSTemplateFormatVersion: '2010-09-09'
-Description: Create a SCRATCH FSx for Lustre filesystem and client security group for use with with ParallelCluster, RES, etc.
+Description: Creates a SCRATCH FSx for Lustre filesystem and a client security group for access to the filesystem
 
 ### Stack metadata
 Metadata:

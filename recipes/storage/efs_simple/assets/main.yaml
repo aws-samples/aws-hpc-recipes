@@ -159,7 +159,7 @@ Outputs:
     Export:
       Name: !Sub ${AWS::StackName}-EFSFilesystemId
   SecurityGroupId:
-    Description: Clients join this grouo for access to the filesystem
+    Description: Clients join this group for access to the filesystem
     Value: !Ref EfsClientSecurityGroup
     Export:
       Name: !Sub ${AWS::StackName}-SecurityGroupId

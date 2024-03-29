@@ -1,5 +1,5 @@
 AWSTemplateFormatVersion: '2010-09-09'
-Description: Creates an FSx for OpenZFS filesystem plus a client security group for use with ParallelCluster, RES, etc.
+Description: Creates an FSx for OpenZFS filesystem and a client security group for access to the filesystem
 
 ### Stack metadata
 Metadata:

@@ -1,5 +1,5 @@
 AWSTemplateFormatVersion: '2010-09-09'
-Description: Creates an FSxL filesystem of PERSISENT_2 type plus the Security Group needed for use with ParallelCluster
+Description: Creates a PERSISTENT_2 FSx for Lustre filesystem and a client security group for access to the filesystem
 
 ### Stack metadata
 Metadata:
