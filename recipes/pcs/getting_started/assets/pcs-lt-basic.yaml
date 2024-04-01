@@ -5,9 +5,8 @@ Parameters:
 
   LaunchTemplateName:
     Type: String
-  NodeGroupSubnetId:
-    Type: AWS::EC2::Subnet::Id
-    Description: Subnet
+    Default: "AWSPCS-basic-launch-template"
+    Description: Launch template name
   NodeGroupSecurityGroupIds:
     Type: List<AWS::EC2::SecurityGroup::Id>
     Description: Security group(s).
@@ -22,15 +21,16 @@ Resources:
     Properties:
       LaunchTemplateName: !Ref LaunchTemplateName
       LaunchTemplateData:
+        # Require IMDS v2
         MetadataOptions:
           HttpEndpoint: enabled
           HttpPutResponseHopLimit: 4
           HttpTokens: required
+        # Configure SSH keypair
         KeyName: !Ref KeyName
-        NetworkInterfaces:
-          - DeviceIndex: 0
-            SubnetId: !Ref NodeGroupSubnetId
-            Groups: !Ref NodeGroupSecurityGroupIds
+        # Configure node group instance security groups
+        SecurityGroupIds: !Ref NodeGroupSecurityGroupIds
+
 
 Outputs:
   LaunchTemplateId:
