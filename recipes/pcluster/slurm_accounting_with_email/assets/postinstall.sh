@@ -89,27 +89,44 @@ if [ ! -f $SLURM_CONF ]; then
     die "$SLURM_CONF does not exist"
 fi
 
+OS_NAME=$(grep -oP '(?<=^NAME=).+' /etc/os-release | tr -d '"')
 OS_ID=$(grep -oP '(?<=^ID=).+' /etc/os-release | tr -d '"')
 OS_VERSION=$(grep -oP '(?<=^VERSION_ID=).+' /etc/os-release | tr -d '"')
 OS_ID_LIKE=$(grep -oP '(?<=^ID_LIKE=).+' /etc/os-release | tr -d '"')
 
-if [[ $OS_ID_LIKE != *"rhel"* ]]; then  
+if [[ $OS_ID_LIKE != *"rhel"* ]] && [[ $OS_NAME != "Ubuntu" ]]; then  
     die "Unsupported OS"
 fi
 
-echo "RHEL based OS"
-OS_RELEASE=$(rpm -qf --qf "%{RELEASE}" /etc/os-release | awk '{n=split($1,A,"."); print A[n]}')
+if [[ $OS_ID_LIKE == *"rhel"* ]]; then
+  echo "RHEL based OS"
+  OS_RELEASE=$(rpm -qf --qf "%{RELEASE}" /etc/os-release | awk '{n=split($1,A,"."); print A[n]}')
 
-echo $OS_RELEASE
+  echo $OS_RELEASE
 
-echo "Installing required packages"
-yum install -y wget which
+  echo "Installing required packages"
+  yum install -y wget
 
-echo "Downloading Slurm-Mail repo file"
-wget -O /etc/yum.repos.d/slurm-mail.repo "https://neilmunday.github.io/slurm-mail/repo/slurm-mail.${OS_RELEASE}.repo"
+  echo "Downloading Slurm-Mail repo file"
+  wget -O /etc/yum.repos.d/slurm-mail.repo "https://neilmunday.github.io/slurm-mail/repo/slurm-mail.${OS_RELEASE}.repo"
 
-echo "Installing Slurm-Mail"
-yum install -y slurm-mail
+  echo "Installing Slurm-Mail"
+  yum install -y slurm-mail
+elif [[ $OS_NAME == "Ubuntu" ]]; then
+  echo "Ubuntu OS"
+  echo "Updating OS"
+  apt-get update -y
+  echo "Installing required packages"
+  apt-get install -y wget
+
+  UBUNTU_MAJOR_VERSION=$(echo $OS_VERSION | awk -F '.' '{print $1}')
+  
+  if ! grep -q "https://neilmunday.github.io/slurm-mail/repo/ub${UBUNTU_MAJOR_VERSION}" /etc/apt/sources.list; then
+    echo "deb [trusted=yes] https://neilmunday.github.io/slurm-mail/repo/ub${UBUNTU_MAJOR_VERSION} ./" >> /etc/apt/sources.list
+  fi
+
+  apt-get install -y slurm-mail
+fi
 
 SLURM_MAIL_CONF="/etc/slurm-mail/slurm-mail.conf"
 
