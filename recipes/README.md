@@ -78,6 +78,11 @@ You can use an HPC Recipe for AWS in several ways:
 * **About**: Demonstrates the new Login Nodes feature in ParallelCluster 3.7.2
 * **Usage**: [README.md](pcluster/login_nodes/README.md)
 
+#### login_nodes_ami_for_res ![tag](https://img.shields.io/badge/-pcluster-%23AAB7B8) ![tag](https://img.shields.io/badge/-res-%237DCEA0) ![tag](https://img.shields.io/badge/-ssm-%23AAB7B8) 
+
+* **About**: Create an AMI of a ParallelCluster LoginNode compatible with Research and Engineering Studio
+* **Usage**: [README.md](pcluster/login_nodes_ami_for_res/README.md)
+
 #### multi_az ![tag](https://img.shields.io/badge/-parallelcluster-%23FF9900) 
 
 * **About**: Create a cluster that can launch instances in multiple Availability Zones
