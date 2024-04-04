@@ -14,6 +14,7 @@ Metadata:
           - QueueName
           - ComputeInstanceMax
           - ScalingStrategy
+          - SharedStorageType
       - Label:
           default: Networking and Access
         Parameters:
@@ -38,7 +39,6 @@ Parameters:
   AvailabilityZone:
     Description: Availability zone where instances will be launched
     Type: AWS::EC2::AvailabilityZone::Name
-    Default: us-east-2a
 
   QueueName:
     Description: Name of the default Slurm queue
@@ -60,6 +60,14 @@ Parameters:
          - "greedy-all-or-nothing"
          - "best-effort"
 
+  SharedStorageType:
+    Type: String
+    Default: "Ebs"
+    Description: Choose whether to use EFS for the cluster shared filesystem
+    AllowedValues:
+         - "Ebs"
+         - "Efs"
+
   AllowedIps:
     Description: CIDR-formatted IP range for SSH connections to the cluster
     Type: String
@@ -78,6 +86,7 @@ Parameters:
       - ubuntu2004
       - ubuntu2204
       - rhel8
+      - rhel9
     Description: Cluster operating system
 
   Architecture:
@@ -92,7 +101,7 @@ Parameters:
 Mappings:
   ParallelCluster:
     Constants:
-      Version: 3.8.0
+      Version: 3.9.0
   Recipes:
     Constants:
       Version: main
@@ -133,7 +142,7 @@ Resources:
         PrivateCIDR: 10.0.16.0/20
         AvailabilityZone: !Ref AvailabilityZone
       TemplateURL: !Sub
-        - https://aws-hpc-recipes.s3.us-east-1.${AWS::URLSuffix}/${Version}/recipes/net/hpc_basic/assets/public-private.yaml
+        - https://aws-hpc-recipes.s3.us-east-1.amazonaws.com/${Version}/recipes/net/hpc_basic/assets/public-private.yaml
         - { Version: !FindInMap [Recipes, Constants, Version] }
       TimeoutInMinutes: 10
 
@@ -149,6 +158,7 @@ Resources:
           Os: !Ref OS
         HeadNode:
           InstanceType: !FindInMap [ InstanceTypeForArchitecture, HeadNode, !Ref Architecture ]
+          SharedStorageType: !Ref SharedStorageType
           Networking:
             SubnetId: !GetAtt [ PclusterVpc , Outputs.DefaultPublicSubnet ]
           Ssh:
