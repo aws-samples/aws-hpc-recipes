@@ -1,4 +1,4 @@
-Description: Research and Engineering Studio on AWS [version 2024.01.01] demo environment
+Description: Research and Engineering Studio on AWS demo environment
 
 Metadata:
   AWS::CloudFormation::Interface:
