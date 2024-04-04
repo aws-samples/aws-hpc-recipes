@@ -6,10 +6,21 @@ The format is based on [Keep a Changelog](http://keepachangelog.com/)
 ## [Unreleased]
 
 ### Added
+
+### Fixed
+
+### Changed
+
+## [1.3.0] - 2024-04-04
+
+### Added
 * New recipe: pcluster/login_node_for_res which provides a ParallelCluster LoginNode for Research and Engineering Studio
+* New recipe: pcluster/decoupled_storage which demonstrates the decoupled storage feature in PC 3.9
 
 ### Fixed
 * Updated Python runtime in hpc_large_scale to python3.9
+* In mountpoint_s3, point to proper location for mountpoint-s3 on Github
+* Template URLs referencing the HPC recipes bucket are no longer templated to region and partition
 
 ### Changed
 * In res_demo_env, you can now restrict inbound access using a CIDR or VPC Prefix List
@@ -18,11 +29,12 @@ The format is based on [Keep a Changelog](http://keepachangelog.com/)
 * In the res_demo_env external resources template, you can now configure whether the AD admin instances stop after launching
 * In res_demo_env, the AD admin instances automatically stop after launching to reduce costs
 * The public_certs recipe can now automatically renew LetsEncrypt TLS certificates
-* Bumped res_demo_env RES version to 2024.01.01
 * In public_certs, LetsEncrypt TLS certificates are now renewed every 60 days
 * In res_demo_env, it is now optional whether EFS storage and VPC are retained when deleting the stack
 * In demo_managed_ad, Windows AD management host now uses IMDS v2
 * In res_demo, the BI stack now exports ServiceAccountUserDN
+* In pcluster/latest, ParallelCluster version is bumped to 3.9.0 and supported operating systems are refreshed
+* In res_demo_env RES version now tracks the `latest` release
 
 ## [1.2.0] - 2024-01-30
 

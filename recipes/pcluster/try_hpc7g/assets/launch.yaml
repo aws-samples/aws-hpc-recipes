@@ -119,7 +119,7 @@ Resources:
         PrivateCIDR: 10.0.16.0/20
         AvailabilityZone: !Ref AvailabilityZone
       TemplateURL: !Sub
-        - https://aws-hpc-recipes.s3.us-east-1.${AWS::URLSuffix}/${Version}/recipes/net/hpc_basic/assets/public-private.yaml
+        - https://aws-hpc-recipes.s3.us-east-1.amazonaws.com/${Version}/recipes/net/hpc_basic/assets/public-private.yaml
         - { Version: !FindInMap [Recipes, Constants, Version] }
       TimeoutInMinutes: 10
 

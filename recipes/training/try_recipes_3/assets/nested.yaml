@@ -102,7 +102,7 @@ Resources:
         PrivateCIDR: 10.0.16.0/20
         AvailabilityZone: !Ref AvailabilityZoneName
       TemplateURL: !Sub
-        - https://aws-hpc-recipes.s3.us-east-1.${AWS::URLSuffix}/${Version}/recipes/net/hpc_basic/assets/public-private.yaml
+        - https://aws-hpc-recipes.s3.us-east-1.amazonaws.com/${Version}/recipes/net/hpc_basic/assets/public-private.yaml
         - { Version: !FindInMap [Recipes, Constants, Version] }
       TimeoutInMinutes: 10
 
@@ -113,7 +113,7 @@ Resources:
     UpdateReplacePolicy: Delete
     Properties:
       TemplateURL: !Sub
-        - https://aws-hpc-recipes.s3.us-east-1.${AWS::URLSuffix}/${Version}/recipes/storage/s3_demo/assets/main.yaml
+        - https://aws-hpc-recipes.s3.us-east-1.amazonaws.com/${Version}/recipes/storage/s3_demo/assets/main.yaml
         - { Version: !FindInMap [Recipes, Constants, Version] }
       TimeoutInMinutes: 10
 
@@ -130,7 +130,7 @@ Resources:
           - 's3://${BucketName}/'
           - BucketName: !GetAtt [ DemoBucket , Outputs.BucketName ]
       TemplateURL: !Sub
-        - https://aws-hpc-recipes.s3.us-east-1.${AWS::URLSuffix}/${Version}/recipes/storage/fsx_lustre/assets/persistent.yaml
+        - https://aws-hpc-recipes.s3.us-east-1.amazonaws.com/${Version}/recipes/storage/fsx_lustre/assets/persistent.yaml
         - { Version: !FindInMap [Recipes, Constants, Version] }
 
   PclusterClusterProvider:

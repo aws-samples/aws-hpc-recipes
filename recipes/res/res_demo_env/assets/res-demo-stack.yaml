@@ -132,7 +132,10 @@ Resources:
         SharedHomeFileSystemId: !GetAtt [ RESExternal, Outputs.SharedHomeFilesystemId ]
         InfrastructureHostAMI: ""
         EnableLdapIDMapping: "True"
-      TemplateURL: https://research-engineering-studio-us-east-1.s3.amazonaws.com/releases/2024.01.01/ResearchAndEngineeringStudio.template.json
+        IAMPermissionBoundary: ""
+        DisableADJoin: "False"
+        ServiceAccountUserDN: !GetAtt [ RESExternal, Outputs.ServiceAccountUserDN ]
+      TemplateURL: https://research-engineering-studio-us-east-1.s3.amazonaws.com/releases/latest/ResearchAndEngineeringStudio.template.json
 
   LoadBalancerLookupFunction:
     Type: AWS::Lambda::Function

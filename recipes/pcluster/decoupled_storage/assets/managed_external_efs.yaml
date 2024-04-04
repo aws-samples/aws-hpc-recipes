@@ -1,6 +1,6 @@
 AWSTemplateFormatVersion: '2010-09-09'
 Description: >
-  Demonstrates the new Login Nodes feature in ParallelCluster 3.7.2
+  Demonstrate decoupled shared storage using Amazon EFS filesystems.
 
 ### Stack metadata
 Metadata:
@@ -14,34 +14,31 @@ Metadata:
           - QueueName
           - ComputeInstanceMax
       - Label:
-          default: Login Nodes
-        Parameters:
-            - LoginNodeCount
-            - KeyName
-            - AllowedIps
-      - Label:
           default: Networking and Access
         Parameters:
-          - AvailabilityZone
+          - NetworkStackNameParameter
+          - KeyName
+          - AllowedIps
       - Label:
-          default: Miscellaneous
+          default: Amazon EFS
         Parameters:
-          - ClusterName
+          - EfsStackNameParameter
 
 Conditions:
   GovCloud: !Equals [!Ref AWS::Partition, 'aws-us-gov']
   China: !Equals [!Ref AWS::Partition, 'aws-cn']
 
 Parameters:
-  ClusterName:
-    Description: Name of cluster. This must be unqiue in the Region and different than the stack name.
-    Type: String
-    Default: mycluster
 
-  AvailabilityZone:
-    Description: Availability zone where instances will be launched
-    Type: AWS::EC2::AvailabilityZone::Name
-    Default: us-east-2a
+  NetworkStackNameParameter:
+    Description: Name of an HPC Recipes large-scale networking stack
+    Type: String
+    Default: hpc-networking
+
+  EfsStackNameParameter:
+    Description: Name of an HPC Recipes EFS filesystem stack
+    Type: String
+    Default: efs-simple
 
   QueueName:
     Description: Name of the default Slurm queue
@@ -55,9 +52,11 @@ Parameters:
     Default: 10
 
   AllowedIps:
-    Description: CIDR-formatted IP range for SSH connections to the cluster
+    Description: CIDR-formatted IP range for SSH connections to the cluster. We recommend you use a more restricitve setting, such as your own IP address. 
     Type: String
-    Default: 0.0.0.0/0
+    Default: '0.0.0.0/0'
+    AllowedPattern: ^(?:(?:25[0-5]|2[0-4][0-9]|[01]?[0-9][0-9]?).){3}(?:25[0-5]|2[0-4][0-9]|[01]?[0-9][0-9]?)(/([0-9]|[1-2][0-9]|3[0-2]))$
+    ConstraintDescription: 'Must be IPv4 CIDR notation: X.X.X.X/X' 
 
   KeyName:
     Description: Key pair for SSH login
@@ -72,27 +71,22 @@ Parameters:
       - ubuntu2004
       - ubuntu2204
       - rhel8
+      - rhel9
     Description: Cluster operating system
 
   Architecture:
     Type: String
-    Default: Graviton
+    Default: x86
     AllowedValues:
       - Graviton
       - GPU
       - x86
     Description: Choose a node architecture.
 
-  LoginNodeCount:
-    Type: Number
-    Description: Number of login nodes to launch
-    Default: 2
-    MinValue: 1
-
 Mappings:
   ParallelCluster:
     Constants:
-      Version: 3.7.2
+      Version: 3.9.0
   Recipes:
     Constants:
       Version: main
@@ -120,22 +114,7 @@ Resources:
       TemplateURL: !Sub
         - https://${AWS::Region}-aws-parallelcluster.s3.${AWS::Region}.${AWS::URLSuffix}/parallelcluster/${Version}/templates/custom_resource/cluster.yaml
         - { Version: !FindInMap [ParallelCluster, Constants, Version] }
-      TimeoutInMinutes: 10
-
-  PclusterVpc:
-    Type: AWS::CloudFormation::Stack
-    DeletionPolicy: Delete
-    UpdateReplacePolicy: Delete
-    Properties:
-      Parameters:
-        VpcCIDR: 10.0.0.0/16
-        PublicCIDR: 10.0.0.0/24
-        PrivateCIDR: 10.0.16.0/20
-        AvailabilityZone: !Ref AvailabilityZone
-      TemplateURL: !Sub
-        - https://aws-hpc-recipes.s3.us-east-1.amazonaws.com/${Version}/recipes/net/hpc_basic/assets/public-private.yaml
-        - { Version: !FindInMap [Recipes, Constants, Version] }
-      TimeoutInMinutes: 10
+      TimeoutInMinutes: 15
 
   PclusterCluster:
     Type: Custom::PclusterCluster
@@ -143,39 +122,23 @@ Resources:
     UpdateReplacePolicy: Delete
     Properties:
       ServiceToken: !GetAtt [ PclusterClusterProvider , Outputs.ServiceToken ]
-      ClusterName: !Ref ClusterName
+      ClusterName: !Sub 'c-${AWS::StackName}'
       ClusterConfiguration:
         Image:
           Os: !Ref OS
         HeadNode:
           InstanceType: !FindInMap [ InstanceTypeForArchitecture, HeadNode, !Ref Architecture ]
+          SharedStorageType: 'Efs'
           Networking:
-            SubnetId: !GetAtt [ PclusterVpc , Outputs.DefaultPrivateSubnet ]
+            SubnetId: {"Fn::Select": [0, { "Fn::Split" : [",", {"Fn::ImportValue" : {"Fn::Sub" : "${NetworkStackNameParameter}-PublicSubnets"}}] }]}
+            AdditionalSecurityGroups:
+              - {"Fn::ImportValue" : {"Fn::Sub" : "${EfsStackNameParameter}-SecurityGroupId"}}
           Ssh:
             KeyName: !Ref KeyName
             AllowedIps: !Ref AllowedIps
-          Dcv:
-            Enabled: false
-          LocalStorage:
-            RootVolume:
-              Size: 40
           Iam:
             AdditionalIamPolicies:
               - Policy: arn:aws:iam::aws:policy/AmazonSSMManagedInstanceCore
-        LoginNodes:
-          Pools:
-             - Name: external
-               Count: !Ref LoginNodeCount
-               InstanceType: !FindInMap [ InstanceTypeForArchitecture, LoginNodes, !Ref Architecture ]
-               GracetimePeriod: 5
-               Ssh:
-                KeyName: !Ref KeyName
-               Networking:
-                SubnetIds: 
-                  - !GetAtt [ PclusterVpc , Outputs.DefaultPublicSubnet ]
-               Iam:
-                 AdditionalIamPolicies:
-                  - Policy: arn:aws:iam::aws:policy/AmazonSSMManagedInstanceCore
         Scheduling:
           Scheduler: slurm
           SlurmSettings:
@@ -184,32 +147,23 @@ Resources:
           - Name: !Ref QueueName
             ComputeResources:
             - Name: nodes
-              InstanceType: !FindInMap [ InstanceTypeForArchitecture, ComputeNodes, !Ref Architecture ]
+              Instances:
+                - InstanceType: !FindInMap [ InstanceTypeForArchitecture, ComputeNodes, !Ref Architecture ]
               MinCount: 0
               MaxCount: !Ref ComputeInstanceMax
-              DisableSimultaneousMultithreading: true
             Networking:
               SubnetIds:
-                - !GetAtt [ PclusterVpc , Outputs.DefaultPrivateSubnet ]
-              PlacementGroup:
-                Enabled: true
-            ComputeSettings:
-              LocalStorage:
-                RootVolume:
-                  Size: 40
+               - {"Fn::Select": [0, { "Fn::Split" : [",", {"Fn::ImportValue" : {"Fn::Sub" : "${NetworkStackNameParameter}-PrivateSubnets"}}] }]}
+              AdditionalSecurityGroups:
+                - {"Fn::ImportValue" : {"Fn::Sub" : "${EfsStackNameParameter}-SecurityGroupId"}}
         SharedStorage:
-        - StorageType: Efs
-          Name: shared
-          MountDir: /shared
-          EfsSettings:
-            DeletionPolicy: Delete
+          - Name: Efs0
+            StorageType: Efs
+            MountDir: /home
+            EfsSettings:
+              FileSystemId: {"Fn::ImportValue" : {"Fn::Sub" : "${EfsStackNameParameter}-EFSFilesystemId"}}
 
 Outputs:
-  LoginNodesAddress:
-    Description: DNS address for login node SSH access
-    Value: !GetAtt [ PclusterCluster, loginNodes.address ]
-    Export:
-      Name: !Sub ${AWS::StackName}-LoginNodesAddress
   SystemManagerUrl:
     Description: URL to access the HeadNode via SystemManager
     Value: !Sub
@@ -222,3 +176,4 @@ Outputs:
   ValidationMessages:
     Description: Warnings from cluster create or update operations.
     Value: !GetAtt PclusterCluster.validationMessages
+
