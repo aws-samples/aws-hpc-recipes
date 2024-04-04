@@ -1,0 +1,40 @@
+[domain/default]
+
+cache_credentials = True
+default_shell = /bin/bash
+fallback_homedir = /home/%u
+debug_level = 2 
+id_provider = ldap
+
+; not necessary 
+enumerate=true 
+auth_provider=ldap 
+ldap_uri = ldaps://ldap.jumpcloud.com:636 
+ldap_search_base = o=650d919a40d0505b431c4874,dc=jumpcloud,dc=com 
+ldap_default_bind_dn = ${BIND_DN}
+ldap_default_authtok = ${BIND_PASSWORD}
+; ldap_user_ssh_public_key = sshKey 
+; not necessary
+; ldap_use_tokengroups = False
+; Not needed - Jumpcloud cert is a GoDaddy cert and can be resolved automatically
+; ldap_tls_cacert = /etc/ssl/certs/ca-bundle.crt
+sudo_provider = none
+; not necessary
+; ldap_access_filter = memberOf=cn=All Users,ou=Users,o=650d919a40d0505b431c4874,dc=jumpcloud,dc=com
+
+[domain/local]
+id_provider = files
+enumerate = True
+
+[sssd] 
+config_file_version = 2
+services = nss, pam, ssh
+domains = default, local
+full_name_format = %1$s
+
+[nss]
+filter_users = nobody,root
+filter_groups = nobody,root
+
+[pam] 
+offline_credentials_expiration = 7
