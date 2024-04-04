@@ -103,6 +103,11 @@ You can use an HPC Recipe for AWS in several ways:
 * **About**: Create an instance of AWS ParallelCluster with Slurm accounting enabled, using Amazon RDS as the DBMS.
 * **Usage**: [README.md](pcluster/slurm_accounting/README.md)
 
+#### slurm_accounting_with_email ![tag](https://img.shields.io/badge/-core-%23146EB4) ![tag](https://img.shields.io/badge/-email-%23AAB7B8) ![tag](https://img.shields.io/badge/-parallelcluster-%23FF9900) ![tag](https://img.shields.io/badge/-rds-%237DCEA0) ![tag](https://img.shields.io/badge/-sms-%23AAB7B8) 
+
+* **About**: Create an instance of AWS ParallelCluster with Slurm accounting enabled and e-mail notifications using Slurm-Mail, using Amazon RDS as the DBMS.
+* **Usage**: [README.md](pcluster/slurm_accounting_with_email/README.md)
+
 #### stig ![tag](https://img.shields.io/badge/-ec2imagebuilder-%23AAB7B8) ![tag](https://img.shields.io/badge/-parallelcluster-%23FF9900) ![tag](https://img.shields.io/badge/-systemsmanager-%23AAB7B8) 
 
 * **About**: Includes files to accelerate STIG compliance for Parallelcluster images as well as scripts to verify OSCAP results

@@ -6,6 +6,7 @@ The format is based on [Keep a Changelog](http://keepachangelog.com/)
 ## [Unreleased]
 
 ### Added
+* New recipe slurm_accounting_with_email with the Slurm-Mail plugin
 
 ### Fixed
 
