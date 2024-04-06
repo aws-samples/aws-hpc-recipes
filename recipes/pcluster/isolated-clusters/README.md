@@ -229,15 +229,15 @@
 
 ![](images/cluster-admin-head-node.PNG)
 
-- Users can connect to the login nodes with a user that is authenticated to Active Directory. First, connect to the ParallelClusterAdminNode using SSH or Systems Manager. From the CLI of the ParallelClusterAdminNode, type ‘ssh user000@NETWORK_LOAD_BALANCER_PRIVATE_DNS’. Note that users will be connecting to the Login Nodes and NOT the Head Node which is the case for Administrators. To find the load balancer DNS name, navigate to EC2->Load Balancers. One load balancer is being used for AWS Managed AD, and the other is the one we are using for the login nodes. The easiest way to tell which load balancer is needed here is to look for under the Availability Zone column. The entry that contain a singular entry is the one one that is needed. Once highlighted, scroll down and look for DNS name on the bottom left. See the below picture for an example.
+- Users can connect to the login nodes with a user that is authenticated to Active Directory. First, connect to the ParallelClusterAdminNode using SSH or Systems Manager. From the CLI of the ParallelClusterAdminNode, type ‘ssh user000@NETWORK_LOAD_BALANCER_PRIVATE_DNS’. Note that general users will be connecting to the Login Nodes and NOT the Head Node. To find the load balancer DNS name, navigate to EC2->Load Balancers. One load balancer is being used for AWS Managed AD, and the other is the one we are using for the login nodes. The easiest way to tell which load balancer is needed here is to look under the Availability Zone column. The column that contain a singular entry is the one we need here. Once highlighted, scroll down and look for DNS name on the bottom right. See the below picture for an example.
 
 ![](images/load-balancer-dns-name.PNG)  
     
-    You can use this DNS name to authenticate into the Login Nodes. 
+- You can use this DNS name to authenticate into the Login Nodes. 
 
 ![](images/user000-login-node.PNG) 
     
-- Keep in mind that you can optionally configure a private connection from on premise locations into AWS (such as Site to Site VPN or Direct Connect Private Vif) so that users can directly access the Login Nodes. This would make the jump box to the ParallelClusterAdminNode unnecesary. Another option is to restrict Systems Manager access for users to only allow them to connect to the Login Nodes. See this [here](https://repost.aws/knowledge-center/ssm-session-manager-control-access) for more details.  
+- Keep in mind that you can optionally configure a private connection from on premise locations into AWS (such as Site to Site VPN or Direct Connect Private Vif) so that users can directly access nodes using SSH without a jumpbox or needing public Internet access. It is possible to also restrict Systems Manager access for users to only allow them to connect to the Login Nodes. See this [link](https://repost.aws/knowledge-center/ssm-session-manager-control-access) for more details. 
 
 19.	You can also launch new clusters from the CLI of the ParrallelClusterAdminNode
    
