@@ -33,6 +33,19 @@ Parameters:
     MaxLength: 64
     AllowedPattern: (?=^.{8,64}$)((?=.*\d)(?=.*[A-Z])(?=.*[a-z])|(?=.*\d)(?=.*[^A-Za-z0-9\s])(?=.*[a-z])|(?=.*[^A-Za-z0-9\s])(?=.*[A-Z])(?=.*[a-z])|(?=.*\d)(?=.*[A-Z])(?=.*[^A-Za-z0-9\s]))^.*
     NoEcho: true
+  ClusterAdminName:
+    Description: Cluster admin that is created in the Active Directory.
+    Type: String
+    Default: cluster-admin
+    MinLength: 3
+    MaxLength: 64
+  ClusterAdminPassword:
+    Description: Cluster admin Password.
+    Type: String
+    MinLength: 8
+    MaxLength: 64
+    AllowedPattern: (?=^.{8,64}$)((?=.*\d)(?=.*[A-Z])(?=.*[a-z])|(?=.*\d)(?=.*[^A-Za-z0-9\s])(?=.*[a-z])|(?=.*[^A-Za-z0-9\s])(?=.*[A-Z])(?=.*[a-z])|(?=.*\d)(?=.*[A-Z])(?=.*[^A-Za-z0-9\s]))^.*
+    NoEcho: true
 
   EC2InstancesAmiId:
     Description: AMI for the AdDomainAdminNode
@@ -41,6 +54,16 @@ Parameters:
   Keypair:
     Description: EC2 Keypair to access AdDomainAdminNode
     Type: AWS::EC2::KeyPair::KeyName
+
+  AllowedIPAddressAndCIDRforAdmins:
+    Description: Enter the allowed IP address and CIDR block for Administrators
+    Type: String
+    Default: 0.0.0.0/0
+
+  AllowedIPAddressAndCIDRforUsers:
+    Description: Enter the allowed IP address and CIDR block for Users
+    Type: String
+    Default: 0.0.0.0/0
 
 Transform: AWS::Serverless-2016-10-31
 
@@ -102,7 +125,11 @@ Resources:
           FromPort: -1
           IpProtocol: "-1"
           ToPort: -1
-      SecurityGroupIngress: []
+      SecurityGroupIngress:
+        - IpProtocol: tcp
+          FromPort: 22
+          ToPort: 22
+          CidrIp: !Ref AllowedIPAddressAndCIDRforAdmins
       VpcId: !Ref PclusterVpc
       
   HeadNodeSecurityGroup:
@@ -117,6 +144,12 @@ Resources:
       GroupDescription: 'Compute node security group'
       VpcId: !Ref PclusterVpc
 
+  LoginNodeSecurityGroup:
+    Type: 'AWS::EC2::SecurityGroup'
+    Properties:
+      GroupDescription: 'Login node security group'
+      VpcId: !Ref PclusterVpc 
+  
   ComputeToHeadIngress:
     Type: 'AWS::EC2::SecurityGroupIngress'
     Properties:
@@ -139,6 +172,79 @@ Resources:
       GroupId: !Ref ComputeNodeSecurityGroup
       SourceSecurityGroupId: !Ref HeadNodeSecurityGroup
       Description: 'Allow inbound traffic from head node to compute nodes'
+      IpProtocol: '-1'
+
+  ComputetoLoginIngress:
+    Type: 'AWS::EC2::SecurityGroupIngress'
+    Properties:
+      GroupId: !Ref LoginNodeSecurityGroup
+      SourceSecurityGroupId: !Ref ComputeNodeSecurityGroup
+      Description: 'Allow inbound traffic from login node to compute nodes'
+      IpProtocol: '-1' 
+  
+  LoginToLoginIngress:
+    Type: 'AWS::EC2::SecurityGroupIngress'
+    Properties:
+      GroupId: !Ref LoginNodeSecurityGroup
+      SourceSecurityGroupId: !Ref LoginNodeSecurityGroup
+      Description: 'Allow inbound traffic from compute nodes to compute nodes'
+      IpProtocol: '-1'
+
+  LoginToComputeIngress:
+    Type: 'AWS::EC2::SecurityGroupIngress'
+    Properties:
+      GroupId: !Ref ComputeNodeSecurityGroup
+      SourceSecurityGroupId: !Ref LoginNodeSecurityGroup
+      Description: 'Allow inbound traffic from login nodes to compute nodes'
+      IpProtocol: '-1'
+
+  LoginToHeadIngress:
+    Type: 'AWS::EC2::SecurityGroupIngress'
+    Properties:
+      GroupId: !Ref HeadNodeSecurityGroup
+      SourceSecurityGroupId: !Ref LoginNodeSecurityGroup
+      Description: 'Allow inbound traffic from login nodes to head node'
+      IpProtocol: '-1'
+
+  HeadToLoginIngress:
+    Type: 'AWS::EC2::SecurityGroupIngress'
+    Properties:
+      GroupId: !Ref LoginNodeSecurityGroup
+      SourceSecurityGroupId: !Ref HeadNodeSecurityGroup
+      Description: 'Allow inbound traffic from head node to login nodes'
+      IpProtocol: '-1'
+
+  LoginEgress:
+    Type: 'AWS::EC2::SecurityGroupEgress'
+    Properties:
+      GroupId: !Ref LoginNodeSecurityGroup
+      CidrIp: 0.0.0.0/0
+      Description: 'Allow all outbound traffic from login nodes'
+      IpProtocol: '-1'  
+
+  SSHtoLogin:
+    Type: 'AWS::EC2::SecurityGroupIngress'
+    Properties:
+      GroupId: !Ref LoginNodeSecurityGroup
+      IpProtocol: tcp
+      FromPort: 22
+      ToPort: 22
+      CidrIp: !Ref AllowedIPAddressAndCIDRforUsers
+ 
+  LoginToLoginIngress:
+    Type: 'AWS::EC2::SecurityGroupIngress'
+    Properties:
+      GroupId: !Ref LoginNodeSecurityGroup
+      SourceSecurityGroupId: !Ref LoginNodeSecurityGroup
+      Description: 'Allow inbound traffic from compute nodes to compute nodes'
+      IpProtocol: '-1'
+
+  HeadToLoginIngress:
+    Type: 'AWS::EC2::SecurityGroupIngress'
+    Properties:
+      GroupId: !Ref LoginNodeSecurityGroup
+      SourceSecurityGroupId: !Ref HeadNodeSecurityGroup
+      Description: 'Allow inbound traffic from head node to login nodes'
       IpProtocol: '-1'
 
   HeadToAdminIngress:
@@ -201,6 +307,20 @@ Resources:
         - !Ref IsolatedHPCSubnetTwo
       PrivateDnsEnabled: true
         
+  DirectoryServiceEndpoint:
+    Type: 'AWS::EC2::VPCEndpoint'
+    Condition: CreateVPC
+    DependsOn: NetworkLoadBalancer
+    Properties:
+      VpcId: !Ref PclusterVpc
+      ServiceName: !Sub 'com.amazonaws.${AWS::Region}.ds'
+      VpcEndpointType: 'Interface'
+      SecurityGroupIds: 
+        - !GetAtt VpcEndpointSecurityGroup.GroupId      
+      SubnetIds:
+        - !Ref IsolatedHPCSubnetTwo
+      PrivateDnsEnabled: true
+
   CloudFormationEndpoint:
     Type: 'AWS::EC2::VPCEndpoint'
     Condition: CreateVPC
@@ -305,6 +425,20 @@ Resources:
         - !Ref IsolatedHPCSubnetTwo
       PrivateDnsEnabled: true
         
+  KMSEndpoint:
+    Type: 'AWS::EC2::VPCEndpoint'
+    Condition: CreateVPC
+    DependsOn: NetworkLoadBalancer
+    Properties:
+      VpcId: !Ref PclusterVpc
+      ServiceName: !Sub 'com.amazonaws.${AWS::Region}.kms'
+      VpcEndpointType: 'Interface'
+      SecurityGroupIds: 
+        - !GetAtt VpcEndpointSecurityGroup.GroupId      
+      SubnetIds:
+        - !Ref IsolatedHPCSubnetTwo
+      PrivateDnsEnabled: true
+        
   AutoscalingEndpoint:
     Type: 'AWS::EC2::VPCEndpoint'
     Condition: CreateVPC
@@ -332,6 +466,48 @@ Resources:
       SubnetIds:
         - !Ref IsolatedHPCSubnetTwo
       PrivateDnsEnabled: true    
+        
+  FSxEndpoint:
+    Type: 'AWS::EC2::VPCEndpoint'
+    Condition: CreateVPC
+    DependsOn: NetworkLoadBalancer
+    Properties:
+      VpcId: !Ref PclusterVpc
+      ServiceName: !Sub 'com.amazonaws.${AWS::Region}.fsx'
+      VpcEndpointType: 'Interface'
+      SecurityGroupIds: 
+        - !GetAtt VpcEndpointSecurityGroup.GroupId      
+      SubnetIds:
+        - !Ref IsolatedHPCSubnetTwo
+      PrivateDnsEnabled: true      
+        
+  EBSEndpoint:
+    Type: 'AWS::EC2::VPCEndpoint'
+    Condition: CreateVPC
+    DependsOn: NetworkLoadBalancer
+    Properties:
+      VpcId: !Ref PclusterVpc
+      ServiceName: !Sub 'com.amazonaws.${AWS::Region}.ebs'
+      VpcEndpointType: 'Interface'
+      SecurityGroupIds: 
+        - !GetAtt VpcEndpointSecurityGroup.GroupId      
+      SubnetIds:
+        - !Ref IsolatedHPCSubnetTwo
+      PrivateDnsEnabled: true
+        
+  ImageBuilderEndpoint:
+    Type: 'AWS::EC2::VPCEndpoint'
+    Condition: CreateVPC
+    DependsOn: NetworkLoadBalancer
+    Properties:
+      VpcId: !Ref PclusterVpc
+      ServiceName: !Sub 'com.amazonaws.${AWS::Region}.imagebuilder'
+      VpcEndpointType: 'Interface'
+      SecurityGroupIds: 
+        - !GetAtt VpcEndpointSecurityGroup.GroupId      
+      SubnetIds:
+        - !Ref IsolatedHPCSubnetTwo
+      PrivateDnsEnabled: true
   
   EC2MessagesEndpoint:
     Type: 'AWS::EC2::VPCEndpoint'
@@ -561,10 +737,11 @@ Resources:
                 Action: 
                     - 's3:*'
                 Resource: 
-                    - !Sub 'arn:${AWS::Partition}:s3:::your-s3-bucket'
+                    - !Sub 'arn:${AWS::Partition}:s3:::your-s3-bucket*'
                     - !Sub 'arn:${AWS::Partition}:s3:::your-s3-bucket/*'
                     - !Sub 'arn:${AWS::Partition}:s3:::parallelcluster-*'
                     - !Sub 'arn:${AWS::Partition}:s3:::aws-parallelcluster-*'
+                    - !Sub 'arn:${AWS::Partition}:s3:::parallelcluster-*/*' 
               - Sid: 'S3ParallelClusterReadOnly'
                 Effect: Allow
                 Action: 
@@ -745,16 +922,6 @@ Resources:
                     - 'sns:Unsubscribe'
                 Resource: 
                     - !Sub 'arn:${AWS::Partition}:sns:*:${AWS::AccountId}:ParallelClusterImage-*'
-              - Sid: 'S3Objects'
-                Effect: Allow
-                Action: 
-                    - 's3:PutObject'
-                    - 's3:GetObject'
-                    - 's3:GetObjectVersion'
-                    - 's3:DeleteObject'
-                    - 's3:DeleteObjectVersion'
-                Resource: 
-                    - !Sub 'arn:${AWS::Partition}:s3:::parallelcluster-*/*'
               - Sid: 'CreateServiceLinkedRole'
                 Effect: Allow
                 Action: 
@@ -810,6 +977,8 @@ Resources:
                       - !Sub '${DomainCertificateSecretReadPolicy}'
       ManagedPolicyArns:
         - !Sub 'arn:${AWS::Partition}:iam::aws:policy/AmazonSSMManagedInstanceCore'
+        - !Sub 'arn:${AWS::Partition}:iam::aws:policy/ElasticLoadBalancingFullAccess'
+        - !Sub 'arn:${AWS::Partition}:iam::aws:policy/AutoScalingFullAccess'
   
   AdDomainProfile:
     Type: AWS::IAM::InstanceProfile
@@ -983,12 +1152,20 @@ Resources:
               ADMIN_PW="${AdminPassword}"
               echo "$ADMIN_PW" | sudo realm join -U Admin "${DirectoryDomain}"
               sleep 10
+              echo "Creating Admin Group..."
+              echo "$ADMIN_PW" | adcli create-group "cluster-admins" -x -U Admin --domain="${DirectoryDomain}" 
               echo "Registering ReadOnlyUser..."
               echo "$ADMIN_PW" | adcli create-user -x -U Admin --domain="${DirectoryDomain}" --display-name=ReadOnlyUser ReadOnlyUser
               sleep 0.5
               echo "Registering User..."
               echo "$ADMIN_PW" | adcli create-user -x -U Admin --domain="${DirectoryDomain}" --display-name="${UserName}" "${UserName}"
-
+              echo "Registering Cluster Admin..."
+              echo "$ADMIN_PW" | adcli create-user -x -U Admin --domain="${DirectoryDomain}" --display-name="${ClusterAdminName}" "${ClusterAdminName}"
+              echo "Setting Cluster Admin Password..."
+              echo "$ADMIN_PW" | aws --region "${AWS::Region}" ds reset-user-password --directory-id "${Directory}" --user-name "${ClusterAdminName}" --new-password "${ClusterAdminPassword}"
+              echo "Adding Admin to Admin Group..."
+              echo "$ADMIN_PW" | adcli add-member "cluster-admins" -x -U Admin "${ClusterAdminName}" --domain "${DirectoryDomain}" 
+              
               echo "Creating domain certificate..."
               PRIVATE_KEY="${DirectoryDomain}.key"
               CERTIFICATE="${DirectoryDomain}.crt"
@@ -1048,16 +1225,26 @@ Resources:
                 Iam:
                   AdditionalIamPolicies:
                     - Policy: ${DomainCertificateSecretReadPolicy}
+                    - Policy: arn:${AWS::Partition}:iam::aws:policy/AmazonSSMManagedInstanceCore
                   S3Access:
                     - BucketName: your-s3-bucket
                       EnableWriteAccess: false
                       KeyName: active-directory.head.post.sh
+                    - BucketName: your-s3-bucket
+                      EnableWriteAccess: false
+                      KeyName: restrict-access.sh
+                    - BucketName: your-s3-bucket
+                      EnableWriteAccess: false
+                      KeyName: pam.sh                        
                 CustomActions:
                   OnNodeConfigured:
-                    Script: s3://your-s3-bucket/active-directory.head.post.sh
-                    Args:
-                      - ${DomainCertificateSecret}
-                      - /opt/parallelcluster/shared/directory_service/domain-certificate.crt
+                    Sequence:
+                      - Script: s3://your-s3-bucket/active-directory.head.post.sh
+                        Args:
+                          - ${DomainCertificateSecret}
+                          - /opt/parallelcluster/shared/directory_service/domain-certificate.crt
+                      - Script: s3://your-s3-bucket/restrict-access.sh
+                      - Script: s3://your-s3-bucket/pam.sh                      
               SharedStorage:
                 - MountDir: /ebs
                   Name: EBSExtData
@@ -1065,6 +1252,21 @@ Resources:
                   EbsSettings:
                     VolumeType: io1
                     DeletionPolicy: Delete
+              LoginNodes:
+                Pools:
+                  - Name: user-pool
+                    Count: 2
+                    InstanceType: t2.micro
+                    Ssh:
+                      KeyName: ${Keypair}
+                    Networking:
+                      SubnetIds:
+                        - ${IsolatedHPCSubnetTwo}
+                      SecurityGroups:
+                        - ${LoginNodeSecurityGroup}
+                    Iam: 
+                      AdditionalIamPolicies: 
+                        - Policy: arn:${AWS::Partition}:iam::aws:policy/AmazonSSMManagedInstanceCore              
               Scheduling:
                 Scheduler: slurm
                 SlurmSettings:
@@ -1085,6 +1287,9 @@ Resources:
                     - ${IsolatedHPCSubnetTwo}
                     SecurityGroups: 
                     - ${ComputeNodeSecurityGroup}
+                  Iam:
+                    AdditionalIamPolicies:
+                      - Policy: arn:${AWS::Partition}:iam::aws:policy/AmazonSSMManagedInstanceCore
               DirectoryService:
                 DomainName: ${DomainName} 
                 DomainAddr: ldaps://${DomainName}
@@ -1110,12 +1315,47 @@ Resources:
               cd /usr/bin/pcluster
               chmod +x active-directory.head.post.sh
               cat << EOF | sudo tee -a /etc/profile.d/pcluster.sh
-              export PATH=/usr/bin/pcluster/pcluster-installer-bundle:/usr/bin/pcluster/pcluster-installer-bundle/node-v18.17.1-linux-x64/bin:/bin:PATH
+              export PATH=/usr/bin/pcluster/pcluster-installer-bundle:/usr/bin/pcluster/pcluster-installer-bundle/node-v*/bin:/bin:PATH
               export AWS_DEFAULT_REGION=${AWS::Region}
               EOF
               aws s3 cp active-directory.head.post.sh s3://your-s3-bucket/active-directory.head.post.sh --region us-gov-west-1
               aws s3 cp s3://your-s3-bucket /usr/bin/pcluster --recursive --exclude "*" --include "*.zip"
               sudo unzip *.zip -d pcluster-installer-bundle
+              cat << 'EOF' > restrict-access.sh
+              #!/bin/bash
+              cat <<EOF > /etc/security/access.conf
+              + : root : ALL
+              + : ec2-user : ALL
+              + : ssm-user : ALL
+              + : (cluster-admins) : ALL
+              - : ALL : ALL
+              EOF
+              cat << 'EOF' > pam.sh
+              #!/bin/bash
+              cat <<EOF > /etc/pam.d/sshd
+              #%PAM-1.0
+              auth       substack     password-auth
+              auth       include      postlogin
+              account    required     pam_sepermit.so
+              account    required     pam_nologin.so
+              account    include      password-auth
+              account    required     pam_access.so
+              password   include      password-auth
+              # pam_selinux.so close should be the first session rule
+              session    required     pam_selinux.so close
+              session    required     pam_loginuid.so
+              # pam_selinux.so open should only be followed by sessions to be executed in the user context
+              session    required     pam_selinux.so open env_params
+              session    required     pam_namespace.so
+              session    optional     pam_keyinit.so force revoke
+              session    optional     pam_motd.so
+              session    include      password-auth
+              session    include      postlogin
+              EOF
+              chmod +x restrict-access.sh
+              chmod +x pam.sh
+              aws s3 cp restrict-access.sh s3://your-s3-bucket
+              aws s3 cp pam.sh s3://your-s3-bucket
               cd pcluster-installer-bundle
               sudo chmod +x install_pcluster.sh
               sudo bash install_pcluster.sh
@@ -1577,4 +1817,4 @@ Outputs:
   DomainAddrLdaps:
     Value: !Sub ldaps://${DomainName}
   DomainCertificateSecretReadPolicy:
-    Value: !Ref DomainCertificateSecretReadPolicy    
+    Value: !Ref DomainCertificateSecretReadPolicy   

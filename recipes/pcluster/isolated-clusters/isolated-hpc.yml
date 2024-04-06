@@ -10,6 +10,16 @@ Parameters:
     Description: EC2 Keypair to access ParallelClusterAdminNode
     Type: AWS::EC2::KeyPair::KeyName
 
+  AllowedIPAddressAndCIDRforAdmins:
+    Description: Enter the allowed IP address and CIDR block for Administrators
+    Type: String
+    Default: 0.0.0.0/0
+
+  AllowedIPAddressAndCIDRforUsers:
+    Description: Enter the allowed IP address and CIDR block for Users
+    Type: String
+    Default: 0.0.0.0/0
+
 Resources:
   PclusterVpc:
     Type: 'AWS::EC2::VPC'
@@ -42,7 +52,11 @@ Resources:
           FromPort: -1
           IpProtocol: "-1"
           ToPort: -1
-      SecurityGroupIngress: []
+      SecurityGroupIngress:
+        - IpProtocol: tcp
+          FromPort: 22
+          ToPort: 22
+          CidrIp: !Ref AllowedIPAddressAndCIDRforAdmins
       VpcId: !Ref PclusterVpc
       
   HeadNodeSecurityGroup:
@@ -57,6 +71,12 @@ Resources:
       GroupDescription: 'Compute node security group'
       VpcId: !Ref PclusterVpc
 
+  LoginNodeSecurityGroup:
+    Type: 'AWS::EC2::SecurityGroup'
+    Properties:
+      GroupDescription: 'Login node security group'
+      VpcId: !Ref PclusterVpc 
+  
   ComputeToHeadIngress:
     Type: 'AWS::EC2::SecurityGroupIngress'
     Properties:
@@ -81,6 +101,79 @@ Resources:
       Description: 'Allow inbound traffic from head node to compute nodes'
       IpProtocol: '-1'
 
+  ComputetoLoginIngress:
+    Type: 'AWS::EC2::SecurityGroupIngress'
+    Properties:
+      GroupId: !Ref LoginNodeSecurityGroup
+      SourceSecurityGroupId: !Ref ComputeNodeSecurityGroup
+      Description: 'Allow inbound traffic from login node to compute nodes'
+      IpProtocol: '-1' 
+  
+  LoginToLoginIngress:
+    Type: 'AWS::EC2::SecurityGroupIngress'
+    Properties:
+      GroupId: !Ref LoginNodeSecurityGroup
+      SourceSecurityGroupId: !Ref LoginNodeSecurityGroup
+      Description: 'Allow inbound traffic from compute nodes to compute nodes'
+      IpProtocol: '-1'
+
+  LoginToComputeIngress:
+    Type: 'AWS::EC2::SecurityGroupIngress'
+    Properties:
+      GroupId: !Ref ComputeNodeSecurityGroup
+      SourceSecurityGroupId: !Ref LoginNodeSecurityGroup
+      Description: 'Allow inbound traffic from login nodes to compute nodes'
+      IpProtocol: '-1'
+
+  LoginToHeadIngress:
+    Type: 'AWS::EC2::SecurityGroupIngress'
+    Properties:
+      GroupId: !Ref HeadNodeSecurityGroup
+      SourceSecurityGroupId: !Ref LoginNodeSecurityGroup
+      Description: 'Allow inbound traffic from login nodes to head node'
+      IpProtocol: '-1'
+
+  HeadToLoginIngress:
+    Type: 'AWS::EC2::SecurityGroupIngress'
+    Properties:
+      GroupId: !Ref LoginNodeSecurityGroup
+      SourceSecurityGroupId: !Ref HeadNodeSecurityGroup
+      Description: 'Allow inbound traffic from head node to login nodes'
+      IpProtocol: '-1'
+
+  LoginEgress:
+    Type: 'AWS::EC2::SecurityGroupEgress'
+    Properties:
+      GroupId: !Ref LoginNodeSecurityGroup
+      CidrIp: 0.0.0.0/0
+      Description: 'Allow all outbound traffic from login nodes'
+      IpProtocol: '-1'  
+
+  SSHtoLogin:
+    Type: 'AWS::EC2::SecurityGroupIngress'
+    Properties:
+      GroupId: !Ref LoginNodeSecurityGroup
+      IpProtocol: tcp
+      FromPort: 22
+      ToPort: 22
+      CidrIp: !Ref AllowedIPAddressAndCIDRforUsers
+ 
+  LoginToLoginIngress:
+    Type: 'AWS::EC2::SecurityGroupIngress'
+    Properties:
+      GroupId: !Ref LoginNodeSecurityGroup
+      SourceSecurityGroupId: !Ref LoginNodeSecurityGroup
+      Description: 'Allow inbound traffic from compute nodes to compute nodes'
+      IpProtocol: '-1'
+
+  HeadToLoginIngress:
+    Type: 'AWS::EC2::SecurityGroupIngress'
+    Properties:
+      GroupId: !Ref LoginNodeSecurityGroup
+      SourceSecurityGroupId: !Ref HeadNodeSecurityGroup
+      Description: 'Allow inbound traffic from head node to login nodes'
+      IpProtocol: '-1'
+
   HeadToAdminIngress:
     Type: 'AWS::EC2::SecurityGroupIngress'
     Properties:
@@ -96,11 +189,11 @@ Resources:
       CidrIp: 0.0.0.0/0
       Description: 'Allow all outbound traffic from compute nodes'
       IpProtocol: '-1'  
-  
+
   VpcEndpointSecurityGroup:
     Type: AWS::EC2::SecurityGroup
     Properties:
-      GroupDescription: Allow Isolated AWS API Access
+      GroupDescription: Allow SSM access
       SecurityGroupEgress:
         - CidrIp: 0.0.0.0/0
           FromPort: -1
@@ -226,7 +319,7 @@ Resources:
       SecurityGroupIds:
         - !Ref VpcEndpointSecurityGroup
       PrivateDnsEnabled: true  
-  
+
   EC2MessagesEndpoint:
     Type: 'AWS::EC2::VPCEndpoint'
     Properties:
@@ -650,7 +743,9 @@ Resources:
                       - !Sub 'arn:${AWS::Partition}:iam::aws:policy/service-role/AWSLambdaBasicExecutionRole'
       ManagedPolicyArns:
         - !Sub 'arn:${AWS::Partition}:iam::aws:policy/AmazonSSMManagedInstanceCore'
-
+        - !Sub 'arn:${AWS::Partition}:iam::aws:policy/ElasticLoadBalancingFullAccess'
+        - !Sub 'arn:${AWS::Partition}:iam::aws:policy/AutoScalingFullAccess'
+        
   PclusterProfile:
     Type: 'AWS::IAM::InstanceProfile'
     Properties:
@@ -687,7 +782,7 @@ Resources:
           sudo bash install_pcluster.sh
           source ~/.bash_profile
           cat > /etc/profile.d/pcluster.sh << EOF
-          export PATH=/usr/bin/pcluster/pcluster-installer-bundle:/usr/bin/pcluster/pcluster-installer-bundle/node-v18.17.1-linux-x64/bin:/bin:PATH
+          export PATH=/usr/bin/pcluster/pcluster-installer-bundle:/usr/bin/pcluster/pcluster-installer-bundle/node-v*/bin:/bin:PATH
           export AWS_DEFAULT_REGION=${AWS::Region}
           EOF
           export PATH=/usr/bin/pcluster/pcluster-installer-bundle:$PATH 
@@ -708,7 +803,7 @@ Resources:
               KeyName: ${Keypair}
             Iam:
               AdditionalIamPolicies:
-                - Policy: arn:aws-us-gov:iam::aws:policy/AmazonSSMManagedInstanceCore
+                - Policy: arn:${AWS::Partition}:iam::aws:policy/AmazonSSMManagedInstanceCore
           SharedStorage:
             - MountDir: /ebs
               Name: EBSExtData
@@ -716,6 +811,21 @@ Resources:
               EbsSettings:
                 VolumeType: io1
                 DeletionPolicy: Delete
+          LoginNodes:
+            Pools:
+              - Name: user-pool
+                Count: 2
+                InstanceType: t2.micro
+                Ssh:
+                  KeyName: ${Keypair}
+                Networking:
+                  SubnetIds:
+                    - ${IsolatedHPCSubnet}
+                  SecurityGroups:
+                    - ${LoginNodeSecurityGroup}
+                Iam: 
+                  AdditionalIamPolicies: 
+                    - Policy: arn:${AWS::Partition}:iam::aws:policy/AmazonSSMManagedInstanceCore  
           Scheduling:
             Scheduler: slurm
             SlurmSettings:
@@ -738,7 +848,7 @@ Resources:
                 - ${ComputeNodeSecurityGroup}
               Iam:
                 AdditionalIamPolicies:
-                 - Policy: arn:aws-us-gov:iam::aws:policy/AmazonSSMManagedInstanceCore
+                 - Policy: arn:${AWS::Partition}:iam::aws:policy/AmazonSSMManagedInstanceCore
           EOF
             
           # Initialize ParallelCluster with the above configuration

@@ -61,9 +61,11 @@
 ![](images/CloudFormation-upload.PNG)
 11.	On the specify stack details page
 
-    a. Provide a name for your stack and select the Keypair you created in Step 5
+    a. Specify the on premise IP addresses and CIDR blocks for SSH traffic to be used by Administrators and Users. By default, the 0.0.0.0/0 entry allows all traffic. It is recommended to lock this down to only allow the IP addresses needed to login and manage the cluster. 
 
-    b. Leave the ParallelClusterEC2InstanceAmiId as the default value
+    b. Provide a name for your stack and select the Keypair you created in Step 5
+
+    c. Leave the ParallelClusterEC2InstanceAmiId as the default value
 
 12.	On the configure stack options page, select Next
 13.	On the review page, acknowledge the fact that AWS Cloudformation might create IAM resources and select Submit
@@ -171,7 +173,7 @@
 
 ![](images/S3-Bucket-List-AD.PNG)
 
--	For example, using the bucket shown above which is “hpc-ad-int” I would put that in the Replace with section. Then select Replace All and you will replace 9 occurrences in the file. 
+-	For example, using the bucket shown above which is “hpc-ad-int” I would put that in the Replace with section. Then select Replace All and you will replace 15 occurrences in the file. 
     
 ![](images/notepad-replace-AD.PNG) 
 
@@ -183,13 +185,15 @@
     
     a.	Provide a stack name
    
-    b.	Enter passwords for Admin, ReadOnly, and for user000
+    b.	Enter passwords for Admin, cluster-admin, ReadOnly, and for user000
    
     - For demo purposes, I will be using “p@ssw0rd” without the quotes as my password for all three usernames.
    
-    c.	Select the keypair you created in Step 5
+    c.	Specify the on premise IP addresses and CIDR blocks for SSH traffic to be used by Administrators and Users. By default, the 0.0.0.0/0 entry allows all traffic. It is recommended to lock this down to only allow the IP addresses needed to login and manage the cluster. 
+    
+    d.  Select the keypair you created in Step 5
    
-    d.	Select Next
+    e.	Select Next
 
 12.	Select Next on the Configure stack options page
 13.	Scroll all the way down on the Review page and acknowledge the checkboxes. Then select Submit.
@@ -203,23 +207,27 @@
     b.	Once the stack marked “IsolatedClusterWithAD” is CREATE_COMPLETE the process is finished 
 
 15.	You have successfully deployed the infrastructure needed to run ParallelCluster in an isolated environment and launched a sample cluster that has Active Directory integration.
-16.	You can now login to the ParallelClusterAdminNode using Systems Manager
+16.	You can now login to each node using Systems Manager
    
-    a.	Navigate to EC2->Instances and select the box next to instance named ParallelClusterAdminNode. Then select Connect.  
+    a.	Navigate to EC2->Instances and, for example, select the box next to instance named ParallelClusterAdminNode. Then select Connect.  
    
     ![](images/EC2-Connect-AD.PNG)
    
     b.	Select Session Manager and click on Connect
 
-17.	You can also login to the Head Node from the ParallelClusterAdminNode with a user that is authenticated to Active Directory
-    
-    a.	From the CLI of the ParallelClusterAdminNode, type ‘ssh user000@HEAD_NODE_PRIVATE_IP’. You can find the IP of the head node by navigating to EC2->Instances->Check the box next to head node and you will see the IP address on the bottom right as shown below. 
+    c. Note that users will need access to the AWS Console in order to use Systems Manager.
+
+17.	Logging into the cluster
+
+    a. Administrators can also login to the Head Node from the ParallelClusterAdminNode with a user that is authenticated to Active Directory. First, connect to the ParallelClusterAdminNode using SSH or Systems Manager. From the CLI of the ParallelClusterAdminNode, type ‘ssh cluster-admin@HEAD_NODE_PRIVATE_IP’. You can find the IP of the head node by navigating to EC2->Instances->Check the box next to head node and you will see the IP address on the bottom right as shown below. 
     
     ![](images/private-IP-ad.PNG) 
 
-18. Input the password you created before the CloudFormation template was launched. You are now logged into the head node.  
+    Input the cluster-admin password you created before the CloudFormation template was launched. You are now logged into the head node.  
 
 ![](images/head-node-login-ad.PNG)
+
+    b. Users can connect to the login nodes with a user that is authenticated to Active Directory. First, connect to the ParallelClusterAdminNode using SSH or Systems Manager. From the CLI of the ParallelClusterAdminNode, type ‘ssh user000@LOGIN_NODE_PRIVATE_IP’. Note that users will be connecting to the Login Nodes and NOT the Head Node which is the case for Administrators. Keep in mind that you can optionally configure a private connection from on premise locations into AWS (such as Site to Site VPN or Direct Connect Private Vif) so that users can directly access the Login Nodes. This would make the jump box to the ParallelClusterAdminNode unnecesary. Another option is to restrict Systems Manager access for users to only allow them to connect to the Login Nodes. See this [link](https://repost.aws/knowledge-center/ssm-session-manager-control-access) for more details.  
 
 19.	You can also launch new clusters from the CLI of the ParrallelClusterAdminNode
    
