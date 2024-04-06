@@ -75,7 +75,7 @@
 
     b.	Once the stack marked “IsolatedCluster” is CREATE_COMPLETE the process is finished  
 
-![](images/stack-complete.PNG)
+![](images/isolated-hpc-complete.PNG)
 
 15.	You have successfully deployed the infrastructure needed to run ParallelCluster in an isolated environment and launched a sample cluster. 
 16. You can now login to the ParallelCluster Admin, Head, and Compute nodes using Systems Manager
