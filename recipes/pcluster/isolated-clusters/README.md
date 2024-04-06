@@ -86,7 +86,7 @@
 
     b.	Select Session Manager and click on Connect
 
-    c. Keep in mind that you can optionally configure a private connection from on premise locations into AWS (such as Site to Site VPN or Direct Connect Private Vif) so that users can directly access nodes using SSH from on premise. It is possible to also restrict Systems Manager access for users to only allow them to connect to the Login Nodes. See this [link](https://repost.aws/knowledge-center/ssm-session-manager-control-access) for more details. 
+    c. Keep in mind that you can optionally configure a private connection from on premise locations into AWS (such as Site to Site VPN or Direct Connect Private Vif) so that users can directly access nodes using SSH without a jumpbox or needing public Internet access. It is possible to also restrict Systems Manager access for users to only allow them to connect to the Login Nodes. See this [link](https://repost.aws/knowledge-center/ssm-session-manager-control-access) for more details. 
 
 17.	You can login to the ParallelClusterAdminNode to launch new clusters
 
@@ -143,7 +143,7 @@
 
        - Make sure you change the 'your-s3-bucket' to match the name of the bucket you just created
     
-    b.  If you are using the Management Consolole, click on the newly created S3 bucket
+    b.  If you are using the Management Console, click on the newly created S3 bucket
     
     b.	Select Upload
     
@@ -201,7 +201,7 @@
 13.	Scroll all the way down on the Review page and acknowledge the checkboxes. Then select Submit.
 14.	You can view the stack’s progress through the CloudFormation page.
    
-    a.	Total time for the process to complete is approximately 1 hour. The initial stack used to provision the environment with the VPC, route tables, subnets, Active Directory, etc will take approximately 45 minutes to complete. Once complete, you will see a second stack automatically launch to provision the ParallelCluster Head and Compute Nodes. This will take approximately 15-20 minutes to complete.
+    a.	Total time for the process to complete is approximately 1 hour. The initial stack used to provision the environment with the VPC, route tables, subnets, Active Directory, etc will take approximately 45 minutes to complete. Once complete, you will see a second stack automatically launch to provision the ParallelCluster Head, Login, and Compute Nodes. This will take approximately 15-20 minutes to complete.
     
     ![](images/AD-stack-complete.PNG)
 
@@ -227,7 +227,7 @@
 
     Input the cluster-admin password you created before the CloudFormation template was launched. You are now logged into the head node.  
 
-![](images/head-node-login-ad.PNG)
+![](images/cluster-admin-head-node.PNG)
 
 - Users can connect to the login nodes with a user that is authenticated to Active Directory. First, connect to the ParallelClusterAdminNode using SSH or Systems Manager. From the CLI of the ParallelClusterAdminNode, type ‘ssh user000@NETWORK_LOAD_BALANCER_PRIVATE_DNS’. Note that users will be connecting to the Login Nodes and NOT the Head Node which is the case for Administrators. To find the load balancer DNS name, navigate to EC2->Load Balancers. One load balancer is being used for AWS Managed AD, and the other is the one we are using for the login nodes. The easiest way to tell which load balancer is needed here is to look for under the Availability Zone column. The entry that contain a singular entry is the one one that is needed. Once highlighted, scroll down and look for DNS name on the bottom left. See the below picture for an example.
 
