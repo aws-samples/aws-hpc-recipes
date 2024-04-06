@@ -78,7 +78,7 @@
 ![](images/isolated-hpc-complete.PNG)
 
 15.	You have successfully deployed the infrastructure needed to run ParallelCluster in an isolated environment and launched a sample cluster. 
-16. You can now login to the ParallelCluster Admin, Head, and Compute nodes using Systems Manager
+16. You can now login to the ParallelCluster Admin, Head, Login, and Compute nodes using Systems Manager
     
     a.	Navigate to EC2->Instances and select the box next to the instance you want to login to. Then select Connect. 
 
@@ -86,9 +86,9 @@
 
     b.	Select Session Manager and click on Connect
 
-17.	You can login to the ParrallelClusterAdminNode to launch new clusters
+17.	You can login to the ParallelClusterAdminNode to launch new clusters
 
-    a.	Repeat the process described in Step 16 to connect to the ParrallelClusterAdminNode
+    a.	Repeat the process described in Step 16 to connect to the ParallelClusterAdminNode
 
     b.	Type ‘cd pcluster’
 
@@ -209,7 +209,7 @@
 15.	You have successfully deployed the infrastructure needed to run ParallelCluster in an isolated environment and launched a sample cluster that has Active Directory integration.
 16.	You can now login to each node using Systems Manager
    
-    a.	Navigate to EC2->Instances and, for example, select the box next to instance named ParallelClusterAdminNode. Then select Connect.  
+    a.	Navigate to EC2->Instances and, for example, select the box next to instance named Head Node. Then select Connect.  
    
     ![](images/EC2-Connect-AD.PNG)
    
@@ -230,6 +230,10 @@
     b. Users can connect to the login nodes with a user that is authenticated to Active Directory. First, connect to the ParallelClusterAdminNode using SSH or Systems Manager. From the CLI of the ParallelClusterAdminNode, type ‘ssh user000@NETWORK_LOAD_BALANCER_PRIVATE_DNS’. Note that users will be connecting to the Login Nodes and NOT the Head Node which is the case for Administrators. To find the load balancer DNS name, navigate to EC2->Load Balancers. One load balancer is being used for AWS Managed AD, and the other is the one we are using for the login nodes. The easiest way to tell which load balancer is needed here is to look for under the Availability Zone column. The entry that contain a singular entry is the one one that is needed. Once highlighted, scroll down and look for DNS name on the bottom left. See the below picture for an example.
 
 ![](images/load-balancer-dns-name.PNG)  
+    
+    You can use this DNS name to authenticate into the Login Nodes. 
+
+![](images/user000-login-node.PNG) 
     
     Keep in mind that you can optionally configure a private connection from on premise locations into AWS (such as Site to Site VPN or Direct Connect Private Vif) so that users can directly access the Login Nodes. This would make the jump box to the ParallelClusterAdminNode unnecesary. Another option is to restrict Systems Manager access for users to only allow them to connect to the Login Nodes. See this [link](https://repost.aws/knowledge-center/ssm-session-manager-control-access) for more details.  
 
