@@ -306,20 +306,6 @@ Resources:
       SubnetIds:
         - !Ref IsolatedHPCSubnetTwo
       PrivateDnsEnabled: true
-        
-  DirectoryServiceEndpoint:
-    Type: 'AWS::EC2::VPCEndpoint'
-    Condition: CreateVPC
-    DependsOn: NetworkLoadBalancer
-    Properties:
-      VpcId: !Ref PclusterVpc
-      ServiceName: !Sub 'com.amazonaws.${AWS::Region}.ds'
-      VpcEndpointType: 'Interface'
-      SecurityGroupIds: 
-        - !GetAtt VpcEndpointSecurityGroup.GroupId      
-      SubnetIds:
-        - !Ref IsolatedHPCSubnetTwo
-      PrivateDnsEnabled: true
 
   CloudFormationEndpoint:
     Type: 'AWS::EC2::VPCEndpoint'
@@ -1154,15 +1140,16 @@ Resources:
               sleep 10
               echo "Creating Admin Group..."
               echo "$ADMIN_PW" | adcli create-group "cluster-admins" -x -U Admin --domain="${DirectoryDomain}" 
-              echo "Registering ReadOnlyUser..."
-              echo "$ADMIN_PW" | adcli create-user -x -U Admin --domain="${DirectoryDomain}" --display-name=ReadOnlyUser ReadOnlyUser
-              sleep 0.5
-              echo "Registering User..."
-              echo "$ADMIN_PW" | adcli create-user -x -U Admin --domain="${DirectoryDomain}" --display-name="${UserName}" "${UserName}"
+              sleep 2
               echo "Registering Cluster Admin..."
               echo "$ADMIN_PW" | adcli create-user -x -U Admin --domain="${DirectoryDomain}" --display-name="${ClusterAdminName}" "${ClusterAdminName}"
-              echo "Setting Cluster Admin Password..."
-              echo "$ADMIN_PW" | aws --region "${AWS::Region}" ds reset-user-password --directory-id "${Directory}" --user-name "${ClusterAdminName}" --new-password "${ClusterAdminPassword}"
+              sleep 2
+              echo "Registering ReadOnlyUser..."
+              echo "$ADMIN_PW" | adcli create-user -x -U Admin --domain="${DirectoryDomain}" --display-name=ReadOnlyUser ReadOnlyUser
+              sleep 2
+              echo "Registering User..."
+              echo "$ADMIN_PW" | adcli create-user -x -U Admin --domain="${DirectoryDomain}" --display-name="${UserName}" "${UserName}"
+              sleep 10
               echo "Adding Admin to Admin Group..."
               echo "$ADMIN_PW" | adcli add-member "cluster-admins" -x -U Admin "${ClusterAdminName}" --domain "${DirectoryDomain}" 
               
@@ -1436,7 +1423,7 @@ Resources:
               return ret
           
           def handler(event, context):
-              print(redact_keys(event, {"ReadOnlyPassword", "UserPassword", "AdminPassword"}))
+              print(redact_keys(event, {"ReadOnlyPassword", "UserPassword", "ClusterAdminPassword", "AdminPassword"}))
               print( 'boto version {}'.format(boto3.__version__))
               directory_id = event['ResourceProperties']['DirectoryId']
               instance_id = event['ResourceProperties']['AdDomainAdminNode']
@@ -1444,6 +1431,8 @@ Resources:
               read_only_password = event['ResourceProperties']['ReadOnlyPassword']
               user_name = event['ResourceProperties']['UserName']
               user_password = event['ResourceProperties']['UserPassword']
+              cluster_admin_user_name = event['ResourceProperties']['ClusterAdminName']
+              cluster_admin_password = event['ResourceProperties']['ClusterAdminPassword']
               admin_password = event['ResourceProperties']['AdminPassword']
 
               response_data = {}
@@ -1455,6 +1444,7 @@ Resources:
                   physical_resource_id = create_physical_resource_id()
                   ds.reset_user_password(DirectoryId=directory_id, UserName='ReadOnlyUser', NewPassword=read_only_password)
                   ds.reset_user_password(DirectoryId=directory_id, UserName=user_name, NewPassword=user_password)
+                  ds.reset_user_password(DirectoryId=directory_id, UserName=cluster_admin_user_name, NewPassword=cluster_admin_password)
                   ds.reset_user_password(DirectoryId=directory_id, UserName='Admin', NewPassword=admin_password)
               else:
                   physical_resource_id = event['PhysicalResourceId']
@@ -1468,6 +1458,8 @@ Resources:
       DirectoryId: !Ref Directory
       UserName: !Ref UserName
       UserPassword: !Ref UserPassword
+      ClusterAdminName: !Ref ClusterAdminName
+      ClusterAdminPassword: !Ref ClusterAdminPassword
       AdminPassword: !Ref AdminPassword
       ReadOnlyPassword: !Ref ReadOnlyPassword
 
