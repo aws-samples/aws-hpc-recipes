@@ -13,12 +13,12 @@ Parameters:
   AllowedIPAddressAndCIDRforAdmins:
     Description: Enter the allowed IP address and CIDR block for Administrators
     Type: String
-    Default: 0.0.0.0/0
+    Default: 10.100.0.0/32
 
   AllowedIPAddressAndCIDRforUsers:
     Description: Enter the allowed IP address and CIDR block for Users
     Type: String
-    Default: 0.0.0.0/0
+    Default: 10.200.0.0/32
 
 Resources:
   PclusterVpc:

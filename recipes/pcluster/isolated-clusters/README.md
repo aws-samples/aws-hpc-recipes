@@ -63,7 +63,7 @@
 
     a. Provide a name for your stack
     
-    b. Specify the on premise IP addresses and CIDR blocks for SSH traffic to be used by Administrators and Users. By default, the 0.0.0.0/0 entry allows all traffic. It is recommended to lock this down to only allow the IP addresses needed to login and manage the cluster. 
+    b. Specify the on premise IP addresses and CIDR blocks for SSH traffic to be used by Administrators and Users. Inputting a 0.0.0.0/0 entry will allow all traffic. It is recommended to lock this down to only allow the IP addresses needed to login and manage the cluster. 
 
     c. Select the Keypair you created in Step 5
 
@@ -193,7 +193,7 @@
    
     - For demo purposes, I will be using “p@55w0rd” without the quotes as my password for all four usernames.
    
-    c.	Specify the on premise IP addresses and CIDR blocks for SSH traffic to be used by Administrators and Users. By default, the 0.0.0.0/0 entry allows all traffic. It is recommended to lock this down to only allow the IP addresses needed to login and manage the cluster. 
+    c.	Specify the on premise IP addresses and CIDR blocks for SSH traffic to be used by Administrators and Users. Inputting a 0.0.0.0/0 entry will allow all traffic. It is recommended to lock this down to only allow the IP addresses needed to login and manage the cluster. 
     
     d.  Select the keypair you created in Step 5
    
