@@ -187,7 +187,7 @@
     
     a.	Provide a stack name
    
-    b.	Enter passwords for Admin, cluster-admin, ReadOnly, and for user000
+    b.	Enter passwords for Admin, cluster-admin, ReadOnlyUser, and for user000
    
     - For demo purposes, I will be using “p@ssw0rd” without the quotes as my password for all three usernames.
    
@@ -221,7 +221,7 @@
 
 17.	Logging into the cluster
 
-    a. Administrators can also login to the Head Node from the ParallelClusterAdminNode with a user that is authenticated to Active Directory. First, connect to the ParallelClusterAdminNode using SSH or Systems Manager. From the CLI of the ParallelClusterAdminNode, type ‘ssh cluster-admin@HEAD_NODE_PRIVATE_IP’. You can find the IP of the head node by navigating to EC2->Instances->Check the box next to head node and you will see the IP address on the bottom right as shown below. 
+- Administrators can also login to the Head Node from the ParallelClusterAdminNode with a user that is authenticated to Active Directory. First, connect to the ParallelClusterAdminNode using SSH or Systems Manager. From the CLI of the ParallelClusterAdminNode, type ‘ssh cluster-admin@HEAD_NODE_PRIVATE_IP’. You can find the IP of the head node by navigating to EC2->Instances->Check the box next to head node and you will see the IP address on the bottom right as shown below. 
     
     ![](images/private-IP-ad.PNG) 
 
