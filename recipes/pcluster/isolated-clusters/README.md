@@ -61,11 +61,13 @@
 ![](images/CloudFormation-upload.PNG)
 11.	On the specify stack details page
 
-    a. Specify the on premise IP addresses and CIDR blocks for SSH traffic to be used by Administrators and Users. By default, the 0.0.0.0/0 entry allows all traffic. It is recommended to lock this down to only allow the IP addresses needed to login and manage the cluster. 
+    a. Provide a name for your stack
+    
+    b. Specify the on premise IP addresses and CIDR blocks for SSH traffic to be used by Administrators and Users. By default, the 0.0.0.0/0 entry allows all traffic. It is recommended to lock this down to only allow the IP addresses needed to login and manage the cluster. 
 
-    b. Provide a name for your stack and select the Keypair you created in Step 5
+    c. Select the Keypair you created in Step 5
 
-    c. Leave the ParallelClusterEC2InstanceAmiId as the default value
+    d. Leave the ParallelClusterEC2InstanceAmiId as the default value
 
 12.	On the configure stack options page, select Next
 13.	On the review page, acknowledge the fact that AWS Cloudformation might create IAM resources and select Submit
@@ -86,7 +88,7 @@
 
     b.	Select Session Manager and click on Connect
 
-    c. Keep in mind that you can optionally configure a private connection from on premise locations into AWS (such as Site to Site VPN or Direct Connect Private Vif) so that users can directly access nodes using SSH without a jumpbox or needing public Internet access. It is possible to also restrict Systems Manager access for users to only allow them to connect to the Login Nodes. See this [link](https://repost.aws/knowledge-center/ssm-session-manager-control-access) for more details. 
+    c. Keep in mind that you can optionally configure a private connection from on premise locations into AWS (such as Site to Site VPN or Direct Connect Private VIF) so that users can directly access nodes using SSH without a jumpbox or needing public Internet access. It is possible to also restrict Systems Manager such that users can only connect to the Login Nodes. See this [link](https://repost.aws/knowledge-center/ssm-session-manager-control-access) for more details. 
 
 17.	You can login to the ParallelClusterAdminNode to launch new clusters
 
@@ -189,7 +191,7 @@
    
     b.	Enter passwords for Admin, cluster-admin, ReadOnlyUser, and for user000
    
-    - For demo purposes, I will be using “p@ssw0rd” without the quotes as my password for all three usernames.
+    - For demo purposes, I will be using “p@55w0rd” without the quotes as my password for all four usernames.
    
     c.	Specify the on premise IP addresses and CIDR blocks for SSH traffic to be used by Administrators and Users. By default, the 0.0.0.0/0 entry allows all traffic. It is recommended to lock this down to only allow the IP addresses needed to login and manage the cluster. 
     
@@ -229,7 +231,7 @@
 
 ![](images/cluster-admin-head-node.PNG)
 
-- Users can connect to the login nodes with a user that is authenticated to Active Directory. First, connect to the ParallelClusterAdminNode using SSH or Systems Manager. From the CLI of the ParallelClusterAdminNode, type ‘ssh user000@NETWORK_LOAD_BALANCER_PRIVATE_DNS’. Note that general users will be connecting to the Login Nodes and NOT the Head Node. To find the load balancer DNS name, navigate to EC2->Load Balancers. One load balancer is being used for AWS Managed AD, and the other is the one we are using for the login nodes. The easiest way to tell which load balancer is needed here is to look under the Availability Zone column. The column that contain a singular entry is the one we need here. Once highlighted, scroll down and look for DNS name on the bottom right. See the below picture for an example.
+- Users can connect to the login nodes with a user that is authenticated to Active Directory using ‘ssh user000@NETWORK_LOAD_BALANCER_PRIVATE_DNS’. Note that general users will be connecting to the Login Nodes and NOT the Head Node. To find the load balancer DNS name, navigate to EC2->Load Balancers. One load balancer is being used for AWS Managed AD, and the other is the one we are using for the login nodes. The easiest way to tell which load balancer is needed here is to look under the Availability Zone column. The column that contain a singular entry is the one we need here. Once highlighted, scroll down and look for DNS name on the bottom right. See the below picture for an example.
 
 ![](images/load-balancer-dns-name.PNG)  
     
