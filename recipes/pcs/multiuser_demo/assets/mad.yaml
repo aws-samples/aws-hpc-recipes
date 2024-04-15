@@ -154,12 +154,16 @@ Outputs:
     Value: !GetAtt [ DirectoryService, Outputs.DomainName ]
   DomainShortName:
     Value: !GetAtt [ DirectoryService, Outputs.DomainShortName ]
+  DomainComponents:
+    Value: !GetAtt [ DirectoryService, Outputs.DomainComponents ]
   DomainServiceAccount:
     Value: !GetAtt [ DirectoryService, Outputs.DomainServiceAccount ]
   DirectoryId:
     Value: !GetAtt [ DirectoryService, Outputs.DirectoryId ]
   DomainManagementNodeId:
     Value: !GetAtt [ DirectoryService, Outputs.DomainManagementNodeId ]
+  DomainManagementNodeSystemManagerUrl:
+    Value: !GetAtt [ DirectoryService, Outputs.DomainManagementNodeSystemManagerUrl ]
   DomainAddrLdap:
     Value: !Sub
       - "ldap://${Domain}"
