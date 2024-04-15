@@ -135,6 +135,8 @@ Conditions:
   SubDomainNotProvided: !Equals [!Ref SubDomain, ""]
   AddPrefixList: !Not [!Equals [!Ref ClientPrefixList, ""]]
   AddCidrIngress: !Not [!Equals [!Ref AllowedIps, ""]]
+  GovCloud: !Equals [!Ref AWS::Partition, 'aws-us-gov']
+  China: !Equals [!Ref AWS::Partition, 'aws-cn']
 
 Resources:
 
@@ -1024,6 +1026,11 @@ Outputs:
     Value: !If [ SubDomainNotProvided, !Ref DomainName, !Join [ ".", [ !Ref SubDomain, !Ref DomainName] ] ]
     Export:
         Name: !Sub ${AWS::StackName}-DomainName
+  DomainComponents:
+    Description: "Domain name expressed as Domain Components"
+    Value: !Join [",dc=", !Split [".", !If [ SubDomainNotProvided, !Ref DomainName, !Join [ ".", [ !Ref SubDomain, !Ref DomainName] ] ] ]]
+    Export:
+      Name: !Sub ${AWS::StackName}-DomainComponents
   PasswordSecretArn:
     Value: !Ref PasswordSecret
     Export:
@@ -1074,3 +1081,12 @@ Outputs:
     Description: Instance ID for Linux Active Directory Domain Management Node
     Export:
         Name: !Sub ${AWS::StackName}-DomainManagementNodeId
+  DomainManagementNodeSystemManagerUrl:
+    Description: URL to access the HeadNode via SystemManager
+    Value: !Sub
+      - https://${ConsoleDomain}/systems-manager/session-manager/${InstanceId}?region=${AWS::Region}
+      - { ConsoleDomain: !If [ GovCloud, 'console.amazonaws-us-gov.com', !If [ China, 'console.amazonaws.cn', !Sub '${AWS::Region}.console.aws.amazon.com']],
+          InstanceId: !Ref AdDomainAdminNode
+        }
+    Export:
+      Name: !Sub ${AWS::StackName}-DomainManagementNodeSystemManagerUrl

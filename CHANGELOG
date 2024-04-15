@@ -11,6 +11,8 @@ The format is based on [Keep a Changelog](http://keepachangelog.com/)
 ### Fixed
 
 ### Changed
+* In demo_managed_ad, the domain name (and subdomain if included) is output as Domain Components in a string
+* In demo_managed_ad, a console URL to the domain management node is output as a link
 
 ## [1.3.0] - 2024-04-04
 
