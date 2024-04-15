@@ -1,18 +1,18 @@
 [domain/default]
 cache_credentials = True
-debug_level = 0xFFF0
+debug_level = 4
 default_shell = /bin/bash
 fallback_homedir = /home/%u
 id_provider = ldap
-ldap_auth_disable_tls_never_use_in_production = true
 ldap_default_authtok = ${BIND_PASSWORD}
 ldap_default_bind_dn = ${BIND_DN}
 ldap_id_mapping = True
 ldap_referrals = False
 ldap_schema = AD
-ldap_search_base = DC=corp,DC=pcluster,DC=com
+ldap_search_base = ${LDAP_SEARCH_BASE}
 ldap_tls_reqcert = allow
-ldap_uri = ldap://10.3.130.154,ldap://10.3.155.105
+ldap_uri = ${LDAP_URI}
+ldap_auth_disable_tls_never_use_in_production = true
 use_fully_qualified_names = False
 
 [domain/local]
@@ -20,14 +20,18 @@ id_provider = files
 enumerate = True
 
 [sssd]
+debug_level = 4
 config_file_version = 2
 services = nss, pam, ssh
 domains = default, local
-full_name_format = %1$s
+# The strange escaping is so envsubst won't break full_name_format
+full_name_format = %1$${q}s
 
 [nss]
+debug_level = 4
 filter_users = nobody,root
 filter_groups = nobody,root
 
 [pam]
+debug_level = 4
 offline_credentials_expiration = 7
