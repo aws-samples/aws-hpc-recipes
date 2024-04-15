@@ -1028,7 +1028,9 @@ Outputs:
         Name: !Sub ${AWS::StackName}-DomainName
   DomainComponents:
     Description: "Domain name expressed as Domain Components"
-    Value: !Join [",dc=", !Split [".", !If [ SubDomainNotProvided, !Ref DomainName, !Join [ ".", [ !Ref SubDomain, !Ref DomainName] ] ] ]]
+    Value: !Sub 
+      - "dc=${dc}"
+      - dc: !Join [",dc=", !Split [".", !If [ SubDomainNotProvided, !Ref DomainName, !Join [ ".", [ !Ref SubDomain, !Ref DomainName] ] ] ]]
     Export:
       Name: !Sub ${AWS::StackName}-DomainComponents
   PasswordSecretArn:
