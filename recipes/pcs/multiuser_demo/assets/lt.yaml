@@ -1,18 +1,66 @@
 AWSTemplateFormatVersion: 2010-09-09
 Description: Create a launch template to support a compute node group
 
+Metadata:
+  AWS::CloudFormation::Interface:
+    ParameterGroups:
+      - Label: 
+          default: LDAP Configuration
+        Parameters:
+          - DomainName
+          - LdapUri
+          - LdapSearchBase
+          - DomainServiceAccount
+          - PasswordSecretArn
+          - SssdConfigTemplateS3Path
+      - Label:
+          default: Node Group Options
+        Parameters:
+          - KeyName
+          - NodeGroupSecurityGroupIds
+      - Label:
+          default: Other
+        Parameters:
+          - LaunchTemplateName
+
 Parameters:
 
   LaunchTemplateName:
     Type: String
-    Default: "AWSPCS-basic-launch-template"
+    Default: "PCS-sssd-for-ad"
     Description: Launch template name
   NodeGroupSecurityGroupIds:
     Type: List<AWS::EC2::SecurityGroup::Id>
-    Description: Security group(s).
+    Description: Security group(s) for compute node group instances.
   KeyName:
     Type: AWS::EC2::KeyPair::KeyName
     Description: SSH keypair to log into node group instances
+    Default: ""
+  PasswordSecretArn:
+    Type: String
+    Description: ARN where bind password is stored.
+  SssdConfigTemplateS3Path:
+    Description: An S3 Path (without the s3://) to a configuration file template for configuring SSSD. 
+    Type: String
+    Default: awspcs-hpc-recipes-demo/ad.sssd.conf.template
+    # TODO: Add validation
+  DomainName:
+    Type: String
+    Description: LDAP domain name (e.g. corp.example.com)
+    Default: corp.example.com
+    AllowedPattern: ^([a-zA-Z0-9]+[\\.-])+([a-zA-Z0-9])+$
+  LdapSearchBase:
+    Type: String
+    Description: LDAP search base (e.g. dc=corp,dc=example,dc=com)
+    Default: dc=corp,dc=example,dc=com
+  LdapUri:
+    Type: String
+    Default: "ldap://corp.example.com"
+    # TODO: Add validation
+  DomainServiceAccount:
+    Type: String
+    Description: Bind account as DN (e.g cn=ReadOnly,ou=CORP,ou=Users,dc=corp,dc=example,dc=com)
+    # TODO: Add validation
 
 Resources:
 
@@ -21,7 +69,7 @@ Resources:
     Properties:
       LaunchTemplateName: !Ref LaunchTemplateName
       LaunchTemplateData:
-        # Require IMDS v2
+        # Enforce IMDS v2
         MetadataOptions:
           HttpEndpoint: enabled
           HttpPutResponseHopLimit: 4
@@ -54,6 +102,7 @@ Resources:
                   export BIND_PASSWORD=$(aws secretsmanager get-secret-value --region ${AWS::Region} --secret-id ${BindSecretArn} --query SecretString --output text)
                   # Other config options
                   export BIND_DN="${ServiceAccountDn}"
+                  export DOMAIN_NAME="${DomainName}"
                   export LDAP_SEARCH_BASE="${LdapSearchBase}"
                   export LDAP_URI="${LdapUri}"
                   # Write sssd.conf file injecting BIND_DN and BIND_PASSWORD variables
@@ -77,11 +126,12 @@ Resources:
 
               --==MYBOUNDARY==--
 
-            - { BindSecretArn: "",
-                ConfigTemplateS3Path: "meep",
-                LdapSearchBase: "",
-                LdapUri: "meep",
-                ServiceAccountDn: "meep" }
+            - { BindSecretArn: !Ref PasswordSecretArn,
+                DomainName: !Ref DomainName,
+                ConfigTemplateS3Path: !Ref SssdConfigTemplateS3Path,
+                LdapSearchBase: !Ref LdapSearchBase,
+                LdapUri: !Ref LdapUri,
+                ServiceAccountDn: !Ref DomainServiceAccount }
   
 Outputs:
   LaunchTemplateId:

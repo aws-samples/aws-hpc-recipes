@@ -6,7 +6,7 @@ Parameters:
   SssdConfigTemplateS3Path:
     Description: An S3 Path (without the s3://) to a configuration file template for configuring SSSD. 
     Type: String
-    Default: awspcs-hpc-recipes-demo/sssd.conf.template
+    Default: awspcs-hpc-recipes-demo/ad.sssd.conf.template
 
   SecretsPrefix:
     Description: Prefix for naming configuration secrets in AWS Secrets Manager
@@ -20,7 +20,7 @@ Resources:
     Type: AWS::IAM::Role
     Properties:
       RoleName: !Sub "PcsAdConfiguration-${AWS::StackName}"
-      Description: "AWS IAM role PCS node group instances with AD support"
+      Description: "AWS IAM role for PCS node group instances with AD support"
       AssumeRolePolicyDocument:
         Statement:
           - Action: sts:AssumeRole

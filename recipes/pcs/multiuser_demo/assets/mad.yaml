@@ -32,9 +32,7 @@ Parameters:
     Description: Domain name
     Type: String
     Default: "corp.example.com"
-    # TODO - This is constrained until we can guarantee the downstream bits work with other domain names
-    AllowedValues:
-      - "corp.example.com"
+    AllowedPattern: ^([a-zA-Z0-9]+[\\.-])+([a-zA-Z0-9])+$
 
   SubDomain:
     Description: (Optional, but required for GovCloud regions) SubDomain for the Active Directory Domain Name. If provided, Active Directory Domain Name will be {SubDomain}.{DomainName}
@@ -45,6 +43,8 @@ Parameters:
     Description: Username for LDAP binding
     Type: String
     Default: ReadOnly
+    MinLength: 4
+    MaxLength: 24
     AllowedValues:
          - "ReadOnly"
          - "ServiceAccount"
