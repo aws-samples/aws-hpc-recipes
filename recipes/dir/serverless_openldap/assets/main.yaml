@@ -2,232 +2,99 @@ AWSTemplateFormatVersion: '2010-09-09'
 Transform: AWS::Serverless-2016-10-31
 Description: Example of how to operate OpenLDAP on Fargate.
 
+Metadata:
+  AWS::CloudFormation::Interface:
+    ParameterGroups:
+      - Label:
+          default: "OpenLDAP Configuration"
+        Parameters:
+          - DomainName
+          - SubDomain
+          - AdminPassword
+          - ServiceAccountName
+          - ServiceAccountPassword
+          - ManagedAdEdition
+      - Label:
+          default: "OpenLDAP Bootstrapping"
+        Parameters:
+          - UserName
+          - UserPassword
+          - LDIFS3Path
+      - Label:
+          default: "Network Configuration"
+        Parameters:
+          - Vpc
+          - PrivateSubnetOne
+          - PrivateSubnetTwo
+      - Label:
+          default: "Host Configuration"
+        Parameters:
+          - Keypair
+          - AdminNodeAmiId
+          - StopAdAdminInstance
+          - AdDomainAdminNodeInstancetype
+          - AllowedIps
+          - ClientPrefixList
+
 Parameters:
-  VpcId:
+  Vpc:
+    Description: VPC ID to create the OpenLDAP service in.
     Type: AWS::EC2::VPC::Id
-    Description: The VPC into which to launch all resources
-  SubnetOne:
+  PrivateSubnetOne:
+    Description: Subnet ID of the first private subnet in the VPC. 
     Type: AWS::EC2::Subnet::Id
-    Description: The first subnet for running an OpenLDAP service
-  SubnetTwo:
+  PrivateSubnetTwo:
+    Description: Subnet ID of the second private subnet in the VPC.
     Type: AWS::EC2::Subnet::Id
-    Description: The first subnet for running an OpenLDAP service
   DomainName:
+    Description: OpenLDAP Domain Name.
     Type: String
-    Default: 'corp.pcluster.com'
-  CertProvisionerAmiId:
-    Description: AMI for the Admin Node
-    Type: 'AWS::SSM::Parameter::Value<AWS::EC2::Image::Id>'
-    Default: '/aws/service/ami-amazon-linux-latest/amzn2-ami-hvm-x86_64-gp2'
+    Default: corp.directory.com
+    AllowedPattern: ^([a-zA-Z0-9]+[\\.-])+([a-zA-Z0-9])+$
+  SubDomain:
+    Description: (Optional, but required for GovCloud regions) SubDomain for the OpenLDAP Domain Name. If provided OpenLDAP Domain Name will be (SubDomain).(DomainName)
+    Type: String
+    Default: ""
+  AdminPassword:
+    Description: OpenLDAP Admin Password.
+    Type: String
+    MinLength: 8
+    MaxLength: 64
+    AllowedPattern: (?=^.{8,64}$)((?=.*\d)(?=.*[A-Z])(?=.*[a-z])|(?=.*\d)(?=.*[^A-Za-z0-9\s])(?=.*[a-z])|(?=.*[^A-Za-z0-9\s])(?=.*[A-Z])(?=.*[a-z])|(?=.*\d)(?=.*[A-Z])(?=.*[^A-Za-z0-9\s]))^.*
+    NoEcho: true
+  ServiceAccountName:
+    Description: Username for the Service Account
+    Type: String
+    MinLength: 4
+    Default: ReadOnlyUser
+  ServiceAccountPassword:
+    Description: OpenLDAP Service Account Password.
+    Type: String
+    AllowedPattern: (?=^.{8,64}$)((?=.*\d)(?=.*[A-Z])(?=.*[a-z])|(?=.*\d)(?=.*[^A-Za-z0-9\s])(?=.*[a-z])|(?=.*[^A-Za-z0-9\s])(?=.*[A-Z])(?=.*[a-z])|(?=.*\d)(?=.*[A-Z])(?=.*[^A-Za-z0-9\s]))^.*
+    NoEcho: true
+  UserName:
+    Description: Example OpenLDAP cluster user.
+    Type: String
+    Default: "user123"
+  UserPassword:
+    Description: Password for OpenLDAP cluster user.
+    Type: String
+    AllowedPattern: (?=^.{8,64}$)((?=.*\d)(?=.*[A-Z])(?=.*[a-z])|(?=.*\d)(?=.*[^A-Za-z0-9\s])(?=.*[a-z])|(?=.*[^A-Za-z0-9\s])(?=.*[A-Z])(?=.*[a-z])|(?=.*\d)(?=.*[A-Z])(?=.*[^A-Za-z0-9\s]))^.*
+    NoEcho: true
+
+Conditions:
+  SubDomainNotProvided: !Equals [!Ref SubDomain, ""]
 
 Resources:
 
-  # Ensure CertNode uses IMDS v2
-  DisableImdsv1LaunchTemplate:
-    Type: AWS::EC2::LaunchTemplate
-    Properties:
-      LaunchTemplateData:
-        MetadataOptions:
-          HttpEndpoint: enabled
-          HttpPutResponseHopLimit: 4
-          HttpTokens: required
-
-  DomainCertificateSecret:
+  ServiceAccountPasswordSecret:
     Type: AWS::SecretsManager::Secret
     Properties:
-      Description: Domain certificate
-      Name: !Sub [ "DomainCertificateSecret-${StackIdSuffix}", { StackIdSuffix: !Select [ 1, !Split [ '/', !Ref 'AWS::StackId' ] ] } ]
+      Description: Stored password for OpenLDAP service account
+      Name: !Sub [ "PasswordSecret-${StackIdSuffix}", {StackIdSuffix: !Select [1, !Split ['/', !Ref 'AWS::StackId']]}]
+      SecretString: !Ref ServiceAccountPassword
 
-  DomainPrivateKeySecret:
-    Type: AWS::SecretsManager::Secret
-    Properties:
-      Description: Domain private key
-      Name: !Sub [ "DomainPrivateKeySecret-${StackIdSuffix}", { StackIdSuffix: !Select [ 1, !Split [ '/', !Ref 'AWS::StackId' ] ] } ]
-
-  # The ECS cluster that will be controlling the tasks in AWS Fargate
-  Cluster:
-    Type: AWS::ECS::Cluster
-
-  # The EFS filesystem
-  # TODO: Make it so EFS can be specified by ID, and created only if not
-  EFSFileSystem:
-    Type: AWS::EFS::FileSystem
-    DeletionPolicy: Delete
-    UpdateReplacePolicy: Retain
-    Properties:
-      Encrypted: true
-      PerformanceMode: generalPurpose
-      ThroughputMode: bursting
-
-  # EFS Access point for Data
-  # Required because our main container is a non-root container
-  # The POSIX user for the mount point is determined by looking container Dockerfile
-  # https://github.com/bitnami/containers/blob/main/bitnami/openldap/2.6/debian-11/Dockerfile
-  EFSAccessPointData:
-    Type: AWS::EFS::AccessPoint
-    Properties: 
-      FileSystemId: !Ref EFSFileSystem
-      PosixUser: 
-        Gid: "0"
-        Uid: "1001"
-      RootDirectory:
-        CreationInfo:
-             OwnerUid: "0"
-             OwnerGid: "0"
-             Permissions: '0777' 
-        Path: /data
-
-  # Mount target for subnet one
-  EFSMountTargetOne:
-    Type: AWS::EFS::MountTarget
-    Properties:
-      FileSystemId: !Ref EFSFileSystem
-      SubnetId: !Ref SubnetOne
-      SecurityGroups:
-        - !Ref EFSServerSecurityGroup
-
-  # Mount target for subnet two
-  EFSMountTargetTwo:
-    Type: AWS::EFS::MountTarget
-    Properties:
-      FileSystemId: !Ref EFSFileSystem
-      SubnetId: !Ref SubnetTwo
-      SecurityGroups:
-        - !Ref EFSServerSecurityGroup
-
-  # Security group that ECS tasks will use to access EFS
-  EfsClientSecurityGroup:
-    Type: AWS::EC2::SecurityGroup
-    Properties:
-      GroupDescription: Security group for EFS
-      VpcId: !Ref VpcId
-
-  # Allow inbound connection to EFS filesystem
-  # from resources in EfsClientSecurityGroup
-  EFSServerSecurityGroup:
-    Type: AWS::EC2::SecurityGroup
-    Properties:
-      GroupDescription: Security group for EFS file system
-      VpcId: !Ref VpcId
-      SecurityGroupIngress:
-        - IpProtocol: tcp
-          FromPort: 2049
-          ToPort: 2049
-          SourceSecurityGroupId: !Ref EfsClientSecurityGroup
-
-  # Role for provisioner instance
-  CertProvisionerRole:
-    Type: AWS::IAM::Role
-    Properties:
-      AssumeRolePolicyDocument:
-        Statement:
-          - Action: sts:AssumeRole
-            Effect: Allow
-            Principal:
-              Service: ec2.amazonaws.com
-        Version: "2012-10-17"
-      ManagedPolicyArns:
-        - arn:aws:iam::aws:policy/AmazonSSMManagedInstanceCore
-        - arn:aws:iam::aws:policy/AmazonSSMDirectoryServiceAccess
-      Policies:
-        - PolicyDocument:
-            Statement:
-              - Action:
-                  - secretsmanager:PutSecretValue
-                Effect: Allow
-                Resource:
-                  - !Ref DomainCertificateSecret
-                  - !Ref DomainPrivateKeySecret
-          PolicyName: PutDomainCertificateSecrets
-
-  # IAM Profile for provisioner instance
-  CertProvisionerProfile:
-    Type: AWS::IAM::InstanceProfile
-    Properties:
-      Roles:
-        - Ref: CertProvisionerRole
-
-  # SecGroup for provisioner instance
-  CertProvisionerSecurityGroup:
-    Type: AWS::EC2::SecurityGroup
-    Properties:
-      GroupDescription: Allow SSH access
-      SecurityGroupEgress:
-        - CidrIp: 0.0.0.0/0
-          FromPort: -1
-          IpProtocol: "-1"
-          ToPort: -1
-      VpcId: !Ref VpcId
-
-  # Ephemeral instance to generate a self-signed cert,
-  # stash it and its private key in Secrets Manager, then 
-  # move the assets to the EFS certs access point
-  CertProvisionerNode:
-    Type: AWS::EC2::Instance
-    CreationPolicy:
-      ResourceSignal:
-        Timeout: PT30M
-    Metadata:
-      "AWS::CloudFormation::Init":
-        configSets:
-          setup:
-            - install_dependencies
-        install_dependencies:
-          packages:
-            yum:
-              openssl: []
-    Properties:
-      IamInstanceProfile:
-        Ref: CertProvisionerProfile
-      ImageId: !Ref CertProvisionerAmiId
-      InstanceType: t2.micro
-      LaunchTemplate:
-        LaunchTemplateId: !Ref 'DisableImdsv1LaunchTemplate'
-        Version: !GetAtt 'DisableImdsv1LaunchTemplate.LatestVersionNumber'
-      SecurityGroupIds:
-        - Ref: CertProvisionerSecurityGroup
-      SubnetId: !Ref SubnetOne
-      Tags:
-        - Key: "Name"
-          Value: !Sub [ "CertProvisionerNode-${StackIdSuffix}", {StackIdSuffix: !Select [1, !Split ['/', !Ref 'AWS::StackId']]}]
-      UserData:
-        Fn::Base64:
-          !Sub
-            - |
-              #!/bin/bash -e
-              set -o pipefail
-              exec > >(tee /var/log/user-data.log|logger -t user-data -s 2>/dev/console) 2>&1
-              yum update -y aws-cfn-bootstrap
-              /opt/aws/bin/cfn-init -v --stack "${AWS::StackName}" --resource CertProvisionerNode --configsets setup --region "${AWS::Region}"
-
-              echo "Creating self-signed domain certificate..."
-              echo "Domain Name: ${DirectoryDomain}"
-              echo "Domain Certificate Secret: ${DomainCertificateSecretArn}"
-              echo "Domain Private Key Secret: ${DomainPrivateKeySecretArn}"
-
-              PRIVATE_KEY="certificate.key"
-              CERTIFICATE="certificate.crt"
-              printf '.\n.\n.\n.\n.\n%s\n.\n' "${DirectoryDomain}" | openssl req -x509 -sha256 -nodes -newkey rsa:2048 -keyout "$PRIVATE_KEY" -days 365 -out "$CERTIFICATE"
-              
-              echo ""
-              echo "Storing domain private key in Secrets Manager..."
-              aws secretsmanager put-secret-value --secret-id "${DomainPrivateKeySecretArn}" --secret-string "file://$PRIVATE_KEY" --region "${AWS::Region}"
-              
-              echo "Storing domain certificate in Secrets Manager..."
-              aws secretsmanager put-secret-value --secret-id "${DomainCertificateSecretArn}" --secret-string "file://$CERTIFICATE" --region "${AWS::Region}"
-
-              /opt/aws/bin/cfn-signal -e "$?" --stack "${AWS::StackName}" --resource CertProvisionerNode --region "${AWS::Region}"
-
-              sudo shutdown now -h
-
-            - { 
-                DirectoryDomain: !Ref DomainName,
-                DomainCertificateSecretArn: !Ref DomainCertificateSecret,
-                DomainPrivateKeySecretArn: !Ref DomainPrivateKeySecret,
-              }
-
-  # Role to support Lambda that imports cert into ACM
-  DomainCertificateSetupLambdaRole:
+  PrepRole:
     Type: AWS::IAM::Role
     Properties:
       AssumeRolePolicyDocument:
@@ -245,41 +112,21 @@ Resources:
             Version: 2012-10-17
             Statement:
               - Action:
-                  - logs:CreateLogGroup
-                  - logs:CreateLogStream
-                  - logs:PutLogEvents
+                - logs:CreateLogGroup
+                - logs:CreateLogStream
+                - logs:PutLogEvents
                 Effect: Allow
+                # Resource: !Sub arn:${AWS::Partition}:logs:${AWS::Region}:${AWS::AccountId}:log-group:/aws/lambda/${AWS::StackName}-Prep:*
                 Resource: '*'
-        - PolicyName: ManageDomainCertificate
-          PolicyDocument:
-            Version: 2012-10-17
-            Statement:
-              - Effect: Allow
-                Action:
-                  - acm:ImportCertificate
-                  - acm:AddTagsToCertificate
-                Resource: !Sub arn:${AWS::Partition}:acm:${AWS::Region}:${AWS::AccountId}:certificate/*
-                Condition:
-                  StringEquals:
-                    aws:RequestTag/StackId: !Sub ${AWS::StackId}
-              - Effect: Allow
-                Action:
-                  - secretsmanager:GetSecretValue
-                Resource:
-                  - !Ref DomainCertificateSecret
-                  - !Ref DomainPrivateKeySecret
 
-  # Lambda that imports cert into ACM
-  DomainCertificateSetupLambda:
+  PrepLambda:
     Type: AWS::Lambda::Function
-    DependsOn:
-         - CertProvisionerNode
     Properties:
-      Description: !Sub "${AWS::StackName}: custom resource handler to import the domain certificate into ACM."
+      Description: !Sub "${AWS::StackName}: custom resource handler to prepare the stack."
       Handler: index.handler
       MemorySize: 128
-      Role: !GetAtt DomainCertificateSetupLambdaRole.Arn
-      Runtime: python3.10
+      Role: !GetAtt PrepRole.Arn
+      Runtime: python3.9
       Timeout: 300
       TracingConfig:
         Mode: Active
@@ -293,174 +140,53 @@ Resources:
           import string
           logger = logging.getLogger()
           logger.setLevel(logging.INFO)
-          acm = boto3.client("acm")
-          sm = boto3.client("secretsmanager")
+          ec2 = boto3.client("ec2")
+          ds = boto3.client("ds")
 
           def create_physical_resource_id():
               alnum = string.ascii_uppercase + string.ascii_lowercase + string.digits
-              return ''.join(random.choice(alnum) for _ in range(16))
-
-          def import_certificate(certificate_secret_arn, private_key_secret_arn, tags):
-            logger.info('Reading secrets from Secrets Manager...')
-            domain_certificate = sm.get_secret_value(SecretId=certificate_secret_arn)["SecretString"]
-            domain_private_key = sm.get_secret_value(SecretId=private_key_secret_arn)["SecretString"]
-            logger.info('Importing certificate into ACM...')
-            certificate_arn = acm.import_certificate(
-              Certificate=domain_certificate, PrivateKey=domain_private_key, Tags=tags
-            )["CertificateArn"]
-            return certificate_arn
+              return "".join(random.choice(alnum) for _ in range(16))
 
           def handler(event, context):
-              logger.info(f"Context: {context}")
-              logger.info(f"Event: {event}")
-              logger.info(f"Boto version: {boto3.__version__}")
-
-              domain_name = event['ResourceProperties']['DomainName']
-              certificate_secret_arn = event['ResourceProperties']['DomainCertificateSecretArn']
-              private_key_secret_arn = event['ResourceProperties']['DomainPrivateKeySecretArn']
-              tags = [{ 'Key': 'StackId', 'Value': event['StackId']}]
+              print(event)
+              print( 'boto version {}'.format(boto3.__version__))
+              domain = event['ResourceProperties']['DomainName']
+              vpc_id = event['ResourceProperties']['Vpc']
+              subnet1_id = event['ResourceProperties']['PrivateSubnetOne']
+              subnet2_id = event['ResourceProperties']['PrivateSubnetTwo']
 
               response_data = {}
               reason = None
               response_status = cfnresponse.SUCCESS
+              stack_id_suffix = event['StackId'].split("/")[1]
 
-              physical_resource_id = event.get("PhysicalResourceId", create_physical_resource_id())
+              if event['RequestType'] == 'Create':
+                  response_data['Message'] = 'Resource creation successful!'
+                  physical_resource_id = create_physical_resource_id()
 
-              try:
-                if event['RequestType'] == 'Create':
-                  certificate_arn = import_certificate(certificate_secret_arn, private_key_secret_arn, tags)
-                  response_data['DomainCertificateArn'] = certificate_arn
-                  response_data['Message'] = f"Resource creation successful! ACM certificate imported: {certificate_arn}"
-              except Exception as e:
-                response_status = cfnresponse.FAILED
-                reason = str(e)
+                  # provide outputs
+                  response_data['DomainName'] = domain
+                  response_data['DomainShortName'] = domain.split(".")[0].upper()
+                  response_data['DomainComponents'] = ','.join(['dc=' + x for  x in domain.split('.')])
+                  response_data['VpcId'] = vpc_id
+                  response_data['Subnet1Id'] = subnet1_id
+                  response_data['Subnet2Id'] = subnet2_id
+              else:
+                  physical_resource_id = event['PhysicalResourceId']
               cfnresponse.send(event, context, response_status, response_data, physical_resource_id, reason)
 
-  # Invoke the Lambda that imports cert into ACM
-  DomainCertificateSetup:
-    Type: Custom::DomainCertificateSetupLambda
+  Prep:
+    Type: Custom::PrepLambda
     Properties:
-      ServiceToken: !GetAtt DomainCertificateSetupLambda.Arn
-      DomainName: !Ref DomainName
-      DomainCertificateSecretArn: !Ref DomainCertificateSecret
-      DomainPrivateKeySecretArn: !Ref DomainPrivateKeySecret
+      ServiceToken: !GetAtt PrepLambda.Arn
+      DomainName:  !If [ SubDomainNotProvided, !Ref DomainName, !Join [ ".", [ !Ref SubDomain, !Ref DomainName] ] ]
+      Vpc: !Ref Vpc
+      PrivateSubnetOne: !Ref PrivateSubnetOne
+      PrivateSubnetTwo: !Ref PrivateSubnetTwo
 
-# Role supporting lamdda for cleaning up cert from ACM
-  CleanupLambdaRole:
-      Type: AWS::IAM::Role
-      Properties:
-        AssumeRolePolicyDocument:
-          Version: 2012-10-17
-          Statement:
-            - Action:
-                - sts:AssumeRole
-              Effect: Allow
-              Principal:
-                Service:
-                  - lambda.amazonaws.com
-        Policies:
-          - PolicyName: LogOutput
-            PolicyDocument:
-              Version: 2012-10-17
-              Statement:
-                - Action:
-                    - logs:CreateLogGroup
-                    - logs:CreateLogStream
-                    - logs:PutLogEvents
-                  Effect: Allow
-                  Resource: '*'
-          - PolicyName: DeleteDomainCertificate
-            PolicyDocument:
-              Version: 2012-10-17
-              Statement:
-                - Effect: Allow
-                  Action:
-                    - acm:DeleteCertificate
-                  Resource: !GetAtt DomainCertificateSetup.DomainCertificateArn
-
-# Lamda for cleaning up cert from ACM
-  CleanupLambda:
-    Type: AWS::Lambda::Function
-    Properties:
-      Description: !Sub "${AWS::StackName}: custom resource handler to cleanup resources."
-      Handler: index.handler
-      MemorySize: 128
-      Role: !GetAtt CleanupLambdaRole.Arn
-      Runtime: python3.10
-      Timeout: 900
-      TracingConfig:
-        Mode: Active
-      Code:
-        ZipFile: |
-          import time
-          import cfnresponse
-          import boto3
-          import logging
-          import random
-          import string
-          logger = logging.getLogger()
-          logger.setLevel(logging.INFO)
-          acm = boto3.client("acm")
-
-          def create_physical_resource_id():
-            alnum = string.ascii_uppercase + string.ascii_lowercase + string.digits
-            return ''.join(random.choice(alnum) for _ in range(16))
-
-          def delete_certificate(certificate_arn):
-            logger.info(f"Deleting ACM certificate {certificate_arn}...")
-            max_attempts = 10
-            sleep_time = 60
-            for attempt in range(1, max_attempts+1):
-              try:
-                acm.delete_certificate(CertificateArn=certificate_arn)
-                break
-              except acm.exceptions.ResourceInUseException as e:
-                logger.info(f"(Attempt {attempt}/{max_attempts}) Cannot delete ACM certificate because it is in use. Retrying in {sleep_time} seconds...")
-                if attempt == max_attempts:
-                  raise Exception(f"Cannot delete certificate {certificate_arn}: {e}")
-                else:
-                  time.sleep(sleep_time)
-
-          def handler(event, context):
-            logger.info(f"Context: {context}")
-            logger.info(f"Event: {event}")
-            logger.info(f"Boto version: {boto3.__version__}")
-
-            response_data = {}
-            reason = None
-            response_status = cfnresponse.SUCCESS
-
-            physical_resource_id = event.get("PhysicalResourceId", create_physical_resource_id())
-
-            try:
-              if event['RequestType'] == 'Delete':
-                certificate_arn = event['ResourceProperties']['DomainCertificateArn']
-                delete_certificate(certificate_arn)
-            except Exception as e:
-              response_status = cfnresponse.FAILED
-              reason = str(e)
-            cfnresponse.send(event, context, response_status, response_data, physical_resource_id, reason)
-
-  # Invoke cleanup Lambda
-  Cleanup:
-    Type: Custom::CleanupLambda
-    Properties:
-      ServiceToken: !GetAtt CleanupLambda.Arn
-      DomainCertificateArn: !GetAtt DomainCertificateSetup.DomainCertificateArn
-
-  # Policy customers can use to read the Domain Cert secret
-  DomainCertificateSecretReadPolicy:
-    Type: AWS::IAM::ManagedPolicy
-    Properties:
-      ManagedPolicyName: !Sub [ "DomainCertificateSecretReadPolicy-${StackIdSuffix}", { StackIdSuffix: !Select [ 1, !Split [ '/', !Ref 'AWS::StackId' ] ] } ]
-      PolicyDocument:
-        Version: 2012-10-17
-        Statement:
-          - Effect: Allow
-            Action:
-              - secretsmanager:GetSecretValue
-            Resource:
-              - !Ref DomainCertificateSecret
+  # The ECS cluster that will be controlling the tasks in AWS Fargate
+  Cluster:
+    Type: AWS::ECS::Cluster
 
   # This role is used to setup the execution environment for
   # the OpenLDAP Fargate task, allowing it to connect to EFS
@@ -480,18 +206,6 @@ Resources:
                 aws:SourceAccount: !Ref AWS::AccountId
       ManagedPolicyArns:
         - arn:aws:iam::aws:policy/service-role/AmazonECSTaskExecutionRolePolicy
-      Policies:
-        - PolicyName: EFSAccess
-          PolicyDocument:
-            Version: '2012-10-17'
-            Statement:
-              - Effect: Allow
-                Action:
-                  - elasticfilesystem:ClientMount
-                  - elasticfilesystem:ClientWrite
-                  - elasticfilesystem:DescribeMountTargets
-                  - elasticfilesystem:DescribeFileSystems
-                Resource: !GetAtt EFSFileSystem.Arn
 
   # This role is used at runtime.
   TaskRole:
@@ -521,18 +235,14 @@ Resources:
                   - ssmmessages:OpenDataChannel
                 Resource: '*'
 
-  # Store the logs from the task for inspection and review
-  # for up to 7 days
-  EfsTaskLogGroup:
+
+  LdapTaskLogGroup:
     DeletionPolicy: Retain
     UpdateReplacePolicy: Retain
     Type: AWS::Logs::LogGroup
     Properties:
       RetentionInDays: 7
 
-  # Launch the application, mounting the EFS filesystem
-  # for data peristence. 
-  # TODO: Accept custom LDIF, LDAP root, default users/passwords, log level
   TaskDefinition:
     Type: AWS::ECS::TaskDefinition
     Properties:
@@ -542,89 +252,52 @@ Resources:
       NetworkMode: awsvpc
       ContainerDefinitions:
         - Name: openldap
-          Image: bitnami/openldap:2.6.6
+          Image: bitnami/openldap:2.6.7
           Environment:
             - Name: LDAP_ROOT
-              Value: "DC=corp,DC=pcluster,DC=com"
+              Value: !GetAtt Prep.DomainComponents
             - Name: LDAP_ALLOW_ANON_BINDING
-              Value: "yes"
+              Value: "no"
             - Name: LDAP_LOGLEVEL
               Value: 256
             - Name: LDAP_ADMIN_USERNAME
-              Value: admin
+              Value: Admin
             - Name: LDAP_ADMIN_PASSWORD
-              Value: adminpassword
+              Value: !Ref AdminPassword
             - Name: LDAP_USERS
-              Value: user01,user02
+              Value: !Sub
+                - '${ServiceAccount},${UserName}'
+                - ServiceAccount: !Ref ServiceAccountName
+                  UserName: !Ref UserName
             - Name: LDAP_PASSWORDS
-              Value: password1,password2
+              Value: !Sub
+                - '${ServiceAccountPassword},${UserPassword}'
+                - ServiceAccountPassword: !Ref ServiceAccountPassword
+                  UserPassword: !Ref UserPassword
           Essential: true
           LinuxParameters:
             InitProcessEnabled: true
-          MountPoints:
-            - SourceVolume: data-volume
-              ContainerPath: /bitnami/openldap
-              ReadOnly: false
           LogConfiguration:
             LogDriver: awslogs
             Options:
               mode: non-blocking
               max-buffer-size: 25m
-              awslogs-group: !Ref EfsTaskLogGroup
+              awslogs-group: !Ref LdapTaskLogGroup
               awslogs-region: !Ref AWS::Region
               awslogs-stream-prefix: openldap-task
           PortMappings:
             - ContainerPort: 1389
               Protocol: tcp
-            # - ContainerPort: 1636
-            #   Protocol: tcp              
-      Volumes:
-        - Name: data-volume
-          EFSVolumeConfiguration:
-            FilesystemId: !Ref EFSFileSystem
-            TransitEncryption: ENABLED
-            AuthorizationConfig:
-              AccessPointId: !Ref EFSAccessPointData
-              IAM: ENABLED
       RequiresCompatibilities:
         - FARGATE
       Cpu: '256'
       Memory: '512'
 
-  # # Clients join this group to get access to LDAP/S service
-  # LdapClientSecurityGroup:
-  #   Type: AWS::EC2::SecurityGroup
-  #   Properties:
-  #     GroupDescription: Security group for LDAP clients
-  #     VpcId: !Ref VpcId
-
-  # # Allow inbound connection to LDAP ECS service
-  # # from resources in LdapClientSecurityGroup
-  # LdapServiceSecurityGroup:
-  #   Type: AWS::EC2::SecurityGroup
-  #   Properties:
-  #     GroupDescription: Security group for LDAP service
-  #     VpcId: !Ref VpcId
-  #     SecurityGroupIngress:
-  #       - IpProtocol: tcp
-  #         FromPort: 1389
-  #         ToPort: 1389
-  #         SourceSecurityGroupId: !Ref LdapClientSecurityGroup
-  #       - IpProtocol: tcp
-  #         FromPort: 1636
-  #         ToPort: 1636
-  #         SourceSecurityGroupId: !Ref LdapClientSecurityGroup
-
   # Launch OpenLDAP task as a service
   Service:
     Type: AWS::ECS::Service
     DependsOn:
-      # Ensure task don't launch before EFS is ready
-      # and certs have been generated
-      - EFSMountTargetOne
-      - EFSMountTargetTwo
-      - DomainCertificateSetupLambda
-      - ServiceListener1636
+      - ServiceListener1389
     Properties:
       ServiceName: 'openldap'
       Cluster: !Ref Cluster
@@ -638,19 +311,15 @@ Resources:
         AwsvpcConfiguration:
           AssignPublicIp: DISABLED
           SecurityGroups:
-            - !Ref EfsClientSecurityGroup
             - !Ref ServiceSecurityGroup
           Subnets:
-            - !Ref SubnetOne
-            - !Ref SubnetTwo
+            - !Ref PrivateSubnetOne
+            - !Ref PrivateSubnetTwo
       TaskDefinition: !Ref 'TaskDefinition'
       LoadBalancers:
-          #  - ContainerName: 'openldap'
-          #    ContainerPort: 1389
-          #    TargetGroupArn: !Ref ServiceTargetGroup1389
-           - ContainerName: 'openldap'
-             ContainerPort: 1389
-             TargetGroupArn: !Ref ServiceTargetGroup1636
+        - ContainerName: 'openldap'
+          ContainerPort: 1389
+          TargetGroupArn: !Ref ServiceTargetGroup1389
 
   # Security group that limits network access
   # to the task
@@ -658,42 +327,23 @@ Resources:
     Type: AWS::EC2::SecurityGroup
     Properties:
       GroupDescription: Security group for service
-      VpcId: !Ref VpcId
+      VpcId: !Ref Vpc
 
-  # LDAP high port
-  # ServiceTargetGroup1389:
-  #   Type: AWS::ElasticLoadBalancingV2::TargetGroup
-  #   Properties:
-  #     HealthCheckEnabled: true
-  #     HealthCheckIntervalSeconds: 120
-  #     HealthCheckTimeoutSeconds: 30
-  #     HealthCheckPort: 1389
-  #     HealthCheckProtocol: TCP
-  #     HealthyThresholdCount: 3
-  #     UnhealthyThresholdCount: 10
-  #     Port: 1389
-  #     Protocol: TCP
-  #     TargetType: ip
-  #     VpcId: !Ref VpcId
-  #     TargetGroupAttributes:
-  #       - Key: deregistration_delay.timeout_seconds
-  #         Value: 60
-
-  # LDAPS high port
-  ServiceTargetGroup1636:
+#  LDAP high port
+  ServiceTargetGroup1389:
     Type: AWS::ElasticLoadBalancingV2::TargetGroup
     Properties:
       HealthCheckEnabled: true
       HealthCheckIntervalSeconds: 120
-      HealthCheckTimeoutSeconds: 10
-      HealthCheckPort: 1636
+      HealthCheckTimeoutSeconds: 30
+      HealthCheckPort: 1389
       HealthCheckProtocol: TCP
       HealthyThresholdCount: 3
-      UnhealthyThresholdCount: 3
-      Port: 1636
+      UnhealthyThresholdCount: 10
+      Port: 1389
       Protocol: TCP
       TargetType: ip
-      VpcId: !Ref VpcId
+      VpcId: !Ref Vpc
       TargetGroupAttributes:
         - Key: deregistration_delay.timeout_seconds
           Value: 60
@@ -714,7 +364,7 @@ Resources:
     Type: AWS::EC2::SecurityGroup
     Properties:
       GroupDescription: Access to the public facing load balancer
-      VpcId: !Ref VpcId
+      VpcId: !Ref Vpc
       SecurityGroupIngress:
         # Allow access to public facing ALB from any IP address
         - CidrIp: 0.0.0.0/0
@@ -728,41 +378,29 @@ Resources:
       SecurityGroups:
            - !Ref PublicLoadBalancerSG
       Subnets: 
-        - !Ref SubnetOne
-        - !Ref SubnetTwo
+        - !Ref PrivateSubnetOne
+        - !Ref PrivateSubnetTwo
       Type: network
 
-  # ServiceListener1389:
-  #   Type: AWS::ElasticLoadBalancingV2::Listener
-  #   Properties: 
-  #     DefaultActions: 
-  #       - Type: "forward"
-  #         TargetGroupArn: !Ref ServiceTargetGroup1389
-  #     LoadBalancerArn: !Ref PublicLoadBalancer
-  #     Port: 1389
-  #     Protocol: TCP
-
-  ServiceListener1636:
+  ServiceListener1389:
     Type: AWS::ElasticLoadBalancingV2::Listener
     Properties: 
       DefaultActions: 
         - Type: "forward"
-          TargetGroupArn: !Ref ServiceTargetGroup1636
+          TargetGroupArn: !Ref ServiceTargetGroup1389
       LoadBalancerArn: !Ref PublicLoadBalancer
-      Port: 1636
-      Protocol: TLS
-      SslPolicy: ELBSecurityPolicy-TLS-1-2-2017-01
-      Certificates:
-        - CertificateArn: !GetAtt DomainCertificateSetup.DomainCertificateArn
+      Port: 1389
+      Protocol: TCP
 
   DNS:
     Type: AWS::Route53::HostedZone
     Properties:
       Name: !Ref DomainName
       VPCs:
-        - VPCId: !Ref VpcId
+        - VPCId: !Ref Vpc
           VPCRegion: !Ref AWS::Region
 
+  # Enables DNS lookup for NLB within VPC
   DNSRecord:
     Type: AWS::Route53::RecordSet
     Properties:
@@ -774,58 +412,31 @@ Resources:
       Type: A
 
 Outputs:
-  VpcId:
-    Value: !Ref VpcId
-    Export:
-        Name: !Sub ${AWS::StackName}-VpcId
-  PrivateSubnetIds:
-    Value: !Join [",", [!Ref SubnetOne, !Ref SubnetTwo]]
-    Export:
-        Name: !Sub ${AWS::StackName}-PrivateSubnetIds
   DomainName:
-    Value: !Ref DomainName
+    Value: !If [ SubDomainNotProvided, !Ref DomainName, !Join [ ".", [ !Ref SubDomain, !Ref DomainName] ] ]
     Export:
         Name: !Sub ${AWS::StackName}-DomainName
-  # PasswordSecretArn:
-  #   Value: !Ref PasswordSecret
-  #   Export:
-  #       Name: !Sub ${AWS::StackName}-PasswordSecretArn
-  DomainCertificateArn:
-    Value: !GetAtt DomainCertificateSetup.DomainCertificateArn
+  DomainComponents:
+    Description: "Domain name expressed as Domain Components"
+    Value: !GetAtt Prep.DomainComponents
     Export:
-        Name: !Sub ${AWS::StackName}-DomainCertificateArn
-  DomainCertificateSecretArn:
-    Value: !Ref DomainCertificateSecret
+      Name: !Sub ${AWS::StackName}-DomainComponents
+  DomainServiceAccount:
+    Description: Username for Service Account created during stack creation.
+    Value: !Sub
+      - cn=${service_account_name},ou=users,dc=${dc}
+      - { service_account_name: !Ref ServiceAccountName, dc: !GetAtt Prep.DomainComponents }
     Export:
-        Name: !Sub ${AWS::StackName}-DomainCertificateSecretArn
-  # DomainReadOnlyUser:
-  #   Value: !Sub
-  #     - cn=ReadOnlyUser,ou=Users,ou=${ou},dc=${dc}
-  #     - { dc: !Join [",dc=", !Split [".", !Ref DomainName ]], ou: !GetAtt Prep.DomainShortName }
-  #   Export:
-  #       Name: !Sub ${AWS::StackName}-DomainReadOnlyUser
+        Name: !Sub ${AWS::StackName}-DomainServiceAccount
   DomainAddrLdap:
     Value: !Sub
       - ldap://${address}
-      - address: !GetAtt PublicLoadBalancer.DNSName
+      - address: !Ref DomainName
     Export:
         Name: !Sub ${AWS::StackName}-DomainAddrLdap
-  DomainAddrLdaps:
-    Value: !Sub
-      - ldaps://${address}
-      - address: !GetAtt PublicLoadBalancer.DNSName
+  PasswordSecretArn:
+    Value: !Ref ServiceAccountPasswordSecret
     Export:
-        Name: !Sub ${AWS::StackName}-DomainAddrLdaps
-  DomainCertificateSecretReadPolicy:
-    Value: !Ref DomainCertificateSecretReadPolicy
-    Export:
-        Name: !Sub ${AWS::StackName}-DomainCertificateSecretReadPolicy
-  # DirectoryId:
-  #   Value: !Ref Directory
-  #   Export:
-  #       Name: !Sub ${AWS::StackName}-DirectoryId
-  # DomainManagementNodeId:
-  #   Value: !Ref AdDomainAdminNode
-  #   Description: Instance ID for AD Domain Management Node
-  #   Export:
-  #       Name: !Sub ${AWS::StackName}-DomainManagementNodeId
+        Name: !Sub ${AWS::StackName}-PasswordSecretArn
+  LoadBalancerDns:
+    Value: !GetAtt PublicLoadBalancer.DNSName
