@@ -13,71 +13,60 @@ Metadata:
           - AdminPassword
           - ServiceAccountName
           - ServiceAccountPassword
-          - ManagedAdEdition
       - Label:
           default: "OpenLDAP Bootstrapping"
         Parameters:
           - UserName
           - UserPassword
-          - LDIFS3Path
       - Label:
           default: "Network Configuration"
         Parameters:
           - Vpc
           - PrivateSubnetOne
           - PrivateSubnetTwo
-      - Label:
-          default: "Host Configuration"
-        Parameters:
-          - Keypair
-          - AdminNodeAmiId
-          - StopAdAdminInstance
-          - AdDomainAdminNodeInstancetype
-          - AllowedIps
-          - ClientPrefixList
 
 Parameters:
   Vpc:
-    Description: VPC ID to create the OpenLDAP service in.
+    Description: VPC to create the OpenLDAP service in
     Type: AWS::EC2::VPC::Id
   PrivateSubnetOne:
-    Description: Subnet ID of the first private subnet in the VPC. 
+    Description: Subnet ID of the first private subnet in the VPC
     Type: AWS::EC2::Subnet::Id
   PrivateSubnetTwo:
-    Description: Subnet ID of the second private subnet in the VPC.
+    Description: Subnet ID of the second private subnet in the VPC
     Type: AWS::EC2::Subnet::Id
   DomainName:
-    Description: OpenLDAP Domain Name.
+    Description: OpenLDAP domain name
     Type: String
     Default: corp.directory.com
     AllowedPattern: ^([a-zA-Z0-9]+[\\.-])+([a-zA-Z0-9])+$
   SubDomain:
-    Description: (Optional, but required for GovCloud regions) SubDomain for the OpenLDAP Domain Name. If provided OpenLDAP Domain Name will be (SubDomain).(DomainName)
+    Description: (Optional, but required for GovCloud regions) SubDomain for the OpenLDAP domain name. If provided OpenLDAP domain name will be (SubDomain).(DomainName).
     Type: String
     Default: ""
   AdminPassword:
-    Description: OpenLDAP Admin Password.
+    Description: OpenLDAP admin password
     Type: String
     MinLength: 8
     MaxLength: 64
     AllowedPattern: (?=^.{8,64}$)((?=.*\d)(?=.*[A-Z])(?=.*[a-z])|(?=.*\d)(?=.*[^A-Za-z0-9\s])(?=.*[a-z])|(?=.*[^A-Za-z0-9\s])(?=.*[A-Z])(?=.*[a-z])|(?=.*\d)(?=.*[A-Z])(?=.*[^A-Za-z0-9\s]))^.*
     NoEcho: true
   ServiceAccountName:
-    Description: Username for the Service Account
+    Description: OpenLDAP service account username
     Type: String
     MinLength: 4
     Default: ReadOnlyUser
   ServiceAccountPassword:
-    Description: OpenLDAP Service Account Password.
+    Description: OpenLDAP service account password
     Type: String
     AllowedPattern: (?=^.{8,64}$)((?=.*\d)(?=.*[A-Z])(?=.*[a-z])|(?=.*\d)(?=.*[^A-Za-z0-9\s])(?=.*[a-z])|(?=.*[^A-Za-z0-9\s])(?=.*[A-Z])(?=.*[a-z])|(?=.*\d)(?=.*[A-Z])(?=.*[^A-Za-z0-9\s]))^.*
     NoEcho: true
   UserName:
-    Description: Example OpenLDAP cluster user.
+    Description: Example OpenLDAP cluster user
     Type: String
     Default: "user123"
   UserPassword:
-    Description: Password for OpenLDAP cluster user.
+    Description: Password for OpenLDAP cluster user
     Type: String
     AllowedPattern: (?=^.{8,64}$)((?=.*\d)(?=.*[A-Z])(?=.*[a-z])|(?=.*\d)(?=.*[^A-Za-z0-9\s])(?=.*[a-z])|(?=.*[^A-Za-z0-9\s])(?=.*[A-Z])(?=.*[a-z])|(?=.*\d)(?=.*[A-Z])(?=.*[^A-Za-z0-9\s]))^.*
     NoEcho: true
@@ -416,13 +405,15 @@ Outputs:
     Value: !If [ SubDomainNotProvided, !Ref DomainName, !Join [ ".", [ !Ref SubDomain, !Ref DomainName] ] ]
     Export:
         Name: !Sub ${AWS::StackName}-DomainName
+  DomainShortName:
+    Value: !GetAtt Prep.DomainShortName
   DomainComponents:
-    Description: "Domain name expressed as Domain Components"
+    Description: "Domain name as Domain Components"
     Value: !GetAtt Prep.DomainComponents
     Export:
       Name: !Sub ${AWS::StackName}-DomainComponents
   DomainServiceAccount:
-    Description: Username for Service Account created during stack creation.
+    Description: Service account username
     Value: !Sub
       - cn=${service_account_name},ou=users,dc=${dc}
       - { service_account_name: !Ref ServiceAccountName, dc: !GetAtt Prep.DomainComponents }
@@ -436,7 +427,6 @@ Outputs:
         Name: !Sub ${AWS::StackName}-DomainAddrLdap
   PasswordSecretArn:
     Value: !Ref ServiceAccountPasswordSecret
+    Description: Secrets Manager secret where service account password is stored.
     Export:
         Name: !Sub ${AWS::StackName}-PasswordSecretArn
-  LoadBalancerDns:
-    Value: !GetAtt PublicLoadBalancer.DNSName
