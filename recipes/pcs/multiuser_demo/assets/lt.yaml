@@ -18,23 +18,15 @@ Metadata:
         Parameters:
           - KeyName
           - NodeGroupSecurityGroupIds
-      - Label:
-          default: Other
-        Parameters:
-          - LaunchTemplateName
 
 Parameters:
 
-  LaunchTemplateName:
-    Type: String
-    Default: "PCS-sssd-for-ad"
-    Description: Launch template name
   NodeGroupSecurityGroupIds:
     Type: List<AWS::EC2::SecurityGroup::Id>
     Description: Security group(s) for compute node group instances.
   KeyName:
     Type: AWS::EC2::KeyPair::KeyName
-    Description: SSH keypair to log into node group instances
+    Description: SSH keypair to log into compute node group instances
     Default: ""
   PasswordSecretArn:
     Type: String
@@ -42,8 +34,11 @@ Parameters:
   SssdConfigTemplateS3Path:
     Description: An S3 Path (without the s3://) to a configuration file template for configuring SSSD. 
     Type: String
+    # TODO - update with published recipe locations
     Default: awspcs-hpc-recipes-demo/ad.sssd.conf.template
-    # TODO: Add validation
+    AllowedValues:
+         - "awspcs-hpc-recipes-demo/ad.sssd.conf.template"
+         - "awspcs-hpc-recipes-demo/openldap.sssd.conf.template"
   DomainName:
     Type: String
     Description: LDAP domain name (e.g. corp.example.com)
@@ -67,7 +62,7 @@ Resources:
   LaunchTemplate:
     Type: AWS::EC2::LaunchTemplate
     Properties:
-      LaunchTemplateName: !Ref LaunchTemplateName
+      LaunchTemplateName: !Sub "AWSPCS-LDAP-${AWS::StackName}"
       LaunchTemplateData:
         # Enforce IMDS v2
         MetadataOptions:
@@ -134,6 +129,9 @@ Resources:
                 ServiceAccountDn: !Ref DomainServiceAccount }
   
 Outputs:
+  LaunchTemplateName:
+    Description: "Launch template name"
+    Value: !Sub "AWSPCS-LDAP-${AWS::StackName}"
   LaunchTemplateId:
     Description: "Launch template Id"
     Value: !Ref LaunchTemplate

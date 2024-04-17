@@ -1,26 +1,29 @@
 AWSTemplateFormatVersion: 2010-09-09
-Description: IAM instance profile for use with PCS compute node groups
+Description: IAM instance profile enabling PCS compute node groups to be configured with LDAP support
 
 Parameters:
 
   SssdConfigTemplateS3Path:
     Description: An S3 Path (without the s3://) to a configuration file template for configuring SSSD. 
     Type: String
+    # TODO - update with published recipe locations
     Default: awspcs-hpc-recipes-demo/ad.sssd.conf.template
+    AllowedValues:
+         - "awspcs-hpc-recipes-demo/ad.sssd.conf.template"
+         - "awspcs-hpc-recipes-demo/openldap.sssd.conf.template"
 
-  SecretsPrefix:
-    Description: Prefix for naming configuration secrets in AWS Secrets Manager
+  PasswordSecretArn:
     Type: String
-    Default: HPC
-    AllowedPattern: ^([A-Za-z0-9]{3,12})?$
+    Description: Secrets Manager ARN where bind password is stored.
+    # TODO: Add validation
 
 Resources:
 
   PcsInstanceIamRole:
     Type: AWS::IAM::Role
     Properties:
-      RoleName: !Sub "PcsAdConfiguration-${AWS::StackName}"
-      Description: "AWS IAM role for PCS node group instances with AD support"
+      RoleName: !Sub "AWSPCS-LDAP-${AWS::StackName}"
+      Description: "AWS IAM role for PCS node group instances with LDAP support"
       AssumeRolePolicyDocument:
         Statement:
           - Action: sts:AssumeRole
@@ -60,9 +63,7 @@ Resources:
                   - secretsmanager:DescribeSecret
                   - secretsmanager:ListSecretVersionIds
                 Effect: Allow
-                Resource: !Sub 
-                  - "arn:${AWS::Partition}:secretsmanager:*:*:secret:${SecretsPrefix}-"
-                  - SecretsPrefix: !Ref SecretsPrefix
+                Resource: !Ref PasswordSecretArn
           PolicyName: GetSsdConfigSecrets
 
   PcsInstanceProfile:
@@ -70,7 +71,7 @@ Resources:
     Properties:
       Roles:
             - !Ref PcsInstanceIamRole
-      InstanceProfileName: !Sub "PcsAdConfiguration-${AWS::StackName}"
+      InstanceProfileName: !Sub "AWSPCS-LDAP-${AWS::StackName}"
 
 Outputs:
   InstanceProfile:
