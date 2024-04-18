@@ -127,8 +127,6 @@ Outputs:
   DomainServiceAccount:
     Value: !GetAtt [ DirectoryService, Outputs.DomainServiceAccount ]
   DomainAddrLdap:
-    Value: !Sub
-      - "ldap://${Domain}"
-      - Domain: !GetAtt [ DirectoryService, Outputs.DomainName ]
+    Value: !GetAtt [ DirectoryService, Outputs.DomainAddrLdap ]
   PasswordSecretArn:
-    Value: !Ref ServiceAccountPassword
+    Value: !GetAtt [ DirectoryService, Outputs.PasswordSecretArn ]

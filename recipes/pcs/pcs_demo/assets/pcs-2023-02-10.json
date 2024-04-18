@@ -8,11 +8,11 @@
         "ripServiceName": "pcs",
         "serviceAbbreviation": "PCS",
         "serviceFullName": "AWS Parallel Computing Service",
-        "serviceId": "Parallel Computing",
+        "serviceId": "PCS",
         "signatureVersion": "v4",
         "signingName": "pcs",
         "targetPrefix": "AWSParallelComputingService",
-        "uid": "parallel-computing-2023-02-10"
+        "uid": "pcs-2023-02-10"
     },
     "operations": {
         "AllowVendedLogDeliveryForResource": {
@@ -1113,6 +1113,10 @@
                 "slurmConfiguration": {
                     "shape": "SlurmConfiguration"
                 },
+                "clientToken": {
+                    "shape": "SBClientToken",
+                    "idempotencyToken": true
+                },
                 "tags": {
                     "shape": "RequestTagMap"
                 }
@@ -1195,6 +1199,10 @@
                 "slurmConfiguration": {
                     "shape": "ComputeNodeGroupSlurmConfiguration"
                 },
+                "clientToken": {
+                    "shape": "SBClientToken",
+                    "idempotencyToken": true
+                },
                 "tags": {
                     "shape": "RequestTagMap"
                 }
@@ -1247,6 +1255,10 @@
                 },
                 "computeNodeGroupConfigurations": {
                     "shape": "ComputeNodeGroupConfigurationList"
+                },
+                "clientToken": {
+                    "shape": "SBClientToken",
+                    "idempotencyToken": true
                 },
                 "tags": {
                     "shape": "RequestTagMap"
@@ -2027,6 +2039,11 @@
                 "shape": "TagValue"
             }
         },
+        "SBClientToken": {
+            "type": "string",
+            "max": 100,
+            "min": 8
+        },
         "ScalingConfiguration": {
             "type": "structure",
             "required": [
@@ -2338,6 +2355,10 @@
                 },
                 "slurmConfiguration": {
                     "shape": "SlurmConfiguration"
+                },
+                "clientToken": {
+                    "shape": "SBClientToken",
+                    "idempotencyToken": true
                 }
             }
         },
@@ -2405,6 +2426,10 @@
                 },
                 "slurmConfiguration": {
                     "shape": "ComputeNodeGroupSlurmConfiguration"
+                },
+                "clientToken": {
+                    "shape": "SBClientToken",
+                    "idempotencyToken": true
                 }
             }
         },
@@ -2451,6 +2476,10 @@
                 },
                 "computeNodeGroupConfigurations": {
                     "shape": "ComputeNodeGroupConfigurationList"
+                },
+                "clientToken": {
+                    "shape": "SBClientToken",
+                    "idempotencyToken": true
                 }
             }
         },
