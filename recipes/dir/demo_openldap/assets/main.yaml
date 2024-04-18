@@ -415,13 +415,13 @@ Outputs:
   DomainServiceAccount:
     Description: Service account username
     Value: !Sub
-      - cn=${service_account_name},ou=users,dc=${dc}
+      - cn=${service_account_name},ou=users,${dc}
       - { service_account_name: !Ref ServiceAccountName, dc: !GetAtt Prep.DomainComponents }
     Export:
         Name: !Sub ${AWS::StackName}-DomainServiceAccount
   DomainAddrLdap:
     Value: !Sub
-      - ldap://${address}
+      - ldap://${address}:1389
       - address: !Ref DomainName
     Export:
         Name: !Sub ${AWS::StackName}-DomainAddrLdap
