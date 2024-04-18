@@ -1,4 +1,5 @@
 [domain/${DOMAIN_NAME}]
+auto_private_groups = True
 cache_credentials = True
 debug_level = 4
 default_shell = /bin/bash
@@ -6,7 +7,7 @@ fallback_homedir = /home/%u
 id_provider = ldap
 ldap_default_authtok = ${BIND_PASSWORD}
 ldap_default_bind_dn = ${BIND_DN}
-ldap_id_mapping = True
+ldap_id_mapping = False
 ldap_referrals = False
 ldap_schema = rfc2307
 ldap_search_base = ${LDAP_SEARCH_BASE}

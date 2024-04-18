@@ -69,12 +69,6 @@ Parameters:
     AllowedPattern: (?=^.{8,64}$)((?=.*\d)(?=.*[A-Z])(?=.*[a-z])|(?=.*\d)(?=.*[^A-Za-z0-9\s])(?=.*[a-z])|(?=.*[^A-Za-z0-9\s])(?=.*[A-Z])(?=.*[a-z])|(?=.*\d)(?=.*[A-Z])(?=.*[^A-Za-z0-9\s]))^.*
     NoEcho: true
 
-  SecretsPrefix:
-    Description: Prefix for naming configuration secrets in AWS Secrets Manager
-    Type: String
-    Default: HPC
-    AllowedPattern: ^([A-Za-z0-9]{3,12})?$
-
 Resources:
 
   AdminPassword:
@@ -82,9 +76,8 @@ Resources:
     Properties:
       Description: Active Directory Administrator Account Password.
       Name: !Sub 
-        - "${SecretsPrefix}-OPENLDAP-AdminPassword-${StackName}"
-        - SecretsPrefix: !Ref SecretsPrefix
-          StackName: !Ref AWS::StackName
+        - "OPENLDAP-AdminPassword-${StackName}"
+        - StackName: !Ref AWS::StackName
       GenerateSecretString:
         ExcludePunctuation: true
 
@@ -93,9 +86,8 @@ Resources:
     Properties:
       Description: Active Directory Service Account Password.
       Name: !Sub 
-        - "${SecretsPrefix}-OPENLDAP-ServiceAccountPassword-${StackName}"
-        - SecretsPrefix: !Ref SecretsPrefix
-          StackName: !Ref AWS::StackName
+        - "OPENLDAP-ServiceAccountPassword-${StackName}"
+        - StackName: !Ref AWS::StackName
       GenerateSecretString:
         ExcludePunctuation: true
 
