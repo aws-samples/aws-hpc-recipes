@@ -96,6 +96,7 @@ Resources:
         ServiceAccountPassword: !Ref ServiceAccountPassword
         ClientIpCidr: !Ref ClientIpCidr
         ClientPrefixList: !Ref InboundPrefixList
+        RetainStorageResources: "False"  
       TemplateURL: https://aws-hpc-recipes.s3.us-east-1.amazonaws.com/main/recipes/res/res_demo_env/assets/bi.yaml
 
   RES:
