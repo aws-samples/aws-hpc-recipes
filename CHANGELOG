@@ -9,6 +9,7 @@ The format is based on [Keep a Changelog](http://keepachangelog.com/)
 * New recipe slurm_accounting_with_email with the Slurm-Mail plugin
 
 ### Fixed
+* In mountpoint_s3, systemd services now wait for cloud-init.target to come up.
 
 ### Changed
 

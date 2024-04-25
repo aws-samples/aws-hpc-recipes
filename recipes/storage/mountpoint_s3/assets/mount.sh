@@ -105,17 +105,15 @@ fi
 # Write our little systemd service
 ## Reference: https://github.com/awslabs/mountpoint-s3/issues/441#issuecomment-1676949363
 ## There are a couple key changes:
-## 1. Add Wants=network-online.target to ensure the service starts after network is up
-## 2. Add After=default.target to ensure the service starts late. This is needed because on AL2, 
+## 1. Use After=cloud-init.target to ensure the service starts late. This is needed because on AL2, 
 ##    it takes a short while before the instance role is ready to support the S3 listobjects API.
-## 3. Change the service Description to show bucket and directory
-## 4. Pass options from CLI directly to mount-s3
+## 2. Change the service Description to show bucket and directory
+## 3. Pass options from CLI directly to mount-s3
 
 tee > "${SERVICE_NAME}.service" <<EOF
 [Unit]
 Description=Mount s3://${BUCKET_NAME} at ${DIRECTORY}
-Wants=network-online.target
-After=default.target
+After=cloud-init.target
 AssertPathIsDirectory=${DIRECTORY}
 
 [Service]
