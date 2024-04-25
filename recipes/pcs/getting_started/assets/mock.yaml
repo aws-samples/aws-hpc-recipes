@@ -93,7 +93,7 @@ Resources:
         - !GetAtt [ PcsVpc, Outputs.DefaultPrivateSubnet ]
       IamInstanceProfileArn: !GetAtt [PcsInstanceProfile, 'Arn']
       Instances:
-        - !FindInMap [ InstanceTypeForArchitecture, LoginNode, !Ref Architecture ]
+        - !FindInMap [ InstanceTypeForArchitecture, LoginNodes, !Ref Architecture ]
       CustomLaunchTemplate:
         Id: !Ref PcsCngLaunchTemplate
         Version: '$Latest'
@@ -113,7 +113,7 @@ Resources:
         - !GetAtt [ PcsVpc, Outputs.DefaultPrivateSubnet ]
       IamInstanceProfileArn: !GetAtt [PcsInstanceProfile, 'Arn']
       Instances:
-        - !FindInMap [ InstanceTypeForArchitecture, LoginNode, !Ref Architecture ]
+        - !FindInMap [ InstanceTypeForArchitecture, LoginNodes, !Ref Architecture ]
       CustomLaunchTemplate:
         Id: !Ref PcsCngLaunchTemplate
         Version: '$Latest'
