@@ -9,6 +9,7 @@ The format is based on [Keep a Changelog](http://keepachangelog.com/)
 * New recipe slurm_accounting_with_email with the Slurm-Mail plugin
 
 ### Fixed
+* In slurm_accounting_with_email, fixed path to HPC recipes bucket
 
 ### Changed
 * In demo_managed_ad, the domain name (and subdomain if included) is output as Domain Components in a string
