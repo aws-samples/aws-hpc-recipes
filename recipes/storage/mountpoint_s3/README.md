@@ -125,7 +125,7 @@ Here is an example of one of these service files:
 [Unit]
 Description=Mount s3://DEMO-BUCKET-NAME at /HOST-FILESYSTEM-PATH
 Wants=network-online.target
-After=default.target
+After=cloud-init.target
 AssertPathIsDirectory=/HOST-FILESYSTEM-PATH
 
 [Service]
