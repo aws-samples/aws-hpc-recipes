@@ -3,21 +3,33 @@
 set -e
 
 if [ $# -lt 2 ]; then
-    echo "Usage: $0 <PC_CLUSTER_NAME> <RES_STACK_NAME>"
+    echo "Usage: $0 <SSM_DOCUMENT> <PCLUSTER_STACK_NAME>"
     exit 1
 fi
 
-DOCUMENT="EnableLoginNodeforRes"
+SSM_DOCUMENT="$1"
+PCLUSTER_STACK_NAME="$2"
+
+# Verify the parameters are valid
+aws ssm describe-document --name "$SSM_DOCUMENT" >/dev/null 2>&1 || {
+    echo "[!] Invalid SSM_DOCUMENT: '$SSM_DOCUMENT'"
+    exit 1
+}
+
+aws cloudformation describe-stacks --stack-name "$PCLUSTER_STACK_NAME" >/dev/null 2>&1 || {
+    echo "[!] Invalid PCLUSTER_STACK_NAME: '$PCLUSTER_STACK_NAME'"
+    exit 1
+}    
 
 # Execute the automation document
 EXECUTION_ID=$(aws ssm start-automation-execution \
     --document-version \$DEFAULT \
-    --parameters pcClusterName="$1",resStackName="$2" \
-    --document-name "$DOCUMENT" \
+    --parameters pclusterStackName="$PCLUSTER_STACK_NAME" \
+    --document-name "$SSM_DOCUMENT" \
     --query 'AutomationExecutionId' \
     --output text)
 
-echo "[-] Automation execution started with ID: $EXECUTION_ID"
+echo "$(date +%Y%m%d-%H:%M:%S) [-] Automation execution started with ID: $EXECUTION_ID"
 
 # Timeout after 15 minutes
 TIMEOUT=900
@@ -39,7 +51,7 @@ while [[ $ELAPSED_TIME -le $TIMEOUT ]]; do
         break
     fi
 
-    echo "[-] Waiting for automation execution to complete... Retrying in 30s"
+    echo "$(date +%Y%m%d-%H:%M:%S) [-] Waiting for automation execution to complete... Retrying in 30s"
     sleep 30
     CURRENT_TIME=$(date +%s)
     ELAPSED_TIME=$((CURRENT_TIME - START_TIME))
@@ -66,6 +78,6 @@ OUTPUTS=$(aws ssm get-automation-execution \
     --query 'AutomationExecution.Outputs."createAMI.AMIImageId"[0]' \
     --output text)
 
-echo "[-] Automation execution completed successfully."
-echo "[-] Outputs: $OUTPUTS"
+echo "$(date +%Y%m%d-%H:%M:%S) [-] Automation execution completed successfully."
+echo "$(date +%Y%m%d-%H:%M:%S) [-] Outputs: $OUTPUTS"
 echo "Done!"
