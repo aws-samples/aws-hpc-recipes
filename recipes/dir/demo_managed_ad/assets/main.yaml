@@ -12,6 +12,7 @@ Metadata:
           - AdminPassword
           - ServiceAccountName
           - ServiceAccountPassword
+          - ServiceAccountPasswordTag
           - ManagedAdEdition
       - Label:
           default: "Active Directory Bootstrapping"
@@ -71,6 +72,10 @@ Parameters:
     MaxLength: 64
     AllowedPattern: (?=^.{8,64}$)((?=.*\d)(?=.*[A-Z])(?=.*[a-z])|(?=.*\d)(?=.*[^A-Za-z0-9\s])(?=.*[a-z])|(?=.*[^A-Za-z0-9\s])(?=.*[A-Z])(?=.*[a-z])|(?=.*\d)(?=.*[A-Z])(?=.*[^A-Za-z0-9\s]))^.*
     NoEcho: true
+  ServiceAccountPasswordTag:
+    Description: Tag for Active Directory Service Account Password Secret with the following format "<key>,<value>"
+    Type: String
+    Default: ""
   UserName:
     Description: (Optional) Cluster user that is created in the Active Directory.
     Type: String
@@ -135,6 +140,7 @@ Conditions:
   SubDomainNotProvided: !Equals [!Ref SubDomain, ""]
   AddPrefixList: !Not [!Equals [!Ref ClientPrefixList, ""]]
   AddCidrIngress: !Not [!Equals [!Ref AllowedIps, ""]]
+  ServiceAccountPasswordTagProvided: !Not [ !Equals [!Ref ServiceAccountPasswordTag, ""]]
 
 Resources:
 
@@ -673,6 +679,11 @@ Resources:
       Description: Password for Microsoft Active Directory
       Name: !Sub [ "PasswordSecret-${StackIdSuffix}", {StackIdSuffix: !Select [1, !Split ['/', !Ref 'AWS::StackId']]}]
       SecretString: !Ref ServiceAccountPassword
+      Tags: !If
+        - ServiceAccountPasswordTagProvided
+        - - Key: !Select [0, !Split [",", !Ref ServiceAccountPasswordTag]]
+            Value: !Select [1, !Split [",", !Ref ServiceAccountPasswordTag]]
+        - !Ref "AWS::NoValue"
 
   DomainCertificateSecret:
     Type: AWS::SecretsManager::Secret

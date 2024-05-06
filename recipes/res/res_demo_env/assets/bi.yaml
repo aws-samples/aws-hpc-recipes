@@ -122,6 +122,7 @@ Resources:
         SubDomain: !Ref SubDomain
         AdminPassword: !GetAtt PasswordResolver.AdminPassword
         ServiceAccountPassword: !GetAtt PasswordResolver.ServiceAccountPassword
+        ServiceAccountPasswordTag: "res:Resource,ServiceAccountPasswordSecret"
         ServiceAccountName: ServiceAccount
         LDIFS3Path: !Ref LDIFS3Path
         Keypair: !Ref Keypair
