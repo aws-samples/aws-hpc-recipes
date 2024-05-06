@@ -6,7 +6,7 @@ Resources:
   PcsInstanceIamRole:
     Type: AWS::IAM::Role
     Properties:
-      RoleName: "MyPcsBasicInstanceIamRole"
+      RoleName: "AWSPCS-demo-role"
       Description: "AWS IAM role for PCS node group instances"
       AssumeRolePolicyDocument:
         Statement:
@@ -27,14 +27,14 @@ Resources:
                   - pcs:RegisterComputeNodeGroupInstance
                 Effect: Allow
                 Resource: "*"
-          PolicyName: PcsRegisterInstancePolicy
+          PolicyName: AWSPCS-demo-policy
 
   PcsInstanceProfile:
     Type: AWS::IAM::InstanceProfile
     Properties:
       Roles:
             - !Ref PcsInstanceIamRole
-      InstanceProfileName: MyPcsBasicInstanceProfile
+      InstanceProfileName: AWSPCS-demo-profile
 
 Outputs:
   InstanceProfile:
