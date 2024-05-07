@@ -12,7 +12,7 @@ It demonstrates the current (05/2024) minimum requirements for an AMI to be used
 
 ## Usage
 
-There are two scripts `rocky8.sh` and `ubuntu22.sh` in the assets directory. They are constructed as executable Bash programs, but you should probably manually step through their steps interactively, since they are not extensively tested. 
+There are two scripts [`rocky8.sh`](assets/rocky8.sh) and [`ubuntu22.sh`](assets/ubuntu22.sh) in the assets directory. They are constructed as executable Bash programs, but you should probably manually step through their steps interactively, since they are not extensively tested. 
 
 To build a PCS-compatible AMI:
 
@@ -71,4 +71,14 @@ To launch an Ubuntu 22 builder instance:
 4. Navigate to the **Quickstart AMIs** tab and choose **Ubuntu Server 22.04 LTS (HVM), SSD Volume Type**.
 5. Finish launching the instance, choosing an instance type, networking, SSH key, and so on.
 
+### PCS Client Scripts
+
+There are four client scripts in [`assets/client`](assets/client/). PCS will call these scripts automatically as part of the instance launch cycle. In order of execution, they are:
+
+1. [`pcs_bootstrap_init.sh`](assets/client/pcs_bootstrap_init.sh) - Registers the instance with the `RegisterComputeNodeGroupInstance` and caches information such as the SlurmCtld endpoint and the cluster secret in a file.
+2. [`pcs_bootstrap_config_always.sh`](assets/client/pcs_bootstrap_config_always.sh) - Currently a placeholder. Does nothing. 
+3. [`pcs_bootstrap_config_per_instance.sh`](assets/client/pcs_bootstrap_config_per_instance.sh) - Configures Slurm using the output from `pcs_bootstrap_init.sh`.
+4. [`pcs_bootstrap_finalize.sh`](assets/client/pcs_bootstrap_finalize.sh) - Enables and starts SlurmD daemon on the host. 
+
+Internal implementation is subject to change between beta and GA. Don't rely on anything you see in these files except the need to call `RegisterComputeNodeGroupInstance`.
 
