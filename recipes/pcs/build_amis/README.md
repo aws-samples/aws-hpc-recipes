@@ -26,6 +26,24 @@ To build a PCS-compatible AMI:
 8. Wait for the AMI to finish building. Note the AMI ID. 
 9. Create or update a PCS compute node group using the new AMI ID.
 
+Here is an example of creating a static node group that exercises a custom AMI. 
+
+```shell
+aws pcs \
+    --region us-east-1 \
+    create-compute-node-group \
+    --cluster-identifier MYCLUSTER \
+    --compute-node-group-name CUSTOM-AMI-CNG \
+    --subnet-ids SUBNET-ID \
+    --custom-launch-template id=LAUNCH-TEMPLATE-ID,version='$Latest' \
+    --iam-instance-profile-arn arn:aws:iam::111111111111:instance-profile/AWSPCS-Role \
+    --scaling-config minInstanceCount=1,maxInstanceCount=1 \
+    --instances instanceType=c6i.xlarge \
+    --ami-id CUSTOM-AMI-ID
+```
+
+You can validate that the AMI + node group is working as intended.  Log into an instance belonging to a static node group featuring the new AMI and run `sinfo`. If Slurm and the client scripts are all installed correctly, and the IAM instance profile used to create the node group has permission to call `pcs:RegisterComputeNodeGroupInstance`, `sinfo` will run without error. 
+
 ### Rocky Linux 8
 
 There are no AWS-official Rocky Linux AMIs, but you can subscribe to them in the **AwS Marketplace** and use them to build PCS AMIs. 
