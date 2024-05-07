@@ -12,9 +12,9 @@ It demonstrates the current (05/2024) minimum requirements for an AMI to be used
 
 ## Usage
 
-There are two scripts [`rocky8.sh`](assets/rocky8.sh) and [`ubuntu22.sh`](assets/ubuntu22.sh) in the assets directory. They are constructed as executable Bash programs, but you should probably manually step through their steps interactively, since they are not extensively tested. 
+There are two scripts [`rocky8.sh`](assets/rocky8.sh) and [`ubuntu22.sh`](assets/ubuntu22.sh) in the assets directory. They are constructed as executable Bash programs, but you should probably manually step through them interactively, since they are not extensively tested. 
 
-To build a PCS-compatible AMI:
+To build a PCS beta-compatible AMI:
 
 1. Launch a builder instance using the source AMI (such as Rocky8 or Ubuntu22), making sure it is configured so you can log into it.
 2. Log into the builder instance over SSH. 
@@ -46,7 +46,7 @@ You can validate that the AMI + node group is working as intended.  Log into an 
 
 ### Rocky Linux 8
 
-There are no AWS-official Rocky Linux AMIs, but you can subscribe to them in the **AwS Marketplace** and use them to build PCS AMIs. 
+There are no AWS-official Rocky Linux AMIs, but you can subscribe to them in the **AWS Marketplace** and use them to build PCS AMIs. 
 
 To launch a Rocky 8 builder instance:
 
