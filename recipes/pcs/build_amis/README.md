@@ -18,11 +18,11 @@ To build a PCS beta-compatible AMI:
 
 1. Launch a builder instance using the source AMI (such as Rocky8 or Ubuntu22), making sure it is configured so you can log into it.
 2. Log into the builder instance over SSH. 
-3. Become the `root` user 
-4. Follow along the build instructions in `rocky8.sh` or `ubuntu22.sh`
-5. Run /opt/aws/pcs/bin/pcs_ami_cleanup.sh
-6. In AWS EC2 console, navigate to your builder instance
-7. Under **Actions, Image and templates** choose **Create image**
+3. Become the `root` user.
+4. Follow along the build instructions in `rocky8.sh` or `ubuntu22.sh`.
+5. Run `/opt/aws/pcs/bin/pcs_ami_cleanup.sh`
+6. In AWS EC2 console, navigate to your builder instance.
+7. Under **Actions, Image and templates** choose **Create image**.
 8. Wait for the AMI to finish building. Note the AMI ID. 
 9. Create or update a PCS compute node group using the new AMI ID.
 
@@ -50,11 +50,11 @@ There are no AWS-official Rocky Linux AMIs, but you can subscribe to them in the
 
 To launch a Rocky 8 builder instance:
 
-1. Under **Instances** in the EC2 console, choose **Launch instances**
-2. For **Name and tags, Name** provide a distinctive name for the instance
-3. Under **Application and OS Images (Amazon Machine Image)**, search for `Rocky`
+1. Under **Instances** in the EC2 console, choose **Launch instances**.
+2. For **Name and tags, Name** provide a distinctive name for the instance.
+3. Under **Application and OS Images (Amazon Machine Image)**, search for `Rocky`.
 4. Navigate to the **AwS Marketplace AMIs** tab and choose **Rocky Linux 8 (Official)**.
-5. Choose **Subscribe now**
+5. Choose **Subscribe now**.
 6. Finish launching the instance, choosing an instance type, networking, SSH key, and so on.
 
 ### Rocky Linux 9
@@ -65,9 +65,9 @@ Rocky Linux 9 is not currently supported by this repository.
 
 To launch an Ubuntu 22 builder instance:
 
-1. Under **Instances** in the EC2 console, choose **Launch instances**
-2. For **Name and tags, Name** provide a distinctive name for the instance
-3. Under **Application and OS Images (Amazon Machine Image)**, search for `Ubuntu`
+1. Under **Instances** in the EC2 console, choose **Launch instances**.
+2. For **Name and tags, Name** provide a distinctive name for the instance.
+3. Under **Application and OS Images (Amazon Machine Image)**, search for `Ubuntu`.
 4. Navigate to the **Quickstart AMIs** tab and choose **Ubuntu Server 22.04 LTS (HVM), SSD Volume Type**.
 5. Finish launching the instance, choosing an instance type, networking, SSH key, and so on.
 
@@ -78,7 +78,7 @@ There are four client scripts in [`assets/client`](assets/client/). PCS will cal
 1. [`pcs_bootstrap_init.sh`](assets/client/pcs_bootstrap_init.sh) - Registers the instance with the `RegisterComputeNodeGroupInstance` and caches information such as the SlurmCtld endpoint and the cluster secret in a file.
 2. [`pcs_bootstrap_config_always.sh`](assets/client/pcs_bootstrap_config_always.sh) - Currently a placeholder. Does nothing. 
 3. [`pcs_bootstrap_config_per_instance.sh`](assets/client/pcs_bootstrap_config_per_instance.sh) - Configures Slurm using the output from `pcs_bootstrap_init.sh`.
-4. [`pcs_bootstrap_finalize.sh`](assets/client/pcs_bootstrap_finalize.sh) - Enables and starts SlurmD daemon on the host. 
+4. [`pcs_bootstrap_finalize.sh`](assets/client/pcs_bootstrap_finalize.sh) - Enables and starts the SlurmD daemon on the host. 
 
-Internal implementation is subject to change between beta and GA. Don't rely on anything you see in these files except the need to call `RegisterComputeNodeGroupInstance`.
+**Note** Internal implementation is subject to change between beta and GA. Don't rely on anything you see in these files except the need to call `RegisterComputeNodeGroupInstance`.
 
