@@ -1,0 +1,10 @@
+HOW TO INSTALL
+
+PCS Client
+
+Dependencies
+* Python3 installed
+* Python3 virtualenv at /root/pcs
+* awscurl and botocore installed in virtualenv (awscurl==0.33 botocore==1.26.10)
+* jq installed
+* 
