@@ -1,9 +1,11 @@
 # entra_id
 
 ## Info
-The solution allows Entra ID users to log in to RES and use their VDIs by setting up a sync between Entra ID and the currently supported identity solution of AWS managed AD.
+The solution allows Entra ID users to log in to RES and use their VDIs by setting up a sync between Entra ID and the currently supported identity solution of AWS Managed Microsoft AD.
 
-This architecture establishes a 3-way relationship between Entra ID, AWS IAM Identity Center, and an AWS Managed Active Directory. At a high level, Entra ID users are first synced to AWS IAM Identity Center via SAML and SCIM. The syncing events will trigger a custom Lambda function (via EventBridge) which handles the user creation/update/deletion in the AWS managed AD by running remote commands (via SSM) on the directory administration instance. Passwords for logging in to VDIs will be sent to AD user’s email (via SES). The custom Lambda can also be triggered manually via the AWS Lambda console for resetting a user’s password in the AD.
+This architecture establishes a 3-way relationship between Entra ID, AWS IAM Identity Center, and an AWS Managed Microsoft AD. At a high level, Entra ID users are first synced to AWS IAM Identity Center via SAML and SCIM. The syncing events will trigger a custom Lambda function (via EventBridge) which handles the user creation/update/deletion in the AWS managed AD by running remote commands (via SSM) on the directory administration instance. Any new AD users will be added to the specified AD group by default and passwords for logging in to VDIs will be sent to AD user’s email (via SES). The custom Lambda can also be triggered manually via the AWS Lambda console for resetting a user’s password in the AD.
+
+
 
 ## Usage
 
