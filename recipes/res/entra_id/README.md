@@ -1,9 +1,11 @@
 # entra_id
 
 ## Info
-The solution allows Entra ID users to log in to RES and use their VDIs by setting up a sync between Entra ID and the currently supported identity solution of AWS managed AD.
+The solution allows Entra ID users to log in to RES and use their VDIs by setting up a sync between Entra ID and the currently supported identity solution of AWS Managed Microsoft AD.
 
-This architecture establishes a 3-way relationship between Entra ID, AWS IAM Identity Center, and an AWS Managed Active Directory. At a high level, Entra ID users are first synced to AWS IAM Identity Center via SAML and SCIM. The syncing events will trigger a custom Lambda function (via EventBridge) which handles the user creation/update/deletion in the AWS managed AD by running remote commands (via SSM) on the directory administration instance. Passwords for logging in to VDIs will be sent to AD user’s email (via SES). The custom Lambda can also be triggered manually via the AWS Lambda console for resetting a user’s password in the AD.
+This architecture establishes a 3-way relationship between Entra ID, AWS IAM Identity Center, and an AWS Managed Microsoft AD. At a high level, Entra ID users are first synced to AWS IAM Identity Center via SAML and SCIM. The syncing events will trigger a custom Lambda function (via EventBridge) which handles the user creation/update/deletion in the AWS managed AD by running remote commands (via SSM) on the directory administration instance. Any new AD users will be added to the specified AD group by default and passwords for logging in to VDIs will be sent to AD user’s email (via SES). The custom Lambda can also be triggered manually via the AWS Lambda console for resetting a user’s password in the AD.
+
+
 
 ## Usage
 
@@ -19,12 +21,12 @@ Users will have different passwords in Entra ID and AWS managed AD, since user p
 ### Deployment
 Download the CFN template’s JSON and deploy via the CFN console. The template requires the following input parameters:
 * `Stack name` - Assign a name for the CloudFormation you are deploying
-* `ManagedAdAdminPassword` - Password of the AD admin user
-* `ManagedAdAdminUsername` - Username of the AD admin user (e.g. `<NetBIOS-name>\Admin`)
-* `ManagedAdUsersOU` - Organizational unit within AD to sync the Entra ID users to. Suggest to use the same users OU when installing RES so that RES can sync all the users automatically.
-* `SenderEmail` - Sender email address for sending password to AD users
-* `ManagedAdUserGroup` - All the synced users will be added to the specified AD group automatically. Default value is `res`. You can log in to the directory administration instance and add users to any other AD groups manually after the sync.
-* `WindowsManagementHostInstanceId` - EC2 instance ID of the directory administration instance
+* `AWSManagedMicrosoftADAdminPassword` - Password of the AWS Managed Microsoft AD admin
+* `AWSManagedMicrosoftADAdminUsername` - Username of the AWS Managed Microsoft AD admin (e.g. `<NetBIOS-name>\Admin`)
+* `AWSManagedMicrosoftADUsersOU` - Organizational unit within AD to sync the Entra ID users to. Suggest to use the same users OU when installing RES so that RES can sync all the users automatically.
+* `FromEmail` - Email address from which temporary password will be sent to the synced AD user
+* `AWSManagedMicrosoftADDestinationGroup` - Destination group in the AWS Managed Microsoft AD that includes all the synced AD users. Default value is `res`. You can log in to the directory administration instance and add users to any other AD groups manually after the sync.
+* `AWSManagedMicrosoftADAdministrationInstanceId` - Instance ID of the AWS Managed Microsoft AD administration Windows instance
 
 ### How to test once your template is deployed
 
