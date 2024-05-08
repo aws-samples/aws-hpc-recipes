@@ -1,0 +1,596 @@
+Parameters:
+  AWSManagedADAdministrationInstanceId:
+    Type: String
+    AllowedPattern: ^i-(?:[a-f\d]{8}|[a-f\d]{17})$
+    Description: Password of the administrator account in your AWS Managed Microsoft AD that has permission to create and update users.
+  AWSManagedADAdminUsername:
+    Type: String
+    AllowedPattern: .+
+    Description: 'Username of the administrator account in your AWS Managed Microsoft AD that has permission to create and update users. Should follow the format "<managed-directory-NetBIOS-name>\<username>",for example: "corp\Admin"'
+    NoEcho: true
+  AWSManagedADAdminPassword:
+    Type: String
+    AllowedPattern: .+
+    Description: Password of the AWS Managed Microsoft AD admin user or resource ARN to secret containing the password.
+    NoEcho: true
+  AWSManagedADUsersOU:
+    Type: String
+    AllowedPattern: .+
+    Description: Users Organization Unit in the AWS Managed Microsoft AD. For example, "OU=Users,OU=RES,OU=CORP,DC=corp,DC=res,DC=com"
+  FromEmail:
+    Type: String
+    AllowedPattern: .+@.+
+    Description: Email address from which temporary password will be sent to the synced AD user.
+  AWSManagedADDestinationGroup:
+    Type: String
+    Default: res
+    AllowedPattern: .+
+    Description: The name of the group that synced users will be placed in. Users may be added to other groups through an administrative host.
+  BootstrapVersion:
+    Type: AWS::SSM::Parameter::Value<String>
+    Default: /cdk-bootstrap/hnb659fds/version
+    Description: Version of the CDK Bootstrap resources in this environment, automatically retrieved from SSM Parameter Store. [cdk:skip]
+Resources:
+  ADManagementLambdaRole8266D20F:
+    Type: AWS::IAM::Role
+    Properties:
+      AssumeRolePolicyDocument:
+        Statement:
+          - Action: sts:AssumeRole
+            Effect: Allow
+            Principal:
+              Service: lambda.amazonaws.com
+        Version: "2012-10-17"
+      ManagedPolicyArns:
+        - Fn::Join:
+            - ""
+            - - "arn:"
+              - Ref: AWS::Partition
+              - :iam::aws:policy/service-role/AWSLambdaBasicExecutionRole
+        - Fn::Join:
+            - ""
+            - - "arn:"
+              - Ref: AWS::Partition
+              - :iam::aws:policy/AWSSSODirectoryReadOnly
+    Metadata:
+      aws:cdk:path: EntraIdStack/ADManagementLambdaRole/Resource
+  ADManagementLambdaRoleDefaultPolicy5B29B7C7:
+    Type: AWS::IAM::Policy
+    Properties:
+      PolicyDocument:
+        Statement:
+          - Action: ssm:SendCommand
+            Effect: Allow
+            Resource:
+              - Fn::Join:
+                  - ""
+                  - - "arn:"
+                    - Ref: AWS::Partition
+                    - ":ec2:"
+                    - Ref: AWS::Region
+                    - ":"
+                    - Ref: AWS::AccountId
+                    - :instance/*
+              - Fn::Join:
+                  - ""
+                  - - "arn:"
+                    - Ref: AWS::Partition
+                    - ":ssm:"
+                    - Ref: AWS::Region
+                    - :*:document/*
+          - Action:
+              - identitystore:GetGroupId
+              - identitystore:IsMemberInGroups
+              - secretsmanager:GetSecretValue
+              - ssm:GetCommandInvocation
+            Effect: Allow
+            Resource: "*"
+          - Action: ses:SendEmail
+            Effect: Allow
+            Resource:
+              Fn::Join:
+                - ""
+                - - "arn:"
+                  - Ref: AWS::Partition
+                  - ":ses:"
+                  - Ref: AWS::Region
+                  - ":"
+                  - Ref: AWS::AccountId
+                  - :identity/*
+        Version: "2012-10-17"
+      PolicyName: ADManagementLambdaRoleDefaultPolicy5B29B7C7
+      Roles:
+        - Ref: ADManagementLambdaRole8266D20F
+    Metadata:
+      aws:cdk:path: EntraIdStack/ADManagementLambdaRole/DefaultPolicy/Resource
+  ADManagementLambda514CFA37:
+    Type: AWS::Lambda::Function
+    Properties:
+      Code:
+        ZipFile: |
+          import boto3
+          import json
+          import re
+          import os
+          import string
+          from random import shuffle
+
+          try:
+              from secrets import choice
+          except ImportError:
+              from random import choice
+
+          WINDOWS_MANAGEMENT_HOST = os.environ.get("WINDOWS_MANAGEMENT_HOST", "")
+          ADMIN_USERNAME = os.environ.get("ADMIN_USERNAME", "")
+          ADMIN_PASSWORD = os.environ.get("ADMIN_PASSWORD", "")
+          USERS_OU = os.environ.get("USERS_OU", "")
+          SENDER_EMAIL = os.environ.get("SENDER_EMAIL", "")
+          AD_DESTINATION_GROUP = os.environ.get("AD_DESTINATION_GROUP", "res")
+
+          PASSWORD_LOWER_CASE_CHARS_COUNT = 2
+          PASSWORD_UPPER_CASE_CHARS_COUNT = 2
+          PASSWORD_NUMBERS_COUNT = 2
+          PASSWORD_SPECIAL_CHARS_COUNT = 2
+          PASSWORD_LOWER_CASE_CHARS = string.ascii_lowercase
+          PASSWORD_UPPER_CASE_CHARS = string.ascii_uppercase
+          PASSWORD_NUMBERS = string.digits
+          PASSWORD_SPECIAL_CHARS = ["!", "#", "%", "^", "&", "*", "(", ")", ",", ".", "-", "_", "+", "=", "<", ">", "?"]
+
+
+          def send_command(commands):
+              # Run command on the AWS Managed Microsoft AD administration Windows instance to manager AD user
+              admin_password = ADMIN_PASSWORD
+              if ADMIN_PASSWORD.startswith("arn:"):
+                  secrets_manager_client = boto3.client("secretsmanager")
+                  response = secrets_manager_client.get_secret_value(SecretId=ADMIN_PASSWORD)
+                  admin_password = response.get("SecretString", ADMIN_PASSWORD)
+
+              ssm_commands = [
+                  f"$username='{ADMIN_USERNAME}'",
+                  f"$password='{admin_password}'",
+                  '$securePassword=ConvertTo-SecureString "$password" -AsPlainText -Force',
+                  "$credential=New-Object System.Management.Automation.PSCredential $username, $securePassword",
+              ]
+              ssm_commands.extend(commands)
+
+              ssm_client = boto3.client("ssm")
+              cmd_result = ssm_client.send_command(
+                  InstanceIds=[WINDOWS_MANAGEMENT_HOST],
+                  DocumentName="AWS-RunPowerShellScript",
+                  Parameters={"commands": ssm_commands},
+              )
+              command_id = cmd_result.get("Command", {}).get("CommandId", "")
+
+              # Wait for the commands to complete
+              waiter = ssm_client.get_waiter("command_executed")
+              waiter.wait(
+                  CommandId=command_id,
+                  InstanceId=WINDOWS_MANAGEMENT_HOST,
+              )
+
+              # Get the command output
+              return ssm_client.get_command_invocation(
+                  CommandId=command_id,
+                  InstanceId=WINDOWS_MANAGEMENT_HOST,
+              )
+
+
+          def create_ad_group():
+              result = send_command(
+                  [
+                      f'New-ADGroup -Name "{AD_DESTINATION_GROUP}" -SamAccountName "{AD_DESTINATION_GROUP}" -GroupScope Global '
+                      f'-Description "Entra ID user group" -Path "{USERS_OU}" -Credential $credential'
+                  ]
+              )
+
+              error = result.get("StandardErrorContent", "")
+              if error:
+                  if "The specified group already exists" not in error:
+                      print(f"failed to create AD group {AD_DESTINATION_GROUP} to AD: {error}")
+              else:
+                  print(f"created AD group {AD_DESTINATION_GROUP}")
+
+
+          def ad_group_exists():
+              result = send_command([f'Get-ADGroup -Identity "{AD_DESTINATION_GROUP}" -Credential $credential'])
+
+              error = result.get("StandardErrorContent", "")
+              if error:
+                  if "Cannot find an object with identity" not in error:
+                      print(f"failed to get AD group {AD_DESTINATION_GROUP}: {error}")
+                  return False
+              else:
+                  return True
+
+
+          def add_user_to_group(username):
+              if not ad_group_exists():
+                  create_ad_group()
+
+              result = send_command(
+                  [
+                      f'Add-ADGroupMember -Identity "{AD_DESTINATION_GROUP}" -Members {username} -Credential $credential'
+                  ]
+              )
+
+              error = result.get("StandardErrorContent", "")
+              if error:
+                  print(f"failed to add user {username} to group {AD_DESTINATION_GROUP}: {error}")
+              else:
+                  print(f"added user {username} to group {AD_DESTINATION_GROUP}")
+
+
+          def send_invitation_email(username, email, password):
+              user_invitation_email_subject = 'Invitation to Join RES'
+              email_message = [
+                  f'<p>Hello <b>{username},</b></p>',
+                  '<p>You have been invited to join the RES environment.</p>',
+                  '<p>Your temporary password is:</p>',
+                  f'<h3>{password}</h3>',
+                  '<p>---<br/>',
+                  '<b>RES Environment Admin</b></p>'
+              ]
+              user_invitation_email_body = os.linesep.join(email_message)
+              ses_client = boto3.client("ses")
+              ses_client.send_email(
+                  Source=SENDER_EMAIL,
+                  Destination={
+                      "ToAddresses": [
+                          email,
+                      ],
+                  },
+                  Message={
+                      'Subject': {
+                          'Data': user_invitation_email_subject,
+                      },
+                      'Body': {
+                          'Html': {
+                              'Data': user_invitation_email_body,
+                          },
+                      },
+                  },
+              )
+
+
+          def generate_password():
+              final_password = [choice(list(PASSWORD_LOWER_CASE_CHARS)) for i in range(PASSWORD_LOWER_CASE_CHARS_COUNT)]
+              final_password += [choice(list(PASSWORD_UPPER_CASE_CHARS)) for i in range(PASSWORD_UPPER_CASE_CHARS_COUNT)]
+              final_password += [choice(list(PASSWORD_NUMBERS)) for i in range(PASSWORD_NUMBERS_COUNT)]
+              final_password += [choice(list(PASSWORD_SPECIAL_CHARS)) for i in range(PASSWORD_SPECIAL_CHARS_COUNT)]
+
+              shuffle(final_password)
+              return "".join(final_password)
+
+
+          def add_user_to_ad(username, email, user_id):
+              password = generate_password()
+              result = send_command(
+                  [
+                      f'$adUserPassword=ConvertTo-SecureString "{password}" -AsPlainText -Force',
+                      f'New-ADUser -Name "{username}" -SamAccountName "{username}" -AccountPassword $adUserPassword '
+                      f'-ChangePasswordAtLogon $true -Description "{user_id}" -Enabled $true -PasswordNotRequired $true '
+                      f'-EmailAddress "{email}" -Path "{USERS_OU}" -Credential $credential'
+                  ]
+              )
+
+              error = result.get("StandardErrorContent", "")
+              if error:
+                  print(f"failed to add user {username} to AD: {error}")
+              else:
+                  print(f"added user {username} to AD")
+
+                  add_user_to_group(username)
+                  send_invitation_email(username, email, password)
+
+
+          def delete_user_from_ad(username):
+              result = send_command(
+                  [
+                      f'Remove-ADUser -Identity "{username}" -Confirm:$False -Credential $credential'
+                  ]
+              )
+
+              error = result.get("StandardErrorContent", "")
+              if error:
+                  print(f"failed to remove user {username} from AD: {error}")
+              else:
+                  print(f"removed user {username} from AD")
+
+
+          def delete_user_from_ad_by_user_id(user_id):
+              username = get_existing_username_by_id(user_id)
+              delete_user_from_ad(username)
+
+
+          def get_existing_username_by_id(user_id):
+              get_username_result = send_command(
+                  [
+                      f"$user=Get-ADUser -Filter \"Description -eq '{user_id}'\" -Credential $credential",
+                      "$user.name",
+                  ]
+              )
+              error = get_username_result.get("StandardErrorContent", "")
+              if error:
+                  print(f"failed to get user with id {user_id} from AD: {error}")
+                  return ""
+
+              existing_username = re.sub(
+                  r"[\r\n]*", "", get_username_result.get("StandardOutputContent", "")
+              )
+              return existing_username
+
+
+          def update_email(username, email):
+              # Check whether the user email is changed
+              get_user_email_result = send_command(
+                  [
+                      f'$user=Get-ADUser -Identity "{username}" -Properties mail -Credential $credential',
+                      "$user.mail",
+                  ]
+              )
+              error = get_user_email_result.get("StandardErrorContent", "")
+              if error:
+                  print(f"failed to get email of user {username} from AD: {error}")
+                  return
+
+              current_email = re.sub(
+                  r"[\r\n]*", "", get_user_email_result.get("StandardOutputContent", "")
+              )
+
+              # Update the AD user if the email is changed
+              if current_email == email:
+                  print(f"skip updating email of user {username} since it is unchanged")
+              else:
+                  update_user_email_result = send_command(
+                      [
+                          f'Set-ADUser -Identity "{username}" -EmailAddress {email} -Credential $credential'
+                      ]
+                  )
+                  error = update_user_email_result.get("StandardErrorContent", "")
+                  if error:
+                      print(f"failed to update email of user {username} in AD: {error}")
+                  else:
+                      print(f"updated email of user {username} in AD")
+
+
+          def reset_password(username, password):
+              update_password_result = send_command(
+                  [
+                      f"$adUserPassword=ConvertTo-SecureString {password} -AsPlainText -Force",
+                      f'Set-ADAccountPassword -Identity "{username}" -Reset -NewPassword $adUserPassword -Credential $credential'
+                  ]
+              )
+              error = update_password_result.get("StandardErrorContent", "")
+              if error:
+                  print(f"failed to reset password fo user {username} in AD: {error}")
+              else:
+                  print(f"reset password for user {username} in AD")
+
+
+          def get_user_id(event):
+              event_name = event.get("detail", {}).get("eventName", "")
+              if event_name == "DeleteUser":
+                  user_id = event.get("detail", {}).get("requestParameters", {}).get("userId", "")
+              elif event_name == "UpdateUserName":
+                  user_id = event.get("detail", {}).get("requestParameters", {}).get("userId", "")
+              else:
+                  user_id = event.get("detail", {}).get("responseElements", {}).get("user", {}).get("userId", "")
+
+              return user_id
+
+
+          def handler(event, context):
+              if event.get("detail", {}).get("errorCode"):
+                  # Ignore failed requests
+                  return {"statusCode": 200, "body": json.dumps(event)}
+
+              event_name = event.get("detail", {}).get("eventName", "")
+              # Add, update, delete or reset user password in the managed AD base on the event type
+              if event_name == "ResetPassword":
+                  # Temporary workaround for resetting user password.
+                  # Payload should have the format {"detail": {"eventName": "ResetPassword", "username": "<username>", "password": "<password>" }}
+                  username = event.get("detail", {}).get("username", "")
+                  password = event.get("detail", {}).get("password", "")
+                  reset_password(username, password)
+
+                  return {"statusCode": 200, "body": json.dumps(event)}
+
+              identity_store_id = (event.get("detail", {}).get("requestParameters", {}).get("identityStoreId", ""))
+              user_id = get_user_id(event)
+
+              if event_name == "DeleteUser":
+                  # User doesn't exist in IAM IDC anymore. Delete the user from AWS managed AD directly
+                  delete_user_from_ad_by_user_id(user_id)
+              elif event_name in ["CreateUser", "UpdateUser", "UpdateUserName"]:
+                  # Retrieve user information (username and email) from IAM IDC.
+                  identity_store_client = boto3.client("identitystore")
+                  user = identity_store_client.describe_user(
+                      IdentityStoreId=identity_store_id, UserId=user_id
+                  )
+                  username = user.get("UserName", "").split("@")[0]
+                  primary_emails = [
+                      email for email in user.get("Emails", []) if email.get("Primary", False)
+                  ]
+                  email = primary_emails[0].get("Value", "") if len(primary_emails) > 0 else ""
+
+                  existing_username = get_existing_username_by_id(user_id)
+                  if not existing_username:
+                      # Create the user if not exist
+                      add_user_to_ad(username, email, user_id)
+                  elif existing_username == username:
+                      # Update email if username is unchanged
+                      update_email(username, email)
+                  else:
+                      # replace the existing user if username is changed
+                      delete_user_from_ad(existing_username)
+                      add_user_to_ad(username, email, user_id)
+
+              return {"statusCode": 200, "body": json.dumps(event)}
+      Environment:
+        Variables:
+          WINDOWS_MANAGEMENT_HOST:
+            Ref: AWSManagedADAdministrationInstanceId
+          ADMIN_USERNAME:
+            Ref: AWSManagedADAdminUsername
+          ADMIN_PASSWORD:
+            Ref: AWSManagedADAdminPassword
+          USERS_OU:
+            Ref: AWSManagedADUsersOU
+          SENDER_EMAIL:
+            Ref: FromEmail
+          AD_DESTINATION_GROUP:
+            Ref: AWSManagedADDestinationGroup
+      Handler: index.handler
+      Role:
+        Fn::GetAtt:
+          - ADManagementLambdaRole8266D20F
+          - Arn
+      Runtime: python3.9
+      Timeout: 60
+    DependsOn:
+      - ADManagementLambdaRoleDefaultPolicy5B29B7C7
+      - ADManagementLambdaRole8266D20F
+    Metadata:
+      aws:cdk:path: EntraIdStack/ADManagementLambda/Resource
+  IDCListenerRule0FC84009:
+    Type: AWS::Events::Rule
+    Properties:
+      EventPattern:
+        detail:
+          eventSource:
+            - sso-directory.amazonaws.com
+          eventName:
+            - CreateUser
+            - UpdateUser
+            - UpdateUserName
+            - DeleteUser
+        detail-type:
+          - AWS API Call via CloudTrail
+        source:
+          - aws.sso-directory
+      State: ENABLED
+      Targets:
+        - Arn:
+            Fn::GetAtt:
+              - ADManagementLambda514CFA37
+              - Arn
+          Id: Target0
+          RetryPolicy:
+            MaximumEventAgeInSeconds: 7200
+            MaximumRetryAttempts: 2
+    Metadata:
+      aws:cdk:path: EntraIdStack/IDCListenerRule/Resource
+  IDCListenerRuleAllowEventRuleEntraIdStackADManagementLambdaBC216B6074F42078:
+    Type: AWS::Lambda::Permission
+    Properties:
+      Action: lambda:InvokeFunction
+      FunctionName:
+        Fn::GetAtt:
+          - ADManagementLambda514CFA37
+          - Arn
+      Principal: events.amazonaws.com
+      SourceArn:
+        Fn::GetAtt:
+          - IDCListenerRule0FC84009
+          - Arn
+    Metadata:
+      aws:cdk:path: EntraIdStack/IDCListenerRule/AllowEventRuleEntraIdStackADManagementLambdaBC216B60
+  CDKMetadata:
+    Type: AWS::CDK::Metadata
+    Properties:
+      Analytics: v2:deflate64:H4sIAAAAAAAA/02Myw6CMBBFv4V9GUUSjWsS1wQ/wJQyxpE+kj40pOm/W4oLVufOnJl7gqa9wLHiX1eLaa4ljRDvnouZdU/dc8sVerQs+0ckriAORuLqCnsjSSzltKTEJFfjxCHeghaejF7dPvdoFTmXp8Twg9q7XBn+lZkpsQGdCVZsq13ujJ7Il89+8S+jDy1coTlXb0dU26A9KYRh4w9AgkAZ2QAAAA==
+    Metadata:
+      aws:cdk:path: EntraIdStack/CDKMetadata/Default
+    Condition: CDKMetadataAvailable
+Conditions:
+  CDKMetadataAvailable:
+    Fn::Or:
+      - Fn::Or:
+          - Fn::Equals:
+              - Ref: AWS::Region
+              - af-south-1
+          - Fn::Equals:
+              - Ref: AWS::Region
+              - ap-east-1
+          - Fn::Equals:
+              - Ref: AWS::Region
+              - ap-northeast-1
+          - Fn::Equals:
+              - Ref: AWS::Region
+              - ap-northeast-2
+          - Fn::Equals:
+              - Ref: AWS::Region
+              - ap-south-1
+          - Fn::Equals:
+              - Ref: AWS::Region
+              - ap-southeast-1
+          - Fn::Equals:
+              - Ref: AWS::Region
+              - ap-southeast-2
+          - Fn::Equals:
+              - Ref: AWS::Region
+              - ca-central-1
+          - Fn::Equals:
+              - Ref: AWS::Region
+              - cn-north-1
+          - Fn::Equals:
+              - Ref: AWS::Region
+              - cn-northwest-1
+      - Fn::Or:
+          - Fn::Equals:
+              - Ref: AWS::Region
+              - eu-central-1
+          - Fn::Equals:
+              - Ref: AWS::Region
+              - eu-north-1
+          - Fn::Equals:
+              - Ref: AWS::Region
+              - eu-south-1
+          - Fn::Equals:
+              - Ref: AWS::Region
+              - eu-west-1
+          - Fn::Equals:
+              - Ref: AWS::Region
+              - eu-west-2
+          - Fn::Equals:
+              - Ref: AWS::Region
+              - eu-west-3
+          - Fn::Equals:
+              - Ref: AWS::Region
+              - il-central-1
+          - Fn::Equals:
+              - Ref: AWS::Region
+              - me-central-1
+          - Fn::Equals:
+              - Ref: AWS::Region
+              - me-south-1
+          - Fn::Equals:
+              - Ref: AWS::Region
+              - sa-east-1
+      - Fn::Or:
+          - Fn::Equals:
+              - Ref: AWS::Region
+              - us-east-1
+          - Fn::Equals:
+              - Ref: AWS::Region
+              - us-east-2
+          - Fn::Equals:
+              - Ref: AWS::Region
+              - us-west-1
+          - Fn::Equals:
+              - Ref: AWS::Region
+              - us-west-2
+Rules:
+  CheckBootstrapVersion:
+    Assertions:
+      - Assert:
+          Fn::Not:
+            - Fn::Contains:
+                - - "1"
+                  - "2"
+                  - "3"
+                  - "4"
+                  - "5"
+                - Ref: BootstrapVersion
+        AssertDescription: CDK bootstrap stack version 6 required. Please run 'cdk bootstrap' with a recent version of the CDK CLI.
+
