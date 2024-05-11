@@ -21,12 +21,12 @@ Users will have different passwords in Entra ID and AWS managed AD, since user p
 ### Deployment
 Download the CFN template’s JSON and deploy via the CFN console. The template requires the following input parameters:
 * `Stack name` - Assign a name for the CloudFormation you are deploying
-* `AWSManagedMicrosoftADAdminPassword` - Password of the AWS Managed Microsoft AD admin
-* `AWSManagedMicrosoftADAdminUsername` - Username of the AWS Managed Microsoft AD admin (e.g. `<NetBIOS-name>\Admin`)
-* `AWSManagedMicrosoftADUsersOU` - Organizational unit within AD to sync the Entra ID users to. Suggest to use the same users OU when installing RES so that RES can sync all the users automatically.
+* `AWSManagedADAdminPassword` - Password of the AWS Managed Microsoft AD admin
+* `AWSManagedADAdminUsername` - Username of the AWS Managed Microsoft AD admin (e.g. `<NetBIOS-name>\Admin`)
+* `AWSManagedADUsersOU` - Organizational unit within AD to sync the Entra ID users to. Suggest to use the same users OU when installing RES so that RES can sync all the users automatically.
 * `FromEmail` - Email address from which temporary password will be sent to the synced AD user
-* `AWSManagedMicrosoftADDestinationGroup` - Destination group in the AWS Managed Microsoft AD that includes all the synced AD users. Default value is `res`. You can log in to the directory administration instance and add users to any other AD groups manually after the sync.
-* `AWSManagedMicrosoftADAdministrationInstanceId` - Instance ID of the AWS Managed Microsoft AD administration Windows instance
+* `AWSManagedADDestinationGroup` - Destination group in the AWS Managed Microsoft AD that includes all the synced AD users. Default value is `res`. You can log in to the directory administration instance and add users to any other AD groups manually after the sync.
+* `AWSManagedADAdministrationInstanceId` - Instance ID of the AWS Managed Microsoft AD administration Windows instance
 
 ### How to test once your template is deployed
 
