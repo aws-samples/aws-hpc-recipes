@@ -1,0 +1,114 @@
+---
+AWSTemplateFormatVersion: '2010-09-09'
+Description: >
+  Sample ImageBuilder pipeline with SNS topic
+
+Metadata:
+  AWS::CloudFormation::Interface:
+    ParameterGroups:
+      - Label:
+          default: AMI
+        Parameters:
+          - ParentImageId
+
+Parameters:
+  ParentImageId:
+    Description: Source instance ID. Must be a Rocky Linux 8 image built to be compatible with PCS.
+    Type: AWS::EC2::Image::Id
+
+Resources:
+  ImageBuilderInfrastructureConfiguration00infrastructureconfigurationimagebuilderinfra00Z53zq:
+    Type: "AWS::ImageBuilder::InfrastructureConfiguration"
+    Properties:
+      InstanceProfileName:
+        Ref: "IAMInstanceProfile00EC2InstanceProfileForImageBuilder00GOqGW"
+      InstanceMetadataOptions:
+        HttpPutResponseHopLimit: 4
+        HttpTokens: "required"
+      TerminateInstanceOnFailure: true
+      SnsTopicArn:
+        Ref: "SNSTopic00imagebuildertopic00kZG8B"
+      Name: !Sub "image-builder-infra-${AWS::StackName}"
+  IAMInstanceProfile00EC2InstanceProfileForImageBuilder00GOqGW:
+    Type: "AWS::IAM::InstanceProfile"
+    Properties:
+      Path: "/"
+      Roles:
+      - Ref: "IAMRole00EC2InstanceProfileForImageBuilder00KpE0o"
+      InstanceProfileName:
+        Ref: "IAMRole00EC2InstanceProfileForImageBuilder00KpE0o"
+  IAMRole00EC2InstanceProfileForImageBuilder00KpE0o:
+    Type: "AWS::IAM::Role"
+    Properties:
+      Path: "/"
+      ManagedPolicyArns:
+      - "arn:aws:iam::aws:policy/EC2InstanceProfileForImageBuilderECRContainerBuilds"
+      - "arn:aws:iam::aws:policy/EC2InstanceProfileForImageBuilder"
+      - "arn:aws:iam::aws:policy/AmazonSSMManagedInstanceCore"
+      MaxSessionDuration: 3600
+      RoleName: !Sub "EC2InstanceProfileForImageBuilder-${AWS::StackName}"
+      AssumeRolePolicyDocument:
+        Version: "2012-10-17"
+        Statement:
+        - Action: "sts:AssumeRole"
+          Effect: "Allow"
+          Principal:
+            Service: "ec2.amazonaws.com"
+  ImageBuilderImageRecipe00imagereciperocky8latest10400Ky6uc:
+    Type: "AWS::ImageBuilder::ImageRecipe"
+    Properties:
+      Components:
+      - ComponentArn: !Sub "arn:aws:imagebuilder:${AWS::Region}:aws:component/update-linux/x.x.x"
+      WorkingDirectory: "/tmp"
+      ParentImage: !Ref ParentImageId
+      Version: "1.0.4"
+      BlockDeviceMappings:
+      - Ebs:
+          VolumeType: "gp2"
+          VolumeSize: 64
+          Encrypted: false
+          DeleteOnTermination: true
+        DeviceName: "/dev/sda1"
+      AdditionalInstanceConfiguration:
+        SystemsManagerAgent:
+          UninstallAfterBuild: false
+      Name: !Sub "Rocky8-PCS-Latest-${AWS::StackName}"
+  SNSTopic00imagebuildertopic00kZG8B:
+    Type: "AWS::SNS::Topic"
+    Properties:
+      FifoTopic: false
+      TracingConfig: "PassThrough"
+      TopicName: !Sub "image-builder-topic-${AWS::StackName}"
+  ImageBuilderImagePipeline00imagepipelinerocky8latest00w75Oy:
+    Type: "AWS::ImageBuilder::ImagePipeline"
+    Properties:
+      Status: "ENABLED"
+      InfrastructureConfigurationArn:
+        Ref: "ImageBuilderInfrastructureConfiguration00infrastructureconfigurationimagebuilderinfra00Z53zq"
+      ImageScanningConfiguration:
+        ImageScanningEnabled: false
+      ImageRecipeArn:
+        Ref: "ImageBuilderImageRecipe00imagereciperocky8latest10400Ky6uc"
+      DistributionConfigurationArn:
+        Ref: "ImageBuilderDistributionConfiguration00distributionconfigurationrocky8distro00u7Ibz"
+      ImageTestsConfiguration:
+        TimeoutMinutes: 720
+        ImageTestsEnabled: true
+      EnhancedImageMetadataEnabled: true
+      Name: !Sub "rocky8-pcs-latest-${AWS::StackName}"
+  ImageBuilderDistributionConfiguration00distributionconfigurationrocky8distro00u7Ibz:
+    Type: "AWS::ImageBuilder::DistributionConfiguration"
+    Properties:
+      Name: !Sub "rocky8-distro-${AWS::StackName}"
+      Distributions:
+      - AmiDistributionConfiguration:
+          Name: "rocky8-pcs-latest-{{imagebuilder:buildDate}}"
+        Region: !Sub "${AWS::Region}"
+
+Outputs:
+  PipelineName:
+    Description: ImageBuilder pipeline name
+    Value: !GetAtt ImageBuilderImagePipeline00imagepipelinerocky8latest00w75Oy.Name
+  PipelineSnsTopic:
+    Description: Subscribe to this topic for build notifications
+    Value: !Ref SNSTopic00imagebuildertopic00kZG8B
