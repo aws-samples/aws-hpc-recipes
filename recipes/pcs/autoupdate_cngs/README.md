@@ -314,6 +314,8 @@ zip -r ../lambda_function.zip .
 
 Change back to the main source directory to deploy the zipfile to AWS.
 
+**Note** The models folder contains the latest build of the PCS service model. It must be included at the top level of the Lambda zipfile. 
+
 ### Deploy the Lambda function using the zip file
 
 Run the command that follows, making these substitutions: 
@@ -333,7 +335,9 @@ aws lambda create-function \
     --logging-config "LogFormat=Text,LogGroup=/aws/lambda/cluster-updater"
 ```
 
-If you need to update your cluster source code, edit it, repackage it as a zip file, then run the following command:
+**Note** Recall we package a `models` directory with the Lambda. Setting `AWS_DATA_PATH` to `/var/task/models` informs botocore to [look for additional models at this location](https://botocore.amazonaws.com/v1/documentation/api/latest/reference/loaders.html).
+
+If you need to update your cluster source code (or the service model), repackage it as a zip file, then run the following command:
 
 ```shell
 aws lambda update-function-code \
