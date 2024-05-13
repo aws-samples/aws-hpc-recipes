@@ -1,9 +1,10 @@
-# getting_started
+# Getting started with AWS PCS
 
 ## Info
 
-Cloudformation and other assets to get started with AWS PCS"
+This recipe contains assets that support the "Getting started with AWS PCS" section of the PCS User Guide. 
 
 ## Usage
 
-## Cost Estimate
+Download or access the PCS User Guide. Go to *Getting started with AWS PCS*. Follow the directions. When you encounter CloudFormation assets, you can find the source code for them in the `assets` directory of this recipe.
+

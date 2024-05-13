@@ -1,9 +1,10 @@
-# pcs_demo
+# Build and test a PCS cluster
 
 ## Info
 
-Build a working HPC cluster using AWS Parallel Computing Service
+The assets in this recipe support the internal document [Build and test a PCS cluster](https://quip-amazon.com/Dr9xAtgakF0L/Build-and-Test-A-PCS-Cluster). They are not meant to be used after the product reaches beta stage. 
 
 ## Usage
 
-## Cost Estimate
+See [Build and test a PCS cluster](https://quip-amazon.com/Dr9xAtgakF0L/Build-and-Test-A-PCS-Cluster)
+
