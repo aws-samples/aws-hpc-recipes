@@ -377,18 +377,18 @@ aws sns subscribe --protocol lambda \
 Go to your ImageBuilder pipeline. Trigger it. When the new image has built, watch the CloudWatch logs for your Lambda. A successful run will look something like this
 
 ```
-INIT_START Runtime Version: python:3.12.v25	Runtime Version ARN: arn:aws:lambda:REGION::runtime:eb23ce52a7ad2bcf849de9f8cb1e3bae200e62ddb9e03883cc29d7c7a5eade03
+INIT_START Runtime Version: python:3.12.v25	Runtime Version ARN: arn:aws:lambda:us-east-1::runtime:eb23ce52a7ad2bcf849de9f8cb1e3bae200e62ddb9e03883cc29d7c7a5eade03
 START RequestId: 0e0a86e7-945e-4dd8-a14a-924e6a385f45 Version: $LATEST
-[INFO]	2024-05-13T17:38:48.299Z	0e0a86e7-945e-4dd8-a14a-924e6a385f45	TopicArn: arn:aws:sns:REGION:ACCOUNTID:image-builder-topic
+[INFO]	2024-05-13T17:38:48.299Z	0e0a86e7-945e-4dd8-a14a-924e6a385f45	TopicArn: arn:aws:sns:us-east-1:609783872011:image-builder-topic
 [INFO]	2024-05-13T17:38:48.299Z	0e0a86e7-945e-4dd8-a14a-924e6a385f45	MessageId: 548e2b98-89b2-5fa6-97ad-7524dbd59fec
 [INFO]	2024-05-13T17:38:48.299Z	0e0a86e7-945e-4dd8-a14a-924e6a385f45	Subject: None
-[INFO]	2024-05-13T17:38:48.299Z	0e0a86e7-945e-4dd8-a14a-924e6a385f45	Region: REGION
-[INFO]	2024-05-13T17:38:48.299Z	0e0a86e7-945e-4dd8-a14a-924e6a385f45	ClusterId: CLUSTERID
+[INFO]	2024-05-13T17:38:48.299Z	0e0a86e7-945e-4dd8-a14a-924e6a385f45	Region: us-east-1
+[INFO]	2024-05-13T17:38:48.299Z	0e0a86e7-945e-4dd8-a14a-924e6a385f45	ClusterId: pieixxx15i
 [INFO]	2024-05-13T17:38:48.427Z	0e0a86e7-945e-4dd8-a14a-924e6a385f45	Initializing PCS client
 [INFO]	2024-05-13T17:38:48.507Z	0e0a86e7-945e-4dd8-a14a-924e6a385f45	Found credentials in environment variables.
 [INFO]	2024-05-13T17:38:49.546Z	0e0a86e7-945e-4dd8-a14a-924e6a385f45	No endpoints ruleset found for service pcs, falling back to legacy endpoint routing.
 [INFO]	2024-05-13T17:38:49.625Z	0e0a86e7-945e-4dd8-a14a-924e6a385f45	amiId: ami-0c45cdf8be884ff5e
-[INFO]	2024-05-13T17:38:49.625Z	0e0a86e7-945e-4dd8-a14a-924e6a385f45	Listing compute node groups for CLUSTERID
+[INFO]	2024-05-13T17:38:49.625Z	0e0a86e7-945e-4dd8-a14a-924e6a385f45	Listing compute node groups for pieixxx15i
 [INFO]	2024-05-13T17:38:50.478Z	0e0a86e7-945e-4dd8-a14a-924e6a385f45	Updating compute node groups
 [INFO]	2024-05-13T17:38:50.478Z	0e0a86e7-945e-4dd8-a14a-924e6a385f45	ComputeNodeGroupId: 3t9fl7ui6s
 [INFO]	2024-05-13T17:38:51.005Z	0e0a86e7-945e-4dd8-a14a-924e6a385f45	ComputeNodeGroupId: i7jevxks2k
@@ -396,5 +396,5 @@ END RequestId: 0e0a86e7-945e-4dd8-a14a-924e6a385f45
 REPORT RequestId: 0e0a86e7-945e-4dd8-a14a-924e6a385f45	Duration: 3066.60 ms	Billed Duration: 3067 ms	Memory Size: 128 MB	Max Memory Used: 76 MB	Init Duration: 289.19 ms
 ```
 
-Go to the PCS console and navigate to the cluster that should be updated. Go to its compute node groups. Each node group should be updated at or a little after the timestamp in the CloudWatch Logs above.
+Go to the PCS console and navigate to the cluster you are attempting to update. Go to its compute node groups. Each node group should be updated at or a little after the timestamp in the CloudWatch Logs above. The AMI ID for each node group should be the value output in the logs above for `amiId` (in this case, `ami-0c45cdf8be884ff5e`). 
 
