@@ -2,7 +2,7 @@ Parameters:
   AWSManagedADAdministrationInstanceId:
     Type: String
     AllowedPattern: ^i-(?:[a-f\d]{8}|[a-f\d]{17})$
-    Description: Password of the administrator account in your AWS Managed Microsoft AD that has permission to create and update users.
+    Description: Instance ID of the Amazon Elastic Compute Cloud (Amazon EC2) Windows instance that you can use to manage your AWS managed Microsoft AD.
   AWSManagedADAdminUsername:
     Type: String
     AllowedPattern: .+

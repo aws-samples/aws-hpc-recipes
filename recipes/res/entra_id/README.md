@@ -21,12 +21,12 @@ Users will have different passwords in Entra ID and AWS managed AD, since user p
 ### Deployment
 Download the CFN template’s JSON and deploy via the CFN console. The template requires the following input parameters:
 * `Stack name` - Assign a name for the CloudFormation you are deploying
-* `AWSManagedMicrosoftADAdminPassword` - Password of the AWS Managed Microsoft AD admin
-* `AWSManagedMicrosoftADAdminUsername` - Username of the AWS Managed Microsoft AD admin (e.g. `<NetBIOS-name>\Admin`)
-* `AWSManagedMicrosoftADUsersOU` - Organizational unit within AD to sync the Entra ID users to. Suggest to use the same users OU when installing RES so that RES can sync all the users automatically.
-* `FromEmail` - Email address from which temporary password will be sent to the synced AD user
-* `AWSManagedMicrosoftADDestinationGroup` - Destination group in the AWS Managed Microsoft AD that includes all the synced AD users. Default value is `res`. You can log in to the directory administration instance and add users to any other AD groups manually after the sync.
-* `AWSManagedMicrosoftADAdministrationInstanceId` - Instance ID of the AWS Managed Microsoft AD administration Windows instance
+* `AWSManagedADAdminPassword` - Password of the administrator account in your AWS Managed Microsoft AD that has permission to create and update users.
+* `AWSManagedADAdminUsername` - Username of the administrator account in your AWS Managed Microsoft AD that has permission to create and update users. Should follow the format `<managed-directory-NetBIOS-name>\<username>`,for example: `corp\Admin`.
+* `AWSManagedADUsersOU` - Users Organization Unit in the AWS Managed Microsoft AD. For example, `OU=Users,OU=RES,OU=CORP,DC=corp,DC=res,DC=com`.
+* `FromEmail` - Email address from which temporary password will be sent to the synced AD user.
+* `AWSManagedADDestinationGroup` - The name of the group that synced users will be placed in. Users may be added to other groups through an administrative host. Default value is `res`.
+* `AWSManagedADAdministrationInstanceId` - Instance ID of the Amazon Elastic Compute Cloud (Amazon EC2) Windows instance that you can use to manage your AWS managed Microsoft AD
 
 ### How to test once your template is deployed
 
