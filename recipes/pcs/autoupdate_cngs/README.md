@@ -7,7 +7,7 @@ This steps through the process of wiring up a Lambda function that updates a PCS
 
 Follow the instructions in [build_amis](../build_amis/) to create a PCS-compatible Rocky Linux 8 AMI in a region where you will use PCS. Note the instance ID when complete.
 
-## Create a PCS cluster that uses your custom Rocky 8 AMI for its compute node groups
+### Create a PCS cluster that uses your custom Rocky 8 AMI for its compute node groups
 
 Follow the instructions in [build_amis](../build_amis/). Note the `clusterIdentifier` for this cluster, since you will need it later. 
 
