@@ -8,11 +8,8 @@ The format is based on [Keep a Changelog](http://keepachangelog.com/)
 ### Added
 
 ### Fixed
-* In slurm_accounting_with_email, fixed path to HPC recipes bucket
 
 ### Changed
-* In demo_managed_ad, the domain name (and subdomain if included) is output as Domain Components in a string
-* In demo_managed_ad, a console URL to the domain management node is output as a link
 
 ## [1.4.0] - 2024-05-14
 
@@ -21,11 +18,14 @@ The format is based on [Keep a Changelog](http://keepachangelog.com/)
 * New recipe: entra_id enables integration of RES with Entra ID
 
 ### Fixed
+* In slurm_accounting_with_email, fixed path to HPC recipes bucket
 
 ### Changed
 * In login_node_for_res, RES admin action is no longer required to enable a PC login node
-* In res_demo, storage resources created for the demo are deleted when the parent stack is deleted
-* In res_demo, storage resources created for the demo are deleted when the parent stack is deleted
+* In res_demo_env, storage resources created for the demo are deleted when the parent stack is deleted
+* In demo_managed_ad, the domain name (and subdomain if included) is output as Domain Components in a string
+* In demo_managed_ad, a console URL to the domain management node is output as a link
+* In res_demo_env, the service account password ARN is returned as an output
 
 ## [1.3.0] - 2024-04-04
 
