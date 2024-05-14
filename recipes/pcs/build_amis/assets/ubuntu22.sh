@@ -22,6 +22,28 @@ apt-get install -y python3 -y python3 jq curl python3.10-venv
 /usr/bin/python3 -m venv /root/pcs
 /root/pcs/bin/python -m pip install awscurl==0.33 botocore==1.26.10
 
+# Install PCS beta client
+# Set up PCS managed directories
+for D in /opt/aws/pcs/bin /etc/amazon/pcs/
+do
+    mkdir -p $D && chmod 600 $D
+done
+# Install scripts from S3
+# TODO - make this a zipped tarball in 
+URL_BASE="https://aws-hpc-recipes-dev.s3.us-east-1.amazonaws.com/pcs/recipes/pcs/build_amis/assets/client"
+for SCRIPT in common.sh pcs_ami_cleanup.sh pcs_bootstrap_config_always.sh pcs_bootstrap_config_per_instance.sh pcs_bootstrap_finalize.sh pcs_bootstrap_init.sh
+do
+    curl -skL -O ${URL_BASE}/${SCRIPT} && mv ${SCRIPT} /opt/aws/pcs/bin && chmod 0755 /opt/aws/pcs/bin/${SCRIPT}
+done
+
+# User management
+# For beta, Slurm uid must be 401 or there will be constant auth errors in the log
+useradd --uid 400 --home-dir /home/pcs-admin --shell /bin/bash --comment "pcs admin user" -U --system --create-home pcs-admin
+useradd --uid 401 --home-dir /home/slurm --shell /bin/bash --comment "slurm user" -U --system --create-home slurm
+groupadd --gid 405 --system pcs-slurm-share
+usermod --append --groups pcs-slurm-share pcs-admin
+usermod --append --groups pcs-slurm-share slurm
+
 # Deps
 sudo apt-get install -y vim ksh tcsh zsh libssl-dev ncurses-dev libpam-dev net-tools libhwloc-dev dkms \
      tcl-dev automake autoconf libtool librrd-dev libapr1-dev libconfuse-dev \
