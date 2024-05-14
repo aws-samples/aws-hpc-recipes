@@ -20,9 +20,12 @@ def main():
         ns = Path(Path.joinpath(utils.RECIPES, dir))
         for entry in ns.iterdir():
             if entry.is_dir():
-                config = utils.load_config(Path.joinpath(ns, entry, "metadata.yml"))
-                # TODO - add tags to config - hard to compute in template
-                data["namespaces"][dir]["recipes"].append(config)
+                try:
+                    config = utils.load_config(Path.joinpath(ns, entry, "metadata.yml"))
+                    # TODO - add tags to config - hard to compute in template
+                    data["namespaces"][dir]["recipes"].append(config)
+                except FileNotFoundError:
+                    pass
 
     # Render file
     environment = Environment(loader=FileSystemLoader(utils.RECIPES_README_TEMPLATES), autoescape=select_autoescape())
