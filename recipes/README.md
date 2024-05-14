@@ -141,6 +141,11 @@ You can use an HPC Recipe for AWS in several ways:
 
 ### :arrow_right: res: Research and Engineering Studio on AWS
 
+#### entra_id ![tag](https://img.shields.io/badge/-beta-%23800080) ![tag](https://img.shields.io/badge/-entra_id-%23AAB7B8) ![tag](https://img.shields.io/badge/-identity-%23AAB7B8) ![tag](https://img.shields.io/badge/-res-%237DCEA0) 
+
+* **About**: Set up Entra ID with RES
+* **Usage**: [README.md](res/entra_id/README.md)
+
 #### res_demo_env ![tag](https://img.shields.io/badge/-ad-%23AAB7B8) ![tag](https://img.shields.io/badge/-cognito-%237DCEA0) ![tag](https://img.shields.io/badge/-dcv-%23AAB7B8) ![tag](https://img.shields.io/badge/-ec2-%23AAB7B8) ![tag](https://img.shields.io/badge/-efs-%237DCEA0) ![tag](https://img.shields.io/badge/-res-%237DCEA0) ![tag](https://img.shields.io/badge/-sso-%23AAB7B8) 
 
 * **About**: Research and Engineering Studio (RES) on AWS demo environment
