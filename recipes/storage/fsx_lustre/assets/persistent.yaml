@@ -1,5 +1,5 @@
 AWSTemplateFormatVersion: '2010-09-09'
-Description: Creates an FSxL filesystem of PERSISENT_2 type plus the Security Group needed for use with ParallelCluster
+Description: Creates a PERSISTENT_2 FSx for Lustre filesystem and a client security group for access to the filesystem
 
 ### Stack metadata
 Metadata:
@@ -58,146 +58,96 @@ Resources:
   LustreServersSG:
       Type: AWS::EC2::SecurityGroup
       Properties:
-        GroupDescription: Allow Cross Traffic from VPC to Lustre
-        SecurityGroupEgress:
-          - CidrIp: 0.0.0.0/0
-            Description: Allow all outbound traffic by default
-            IpProtocol: "-1"
+        GroupDescription: 'Allows traffic to FSx for Lustre filesystem'
+        GroupName: !Sub '${AWS::StackName}-fsxl-security-group'
         VpcId: !Ref VpcId
 
   LustreClientsSG:
     Type: AWS::EC2::SecurityGroup
     Properties:
-      GroupDescription: Allow Cross Traffic from VPC to Lustre
+      GroupDescription: 'Clients join this group for access to FSx for Lustre filesystem'
+      GroupName: !Sub '${AWS::StackName}-fsxl-client-security-group'
       VpcId: !Ref VpcId
 
   LustreClientsSGfromLustreClients988:
     Type: AWS::EC2::SecurityGroupIngress
     Properties:
       IpProtocol: tcp
-      Description: Allows Lustre traffic between Lustre clients
+      Description: Allows Lustre traffic on port 988 between Lustre clients
       FromPort: 988
-      GroupId:
-        Fn::GetAtt:
-          - LustreClientsSG
-          - GroupId
-      SourceSecurityGroupId:
-        Fn::GetAtt:
-          - LustreClientsSG
-          - GroupId
       ToPort: 988
+      GroupId: !Ref LustreClientsSG
+      SourceSecurityGroupId: !Ref LustreClientsSG
 
   LustreClientsSGxxFROMxxLustreServersSG988:
     Type: AWS::EC2::SecurityGroupIngress
     Properties:
       IpProtocol: tcp
-      Description: Allows Lustre traffic between Amazon FSx for Lustre file servers and Lustre clients
+      Description: Allows Lustre traffic on port 988 between Amazon FSx for Lustre file servers and Lustre clients
       FromPort: 988
-      GroupId:
-        Fn::GetAtt:
-          - LustreClientsSG
-          - GroupId
-      SourceSecurityGroupId:
-        Fn::GetAtt:
-          - LustreServersSG
-          - GroupId
       ToPort: 988
+      GroupId: !Ref LustreClientsSG
+      SourceSecurityGroupId: !Ref LustreServersSG
 
   LustreClientsSGfromLustreClients1021:
     Type: AWS::EC2::SecurityGroupIngress
     Properties:
       IpProtocol: tcp
-      Description: Allows Lustre traffic between Amazon FSx for Lustre file servers
+      Description: Allows Lustre traffic on ports 1021-23 between Amazon FSx for Lustre file servers
       FromPort: 1021
-      GroupId:
-        Fn::GetAtt:
-          - LustreClientsSG
-          - GroupId
-      SourceSecurityGroupId:
-        Fn::GetAtt:
-          - LustreClientsSG
-          - GroupId
       ToPort: 1023
+      GroupId: !Ref LustreClientsSG
+      SourceSecurityGroupId: !Ref LustreClientsSG
   
   LustreClientsSGxxFROMxxLustreServersSG1021:
     Type: AWS::EC2::SecurityGroupIngress
     Properties:
       IpProtocol: tcp
-      Description: Allows Lustre traffic between Amazon FSx for Lustre file servers and Lustre clients
+      Description: Allows Lustre traffic on ports 1021-23 between Amazon FSx for Lustre file servers and Lustre clients
       FromPort: 1021
-      GroupId:
-        Fn::GetAtt:
-          - LustreClientsSG
-          - GroupId
-      SourceSecurityGroupId:
-        Fn::GetAtt:
-          - LustreServersSG
-          - GroupId
       ToPort: 1023
+      GroupId: !Ref LustreClientsSG
+      SourceSecurityGroupId: !Ref LustreServersSG
   
   LustreClientsSGtoLustreClients988:
     Type: AWS::EC2::SecurityGroupEgress
     Properties:
-      GroupId:
-        Fn::GetAtt:
-          - LustreClientsSG
-          - GroupId
       IpProtocol: tcp
-      Description: Allow Lustre traffic between Amazon FSx for Lustre file servers
-      DestinationSecurityGroupId:
-        Fn::GetAtt:
-          - LustreClientsSG
-          - GroupId
+      Description: Allow Lustre traffic on por 988 between Amazon FSx for Lustre clients
       FromPort: 988
       ToPort: 988
+      GroupId: !Ref LustreClientsSG
+      DestinationSecurityGroupId: !Ref LustreClientsSG
   
   LustreClientsSGtopclusterLustreServersSG:
     Type: AWS::EC2::SecurityGroupEgress
     Properties:
-      GroupId:
-        Fn::GetAtt:
-          - LustreClientsSG
-          - GroupId
       IpProtocol: tcp
-      Description: Allow Lustre traffic between Amazon FSx for Lustre file servers and Lustre clients
-      DestinationSecurityGroupId:
-        Fn::GetAtt:
-          - LustreServersSG
-          - GroupId
+      Description: Allow Lustre traffic on port 988 between Amazon FSx for Lustre file servers and Lustre clients
       FromPort: 988
       ToPort: 988
+      GroupId: !Ref LustreClientsSG
+      DestinationSecurityGroupId: !Ref LustreServersSG
 
   LustreClientsSGtoLustreClients1021:
     Type: AWS::EC2::SecurityGroupEgress
     Properties:
-      GroupId:
-        Fn::GetAtt:
-          - LustreClientsSG
-          - GroupId
       IpProtocol: tcp
-      Description: Allows Lustre traffic between Amazon FSx for Lustre file servers
-      DestinationSecurityGroupId:
-        Fn::GetAtt:
-          - LustreClientsSG
-          - GroupId
+      Description: Allows Lustre traffic on ports 1021-23 between Amazon FSx for Lustre clients
       FromPort: 1021
       ToPort: 1023
+      GroupId: !Ref LustreClientsSG
+      DestinationSecurityGroupId: !Ref LustreClientsSG
 
   LustreClientsSGtoLustreServersSG:
     Type: AWS::EC2::SecurityGroupEgress
     Properties:
-      GroupId:
-        Fn::GetAtt:
-          - LustreClientsSG
-          - GroupId
       IpProtocol: tcp
-      Description: Allows Lustre traffic between Amazon FSx for Lustre file servers and Lustre clients
-      DestinationSecurityGroupId:
-        Fn::GetAtt:
-          - LustreServersSG
-          - GroupId
+      Description: Allows Lustre traffic on ports 1021-23 between Amazon FSx for Lustre file servers and Lustre clients
       FromPort: 1021
       ToPort: 1023
+      GroupId: !Ref LustreClientsSG
+      DestinationSecurityGroupId: !Ref LustreServersSG
 
   FSxLFilesystem:
     Type: AWS::FSx::FileSystem
