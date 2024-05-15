@@ -1,0 +1,81 @@
+AWSTemplateFormatVersion: 2010-09-09
+Description: Launch template to configure an EFS filesystem as /home
+
+Metadata:
+  AWS::CloudFormation::Interface:
+    ParameterGroups:
+      - Label:
+          default: Launch Template
+        Parameters:
+          - LaunchTemplateName
+      - Label:
+          default: Security
+        Parameters:
+          - NodeGroupSecurityGroupIds
+          - KeyName
+      - Label:
+          default: Filesystems
+        Parameters:
+          - EfsFilesystemId
+
+Parameters:
+
+  LaunchTemplateName:
+    Type: String
+    Default: "AWSPCS-shared-home-fs"
+    Description: Launch template name (must be unique in account/region)
+  NodeGroupSecurityGroupIds:
+    Type: List<AWS::EC2::SecurityGroup::Id>
+    Description: Security group(s) - select one allowing access within the VPC. Optionally, select another allowing inbound SSH access. 
+  EfsFilesystemId:
+    Type: String
+    Description: Amazon EFS Filesystem ID
+  KeyName:
+    Type: AWS::EC2::KeyPair::KeyName
+    Description: SSH keypair for default user to log into node group instances
+
+Resources:
+
+  LaunchTemplate:
+    Type: AWS::EC2::LaunchTemplate
+    Properties:
+      LaunchTemplateName: !Ref LaunchTemplateName
+      LaunchTemplateData:
+        MetadataOptions:
+          HttpEndpoint: enabled
+          HttpPutResponseHopLimit: 4
+          HttpTokens: required
+        KeyName: !Ref KeyName
+        SecurityGroupIds: !Ref NodeGroupSecurityGroupIds
+        UserData:
+          Fn::Base64: !Sub |
+            MIME-Version: 1.0
+            Content-Type: multipart/mixed; boundary="==MYBOUNDARY=="
+
+            --==MYBOUNDARY==
+            Content-Type: text/cloud-config; charset="us-ascii"
+            MIME-Version: 1.0
+
+            packages:
+            - amazon-efs-utils
+            
+            runcmd:
+            - mkdir -p /tmp/home
+            - rsync -a /home/ /tmp/home
+            - echo "${EfsFilesystemId}:/ /home efs tls,_netdev" >> /etc/fstab
+            - mount -a -t efs defaults
+            - rsync -a --ignore-existing /tmp/home/ /home
+            - rm -rf /tmp/home/
+
+            --==MYBOUNDARY==
+
+Outputs:
+  LaunchTemplateId:
+    Description: "Launch template Id"
+    Value: !Ref LaunchTemplate
+  DefaultVersionNumber:
+    Description: "Default version number"
+    Value: !GetAtt LaunchTemplate.DefaultVersionNumber
+  LatestVersionNumber:
+    Description: "Latest version number"
+    Value: !GetAtt LaunchTemplate.DefaultVersionNumber    
