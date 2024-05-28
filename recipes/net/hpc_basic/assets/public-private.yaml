@@ -18,6 +18,11 @@ Metadata:
         Parameters:
           - PublicCIDR
           - PrivateCIDR
+      - Label:
+          default: VPC Endpoints
+        Parameters:
+          - CreateS3Endpoint 
+          - CreateDynamoDBEndpoint
 
 Parameters:
   AvailabilityZone:
@@ -45,6 +50,22 @@ Parameters:
     Description: "CIDR block for the VPC if it will be created. Required if you opt to create a VPC."
     Default: 10.3.0.0/16
     Type: String
+  CreateS3Endpoint:
+    AllowedValues:
+      - 'True'
+      - 'False'
+    Default: 'True'
+    Description:
+      Set to True to create an S3 endpoint in your VPC.
+    Type: String
+  CreateDynamoDBEndpoint:
+    AllowedValues:
+      - 'True'
+      - 'False'
+    Default: 'True'
+    Description:
+      Set to True to create a DynamoDB endpoint in your VPC.
+    Type: String
 
 Conditions:
   CreateInternetGateway:
@@ -65,6 +86,8 @@ Conditions:
     - Fn::Equals:
       - Ref: InternetGatewayId
       - ''
+  S3EndpointCondition: !Equals [!Ref 'CreateS3Endpoint', 'True']
+  DynamoDBEndpointCondition: !Equals [!Ref 'CreateDynamoDBEndpoint', 'True']
 
 Resources:
 
@@ -273,6 +296,48 @@ Resources:
         SecurityGroupEgress:
         - IpProtocol: -1
           CidrIp: !Ref VpcCIDR
+
+  # S3 endpoint
+  S3Endpoint:
+    Type: 'AWS::EC2::VPCEndpoint'
+    Condition: S3EndpointCondition
+    Properties:
+      PolicyDocument:
+        Version: 2012-10-17
+        Statement:
+            - Effect: Allow
+              Principal: '*'
+              Action:
+                - '*'
+              Resource:
+                - '*'
+      VpcEndpointType: Gateway
+      ServiceName: !Sub 'com.amazonaws.${AWS::Region}.s3'
+      RouteTableIds:
+        - !Ref RouteTablePublic
+        - !Ref RouteTablePrivate
+      VpcId: !If [CreateVpc, !Ref Vpc, !Ref VpcId]
+
+  # DynamoDB endpoint
+  DynamoDBEndpoint:
+    Condition: DynamoDBEndpointCondition
+    Type: AWS::EC2::VPCEndpoint
+    Properties:
+      PolicyDocument:
+        Version: 2012-10-17
+        Statement:
+            - Effect: Allow
+              Principal: '*'
+              Action:
+                - '*'
+              Resource:
+                - '*'
+      VpcEndpointType: Gateway
+      ServiceName: !Sub 'com.amazonaws.${AWS::Region}.dynamodb'
+      RouteTableIds:
+        - !Ref RouteTablePublic
+        - !Ref RouteTablePrivate
+      VpcId: !If [CreateVpc, !Ref Vpc, !Ref VpcId]
 
 
 Outputs:
