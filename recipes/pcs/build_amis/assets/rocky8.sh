@@ -84,7 +84,7 @@ echo "/opt/pmix/lib" > /etc/ld.so.conf.d/pmix.conf && chown root:root /etc/ld.so
 
 # Slurm
 cd /root/third-party-software
-slurm_version="23.11.5"
+slurm_version="23.11.7"
 curl -skL -O https://download.schedmd.com/slurm/slurm-${slurm_version}.tar.bz2
 tar xjf slurm-${slurm_version}.tar.bz2 --no-same-owner
 cd slurm-${slurm_version}
