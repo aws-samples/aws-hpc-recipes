@@ -77,7 +77,7 @@ Parameters:
     AllowedValues:
       - 'True'
       - 'False'
-    Default: 'False'
+    Default: 'True'
     Description:
       Set to True to create an S3 endpoint in your VPC.
     Type: String
@@ -85,9 +85,9 @@ Parameters:
     AllowedValues:
       - 'True'
       - 'False'
-    Default: 'False'
+    Default: 'True'
     Description:
-      Set to Treu to create a DynamoDB endpoint in your VPC.
+      Set to True to create a DynamoDB endpoint in your VPC.
     Type: String
 
 Conditions:
