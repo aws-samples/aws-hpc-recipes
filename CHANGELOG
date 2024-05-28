@@ -10,6 +10,7 @@ The format is based on [Keep a Changelog](http://keepachangelog.com/)
 ### Fixed
 
 ### Changed
+* Updated all instances of ParallelCluster 3.9.0 to 3.9.2 to pick up a critical bug fix.
 
 ## [1.4.0] - 2024-05-14
 
@@ -49,7 +50,7 @@ The format is based on [Keep a Changelog](http://keepachangelog.com/)
 * In res_demo_env, it is now optional whether EFS storage and VPC are retained when deleting the stack
 * In demo_managed_ad, Windows AD management host now uses IMDS v2
 * In res_demo, the BI stack now exports ServiceAccountUserDN
-* In pcluster/latest, ParallelCluster version is bumped to 3.9.0 and supported operating systems are refreshed
+* In pcluster/latest, ParallelCluster version is bumped to 3.9.2 and supported operating systems are refreshed
 * In res_demo_env RES version now tracks the `latest` release
 
 ## [1.2.0] - 2024-01-30
