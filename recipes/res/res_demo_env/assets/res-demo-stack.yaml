@@ -371,6 +371,8 @@ Resources:
                     break
                 if response["Data"].get("LoadBalancerDnsName"):
                     break
+              if not response["Data"].get("UserPoolId") or not response["Data"].get("SAMLRedirectUrl") or not response["Data"].get("LoadBalancerDnsName"):
+                raise Exception(f"Unable to find matching cognito user pool, SAML redirect URL for the user pool, or load balancer. Response: {response}")
             except Exception as e:
               logger.error(f"Error processing request {e}")
               response["Status"] = "FAILED"
@@ -469,7 +471,6 @@ Resources:
       UserData:
         Fn::Base64: !Sub |
           #!/bin/bash -x
-          {
           mkdir -p /root/bootstrap && cd /root/bootstrap
           mkdir -p /root/bootstrap/logs/
           exec > /root/bootstrap/logs/userdata.log 2>&1
@@ -490,7 +491,7 @@ Resources:
           set -x
 
           # Start Keycloak
-          nohup ./bin/kc.sh start-dev --http-port 80 > keycloak.log &
+          sudo -E nohup ./bin/kc.sh start-dev --http-port 80 > keycloak.log &
           
           SERVER_URL="http://0.0.0.0:80"
           MAX_ATTEMPTS=15
@@ -553,9 +554,7 @@ Resources:
           # Create email mapper
           ./bin/kcadm.sh create clients/$clientId/protocol-mappers/models -s name=email_mapper -s protocol=saml -s protocolMapper=saml-user-property-mapper \
           -s 'config."attribute.name"=email' -s 'config."attribute.nameformat"=Unspecified' -s 'config."friendly.name"=email_mapper' -s 'config."user.attribute"=email' -r res
-          } || {
-            echo True
-          }
+
           # Signal stack to continue based on last command output
           /opt/aws/bin/cfn-signal -e $? --stack "${AWS::StackName}" --resource "KeycloakEC2Instance" --region "${AWS::Region}"
   
@@ -692,7 +691,7 @@ Resources:
             except Exception as e:
               logger.error(f"Error processing request {e}")
               response["Status"] = "FAILED"
-              # response["Reason"] = str(e)
+              response["Reason"] = str(e)
             finally:
               logger.info(f"Sending response: {response}")
               send_response(url=response_url, response=response)
