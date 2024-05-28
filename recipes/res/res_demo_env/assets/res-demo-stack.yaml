@@ -49,7 +49,6 @@ Parameters:
     AllowedPattern: ^(pl-[a-z0-9]{8,20})?$
     ConstraintDescription: Must be a valid VPC Prefix List ID, which begins with `pl-` or be empty.
 
-
 Conditions:
   UseEnvironmentName: !Not [!Equals [!Ref EnvironmentName, ""]]
 
@@ -69,7 +68,7 @@ Resources:
           Value: "true"
         - Key: res:EnvironmentName
           Value: !Ref EnvironmentName
-  
+
   ServiceAccountPassword:
     Type: AWS::SecretsManager::Secret
     Properties:
@@ -84,7 +83,7 @@ Resources:
           Value: "true"
         - Key: res:EnvironmentName
           Value: !Ref EnvironmentName
-  
+
   RESExternal:
     Type: AWS::CloudFormation::Stack
     Properties:
@@ -125,7 +124,7 @@ Resources:
         LDAPConnectionURI: !GetAtt [ RESExternal, Outputs.LDAPConnectionURI ]
         SudoersGroupName: RESAdministrators
         ServiceAccountUsername: !GetAtt [ RESExternal, Outputs.ServiceAccountUsername ]
-        ServiceAccountPassword: !Sub "{{resolve:secretsmanager:${ServiceAccountPassword}:SecretString:password}}"
+        ServiceAccountPasswordSecretArn: !GetAtt [ RESExternal, Outputs.ServiceAccountPasswordSecretArn ]
         UsersOU: !GetAtt [ RESExternal, Outputs.UsersOU ]
         GroupsOU: !GetAtt [ RESExternal, Outputs.GroupsOU ]
         SudoersOU: !GetAtt [ RESExternal, Outputs.SudoersOU ]
@@ -215,3 +214,502 @@ Resources:
                   - "dynamodb:GetItem"
                 Resource: !Sub arn:${AWS::Partition}:dynamodb:${AWS::Region}:${AWS::AccountId}:table/${EnvironmentName}.cluster-settings
 
+  KeycloakDataGatherLambdaExecutionRole:
+    Type: 'AWS::IAM::Role'
+    Properties:
+      AssumeRolePolicyDocument:
+        Version: '2012-10-17'
+        Statement:
+          - Effect: Allow
+            Principal:
+              Service: lambda.amazonaws.com
+            Action: 'sts:AssumeRole'
+      Policies:
+        - PolicyName: QueryCognitoAndELBv2
+          PolicyDocument:
+            Version: '2012-10-17'
+            Statement:
+              - Effect: Allow
+                Action:
+                  - elasticloadbalancing:DescribeLoadBalancers
+                  - elasticloadbalancing:DescribeTags
+                  - cognito-idp:ListUserPools
+                Resource: '*'
+              - Effect: Allow
+                Action:
+                  - cognito-idp:DescribeUserPool
+                Resource:
+                  - !Sub arn:${AWS::Partition}:cognito-idp:${AWS::Region}:${AWS::AccountId}:userpool/${AWS::Region}*
+              - Effect: Allow
+                Action:
+                  - logs:CreateLogGroup
+                  - logs:CreateLogStream
+                  - logs:PutLogEvents
+                Resource: '*'
+
+  KeycloakDataGatherHandlerFunction:
+    Type: 'AWS::Lambda::Function'
+    DependsOn: 
+     - RES
+     - KeycloakDataGatherLambdaExecutionRole
+    Properties:
+      Description: 'Keycloak Data Gather Handler'
+      FunctionName: !Sub KeycloakDataGatherHandler-${AWS::StackName}
+      Timeout: 300 # 5 minutes
+      Role: !GetAtt KeycloakDataGatherLambdaExecutionRole.Arn
+      Handler: index.handler
+      Runtime: python3.11
+      Code:
+        ZipFile: |
+          import os
+          import boto3
+          import urllib.error
+          import urllib.parse
+          import urllib.request
+          import json
+          from typing import Any, Dict, TypedDict, Union
+
+          import boto3
+          import botocore.exceptions
+          import logging
+          from typing import TypedDict
+          
+          logger = logging.getLogger()
+          logger.setLevel(logging.INFO)
+          
+          class CustomResourceResponse(TypedDict):
+            Status: str
+            Reason: str
+            PhysicalResourceId: str
+            StackId: str
+            RequestId: str
+            LogicalResourceId: str
+          
+          def send_response(url, response):
+            request = urllib.request.Request(
+              method="PUT",
+              url=url,
+              data=json.dumps(response).encode("utf-8"),
+            )
+            urllib.request.urlopen(request)
+          
+          def handler(event, _):
+            logger.info(f"Received event: {event}")
+            request_type = event["RequestType"]
+            response_url = event["ResponseURL"]
+            response = CustomResourceResponse(
+              Status="SUCCESS",
+              Reason="SUCCESS",
+              PhysicalResourceId=event["LogicalResourceId"],
+              StackId=event["StackId"],
+              RequestId=event["RequestId"],
+              LogicalResourceId=event["LogicalResourceId"],
+              Data={}
+            )
+            if request_type == "Delete":
+              send_response(response_url, response)
+              return
+
+            cluster_name = os.environ['CLUSTER_NAME']
+            region_name = os.environ['AWS_REGION']
+            cognito_client = boto3.client("cognito-idp")
+            elbv2_client = boto3.client('elbv2')
+
+            try:
+              TAG_NAME = "res:EnvironmentName"
+
+              logger.info(f"Working on getting Cognito details")
+              describe_user_pool_paginator = cognito_client.get_paginator("list_user_pools")
+              user_pool_iter = describe_user_pool_paginator.paginate(MaxResults=50)
+
+              for page in user_pool_iter:
+                user_pools = page.get("UserPools", [])
+                for pool in user_pools:
+                  pool_name = pool.get("Name", "")
+                  pool_id = pool.get("Id", None)
+                  if pool_name != f"{cluster_name}-user-pool" or not pool_id:
+                    continue
+                  logger.info(f"Processing cognito pool: {pool_name} PoolId: {pool_id}")
+                  describe_user_pool_result = cognito_client.describe_user_pool(
+                    UserPoolId=pool_id
+                  )
+                  pool_tags = describe_user_pool_result.get("UserPool", {}).get(
+                    "UserPoolTags", {}
+                  )
+                  for tag_name, tag_value in pool_tags.items():
+                    if tag_name == TAG_NAME and tag_value == cluster_name:
+                      logger.info(f"Found matching cognito pool: {pool_name}")
+                      domain = describe_user_pool_result['UserPool']['Domain']
+                      saml_redirect_url = f'https://{domain}.auth.{region_name}.amazoncognito.com/saml2/idpresponse'
+                      response["Data"]["UserPoolId"] = pool_id
+                      response["Data"]["SAMLRedirectUrl"] = saml_redirect_url
+                      break
+                  if response["Data"].get("UserPoolId"):
+                    break
+                if response["Data"].get("UserPoolId"):
+                    break
+
+              logger.info(f"Working on getting load balancer DNS")
+              describe_load_balancer_pagintor = elbv2_client.get_paginator("describe_load_balancers")
+              load_balancer_iter = describe_load_balancer_pagintor.paginate()
+              for page in load_balancer_iter:
+                load_balancers = page.get("LoadBalancers", [])
+                for load_balancer in load_balancers:
+                  load_balancer_arn = load_balancer.get("LoadBalancerArn", "")
+                  load_balancer_name = load_balancer.get("LoadBalancerName", "")
+                  if load_balancer_name != f"{cluster_name}-external-alb":
+                    continue
+                  logger.info(f"Processing load balancer: {load_balancer_name}")
+                  tag_description = elbv2_client.describe_tags(ResourceArns=[load_balancer_arn]).get('TagDescriptions', [None])[0]
+                  tags = tag_description.get('Tags', [])
+                  for tag in tags:
+                    if tag['Key'] == TAG_NAME and tag['Value'] == cluster_name:
+                      load_balancer_dns_name = load_balancer["DNSName"]
+                      response["Data"]["LoadBalancerDnsName"] = f'https://{load_balancer_dns_name}'
+                      break
+                  if response["Data"].get("LoadBalancerDnsName"):
+                    break
+                if response["Data"].get("LoadBalancerDnsName"):
+                    break
+            except Exception as e:
+              logger.error(f"Error processing request {e}")
+              response["Status"] = "FAILED"
+              response["Reason"] = str(e)
+            finally:
+              logger.info(f"Sending response: {response}")
+              send_response(url=response_url, response=response)
+      Environment:
+        Variables:
+          CLUSTER_NAME: !Ref EnvironmentName
+
+  DataGatherCustomResource:
+    Type: Custom::KeycloakDataGather
+    Properties:
+      ServiceToken: !GetAtt KeycloakDataGatherHandlerFunction.Arn
+
+  KeycloakSecret:
+    Type: AWS::SecretsManager::Secret
+    Properties:
+      Name: !Sub ${AWS::StackName}-KeycloakSecret
+      Description: Keycloak secret
+      GenerateSecretString:
+        PasswordLength: 14
+        ExcludePunctuation: true
+
+  KeycloakEC2InstanceRole:
+    Type: AWS::IAM::Role
+    Properties:
+      AssumeRolePolicyDocument:
+        Version: 2012-10-17
+        Statement:
+          - Effect: Allow
+            Principal:
+              Service:
+                - ec2.amazonaws.com
+            Action:
+              - sts:AssumeRole
+      ManagedPolicyArns:
+        - !Sub arn:${AWS::Partition}:iam::aws:policy/AmazonSSMManagedInstanceCore
+      Policies:
+        - PolicyName: KeycloakEC2InstancePolicy
+          PolicyDocument:
+            Version: 2012-10-17
+            Statement:
+              - Effect: Allow
+                Action: secretsmanager:GetSecretValue
+                Resource: 
+                  - !Ref KeycloakSecret
+                  - !GetAtt RESExternal.Outputs.ServiceAccountPasswordSecretArn
+              - Effect: Allow
+                Action:
+                  - logs:CreateLogGroup
+                  - logs:CreateLogStream
+                  - logs:PutLogEvents
+                Resource: '*'
+                
+  KeycloakEC2InstanceProfile:
+    Type: AWS::IAM::InstanceProfile
+    Properties:
+      Roles:
+        - !Ref KeycloakEC2InstanceRole
+
+  KeycloakSecurityGroup:
+    Type: AWS::EC2::SecurityGroup
+    Properties:
+      GroupDescription: Keycloak security group
+      VpcId: !GetAtt RESExternal.Outputs.VpcId
+      SecurityGroupIngress:
+        - IpProtocol: tcp
+          FromPort: 80
+          ToPort: 80
+          CidrIp: "0.0.0.0/0"
+
+  KeycloakEC2Instance:
+    Type: AWS::EC2::Instance
+    DependsOn:
+      - KeycloakSecurityGroup
+      - KeycloakEC2InstanceProfile
+      - KeycloakSecret
+      - DataGatherCustomResource
+      - RES
+    CreationPolicy:
+      ResourceSignal:
+        Timeout: PT15M
+    Properties:
+      ImageId: '{{resolve:ssm:/aws/service/ami-amazon-linux-latest/al2023-ami-kernel-6.1-x86_64:75}}'
+      InstanceType: t2.micro
+      KeyName: !Ref Keypair
+      IamInstanceProfile: !Ref KeycloakEC2InstanceProfile
+      SubnetId: !Select [0, !Split [",", !GetAtt RESExternal.Outputs.PublicSubnets]]
+      SecurityGroupIds:
+        - !Ref KeycloakSecurityGroup
+      Tags:
+       - Key: Name
+         Value: !Sub keycloak-${EnvironmentName}-${AWS::StackName}
+      UserData:
+        Fn::Base64: !Sub |
+          #!/bin/bash -x
+          {
+          mkdir -p /root/bootstrap && cd /root/bootstrap
+          mkdir -p /root/bootstrap/logs/
+          exec > /root/bootstrap/logs/userdata.log 2>&1
+
+          yum -y install java-17-amazon-corretto-headless
+
+          export KEYCLOAK_VERSION=24.0.3
+
+          wget https://github.com/keycloak/keycloak/releases/download/$KEYCLOAK_VERSION/keycloak-$KEYCLOAK_VERSION.zip
+          unzip keycloak-$KEYCLOAK_VERSION.zip
+          cd keycloak-$KEYCLOAK_VERSION
+
+          export KC_HTTP_PORT=80
+          export KEYCLOAK_ADMIN=admin
+          
+          set +x
+          export KEYCLOAK_ADMIN_PASSWORD=$(aws secretsmanager get-secret-value --secret-id ${KeycloakSecret} --query SecretString --region ${AWS::Region} --output text)
+          set -x
+
+          # Start Keycloak
+          nohup ./bin/kc.sh start-dev --http-port 80 > keycloak.log &
+          
+          SERVER_URL="http://0.0.0.0:80"
+          MAX_ATTEMPTS=15
+          RETRY_INTERVAL=10
+
+          attempt=0
+          while [ $attempt -lt $MAX_ATTEMPTS ]; do
+            response=$(curl -s -o /dev/null -w "%{http_code}" "$SERVER_URL")
+            if [ "$response" == "200" ] || [ "$response" == "302" ]; then
+              echo "Server is up!"
+              break
+            else
+              echo "Server is not yet up. Retrying in $RETRY_INTERVAL seconds..."
+              sleep $RETRY_INTERVAL
+              ((attempt++))
+            fi
+          done
+          
+          curl -s -o /dev/null -w "%{http_code}" "$SERVER_URL"
+          echo Keycloak server is up
+
+          # Login to Keycloak
+          set +x
+          ./bin/kcadm.sh config credentials --server $SERVER_URL --realm master --user admin --password $KEYCLOAK_ADMIN_PASSWORD
+          set -x
+
+          # Create realm named 'res'
+          ./bin/kcadm.sh create realms -s realm=res -s id=res -s enabled=true -o
+
+          # Set sslRequired to NONE
+          ./bin/kcadm.sh update realms/master -s sslRequired=NONE --server $SERVER_URL
+          ./bin/kcadm.sh update realms/res -s sslRequired=NONE --server $SERVER_URL
+          
+          #Configure Keycloak
+
+          #Get ServiceAccount passsword
+          set +x
+          serviceAccountPassword=$(aws secretsmanager get-secret-value --secret-id ${RESExternal.Outputs.ServiceAccountPasswordSecretArn} --query SecretString --region ${AWS::Region} --output text)
+          set -x
+
+          #Create storage component to sync from AD
+          componentId=$(./bin/kcadm.sh create components -s name=ldap -s parentId=res -s providerId=ldap -s providerType=org.keycloak.storage.UserStorageProvider \
+          -s 'config.authType=["simple"]' -s "config.bindCredential=[\"$serviceAccountPassword\"]" -s 'config.bindDn=["${RESExternal.Outputs.ServiceAccountUserDN}"]' \
+          -s 'config.connectionUrl=["${RESExternal.Outputs.LDAPConnectionURI}"]' -s 'config.editMode=["READ_ONLY"]' -s 'config.enabled=["true"]' -s 'config.rdnLDAPAttribute=["cn"]' \
+          -s 'config.searchScope=["2"]' -s 'config.usernameLDAPAttribute=["sAMAccountName"]' \
+          -s 'config.usersDn=["${RESExternal.Outputs.LDAPBase}"]' -s 'config.uuidLDAPAttribute=["objectGUID"]' \
+          -s 'config.vendor=["ad"]' -s 'config.userObjectClasses=["person, organizationalPerson, user"]' -r res -i)
+
+          # Trigger user sync
+          ./bin/kcadm.sh create user-storage/$componentId/sync?action=triggerFullSync -r res
+
+          #Create SSO SAML client for SSO
+          clientId=$(./bin/kcadm.sh create clients -r res -s baseUrl=${DataGatherCustomResource.LoadBalancerDnsName} \
+          -s clientId=urn:amazon:cognito:sp:${DataGatherCustomResource.UserPoolId} -s name=saml -s protocol=saml -s 'redirectUris=["*"]' -s rootUrl=${DataGatherCustomResource.LoadBalancerDnsName} \
+          -s 'attributes.saml_name_id_format=email' -s 'attributes."post.logout.redirect.uris"=${DataGatherCustomResource.LoadBalancerDnsName}' \
+          -s 'attributes."saml.client.signature"=false' -s 'attributes."saml.force.post.binding"=true' -s 'attributes."saml.authnstatement"=true' \
+          -s 'attributes."saml_assertion_consumer_url_post"=${DataGatherCustomResource.SAMLRedirectUrl}' \
+          -s 'attributes.saml_single_logout_service_url_redirect=${DataGatherCustomResource.LoadBalancerDnsName}' -i)
+
+          # Create email mapper
+          ./bin/kcadm.sh create clients/$clientId/protocol-mappers/models -s name=email_mapper -s protocol=saml -s protocolMapper=saml-user-property-mapper \
+          -s 'config."attribute.name"=email' -s 'config."attribute.nameformat"=Unspecified' -s 'config."friendly.name"=email_mapper' -s 'config."user.attribute"=email' -r res
+          } || {
+            echo True
+          }
+          # Signal stack to continue based on last command output
+          /opt/aws/bin/cfn-signal -e $? --stack "${AWS::StackName}" --resource "KeycloakEC2Instance" --region "${AWS::Region}"
+  
+  InvokeConfigureSSOLambdaRole:
+    Type: 'AWS::IAM::Role'
+    Properties:
+      AssumeRolePolicyDocument:
+        Version: '2012-10-17'
+        Statement:
+          - Effect: Allow
+            Principal:
+              Service: lambda.amazonaws.com
+            Action: 'sts:AssumeRole'
+      Policies:
+        - PolicyName: InvokeConfigureSSOLambdaPolicy
+          PolicyDocument:
+            Version: '2012-10-17'
+            Statement:
+              - Effect: Allow
+                Action:
+                  - lambda:InvokeFunction
+                Resource:
+                  - !Sub arn:${AWS::Partition}:lambda:${AWS::Region}:${AWS::AccountId}:function:${EnvironmentName}-configure_sso
+              - Effect: Allow
+                Action:
+                  - logs:CreateLogGroup
+                  - logs:CreateLogStream
+                  - logs:PutLogEvents
+                Resource: '*'
+
+  InvokeConfigureSSOHandlerFunction:
+    Type: 'AWS::Lambda::Function'
+    DependsOn: 
+     - InvokeConfigureSSOLambdaRole
+     - KeycloakEC2Instance
+    Properties:
+      Description: 'Invoke RES configure sso function'
+      FunctionName: !Sub InvokeConfigureSSOHandlerFunction-${AWS::StackName}
+      Timeout: 300 # 5 minutes
+      Role: !GetAtt InvokeConfigureSSOLambdaRole.Arn
+      Handler: index.handler
+      Runtime: python3.11
+      Code:
+        ZipFile: |
+          import os
+          import boto3
+          import urllib.error
+          import urllib.parse
+          import urllib.request
+          import json
+          from typing import Any, Dict, TypedDict, Union
+
+          import boto3
+          import botocore.exceptions
+          import base64
+          import logging
+          from typing import TypedDict
+          
+          logger = logging.getLogger()
+          logger.setLevel(logging.INFO)
+          
+          class CustomResourceResponse(TypedDict):
+            Status: str
+            Reason: str
+            PhysicalResourceId: str
+            StackId: str
+            RequestId: str
+            LogicalResourceId: str
+          
+          def send_response(url, response):
+            request = urllib.request.Request(
+              method="PUT",
+              url=url,
+              data=json.dumps(response).encode("utf-8"),
+            )
+            urllib.request.urlopen(request)
+          
+          def handler(event, _):
+            logger.info(f"Received event: {event}")
+
+            try:
+              request_type = event["RequestType"]
+              response_url = event["ResponseURL"]
+              response = CustomResourceResponse(
+                Status="SUCCESS",
+                Reason="SUCCESS",
+                PhysicalResourceId=event["LogicalResourceId"],
+                StackId=event["StackId"],
+                RequestId=event["RequestId"],
+                LogicalResourceId=event["LogicalResourceId"],
+                Data={}
+              )
+              if request_type == "Delete":
+                send_response(response_url, response)
+                return
+              lambda_name = os.environ['LAMBDA_NAME']
+              region_name = os.environ['AWS_REGION']
+              keycloak_url = os.environ['KEYCLOAK_URL']
+
+              #Get SAML metadata string from Keycloak
+              saml_metadata_url = f"{keycloak_url}/realms/res/protocol/saml/descriptor"
+              logger.info(f"SAML metadata url: {saml_metadata_url}")
+
+              local_filename, headers = urllib.request.urlretrieve(saml_metadata_url)
+              saml_metadata = open(local_filename, "r").read()
+              saml_metadata_utf8encoded = saml_metadata.encode("utf-8")
+              saml_metadata_base64_bytes = base64.b64encode(saml_metadata_utf8encoded)
+              saml_metadata_base64_string = saml_metadata_base64_bytes.decode("utf-8")
+
+              #Build payload
+              payload = json.dumps({ 
+                'configure_sso_request': {
+                  'provider_name': 'idc', 
+                  'provider_type': 'SAML', 
+                  'provider_email_attribute': 'email', 
+                  'saml_metadata_file': saml_metadata_base64_string
+                }
+              })
+
+              #Invoke Lambda
+              logger.info(f"Invoking configure_sso lambda with payload : {payload}")
+              lambda_client = boto3.client("lambda")
+              lambda_response = lambda_client.invoke(
+                FunctionName=lambda_name,
+                Payload=payload
+              )
+
+              logger.info(f"Response from configure_sso lambda: lambda_response")
+              if 'FunctionError' in lambda_response:
+                response_payload = json.loads(response['Payload'].read())
+                if 'errorMessage' in response_payload:
+                  raise Exception(response_payload['errorMessage'])
+                raise Exception(lambda_response['FunctionError'])
+            except Exception as e:
+              logger.error(f"Error processing request {e}")
+              response["Status"] = "FAILED"
+              # response["Reason"] = str(e)
+            finally:
+              logger.info(f"Sending response: {response}")
+              send_response(url=response_url, response=response)
+      Environment:
+        Variables:
+          LAMBDA_NAME: !Sub ${EnvironmentName}-configure_sso
+          KEYCLOAK_URL: !Sub http://${KeycloakEC2Instance.PublicIp}:80
+
+  InvokeConfigureSSOCustomResource:
+    Type: Custom::InvokeConfigureSSO
+    Properties:
+      ServiceToken: !GetAtt InvokeConfigureSSOHandlerFunction.Arn
+
+Outputs:
+  KeycloakUrl:
+    Description: Keycloak Administrator Url
+    Value: !Sub http://${KeycloakEC2Instance.PublicIp}:80
+  ApplicationUrl:
+    Description: RES application Url
+    Value: !GetAtt DataGatherCustomResource.LoadBalancerDnsName
