@@ -318,59 +318,55 @@ Resources:
             try:
               TAG_NAME = "res:EnvironmentName"
 
-              logger.info(f"Working on getting Cognito details")
-              describe_user_pool_paginator = cognito_client.get_paginator("list_user_pools")
-              user_pool_iter = describe_user_pool_paginator.paginate(MaxResults=50)
+              def populate_cognito_data(response):
+                logger.info(f"Working on getting Cognito details")
+                describe_user_pool_paginator = cognito_client.get_paginator("list_user_pools")
+                user_pool_iter = describe_user_pool_paginator.paginate(MaxResults=50)
 
-              for page in user_pool_iter:
-                user_pools = page.get("UserPools", [])
-                for pool in user_pools:
-                  pool_name = pool.get("Name", "")
-                  pool_id = pool.get("Id", None)
-                  if pool_name != f"{cluster_name}-user-pool" or not pool_id:
-                    continue
-                  logger.info(f"Processing cognito pool: {pool_name} PoolId: {pool_id}")
-                  describe_user_pool_result = cognito_client.describe_user_pool(
-                    UserPoolId=pool_id
-                  )
-                  pool_tags = describe_user_pool_result.get("UserPool", {}).get(
-                    "UserPoolTags", {}
-                  )
-                  for tag_name, tag_value in pool_tags.items():
-                    if tag_name == TAG_NAME and tag_value == cluster_name:
-                      logger.info(f"Found matching cognito pool: {pool_name}")
-                      domain = describe_user_pool_result['UserPool']['Domain']
-                      saml_redirect_url = f'https://{domain}.auth.{region_name}.amazoncognito.com/saml2/idpresponse'
-                      response["Data"]["UserPoolId"] = pool_id
-                      response["Data"]["SAMLRedirectUrl"] = saml_redirect_url
-                      break
-                  if response["Data"].get("UserPoolId"):
-                    break
-                if response["Data"].get("UserPoolId"):
-                    break
+                for page in user_pool_iter:
+                  user_pools = page.get("UserPools", [])
+                  for pool in user_pools:
+                    pool_name = pool.get("Name", "")
+                    pool_id = pool.get("Id", None)
+                    if pool_name != f"{cluster_name}-user-pool" or not pool_id:
+                      continue
+                    logger.info(f"Processing cognito pool: {pool_name} PoolId: {pool_id}")
+                    describe_user_pool_result = cognito_client.describe_user_pool(
+                      UserPoolId=pool_id
+                    )
+                    pool_tags = describe_user_pool_result.get("UserPool", {}).get(
+                      "UserPoolTags", {}
+                    )
+                    for tag_name, tag_value in pool_tags.items():
+                      if tag_name == TAG_NAME and tag_value == cluster_name:
+                        logger.info(f"Found matching cognito pool: {pool_name}")
+                        domain = describe_user_pool_result['UserPool']['Domain']
+                        saml_redirect_url = f'https://{domain}.auth.{region_name}.amazoncognito.com/saml2/idpresponse'
+                        response["Data"]["UserPoolId"] = pool_id
+                        response["Data"]["SAMLRedirectUrl"] = saml_redirect_url
+                        return
 
-              logger.info(f"Working on getting load balancer DNS")
-              describe_load_balancer_pagintor = elbv2_client.get_paginator("describe_load_balancers")
-              load_balancer_iter = describe_load_balancer_pagintor.paginate()
-              for page in load_balancer_iter:
-                load_balancers = page.get("LoadBalancers", [])
-                for load_balancer in load_balancers:
-                  load_balancer_arn = load_balancer.get("LoadBalancerArn", "")
-                  load_balancer_name = load_balancer.get("LoadBalancerName", "")
-                  if load_balancer_name != f"{cluster_name}-external-alb":
-                    continue
-                  logger.info(f"Processing load balancer: {load_balancer_name}")
-                  tag_description = elbv2_client.describe_tags(ResourceArns=[load_balancer_arn]).get('TagDescriptions', [None])[0]
-                  tags = tag_description.get('Tags', [])
-                  for tag in tags:
-                    if tag['Key'] == TAG_NAME and tag['Value'] == cluster_name:
-                      load_balancer_dns_name = load_balancer["DNSName"]
-                      response["Data"]["LoadBalancerDnsName"] = f'https://{load_balancer_dns_name}'
-                      break
-                  if response["Data"].get("LoadBalancerDnsName"):
-                    break
-                if response["Data"].get("LoadBalancerDnsName"):
-                    break
+              def populate_alb_dns(response):
+                logger.info(f"Working on getting load balancer DNS")
+                describe_load_balancer_pagintor = elbv2_client.get_paginator("describe_load_balancers")
+                load_balancer_iter = describe_load_balancer_pagintor.paginate()
+                for page in load_balancer_iter:
+                  load_balancers = page.get("LoadBalancers", [])
+                  for load_balancer in load_balancers:
+                    load_balancer_arn = load_balancer.get("LoadBalancerArn", "")
+                    load_balancer_name = load_balancer.get("LoadBalancerName", "")
+                    if load_balancer_name != f"{cluster_name}-external-alb":
+                      continue
+                    logger.info(f"Processing load balancer: {load_balancer_name}")
+                    tag_description = elbv2_client.describe_tags(ResourceArns=[load_balancer_arn]).get('TagDescriptions', [None])[0]
+                    tags = tag_description.get('Tags', [])
+                    for tag in tags:
+                      if tag['Key'] == TAG_NAME and tag['Value'] == cluster_name:
+                        load_balancer_dns_name = load_balancer["DNSName"]
+                        response["Data"]["LoadBalancerDnsName"] = f'https://{load_balancer_dns_name}'
+                        return
+              populate_cognito_data(response)
+              populate_alb_dns(response)
               if not response["Data"].get("UserPoolId") or not response["Data"].get("SAMLRedirectUrl") or not response["Data"].get("LoadBalancerDnsName"):
                 raise Exception(f"Unable to find matching cognito user pool, SAML redirect URL for the user pool, or load balancer. Response: {response}")
             except Exception as e:
@@ -459,7 +455,7 @@ Resources:
         Timeout: PT15M
     Properties:
       ImageId: '{{resolve:ssm:/aws/service/ami-amazon-linux-latest/al2023-ami-kernel-6.1-x86_64:75}}'
-      InstanceType: t2.micro
+      InstanceType: t3.micro
       KeyName: !Ref Keypair
       IamInstanceProfile: !Ref KeycloakEC2InstanceProfile
       SubnetId: !Select [0, !Split [",", !GetAtt RESExternal.Outputs.PublicSubnets]]
@@ -470,7 +466,7 @@ Resources:
          Value: !Sub keycloak-${EnvironmentName}-${AWS::StackName}
       UserData:
         Fn::Base64: !Sub |
-          #!/bin/bash -x
+          #!/bin/sh -x
           mkdir -p /root/bootstrap && cd /root/bootstrap
           mkdir -p /root/bootstrap/logs/
           exec > /root/bootstrap/logs/userdata.log 2>&1
@@ -500,7 +496,7 @@ Resources:
           attempt=0
           while [ $attempt -lt $MAX_ATTEMPTS ]; do
             response=$(curl -s -o /dev/null -w "%{http_code}" "$SERVER_URL")
-            if [ "$response" == "200" ] || [ "$response" == "302" ]; then
+            if [ "$response" == "302" ]; then
               echo "Server is up!"
               break
             else
