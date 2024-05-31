@@ -21,7 +21,6 @@ Parameters:
   Keypair:
     Description: EC2 Keypair to access management instance.
     Type: AWS::EC2::KeyPair::KeyName
-    Default: "default_sydney"
 
   ServiceAccountPasswordSecretArn:
     Type: String
