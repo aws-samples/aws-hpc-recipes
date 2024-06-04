@@ -215,3 +215,121 @@ Resources:
                   - "dynamodb:GetItem"
                 Resource: !Sub arn:${AWS::Partition}:dynamodb:${AWS::Region}:${AWS::AccountId}:table/${EnvironmentName}.cluster-settings
 
+  InvokeDeleteSharedStorageSecurityGroupRole:
+    Type: 'AWS::IAM::Role'
+    Properties:
+      AssumeRolePolicyDocument:
+        Version: '2012-10-17'
+        Statement:
+          - Effect: Allow
+            Principal:
+              Service: lambda.amazonaws.com
+            Action: 'sts:AssumeRole'
+      Policies:
+        - PolicyName: InvokeConfigureSSOLambdaPolicy
+          PolicyDocument:
+            Version: '2012-10-17'
+            Statement:
+              - Effect: Allow
+                Action:
+                  - lambda:InvokeFunction
+                Resource:
+                  - !Sub arn:${AWS::Partition}:lambda:${AWS::Region}:${AWS::AccountId}:function:${EnvironmentName}-delete_shared_storage_security_group
+              - Effect: Allow
+                Action:
+                  - ec2:DescribeSecurityGroups
+                  - ec2:DeleteSecurityGroup
+                  - ec2:DescribeNetworkInterfaces
+                Resource: '*'
+
+  InvokeDeleteSharedSecurityGroupHandlerFunction:
+      Type: 'AWS::Lambda::Function'
+      DependsOn: 
+      - InvokeDeleteSharedStorageSecurityGroupRole
+      Properties:
+        Description: 'Deletes the shared storage security group when the stack is deleted.'
+        FunctionName: !Sub InvokeDeleteSharedSecurityGroupHandlerFunction-${AWS::StackName}
+        Timeout: 360 # 6 minutes
+        Role: !GetAtt InvokeDeleteSharedStorageSecurityGroupRole.Arn
+        Handler: index.handler
+        Runtime: python3.11
+        Code:
+          ZipFile: |
+            import boto3
+            import os
+            import logging
+            import cfnresponse
+            import time
+
+            logger = logging.getLogger()
+            logger.setLevel(logging.INFO)
+
+            def wait_for_internal_storage_deletion(shared_group_id, context):
+              ec2 = boto3.client("ec2")
+              mount_targets = ec2.describe_network_interfaces(
+                Filters=[
+                  {
+                    'Name': 'group-id',
+                    'Values': [
+                      shared_group_id
+                    ]
+                  }
+                ]
+              )
+              while len(mount_targets['NetworkInterfaces']) > 0:
+                time.sleep(20)
+                if context.get_remaining_time_in_millis() < 20000:
+                  raise Exception("Timed out waiting for internal storage deletion.")
+                mount_targets = ec2.describe_network_interfaces(
+                  Filters=[
+                    {
+                      'Name': 'group-id',
+                      'Values': [
+                        shared_group_id
+                      ]
+                    }
+                  ]
+              )
+                
+
+            def handler(event, context):
+              logger.info(f"Received event: {event}")
+              response = {}
+
+              if event["RequestType"] == "Delete":
+                try:
+                  ec2 = boto3.client("ec2")
+                  sgResponse = ec2.describe_security_groups(
+                    Filters=[
+                      {
+                        'Name': 'group-name', 
+                        'Values': [ 
+                          f"{os.environ['ENVIRONMENT_NAME']}-shared-storage-security-group",
+                        ]
+                      }
+                    ]
+                  )
+                  if len(sgResponse['SecurityGroups']) == 0:
+                    response['Output'] = "Shared storage security group not found."
+                  else:
+                    wait_for_internal_storage_deletion(sgResponse['SecurityGroups'][0]['GroupId'], context)
+                    ec2.delete_security_group(GroupId=sgResponse['SecurityGroups'][0]['GroupId'])
+                    response['Output'] = "Shared storage security group deleted."
+                except Exception as e:
+                  logger.error(f"Error: Unable to delete shared storage security group: {e}")
+                  response['Output'] = f"Error: Unable to delete shared storage security group: {e}"
+                  cfnresponse.send(event, context, cfnresponse.FAILED, response)
+                finally:
+                  logger.info(f"Sending response: {response}")
+                  cfnresponse.send(event, context, cfnresponse.SUCCESS, response)
+              else:
+                cfnresponse.send(event, context, cfnresponse.SUCCESS, response)
+        Environment:
+          Variables:
+            ENVIRONMENT_NAME: !Ref EnvironmentName
+
+  InvokeDeleteSharedStorageSecurityGroup:
+    Type: Custom::DeleteSharedStorageSecurityGroup
+    Properties:
+      ServiceToken: !GetAtt InvokeDeleteSharedSecurityGroupHandlerFunction.Arn
+
