@@ -1,0 +1,300 @@
+Description: Keycloak Server
+
+Metadata:
+  AWS::CloudFormation::Interface:
+    ParameterGroups:
+      - Label:
+          default: Keycloak Configuration
+        Parameters:
+          - Keypair
+          - ServiceAccountPasswordSecretArn
+          - VpcId
+          - PublicSubnet
+          - ServiceAccountUserDN
+          - UsersDN
+          - LDAPConnectionURI
+          - CogntioUserPoolId
+          - EnvironmentBaseURL
+          - SAMLRedirectUrl
+      
+Parameters:
+  Keypair:
+    Description: EC2 Keypair to access management instance.
+    Type: AWS::EC2::KeyPair::KeyName
+
+  ServiceAccountPasswordSecretArn:
+    Type: String
+    AllowedPattern: ^(?:arn:(?:aws|aws-us-gov|aws-cn):secretsmanager:[a-z0-9-]{1,20}:[0-9]{12}:secret:[A-Za-z0-9-_+=,\.@]{1,128})?$
+    Description: Directory Service Root (Service Account) Password Secret ARN
+
+  VpcId:
+    Type: AWS::EC2::VPC::Id
+    AllowedPattern: vpc-[0-9a-f]{17}
+    ConstraintDescription: VpcId must begin with 'vpc-', only contain letters (a-f) or numbers(0-9) and must be 21 characters in length
+  
+  PublicSubnet:
+    Type: AWS::EC2::Subnet::Id
+    AllowedPattern: subnet-.+
+    Description: Select a public subnet from the already selected VPC
+  
+  ServiceAccountUserDN:
+    Type: String
+    AllowedPattern: .+
+    Description: Provide the Distinguished name (DN) of the service account user in the Active Directory
+  
+  UsersDN:
+    Type: String
+    AllowedPattern: .+
+    Description: Please provide Users Organization Unit in your active directory under which all of your users exist. For example, OU=Users,DC=RES,DC=example,DC=internal
+
+  LDAPConnectionURI:
+    Type: String
+    AllowedPattern: .+
+    Description: Please provide the active directory connection URI (e.g. ldap://www.example.com)
+
+  CogntioUserPoolId:
+    Type: String
+    AllowedPattern: .+
+    Description: Please provide the Cognito user pool id (e.g. us-east-1_ababab)
+
+  EnvironmentBaseURL:
+    Type: String
+    AllowedPattern: https?://.+
+    Description: Please provide your base URL for your environment
+
+  SAMLRedirectUrl:
+    Type: String
+    AllowedPattern: https://.+\.amazoncognito\.com/saml2/idpresponse
+    Description: Please provide the SAML redirect URL
+
+Mappings:
+  Keycloak:
+    Config: 
+      Version: "24.0.3"
+   
+
+Resources:
+  KeycloakSecret:
+    Type: AWS::SecretsManager::Secret
+    Properties:
+      Name: !Sub 
+        - KeycloakSecret-${AWS::StackName}-${StackIdSuffix}
+        - StackIdSuffix: !Select [2, !Split ['/', !Ref 'AWS::StackId']]
+      Description: Keycloak secret
+      GenerateSecretString:
+        PasswordLength: 14
+        ExcludePunctuation: true
+
+  KeycloakEC2InstanceRole:
+    Type: AWS::IAM::Role
+    Properties:
+      AssumeRolePolicyDocument:
+        Version: 2012-10-17
+        Statement:
+          - Effect: Allow
+            Principal:
+              Service:
+                - ec2.amazonaws.com
+            Action:
+              - sts:AssumeRole
+      ManagedPolicyArns:
+        - !Sub arn:${AWS::Partition}:iam::aws:policy/AmazonSSMManagedInstanceCore
+      Policies:
+        - PolicyName: KeycloakEC2InstancePolicy
+          PolicyDocument:
+            Version: 2012-10-17
+            Statement:
+              - Effect: Allow
+                Action: secretsmanager:GetSecretValue
+                Resource: 
+                  - !Ref KeycloakSecret
+                  - !Ref ServiceAccountPasswordSecretArn
+              - Effect: Allow
+                Action:
+                  - logs:CreateLogGroup
+                  - logs:CreateLogStream
+                  - logs:PutLogEvents
+                Resource: '*'
+                
+  KeycloakEC2InstanceProfile:
+    Type: AWS::IAM::InstanceProfile
+    Properties:
+      Roles:
+        - !Ref KeycloakEC2InstanceRole
+
+  KeycloakSecurityGroup:
+    Type: AWS::EC2::SecurityGroup
+    Properties:
+      GroupDescription: Keycloak security group
+      VpcId: !Ref VpcId
+      SecurityGroupIngress:
+        - IpProtocol: tcp
+          FromPort: 80
+          ToPort: 80
+          CidrIp: "0.0.0.0/0"
+
+  KeycloakEC2Instance:
+    Type: AWS::EC2::Instance
+    DependsOn:
+      - KeycloakSecurityGroup
+      - KeycloakEC2InstanceProfile
+      - KeycloakSecret
+    CreationPolicy:
+      ResourceSignal:
+        Timeout: PT15M
+    Properties:
+      ImageId: '{{resolve:ssm:/aws/service/ami-amazon-linux-latest/al2023-ami-kernel-6.1-x86_64:75}}'
+      InstanceType: t3.micro
+      KeyName: !Ref Keypair
+      IamInstanceProfile: !Ref KeycloakEC2InstanceProfile
+      SubnetId: !Ref PublicSubnet
+      SecurityGroupIds:
+        - !Ref KeycloakSecurityGroup
+      Tags:
+       - Key: Name
+         Value: !Sub keycloak-${AWS::StackName}
+      UserData:
+        Fn::Base64: 
+          Fn::Sub:
+            - |
+              #!/bin/sh -x
+              mkdir -p /root/bootstrap && cd /root/bootstrap
+              mkdir -p /root/bootstrap/logs/
+              exec > /root/bootstrap/logs/userdata.log 2>&1
+
+              #Install java17
+              sudo yum -y install java-17-amazon-corretto-headless
+              export KEYCLOAK_VERSION=${KeycloakVersion}
+              wget https://github.com/keycloak/keycloak/releases/download/$KEYCLOAK_VERSION/keycloak-$KEYCLOAK_VERSION.zip
+              unzip keycloak-$KEYCLOAK_VERSION.zip
+              
+              cd keycloak-$KEYCLOAK_VERSION
+              
+              export KC_HTTP_PORT=80
+              export KEYCLOAK_ADMIN=admin
+              set +x
+              export KEYCLOAK_ADMIN_PASSWORD=$(aws secretsmanager get-secret-value --secret-id ${KeycloakSecret} --query SecretString --region ${AWS::Region} --output text)
+              set -x
+
+              # Start Keycloak
+              sudo -E nohup ./bin/kc.sh start-dev --http-port 80 > keycloak.log &
+              sleep 30
+
+              SERVER_URL="http://0.0.0.0:80"
+              MAX_ATTEMPTS=15
+              RETRY_INTERVAL=10
+
+              attempt=0
+              while [ $attempt -lt $MAX_ATTEMPTS ]; do
+                response=$(curl -s -o /dev/null -w "%{http_code}" "$SERVER_URL")
+                if [ "$response" == "302" ]; then
+                  echo "Server is up!"
+                  break
+                else
+                  echo "Server is not yet up. Retrying in $RETRY_INTERVAL seconds..."
+                  sleep $RETRY_INTERVAL
+                  ((attempt++))
+                fi
+              done
+              
+              if [ $(curl -s -o /dev/null -w "%{http_code}" "$SERVER_URL") != 302 ]; then
+                /opt/aws/bin/cfn-signal -e 1 --stack "${AWS::StackName}" --resource "KeycloakEC2Instance" --region "${AWS::Region}"
+              fi
+
+              echo "Keycloak server is up"
+              # Login to Keycloak
+              set +x
+              ./bin/kcadm.sh config credentials --server $SERVER_URL --realm master --user admin --password $KEYCLOAK_ADMIN_PASSWORD
+              set -x
+
+              # Create realm named 'res'
+              ./bin/kcadm.sh create realms -s realm=res -s id=res -s enabled=true -o
+
+              # Set sslRequired to NONE
+              ./bin/kcadm.sh update realms/master -s sslRequired=NONE --server $SERVER_URL
+              ./bin/kcadm.sh update realms/res -s sslRequired=NONE --server $SERVER_URL
+              
+              #Configure Keycloak
+              #Get ServiceAccount passsword
+              set +x
+              serviceAccountPassword=$(aws secretsmanager get-secret-value --secret-id ${ServiceAccountPasswordSecretArn} --query SecretString --region ${AWS::Region} --output text)
+
+              #Create storage component to sync from AD
+              componentId=$(./bin/kcadm.sh create components -s name=ldap -s parentId=res -s providerId=ldap -s providerType=org.keycloak.storage.UserStorageProvider \
+              -s 'config.authType=["simple"]' -s "config.bindCredential=[\"$serviceAccountPassword\"]" -s 'config.bindDn=["${ServiceAccountUserDN}"]' \
+              -s 'config.connectionUrl=["${LDAPConnectionURI}"]' -s 'config.editMode=["READ_ONLY"]' -s 'config.enabled=["true"]' -s 'config.rdnLDAPAttribute=["cn"]' \
+              -s 'config.searchScope=["2"]' -s 'config.usernameLDAPAttribute=["sAMAccountName"]' \
+              -s 'config.usersDn=["${UsersDN}"]' -s 'config.uuidLDAPAttribute=["objectGUID"]' \
+              -s 'config.vendor=["ad"]' -s 'config.userObjectClasses=["person, organizationalPerson, user"]' -r res -i)
+              set -x
+
+              # Trigger user sync
+              ./bin/kcadm.sh create user-storage/$componentId/sync?action=triggerFullSync -r res
+
+              #Create SSO SAML client for SSO
+              clientId=$(./bin/kcadm.sh create clients -r res -s baseUrl=${EnvironmentBaseURL} \
+              -s clientId=urn:amazon:cognito:sp:${CogntioUserPoolId} -s name=saml -s protocol=saml -s 'redirectUris=["*"]' -s rootUrl=${EnvironmentBaseURL} \
+              -s 'attributes.saml_name_id_format=email' -s 'attributes."post.logout.redirect.uris"=${EnvironmentBaseURL}' \
+              -s 'attributes."saml.client.signature"=false' -s 'attributes."saml.force.post.binding"=true' -s 'attributes."saml.authnstatement"=true' \
+              -s 'attributes."saml_assertion_consumer_url_post"=${SAMLRedirectUrl}' \
+              -s 'attributes.saml_single_logout_service_url_redirect=${EnvironmentBaseURL}' -i)
+
+              # Create email mapper
+              ./bin/kcadm.sh create clients/$clientId/protocol-mappers/models -s name=email_mapper -s protocol=saml -s protocolMapper=saml-user-property-mapper \
+              -s 'config."attribute.name"=email' -s 'config."attribute.nameformat"=Unspecified' -s 'config."friendly.name"=email_mapper' -s 'config."user.attribute"=email' -r res
+
+              ##Schedule crontabs
+              #Install crontab on al3
+              sudo yum -y install cronie
+              sudo systemctl enable crond.service
+              sudo systemctl start crond.service
+
+              #Crontab1 - service account password rotation - script
+              echo -e "#!/bin/sh -x
+              exec >> /root/bootstrap/logs/userdata.log 2>&1
+              echo Updating service account password
+              cd /root/bootstrap/keycloak-$KEYCLOAK_VERSION
+              SERVER_URL=\"http://0.0.0.0:80\"
+              set +x
+              kc_admin_password=\$(aws secretsmanager get-secret-value --secret-id ${KeycloakSecret} --query SecretString --region ${AWS::Region} --output text)
+              serviceAccountPassword=\$(aws secretsmanager get-secret-value --secret-id ${ServiceAccountPasswordSecretArn} --query SecretString --region ${AWS::Region} --output text)
+              ./bin/kcadm.sh config credentials --server \$SERVER_URL --realm master --user admin --password \$kc_admin_password
+              ./bin/kcadm.sh update components/$componentId -s name=ldap -s parentId=res -s providerId=ldap -s providerType=org.keycloak.storage.UserStorageProvider \\
+              -s 'config.authType=[\"simple\"]' -s \"config.bindCredential=[\\\"\$serviceAccountPassword\\\"]\" -s 'config.bindDn=[\"${ServiceAccountUserDN}\"]' \\
+              -s 'config.connectionUrl=[\"${LDAPConnectionURI}\"]' -s 'config.editMode=[\"READ_ONLY\"]' -s 'config.enabled=[\"true\"]' -s 'config.rdnLDAPAttribute=[\"cn\"]' \\
+              -s 'config.searchScope=[\"2\"]' -s 'config.usernameLDAPAttribute=[\"sAMAccountName\"]' \\
+              -s 'config.usersDn=[\"${UsersDN}\"]' -s 'config.uuidLDAPAttribute=[\"objectGUID\"]' \\
+              -s 'config.vendor=[\"ad\"]' -s 'config.userObjectClasses=[\"person, organizationalPerson, user\"]' -r res
+              set -x
+              ./bin/kcadm.sh create user-storage/$componentId/sync?action=triggerFullSync -r res
+              " > /root/bootstrap/password_rotation.sh
+              chmod +x /root/bootstrap/password_rotation.sh
+
+              #Crontab2 - user sync - script
+              echo -e "#!/bin/sh -x
+              exec >> /root/bootstrap/logs/userdata.log 2>&1
+              echo Syncing users
+              cd /root/bootstrap/keycloak-$KEYCLOAK_VERSION
+              SERVER_URL=\"http://0.0.0.0:80\"
+              set +x
+              kc_admin_password=\$(aws secretsmanager get-secret-value --secret-id ${KeycloakSecret} --query SecretString --region ${AWS::Region} --output text)
+              ./bin/kcadm.sh config credentials --server \$SERVER_URL --realm master --user admin --password \$kc_admin_password
+              set -x
+              ./bin/kcadm.sh create user-storage/$componentId/sync?action=triggerFullSync -r res
+              " > /root/bootstrap/user_sync.sh
+              chmod +x /root/bootstrap/user_sync.sh
+
+              (crontab -l; echo "*/30 * * * * /root/bootstrap/password_rotation.sh") | crontab -
+              (crontab -l; echo "*/5 * * * * /root/bootstrap/user_sync.sh") | crontab -
+
+              # Signal stack to continue based on last command output
+              /opt/aws/bin/cfn-signal -e $? --stack "${AWS::StackName}" --resource "KeycloakEC2Instance" --region "${AWS::Region}"
+            - KeycloakVersion: !FindInMap [Keycloak, Config, Version]
+
+Outputs:
+  KeycloakUrl:
+    Description: Keycloak administrator URL
+    Value: !Sub http://${KeycloakEC2Instance.PublicIp}:80
+  KeycloakAdminPasswordSecretArn:
+    Description: Keycloak password for admin user
+    Value: !Sub ${KeycloakSecret}
