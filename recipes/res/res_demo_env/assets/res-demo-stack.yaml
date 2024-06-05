@@ -100,6 +100,7 @@ Resources:
 
   RES:
     Type: AWS::CloudFormation::Stack
+    DependsOn: InvokeDeleteSharedStorageSecurityGroup
     Properties:
       Parameters:
         EnvironmentName: !Ref EnvironmentName
@@ -196,38 +197,9 @@ Resources:
             import os
             import logging
             import cfnresponse
-            import time
 
             logger = logging.getLogger()
-            logger.setLevel(logging.INFO)
-
-            def wait_for_internal_storage_deletion(shared_group_id, context):
-              ec2 = boto3.client("ec2")
-              mount_targets = ec2.describe_network_interfaces(
-                Filters=[
-                  {
-                    'Name': 'group-id',
-                    'Values': [
-                      shared_group_id
-                    ]
-                  }
-                ]
-              )
-              while len(mount_targets['NetworkInterfaces']) > 0:
-                time.sleep(20)
-                if context.get_remaining_time_in_millis() < 20000:
-                  raise Exception("Timed out waiting for internal storage deletion.")
-                mount_targets = ec2.describe_network_interfaces(
-                  Filters=[
-                    {
-                      'Name': 'group-id',
-                      'Values': [
-                        shared_group_id
-                      ]
-                    }
-                  ]
-              )
-                
+            logger.setLevel(logging.INFO)              
 
             def handler(event, context):
               logger.info(f"Received event: {event}")
@@ -249,7 +221,6 @@ Resources:
                   if len(sgResponse['SecurityGroups']) == 0:
                     response['Output'] = "Shared storage security group not found."
                   else:
-                    wait_for_internal_storage_deletion(sgResponse['SecurityGroups'][0]['GroupId'], context)
                     ec2.delete_security_group(GroupId=sgResponse['SecurityGroups'][0]['GroupId'])
                     response['Output'] = "Shared storage security group deleted."
                 except Exception as e:
