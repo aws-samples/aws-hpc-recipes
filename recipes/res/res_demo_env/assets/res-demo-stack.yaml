@@ -49,7 +49,6 @@ Parameters:
     AllowedPattern: ^(pl-[a-z0-9]{8,20})?$
     ConstraintDescription: Must be a valid VPC Prefix List ID, which begins with `pl-` or be empty.
 
-
 Conditions:
   UseEnvironmentName: !Not [!Equals [!Ref EnvironmentName, ""]]
 
@@ -69,7 +68,7 @@ Resources:
           Value: "true"
         - Key: res:EnvironmentName
           Value: !Ref EnvironmentName
-  
+
   ServiceAccountPassword:
     Type: AWS::SecretsManager::Secret
     Properties:
@@ -84,7 +83,7 @@ Resources:
           Value: "true"
         - Key: res:EnvironmentName
           Value: !Ref EnvironmentName
-  
+
   RESExternal:
     Type: AWS::CloudFormation::Stack
     Properties:
@@ -125,7 +124,7 @@ Resources:
         LDAPConnectionURI: !GetAtt [ RESExternal, Outputs.LDAPConnectionURI ]
         SudoersGroupName: RESAdministrators
         ServiceAccountUsername: !GetAtt [ RESExternal, Outputs.ServiceAccountUsername ]
-        ServiceAccountPassword: !Sub "{{resolve:secretsmanager:${ServiceAccountPassword}:SecretString:password}}"
+        ServiceAccountPasswordSecretArn: !GetAtt [ RESExternal, Outputs.ServiceAccountPasswordSecretArn ]
         UsersOU: !GetAtt [ RESExternal, Outputs.UsersOU ]
         GroupsOU: !GetAtt [ RESExternal, Outputs.GroupsOU ]
         SudoersOU: !GetAtt [ RESExternal, Outputs.SudoersOU ]
@@ -138,82 +137,20 @@ Resources:
         ServiceAccountUserDN: !GetAtt [ RESExternal, Outputs.ServiceAccountUserDN ]
       TemplateURL: https://research-engineering-studio-us-east-1.s3.amazonaws.com/releases/latest/ResearchAndEngineeringStudio.template.json
 
-  LoadBalancerLookupFunction:
-    Type: AWS::Lambda::Function
-    Properties:
-      Handler: index.handler
-      Runtime: python3.11
-      Timeout: 10
-      Code:
-        ZipFile: |
-          import cfnresponse
-          import boto3
-          
-          client = boto3.client("dynamodb")
-          
-          def handler(event, context):
-            try:
-              if event.get("RequestType") != "Create":
-                cfnresponse.send(event, context, cfnresponse.SUCCESS, {})
-                return
-            
-              table_name = event["ResourceProperties"]["TableName"]
-            
-              alb_dns_name = client.get_item(
-                TableName=table_name,
-                Key={"key": {"S": "cluster.load_balancers.external_alb.load_balancer_dns_name"}},
-              )
-              
-              nlb_dns_name = client.get_item(
-                TableName=table_name,
-                Key={"key": {"S": "vdc.external_nlb.load_balancer_dns_name"}},
-              )
-              
-              response = {
-                "ALBDNSName": alb_dns_name["Item"]["value"]["S"],
-                "NLBDNSName": nlb_dns_name["Item"]["value"]["S"],
-              }
-              
-              cfnresponse.send(event, context, cfnresponse.SUCCESS, response)
-            except Exception as e:
-              cfnresponse.send(event, context, cfnresponse.FAILED, {"error": str(e)})
-      Role:
-        !GetAtt LoadBalancerLookupRole.Arn
-
-  LoadBalancerLookupResource:
-    Type: Custom::LoadBalancerLookup
+  RESSsoKeycloak:
+    Type: AWS::CloudFormation::Stack
     DependsOn: RES
     Properties:
-      ServiceToken: !GetAtt LoadBalancerLookupFunction.Arn
-      TableName: !Sub ${EnvironmentName}.cluster-settings
-
-  LoadBalancerLookupRole:
-    Type: AWS::IAM::Role
-    Properties:
-      AssumeRolePolicyDocument:
-        Version: "2012-10-17"
-        Statement:
-          - Effect: Allow
-            Principal:
-              Service:
-                - lambda.amazonaws.com
-            Action:
-              - "sts:AssumeRole"
-      Policies:
-        - PolicyName: LoadBalancerLookupRolePolicy
-          PolicyDocument:
-            Version: "2012-10-17"
-            Statement:
-              - Effect: Allow
-                Action:
-                  - "logs:CreateLogGroup"
-                  - "logs:CreateLogStream"
-                  - "logs:PutLogEvents"
-                Resource: !Sub arn:${AWS::Partition}:logs:${AWS::Region}:${AWS::AccountId}:*
-              - Effect: Allow
-                Action:
-                  - "dynamodb:GetItem"
-                Resource: !Sub arn:${AWS::Partition}:dynamodb:${AWS::Region}:${AWS::AccountId}:table/${EnvironmentName}.cluster-settings
+      Parameters:
+        EnvironmentName: !Ref EnvironmentName
+        Keypair: !Ref Keypair
+        ServiceAccountPasswordSecretArn: !GetAtt [ RESExternal, Outputs.ServiceAccountPasswordSecretArn ]
+        VpcId: !GetAtt [ RESExternal, Outputs.VpcId ]
+        PublicSubnet: !Select [0, !Split [",", !GetAtt RESExternal.Outputs.PublicSubnets]]
+        ServiceAccountUserDN: !GetAtt [ RESExternal, Outputs.ServiceAccountUserDN ]
+        UsersDN: !GetAtt [ RESExternal, Outputs.LDAPBase ]
+        LDAPConnectionURI: !GetAtt [ RESExternal, Outputs.LDAPConnectionURI ]
+      TemplateURL: https://aws-hpc-recipes.s3.us-east-1.amazonaws.com/main/recipes/res/res_demo_env/assets/res-sso-keycloak.yaml
 
   InvokeDeleteSharedStorageSecurityGroupRole:
     Type: 'AWS::IAM::Role'
@@ -333,3 +270,13 @@ Resources:
     Properties:
       ServiceToken: !GetAtt InvokeDeleteSharedSecurityGroupHandlerFunction.Arn
 
+Outputs:
+  KeycloakUrl:
+    Description: Keycloak Administrator Url
+    Value: !GetAtt [ RESSsoKeycloak, Outputs.KeycloakUrl ]
+  KeycloakAdminPasswordSecretArn:
+    Description: Keycloak password for admin user
+    Value: !GetAtt [ RESSsoKeycloak, Outputs.KeycloakAdminPasswordSecretArn ]
+  ApplicationUrl:
+    Description: RES application Url
+    Value: !GetAtt [ RESSsoKeycloak, Outputs.ApplicationUrl ]
