@@ -223,7 +223,7 @@ Resources:
                     response['Output'] = "Shared storage security group not found."
                   else:
                     ec2.delete_security_group(GroupId=sgResponse['SecurityGroups'][0]['GroupId'])
-                    response['Output'] = "Shared storage security group deleted."s
+                    response['Output'] = "Shared storage security group deleted."
 
                   cfnresponse.send(event, context, cfnresponse.SUCCESS, response)
                 except Exception as e:
