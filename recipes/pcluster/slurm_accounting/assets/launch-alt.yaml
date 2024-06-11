@@ -159,7 +159,7 @@ Resources:
         DatabaseClusterSubnetOne: {"Fn::Select": [0, !Ref DatabaseSubnetIds]}
         DatabaseClusterSubnetTwo: {"Fn::Select": [1, !Ref DatabaseSubnetIds]}
       TemplateURL: !Sub
-        - https://aws-hpc-recipes.s3.us-east-1.amazonaws.com/${Version}/recipes/db/slurm_accounting_db/assets/serverless-database.yaml
+        - https://aws-hpc-recipes.s3.us-east-1.amazonaws.com/${Version}/recipes/db/slurm_accounting_db/assets/main.yaml
         - { Version: !FindInMap [Recipes, Constants, Version] }
       TimeoutInMinutes: 60  
 
