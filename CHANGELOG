@@ -11,6 +11,18 @@ The format is based on [Keep a Changelog](http://keepachangelog.com/)
 
 ### Changed
 
+## [1.5.0] - 2024-06-12
+
+### Added
+
+### Fixed
+* Aligned recipes that depend on db/slurm_accounting_db with renamed main template filename.
+* Fixed some HPC Recipes TemplateURLs that mistakenly still incorporate region or partition variables as substitutions.
+
+### Changed
+* In res_demo, SSO is now automated, to assist with demonstrations
+* Added a lambda to res_demo to remove security group created to enable shared storage
+
 ## [1.4.0] - 2024-05-14
 
 ### Added
