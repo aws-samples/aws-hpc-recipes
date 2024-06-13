@@ -167,12 +167,11 @@ Resources:
               RETRY_INTERVAL=5
               attempt=0
               while [ $attempt -lt $MAX_ATTEMPTS ]; do
+                #Clean yum cache
                 sudo yum clean packages
+                #Install java-17
                 sudo yum -y install java-17-amazon-corretto-headless
-                which java
-                if [ "$?" == "0" ]; then
-                  break
-                fi
+                which java && break
                 sleep $RETRY_INTERVAL
                 ((attempt++))
               done
