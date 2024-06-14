@@ -163,7 +163,19 @@ Resources:
               exec > /root/bootstrap/logs/userdata.log 2>&1
 
               #Install java17
-              sudo yum -y install java-17-amazon-corretto-headless
+              MAX_ATTEMPTS=5
+              RETRY_INTERVAL=5
+              attempt=0
+              while [ $attempt -lt $MAX_ATTEMPTS ]; do
+                #Clean yum cache
+                sudo yum clean packages
+                #Install java-17
+                sudo yum -y install java-17-amazon-corretto-headless
+                which java && break
+                sleep $RETRY_INTERVAL
+                ((attempt++))
+              done
+
               export KEYCLOAK_VERSION=${KeycloakVersion}
               wget https://github.com/keycloak/keycloak/releases/download/$KEYCLOAK_VERSION/keycloak-$KEYCLOAK_VERSION.zip
               unzip keycloak-$KEYCLOAK_VERSION.zip
@@ -183,23 +195,23 @@ Resources:
               SERVER_URL="http://0.0.0.0:80"
               MAX_ATTEMPTS=15
               RETRY_INTERVAL=10
-
               attempt=0
               while [ $attempt -lt $MAX_ATTEMPTS ]; do
                 response=$(curl -s -o /dev/null -w "%{http_code}" "$SERVER_URL")
-                if [ "$response" == "302" ]; then
+                if [ "$response" == "200" ] || [ "$response" == "302" ]; then
                   echo "Server is up!"
                   break
                 else
                   echo "Server is not yet up. Retrying in $RETRY_INTERVAL seconds..."
                   sleep $RETRY_INTERVAL
                   ((attempt++))
+                  if [ $attempt == $MAX_ATTEMPTS ]; then
+                    echo "Server is not up, exiting.."
+                    /opt/aws/bin/cfn-signal -e 1 --stack "${AWS::StackName}" --resource "KeycloakEC2Instance" --region "${AWS::Region}"
+                    sleep 30
+                  fi
                 fi
               done
-              
-              if [ $(curl -s -o /dev/null -w "%{http_code}" "$SERVER_URL") != 302 ]; then
-                /opt/aws/bin/cfn-signal -e 1 --stack "${AWS::StackName}" --resource "KeycloakEC2Instance" --region "${AWS::Region}"
-              fi
 
               echo "Keycloak server is up"
               # Login to Keycloak
