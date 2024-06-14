@@ -1,0 +1,37 @@
+AWSTemplateFormatVersion: 2010-09-09
+Description: Creates a security group that allows enables EFA in a VPC.
+
+Parameters:
+  VpcId:
+    Description: VPC where the Elastic Fabric Adapters will be created
+    Type: 'AWS::EC2::VPC::Id'
+
+Resources:
+
+  EfaSecurityGroup:
+    Type: 'AWS::EC2::SecurityGroup'
+    Properties:
+      GroupDescription: Support EFA
+      GroupName: !Join ['-', ['efa-sg', !Select [4, !Split ['-', !Select [2, !Split ['/', !Ref AWS::StackId]]]]]]
+      VpcId: !Ref VpcId
+
+  EfaSecurityGroupOutboundSelfRule:
+    Type: 'AWS::EC2::SecurityGroupEgress'
+    Properties:
+      IpProtocol: '-1'
+      GroupId: !Ref EfaSecurityGroup
+      Description: Allow outbound traffic to SG members
+      DestinationSecurityGroupId: !Ref EfaSecurityGroup
+
+  EfaSecurityGroupInboundSelfRule:
+    Type: 'AWS::EC2::SecurityGroupIngress'
+    Properties:
+      IpProtocol: '-1'
+      GroupId: !Ref EfaSecurityGroup
+      Description: Allow inbound traffic to SG members
+      SourceSecurityGroupId: !Ref EfaSecurityGroup
+
+Outputs:
+  EfaSecurityGroupId:
+    Description: Security group enabling EFA traffic
+    Value: !Ref EfaSecurityGroup

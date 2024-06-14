@@ -1,0 +1,158 @@
+AWSTemplateFormatVersion: 2010-09-09
+Description: Create a launch template that enables EFA on instances in a PCS node group
+
+Metadata:
+  AWS::CloudFormation::Interface:
+    ParameterGroups:
+      - Label:
+          default: Launch Template
+        Parameters:
+          - LaunchTemplateName
+      - Label:
+          default: Networking
+        Parameters:
+          - NumberOfNetworkCards
+          - NodeGroupSubnetId
+          - VpcSecurityGroupId
+          - EfaSecurityGroupId
+
+Parameters:
+
+  LaunchTemplateName:
+    Type: String
+    Default: AWSPCS-efa-lt
+    Description: Launch template name
+  NodeGroupSubnetId:
+    Type: AWS::EC2::Subnet::Id
+    Description: Subnet within cluster VPC where EFA-enabled instances will be launched
+  VpcSecurityGroupId:
+    Type: AWS::EC2::SecurityGroup::Id
+    Description: Security group allowing access within the cluster VPC [default]
+  EfaSecurityGroupId:
+    Type: AWS::EC2::SecurityGroup::Id
+    Description: Security group allowing EFA traffic amongst instances in cluster VPC
+  PlacementGroupName:
+    Type: String
+    Description: Cluster placement group name (leave blank to create one for this LT)
+    Default: ""
+  NumberOfNetworkCards:
+    Type: String
+    Description: Number of network cards in the target instances
+    Default: "1"
+    AllowedValues:
+         - "1"
+         - "2"
+         - "4"
+         - "8"
+         - "16"
+         - "32"
+
+Conditions:
+  CreatePlacementGroup:
+    Fn::Equals:
+    - Ref: PlacementGroupName
+    - ""
+  CardCount32:
+    Fn::Equals:
+      - Ref: NumberOfNetworkCards
+      - "32"
+  CardCount16:
+    Fn::Or:
+      - Fn::Equals:
+        - Ref: NumberOfNetworkCards
+        - "16"
+      - !Condition CardCount32 
+  CardCount8:
+    Fn::Or:
+      - Fn::Equals:
+        - Ref: NumberOfNetworkCards
+        - "8"
+      - !Condition CardCount16 
+  CardCount4:
+    Fn::Or:
+      - Fn::Equals:
+        - Ref: NumberOfNetworkCards
+        - "4"
+      - !Condition CardCount8  
+  CardCount2:
+    Fn::Or:
+      - Fn::Equals:
+        - Ref: NumberOfNetworkCards
+        - "2"
+      - !Condition CardCount4  
+  CardCount1:
+    Fn::Or:
+      - Fn::Equals:
+        - Ref: NumberOfNetworkCards
+        - "1"
+      - !Condition CardCount2
+
+
+Resources:
+
+  EfaClusterPg:
+    Condition: CreatePlacementGroup
+    Type: AWS::EC2::PlacementGroup
+    Properties:
+      Strategy: cluster
+
+  LaunchTemplate:
+    Type: AWS::EC2::LaunchTemplate
+    Properties:
+      LaunchTemplateName: !Ref LaunchTemplateName
+      LaunchTemplateData:
+        MetadataOptions:
+          HttpEndpoint: enabled
+          HttpPutResponseHopLimit: 4
+          HttpTokens: required
+        Placement:
+          GroupName: !If [ CreatePlacementGroup, !Ref EfaClusterPg, !Ref PlacementGroupName ]
+        NetworkInterfaces:
+          - DeviceIndex: 0
+            InterfaceType: efa
+            NetworkCardIndex: 0
+            SubnetId: !Ref NodeGroupSubnetId
+            Groups:
+            - !Ref EfaSecurityGroupId
+            - !Ref VpcSecurityGroupId
+          - Fn::If:
+            - CardCount2
+            - DeviceIndex: 1
+              InterfaceType: efa
+              NetworkCardIndex: 1
+              SubnetId: !Ref NodeGroupSubnetId
+              Groups:
+              - !Ref EfaSecurityGroupId
+              - !Ref VpcSecurityGroupId
+            - !Ref AWS::NoValue
+          - Fn::If:
+            - CardCount4
+            - DeviceIndex: 2
+              InterfaceType: efa
+              NetworkCardIndex: 2
+              SubnetId: !Ref NodeGroupSubnetId
+              Groups:
+              - !Ref EfaSecurityGroupId
+              - !Ref VpcSecurityGroupId
+            - !Ref AWS::NoValue
+          - Fn::If:
+            - CardCount4
+            - DeviceIndex: 3
+              InterfaceType: efa
+              NetworkCardIndex: 3
+              SubnetId: !Ref NodeGroupSubnetId
+              Groups:
+              - !Ref EfaSecurityGroupId
+              - !Ref VpcSecurityGroupId
+            - !Ref AWS::NoValue
+
+Outputs:
+  LaunchTemplateId:
+    Description: Launch template Id
+    Value: !Ref LaunchTemplate
+  DefaultVersionNumber:
+    Description: Default version number
+    Value: !GetAtt LaunchTemplate.DefaultVersionNumber
+  LatestVersionNumber:
+    Description: Latest version number
+    Value: !GetAtt LaunchTemplate.DefaultVersionNumber
