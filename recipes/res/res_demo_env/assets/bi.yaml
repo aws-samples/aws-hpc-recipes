@@ -17,7 +17,7 @@ Metadata:
           - LDIFS3Path
           - ClientIpCidr
           - ClientPrefixList
-          # - StopAdAdminInstances
+          - StopAdAdminInstances
 
 Parameters:
   DomainName:
@@ -58,13 +58,13 @@ Parameters:
     Description: (Optional) An S3 Path (without the s3://) to an LDIF file that will be used during stack creation.
     Type: String
     Default: aws-hpc-recipes/main/recipes/res/res_demo_env/assets/res.ldif
-  # StopAdAdminInstances:
-  #   Description: Automatically stop management instances to save costs.
-  #   Type: String
-  #   Default: "No"
-  #   AllowedValues:
-  #        - "Yes"
-  #        - "No"
+  StopAdAdminInstances:
+    Description: Automatically stop management instances to save costs.
+    Type: String
+    Default: "No"
+    AllowedValues:
+         - "Yes"
+         - "No"
   Keypair:
     Description: EC2 Keypair to access AD management instances.
     Type: AWS::EC2::KeyPair::KeyName
@@ -148,7 +148,7 @@ Resources:
         Keypair: !Ref Keypair
         VpcId: !GetAtt [ Networking, Outputs.VPC ]
         Subnet: {"Fn::Select": [0, { "Fn::Split" : [",", !GetAtt [ Networking, Outputs.PublicSubnets ]] }]}
-        # StopAdAdminInstance: !Ref StopAdAdminInstances
+        StopAdAdminInstance: !Ref StopAdAdminInstances
         ClientIpCidr: !Ref ClientIpCidr
         ClientPrefixList: !Ref ClientPrefixList
         PSS3Path: aws-hpc-recipes/main/recipes/res/res_demo_env/assets/service_account.ps1

@@ -307,6 +307,9 @@ Resources:
                 }
                 Unregister-ScheduledTask -TaskName $task_name -Confirm:$false # remove subtask
                 Unregister-ScheduledTask -TaskName "Setup domain" -Confirm:$false # remove the parent task that called us
+                if ("${StopAdAdminInstance}" -eq "Yes") {
+                  stop-computer
+                }
               }
               '@
 
@@ -335,6 +338,7 @@ Resources:
                 DomainName: !Ref DomainName,
                 DelegationUser: !Ref DelegationUser,
                 ServiceAccountName: !Ref ServiceAccountName,
+                StopAdAdminInstance: !Ref StopAdAdminInstance,
                 DC: !Join [",DC=", !Split [".", !Ref DomainName ]],
                 OU: !Select [0, !Split ['.', !Ref DomainName ]]
                 }
@@ -413,10 +417,6 @@ Resources:
           def handler(event, context):
               print( 'boto version {}'.format(boto3.__version__))
 
-              instance_id = event['ResourceProperties']['InstanceId']
-              # stop_admin_instance = event['ResourceProperties']['StopAdAdminInstance'] == 'Yes'
-              stop_admin_instance = False
-
               response_data = {}
               reason = None
               response_status = cfnresponse.SUCCESS
@@ -424,8 +424,6 @@ Resources:
               if event['RequestType'] == 'Create':
                   response_data['Message'] = 'Resource creation successful!'
                   physical_resource_id = create_physical_resource_id()
-                  if stop_admin_instance:
-                    ec2.stop_instances(InstanceIds=[instance_id])
               else:
                   physical_resource_id = event['PhysicalResourceId']
 
