@@ -37,7 +37,7 @@ Then select **Connect** to connect to the instance using AWS Session Manager whi
 
 Follow the same instructions as for accessing the host by SSM, until you get to the **Connect** step. There, select **SSH Client** to get directions on how to connect with SSH. 
 
-**Note** If you haven chosen **Yes** for the parameter **StopAdAdminInstance** whe  you launched the CloudFormation template, the Linux instance may be in a stopped state. Choose **Instance state::Start instance** to bring it back online before connecting to it. You can shut the instance down again when you are done working with it. 
+**Note** If you haven chosen **True** for the parameter **StopAdAdminInstance** when  you launched the CloudFormation template, the Linux instance may be in a stopped state. Choose **Instance state::Start instance** to bring it back online before connecting to it. You can shut the instance down again when you are done working with it. 
 
 #### Adding Users and Groups
 
@@ -87,7 +87,7 @@ There is a [Windows Management Host](https://console.aws.amazon.com/cloudformati
 
 You may access this instance by going to the Outputs tab and copying the **ManagementHostId**. Next, navigate to the EC2 console and search for the instance ID. Copy its **Public IPv4 address** and use that with your RDP client to connect to the instance. The access credentials will be `Admin` and the value for **AdministratorPassword** you provided when you created the AD. 
 
-**Note** If you haven chosen **Yes** for the parameter **StopAdAdminInstance** when you launched the CloudFormation template, the Windows instance may be in a stopped state. Choose **Instance state::Start instance** to bring it back online before connecting to it. You can shut the instance down again when you are done working with it. 
+**Note** If you haven chosen **True** for the parameter **StopAdAdminInstance** when you launched the CloudFormation template, the Windows instance may be in a stopped state. Choose **Instance state::Start instance** to bring it back online before connecting to it. You can shut the instance down again when you are done working with it. 
 
 Once you connect to the instance, you may open the **Active Directory Users and Computers** interface by choosing to run that from the Windows Start menu:
 ![image](https://github.com/charlesg3/aws-hpc-recipes/assets/6087509/387f0abe-5db4-4d8d-aaff-9e42023f5dc9)
