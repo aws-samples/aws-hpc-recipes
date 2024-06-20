@@ -118,10 +118,10 @@ Parameters:
   StopAdAdminInstance:
     Description: Automatically stop the management instance to save costs.
     Type: String
-    Default: "No"
+    Default: "False"
     AllowedValues:
-         - "Yes"
-         - "No"
+         - "True"
+         - "False"
 
 Transform: AWS::Serverless-2016-10-31
 
@@ -633,7 +633,7 @@ Resources:
               user_name = event['ResourceProperties']['UserName']
               user_password = event['ResourceProperties']['UserPassword']
               admin_password = event['ResourceProperties']['AdminPassword']
-              stop_ad_admin_instance = event['ResourceProperties']['StopAdAdminInstance'] == 'Yes'
+              stop_ad_admin_instance = event['ResourceProperties']['StopAdAdminInstance'] == 'True'
 
               response_data = {}
               reason = None
