@@ -58,12 +58,12 @@ Parameters:
   AllowedIPAddressAndCIDRforAdmins:
     Description: Enter the allowed IP address and CIDR block for Administrators
     Type: String
-    Default: 10.100.0.0/32
+    Default: 0.0.0.0/0
 
   AllowedIPAddressAndCIDRforUsers:
     Description: Enter the allowed IP address and CIDR block for Users
     Type: String
-    Default: 10.200.0.0/32
+    Default: 0.0.0.0/0
 
 Transform: AWS::Serverless-2016-10-31
 
@@ -230,22 +230,6 @@ Resources:
       FromPort: 22
       ToPort: 22
       CidrIp: !Ref AllowedIPAddressAndCIDRforUsers
- 
-  LoginToLoginIngress:
-    Type: 'AWS::EC2::SecurityGroupIngress'
-    Properties:
-      GroupId: !Ref LoginNodeSecurityGroup
-      SourceSecurityGroupId: !Ref LoginNodeSecurityGroup
-      Description: 'Allow inbound traffic from compute nodes to compute nodes'
-      IpProtocol: '-1'
-
-  HeadToLoginIngress:
-    Type: 'AWS::EC2::SecurityGroupIngress'
-    Properties:
-      GroupId: !Ref LoginNodeSecurityGroup
-      SourceSecurityGroupId: !Ref HeadNodeSecurityGroup
-      Description: 'Allow inbound traffic from head node to login nodes'
-      IpProtocol: '-1'
 
   HeadToAdminIngress:
     Type: 'AWS::EC2::SecurityGroupIngress'

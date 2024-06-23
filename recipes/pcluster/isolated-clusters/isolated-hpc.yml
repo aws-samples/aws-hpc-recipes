@@ -157,22 +157,6 @@ Resources:
       FromPort: 22
       ToPort: 22
       CidrIp: !Ref AllowedIPAddressAndCIDRforUsers
- 
-  LoginToLoginIngress:
-    Type: 'AWS::EC2::SecurityGroupIngress'
-    Properties:
-      GroupId: !Ref LoginNodeSecurityGroup
-      SourceSecurityGroupId: !Ref LoginNodeSecurityGroup
-      Description: 'Allow inbound traffic from compute nodes to compute nodes'
-      IpProtocol: '-1'
-
-  HeadToLoginIngress:
-    Type: 'AWS::EC2::SecurityGroupIngress'
-    Properties:
-      GroupId: !Ref LoginNodeSecurityGroup
-      SourceSecurityGroupId: !Ref HeadNodeSecurityGroup
-      Description: 'Allow inbound traffic from head node to login nodes'
-      IpProtocol: '-1'
 
   HeadToAdminIngress:
     Type: 'AWS::EC2::SecurityGroupIngress'
@@ -726,7 +710,6 @@ Resources:
                     - 'iam:DetachRolePolicy'
                 Resource: !Sub 'arn:${AWS::Partition}:iam::${AWS::AccountId}:role/parallelcluster/*'
                 Condition: 
-                  ArnLike:
                   ArnLike:
                     "iam:PolicyARN":
                       - !Sub 'arn:${AWS::Partition}:iam::${AWS::AccountId}:policy/parallelcluster*'
