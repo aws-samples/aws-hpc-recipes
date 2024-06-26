@@ -102,11 +102,11 @@
 
     e.	The sample ParallelCluster configuration file can be found in this directory by typing ‘cat IsolatedCluster.yaml’ 
 
-18.	You can experiment with installing software on the cluster similarly to how we installed ParallelCluster on the Admin Node. You can upload the software to S3, then utilize the existing private connection between our subnet and S3 to download files securely. Once those files are on the instance you can install the software locally. 
+18.	You can experiment with installing software on the cluster similarly to how we installed ParallelCluster on the Admin Node. You can upload the software to S3, then utilize the existing private connection between our subnet and S3 to download files. Once those files are on the instance you can install the software locally. 
 
 
 ### Cleanup
-1.	Navigate to CloudFormation->Stacks and select “IsolatedCluster”. Select Delete and confirm by selecting Delete again.
+1.	Navigate to CloudFormation->Stacks and select “IsolatedCluster”. Select Delete on the top right and confirm by selecting Delete again.
 2.	Then select the original stack that you named and delete that one following the same process as Step 1.
 
 
@@ -119,11 +119,11 @@
 
 1.	Browse [here](isolated-hpc-ad-integration.yml) and download the “isolated-hpc-ad-integration.yml” file
 2.	Browse [here](https://docs.aws.amazon.com/parallelcluster/latest/ug/install-v3-install-standalone.html) and download the latest pcluster installer that is contained in step 1 of the Linux x86 (64-bit) instructions. This will download a zip file to your local machine.
-3.  You will need to download files necessary to manage Active Directory so that users can be created
+3.  You will need to download files necessary to manage the AWS Directory Service so that users and groups can be created
 
     a. On a Linux machine with Internet access, download these files using 'sudo yum install -y --downloadonly --downloaddir=. sssd realmd oddjob oddjob-mkhomedir adcli samba-common samba-common-tools krb5-workstation openldap-clients policycoreutils-python3 openssl'
 
-    b. There should be 36 files that are downloaded and will look similar to the below with certain versions being different in the future 
+    b. At the time of writing, there are 36 files downloaded and will look similar to the below with certain versions being different in the future 
 
     ![](images/rpm-download.PNG)
 
@@ -139,9 +139,9 @@
 
     e.	Select Create bucket
 
-4.	Upload all 37 files from Steps 2 and 3 to the newly created S3 bucket. You do NOT need to upload the “isolated-hpc-ad-integration.yml” file to the S3 bucket from Step 1.
+4.	Upload all files from Steps 2 and 3 to the newly created S3 bucket. You do NOT need to upload the “isolated-hpc-ad-integration.yml” file to the S3 bucket from Step 1.
     
-    a.  If you are using the AWS CLI, you can use the following command to mass copy the rpm files - aws s3 cp ./ s3://your-s3-bucket/ --recursive --include "*.rpm"	
+    a.  If you are using the [AWS CLI](https://aws.amazon.com/cli/), you can use the following command to mass copy the rpm files - aws s3 cp ./ s3://your-s3-bucket/ --recursive --include "*.rpm"	
 
        - Make sure you change the 'your-s3-bucket' to match the name of the bucket you just created
     
@@ -151,7 +151,7 @@
     
     c.	Select Add files
     
-    d.	Add all 37 files. Your bucket should look like the below, except the S3 bucket name will be different and file versions may different for future releases.    
+    d.	Add all files. Your bucket should look like the below, except the S3 bucket name, file versions, and number of files may be different.     
 
     ![](images/S3-Files-Uploaded-AD.PNG)
 5.	Create an EC2 key pair that can be used to SSH into the instances. If you have already created an EC2 key pair in your account and want to use it for this cluster, you can continue to step 6.
@@ -177,7 +177,7 @@
 
 ![](images/S3-Bucket-List-AD.PNG)
 
--	For example, using the bucket shown above which is “hpc-ad-int” I would put that in the Replace with section. Then select Replace All and you will replace 15 occurrences in the file. 
+-	For example, using the bucket shown above which is “hpc-ad-int” I would put that in the Replace with section. Then select Replace All and you will replace 25 occurrences in the file. 
     
 ![](images/notepad-replace-AD.PNG) 
 
@@ -189,7 +189,7 @@
     
     a.	Provide a stack name
    
-    b.	Enter passwords for Admin, cluster-admin, ReadOnlyUser, and for user000
+    b.	Enter passwords for Admin, cluster-admin, ReadOnlyUser, and user000
    
     - For demo purposes, I will be using “p@55w0rd” without the quotes as my password for all four usernames.
    
@@ -203,12 +203,35 @@
 13.	Scroll all the way down on the Review page and acknowledge the checkboxes. Then select Submit.
 14.	You can view the stack’s progress through the CloudFormation page.
    
-    a.	Total time for the process to complete is approximately 1 hour. The initial stack used to provision the environment with the VPC, route tables, subnets, Active Directory, etc will take approximately 45 minutes to complete. Once complete, you will see a second stack automatically launch to provision the ParallelCluster Head, Login, and Compute Nodes. This will take approximately 15-20 minutes to complete.
+    a.	Total time for the process to complete is approximately 1 hour. The initial stack used to provision the environment with the VPC, route tables, subnets, Directory service, etc will take approximately 45 minutes to complete. Once complete, you will see a second stack automatically launch to provision the ParallelCluster Head, Login, and Compute Nodes. This will take approximately 15-20 minutes to complete.
     
     ![](images/AD-stack-complete.PNG)
 
    
-    b.	Once the stack marked “IsolatedClusterWithAD” is CREATE_COMPLETE the process is finished 
+    b.	Once the stack marked “IsolatedClusterWithAD” is CREATE_COMPLETE the majority of the process is finished and you can move on to step 15.
+
+15. We will need to modify a few files on the Login Nodes using Systems Manager. Note that at the time of writing, OnNodeConfigured actions are not supported on Login Nodes in the ParallelCluster configuration file. Once this feature becomes available, this step will not be required.
+
+    a. Browse [here](ssm-script.sh) and copy the contents of the "ssm-script.sh" file
+
+    b. In the AWS Management Console, navigate to Systems Manager and then select Run Command on the left hand side.
+
+    c. Select Run command on the right hand side.
+
+    d. In the search window, type 'shell' and select "AWS-RunShellScript"
+
+    e. In the Command parameters window, paste the contents of the "ssm-script.sh" file you copied in 15a. It should look like the below
+
+    ![](images/ssm-script.PNG)
+
+    f. For Target selection, keep the box ticked for Specify instance tags. For Tag key, type Name and Tag value as LoginNode. Then select Add right next to it. Working version looks like the below
+
+    ![](images/ssm-tag.PNG) 
+
+    g. For Output options, deselect the box next to Enable an S3 bucket. 
+
+    h. Leave all other settings as default and select Run on the bottom right. It should only take a few seconds for the status to show as 'Success'
+
 
 15.	You have successfully deployed the infrastructure needed to run ParallelCluster in an isolated environment and launched a sample cluster that has Active Directory integration.
 16.	You can now login to each node using Systems Manager
@@ -219,11 +242,13 @@
    
     b.	Select Session Manager and click on Connect
 
-    c. Note that users will need access to the AWS Console in order to use Systems Manager.
+    c. Note that users will need access to the AWS Management Console in order to use Systems Manager.
 
 17.	Logging into the cluster
 
-- Administrators can also login to the Head Node from the ParallelClusterAdminNode with a user that is authenticated to Active Directory. First, connect to the ParallelClusterAdminNode using SSH or Systems Manager. From the CLI of the ParallelClusterAdminNode, type ‘ssh cluster-admin@HEAD_NODE_PRIVATE_IP’. You can find the IP of the head node by navigating to EC2->Instances->Check the box next to head node and you will see the IP address on the bottom right as shown below. 
+- To preface, we are using the ParallelClusterAdminNode both as a means to install the ParallelCluster CLI and launch clusters, but also as a jumpbox for both Administrators and Users. You can optionally create another EC2 instance to function as a jumpbox, but that is not included in this configuration. 
+- Keep in mind that you can optionally configure a private connection from on premise locations into AWS (such as Site to Site VPN or Direct Connect Private Vif) so that users can directly access nodes using SSH without a jumpbox or needing public Internet access. It is possible to also restrict Systems Manager access for users to only allow them to connect to the Login Nodes. See this [link](https://repost.aws/knowledge-center/ssm-session-manager-control-access) for more details. 
+- Administrators can login to the Head Node from the ParallelClusterAdminNode with a user that is authenticated to Active Directory. First, connect to the ParallelClusterAdminNode using SSH or Systems Manager. From the CLI of the ParallelClusterAdminNode, type ‘ssh cluster-admin@HEAD_NODE_PRIVATE_IP’. You can find the IP of the head node by navigating to EC2->Instances->Check the box next to head node and you will see the IP address on the bottom right as shown below. 
     
     ![](images/private-IP-ad.PNG) 
 
@@ -237,19 +262,18 @@
     
 - You can use this DNS name to authenticate into the Login Nodes. 
 
-![](images/user000-login-node.PNG) 
-    
-- Keep in mind that you can optionally configure a private connection from on premise locations into AWS (such as Site to Site VPN or Direct Connect Private Vif) so that users can directly access nodes using SSH without a jumpbox or needing public Internet access. It is possible to also restrict Systems Manager access for users to only allow them to connect to the Login Nodes. See this [link](https://repost.aws/knowledge-center/ssm-session-manager-control-access) for more details. 
+![](images/user000-login-node.PNG)    
+
 
 19.	You can also launch new clusters from the CLI of the ParrallelClusterAdminNode
    
     a.	The sample ParallelCluster configuration file can be found in the /usr/bin/plcuster directory by typing ‘cat IsolatedClusterWithAD.yaml’ 
 
-20.	You can experiment with installing software on the cluster similarly to how we installed ParallelCluster on the ParrallelClusterAdminNode. You can upload the software to S3, then utilize the existing private connection between our subnet and S3 to download files securely. Once those files are on the instance you can install the software locally. 
+20.	You can experiment with installing software on the cluster similarly to how we installed ParallelCluster on the ParallelClusterAdminNode. You can upload the software to S3, then utilize the existing private connection between our subnet and S3 to download files. Once those files are on the instance you can install the software locally. 
 
 
 ### Cleanup
-1.	Navigate to CloudFormation->Stacks and select “IsolatedClusterWithAD”. Select Delete and confirm by selecting Delete again.
+1.	Navigate to CloudFormation->Stacks and select “IsolatedClusterWithAD”. Select Delete on the top right and confirm by selecting Delete again.
 2.	Then select the original stack that you named and delete that one following the same process as Step 1.
 
 
@@ -265,4 +289,4 @@
 
 3. When attempting to launch a cluster, you get an error message stating: "Unable to find node executable"
 
-    a. Run the following command: source /etc/profile
+    a. Run the following command: source /home/ssm-user/.bash_profile

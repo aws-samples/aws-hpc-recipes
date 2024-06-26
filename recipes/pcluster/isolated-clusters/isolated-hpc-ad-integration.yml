@@ -92,6 +92,22 @@ Resources:
         - Key: Name
           Value: PclusterVpc
 
+  IsolatedDHCP:
+    Type: 'AWS::EC2::DHCPOptions'
+    DependsOn: Prep
+    Properties:
+      DomainName: !Ref DomainName
+      DomainNameServers: 
+        - !GetAtt Prep.DnsIpAddress1
+        - !GetAtt Prep.DnsIpAddress2        
+
+  VPCDHCPOptionsAssociation:
+    Type: 'AWS::EC2::VPCDHCPOptionsAssociation'
+    DependsOn: Directory
+    Properties:
+      VpcId: !Ref PclusterVpc
+      DhcpOptionsId: !Ref IsolatedDHCP
+  
   IsolatedHPCSubnetOne:
     Type: 'AWS::EC2::Subnet'
     Condition: CreateVPC
@@ -551,12 +567,44 @@ Resources:
               - Action:
                   - s3:ListBucket
                   - s3:GetObject
+                  - s3:PutObject
                 Effect: Allow
                 Resource:
                   - !Sub 'arn:${AWS::Partition}:s3:::your-s3-bucket'
                   - !Sub 'arn:${AWS::Partition}:s3:::your-s3-bucket/*'
-          PolicyName: S3GetAccess
-   
+          PolicyName: S3Access
+
+  S3AccessPolicy:
+    Type: 'AWS::IAM::Policy'
+    Properties:
+      PolicyName: 'S3AccessPolicy'
+      PolicyDocument:
+        Version: '2012-10-17'
+        Statement:
+          - Effect: 'Allow'
+            Action:
+              - 's3:GetObject'
+              - 's3:ListBucket'
+            Resource:
+              - !Sub 'arn:${AWS::Partition}:s3:::your-s3-bucket'
+              - !Sub 'arn:${AWS::Partition}:s3:::your-s3-bucket/*'
+      Roles:
+        - !Ref ParallelClusterComputeLoginRole
+        
+  ParallelClusterComputeLoginRole:
+    Type: 'AWS::IAM::Role'
+    Properties:
+      AssumeRolePolicyDocument:
+        Version: '2012-10-17'
+        Statement:
+          - Effect: 'Allow'
+            Principal:
+              Service:
+                - 'ec2.amazonaws.com'
+            Action:
+              - 'sts:AssumeRole'
+      Path: '/'
+
   ParallelClusterAdminNodeRole:
     Type: 'AWS::IAM::Role'
     Properties:
@@ -1108,6 +1156,7 @@ Resources:
               cd /usr/bin/directory
               aws s3 cp s3://your-s3-bucket . --recursive --exclude "*" --include "*.rpm"
               rpm -ivh *.rpm
+              sleep 15
               exec > >(tee /var/log/user-data.log|logger -t user-data -s 2>/dev/console) 2>&1
               echo "Domain Name: ${DirectoryDomain}"
               echo "Domain Certificate Secret: ${DomainCertificateSecretArn}"
@@ -1117,8 +1166,31 @@ Resources:
               nameserver       ${DnsIp1}
               nameserver       ${DnsIp2}
               EOF
+
               sed -i 's/PEERDNS=.*/PEERDNS=no/' /etc/sysconfig/network-scripts/ifcfg-eth0
               chattr +i /run/systemd/resolve/resolv.conf
+              cat << 'EOF' > dns.sh
+              #!/bin/bash
+
+              NAMESERVER1="${DnsIp1}"
+              NAMESERVER2="${DnsIp2}"
+              SEARCH_DOMAIN="${DirectoryDomain}"
+
+              cat <<EOL > /etc/resolv.conf
+              nameserver $NAMESERVER1
+              nameserver $NAMESERVER2
+              search $SEARCH_DOMAIN
+              EOF
+              chmod +x dns.sh
+              aws s3 cp /usr/bin/directory/dns.sh s3://your-s3-bucket/dns.sh --region us-gov-west-1
+              cat << 'EOF' > hosts.sh
+              #!/bin/bash
+              cat <<EOL > /etc/hosts
+              10.0.0.100 corp.pcluster.com
+              10.0.1.100 corp.pcluster.com
+              EOF
+              chmod +x hosts.sh
+              aws s3 cp /usr/bin/directory/hosts.sh s3://your-s3-bucket/hosts.sh --region us-gov-west-1
               ADMIN_PW="${AdminPassword}"
               echo "$ADMIN_PW" | sudo realm join -U Admin "${DirectoryDomain}"
               sleep 10
@@ -1206,7 +1278,13 @@ Resources:
                       KeyName: restrict-access.sh
                     - BucketName: your-s3-bucket
                       EnableWriteAccess: false
-                      KeyName: pam.sh                        
+                      KeyName: pam.sh
+                    - BucketName: your-s3-bucket
+                      EnableWriteAccess: false
+                      KeyName: dns.sh 
+                    - BucketName: your-s3-bucket
+                      EnableWriteAccess: false
+                      KeyName: hosts.sh   
                 CustomActions:
                   OnNodeConfigured:
                     Sequence:
@@ -1215,7 +1293,9 @@ Resources:
                           - ${DomainCertificateSecret}
                           - /opt/parallelcluster/shared/directory_service/domain-certificate.crt
                       - Script: s3://your-s3-bucket/restrict-access.sh
-                      - Script: s3://your-s3-bucket/pam.sh                      
+                      - Script: s3://your-s3-bucket/pam.sh
+                      - Script: s3://your-s3-bucket/dns.sh
+                      - Script: s3://your-s3-bucket/hosts.sh                      
               SharedStorage:
                 - MountDir: /ebs
                   Name: EBSExtData
@@ -1237,7 +1317,7 @@ Resources:
                         - ${LoginNodeSecurityGroup}
                     Iam: 
                       AdditionalIamPolicies: 
-                        - Policy: arn:${AWS::Partition}:iam::aws:policy/AmazonSSMManagedInstanceCore              
+                        - Policy: arn:${AWS::Partition}:iam::aws:policy/AmazonSSMManagedInstanceCore
               Scheduling:
                 Scheduler: slurm
                 SlurmSettings:
@@ -1261,35 +1341,32 @@ Resources:
                   Iam:
                     AdditionalIamPolicies:
                       - Policy: arn:${AWS::Partition}:iam::aws:policy/AmazonSSMManagedInstanceCore
+                      - Policy: arn:${AWS::Partition}:iam::aws:policy/AmazonS3ReadOnlyAccess
+                  CustomActions:
+                    OnNodeConfigured:
+                      Sequence:
+                        - Script: s3://your-s3-bucket/dns.sh
+                        - Script: s3://your-s3-bucket/hosts.sh 
               DirectoryService:
                 DomainName: ${DomainName} 
                 DomainAddr: ldaps://${DomainName}
                 PasswordSecretArn: ${PasswordSecret}
                 DomainReadOnlyUser: cn=ReadOnlyUser,ou=Users,ou=CORP,dc=corp,dc=pcluster,dc=com 
                 LdapTlsCaCert: /opt/parallelcluster/shared/directory_service/domain-certificate.crt
-                LdapTlsReqCert: hard  
+                LdapTlsReqCert: hard
               EOF
               cd /usr/bin/pcluster
               export AWS_DEFAULT_REGION=${AWS::Region}
-              cat << 'EOF' > active-directory.head.post.sh
-              #!/bin/bash
-
-              CERTIFICATE_SECRET_ARN="$1"
-              CERTIFICATE_PATH="$2"
-
-              source /etc/parallelcluster/cfnconfig
-              REGION="${AWS::Region}"
-
-              mkdir -p $(dirname $CERTIFICATE_PATH)
-              aws secretsmanager get-secret-value --region $REGION --secret-id $CERTIFICATE_SECRET_ARN --query SecretString --output text > $CERTIFICATE_PATH
-              EOF
-              cd /usr/bin/pcluster
-              chmod +x active-directory.head.post.sh
               cat << EOF | sudo tee -a /etc/profile.d/pcluster.sh
               export PATH=/usr/bin/pcluster/pcluster-installer-bundle:/usr/bin/pcluster/pcluster-installer-bundle/node-v*/bin:/bin:PATH
               export AWS_DEFAULT_REGION=${AWS::Region}
               EOF
-              aws s3 cp active-directory.head.post.sh s3://your-s3-bucket/active-directory.head.post.sh --region us-gov-west-1
+              aws s3 cp s3://your-s3-bucket/dns.sh /usr/bin/pcluster
+              chmod +x dns.sh
+              ./dns.sh
+              sed -i 's/PEERDNS=.*/PEERDNS=no/' /etc/sysconfig/network-scripts/ifcfg-eth0
+              chattr +i /run/systemd/resolve/resolv.conf
+              cd /usr/bin/pcluster
               aws s3 cp s3://your-s3-bucket /usr/bin/pcluster --recursive --exclude "*" --include "*.zip"
               sudo unzip *.zip -d pcluster-installer-bundle
               cat << 'EOF' > restrict-access.sh
@@ -1333,7 +1410,7 @@ Resources:
               source ~/.bash_profile
               cd /usr/bin/pcluster
               export PATH=/usr/bin/pcluster/pcluster-installer-bundle:$PATH              
-              pcluster create-cluster --cluster-name "IsolatedClusterWithAD" --cluster-configuration "./IsolatedClusterWithAD.yaml" --suppress-validators ALL --rollback-on-failure false 
+              pcluster create-cluster --cluster-name "IsolatedClusterwithAD" --cluster-configuration "./IsolatedClusterWithAD.yaml" --suppress-validators ALL --rollback-on-failure false 
 
   PostRole:
     Type: AWS::IAM::Role
@@ -1498,25 +1575,6 @@ Resources:
         - Id: !Select [1, !GetAtt Prep.DnsIpAddresses]
           Port: 389
       TargetType: ip
-
-  DNS:
-    Type: AWS::Route53::HostedZone
-    Properties:
-      Name: !Ref DomainName
-      VPCs:
-        - VPCId: !Ref PclusterVpc
-          VPCRegion: !Ref AWS::Region
-
-  DNSRecord:
-    Type: AWS::Route53::RecordSet
-    Properties:
-      HostedZoneId: !Ref DNS
-      Name: !Ref DomainName
-      Type: A
-      TTL: "300"
-      ResourceRecords: 
-        - "10.0.0.100"
-        - "10.0.1.100"
 
   NetworkLoadBalancerListener:
     Type: AWS::ElasticLoadBalancingV2::Listener
