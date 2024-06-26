@@ -19,6 +19,9 @@ Parameters:
     Description: Enter the allowed IP address and CIDR block for Users
     Type: String
     Default: 10.200.0.0/32
+  S3BucketName:
+    Description: S3 bucket that contains files for ParallelCluster
+    Type: String
 
 Resources:
   PclusterVpc:
@@ -477,7 +480,7 @@ Resources:
                 Action: 
                     - 's3:*'
                 Resource: 
-                    - !Sub 'arn:${AWS::Partition}:s3:::your-s3-bucket/*'
+                    - !Sub 'arn:${AWS::Partition}:s3:::${S3BucketName}/*'
                     - !Sub 'arn:${AWS::Partition}:s3:::parallelcluster-*'
                     - !Sub 'arn:${AWS::Partition}:s3:::aws-parallelcluster-*'
               - Sid: 'S3ParallelClusterReadOnly'
@@ -701,8 +704,8 @@ Resources:
                     - 's3:ListBucket'
                     - 's3:GetObject'
                 Resource: 
-                    - !Sub 'arn:${AWS::Partition}:s3:::your-s3-bucket'
-                    - !Sub 'arn:${AWS::Partition}:s3:::your-s3-bucket/*'
+                    - !Sub 'arn:${AWS::Partition}:s3:::${S3BucketName}'
+                    - !Sub 'arn:${AWS::Partition}:s3:::${S3BucketName}/*'
               - Sid: 'IamPolicy'
                 Effect: Allow
                 Action: 
@@ -757,7 +760,7 @@ Resources:
           # Install AWS ParallelCluster
           mkdir /usr/bin/pcluster
           # Change the path of the bucket to match yours
-          aws s3 cp s3://your-s3-bucket /usr/bin/pcluster --recursive --exclude "*" --include "*.zip" 
+          aws s3 cp s3://${S3BucketName} /usr/bin/pcluster --recursive --exclude "*" --include "*.zip" 
           cd /usr/bin/pcluster
           sudo unzip *.zip -d pcluster-installer-bundle
           cd pcluster-installer-bundle

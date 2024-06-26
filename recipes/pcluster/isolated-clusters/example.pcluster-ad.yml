@@ -1,0 +1,100 @@
+Region: us-gov-west-1
+Image:
+  Os: alinux2
+HeadNode:
+  InstanceType: t2.micro
+  Networking:
+    SubnetId: {your-subnet-id}
+    SecurityGroups:
+      - {your-security-group-id}
+  Ssh:
+    KeyName: {your-keypair}
+  Iam:
+    AdditionalIamPolicies:
+      - Policy: {DomainCertificateSecretReadPolicy} 
+      - Policy: arn:aws-us-gov:iam::aws:policy/AmazonSSMManagedInstanceCore
+    S3Access:
+      - BucketName: {your-s3-bucket}
+        EnableWriteAccess: false
+        KeyName: active-directory.head.post.sh
+      - BucketName: {your-s3-bucket}
+        EnableWriteAccess: false
+        KeyName: restrict-access.sh
+      - BucketName: {your-s3-bucket}
+        EnableWriteAccess: false
+        KeyName: pam.sh
+      - BucketName: {your-s3-bucket}
+        EnableWriteAccess: false
+        KeyName: dns.sh
+      - BucketName: {your-s3-bucket}
+        EnableWriteAccess: false
+        KeyName: hosts.sh
+  CustomActions:
+    OnNodeConfigured:
+      Sequence:
+        - Script: s3://{your-s3-bucket}/active-directory.head.post.sh
+          Args:
+            - {secrets-manager-arn}
+            - /opt/parallelcluster/shared/directory_service/domain-certificate.crt
+        - Script: s3://{your-s3-bucket}/restrict-access.sh
+        - Script: s3://{your-s3-bucket}/pam.sh
+        - Script: s3://{your-s3-bucket}/dns.sh
+        - Script: s3://{your-s3-bucket}/hosts.sh
+SharedStorage:
+  - MountDir: /ebs
+    Name: EBSExtData
+    StorageType: Ebs
+    EbsSettings:
+      VolumeType: io1
+      DeletionPolicy: Delete
+LoginNodes:
+  Pools:
+    - Name: user-pool
+      Count: 2
+      InstanceType: t2.micro
+      Ssh:
+        KeyName: {your-keypair}
+      Networking:
+        SubnetIds:
+          - {your-subnet-id}
+        SecurityGroups:
+          - {your-security-group-id}
+      Iam:
+        AdditionalIamPolicies:
+          - Policy: arn:aws-us-gov:iam::aws:policy/AmazonSSMManagedInstanceCore
+Scheduling:
+  Scheduler: slurm
+  SlurmSettings:
+    QueueUpdateStrategy: DRAIN
+    Dns:
+      DisableManagedDns: true
+      UseEc2Hostnames: true
+  SlurmQueues:
+  - Name: queue1
+    ComputeResources:
+    - Name: compute
+      Instances:
+      - InstanceType: t2.micro
+      MinCount: 1
+      MaxCount: 10
+    Networking:
+      SubnetIds:
+      - {your-subnet-id}
+      SecurityGroups:
+      - {your-security-group-id}
+    Iam:
+      AdditionalIamPolicies:
+        - Policy: arn:aws-us-gov:iam::aws:policy/AmazonSSMManagedInstanceCore
+        - Policy: arn:aws-us-gov:iam::aws:policy/AmazonS3ReadOnlyAccess
+    CustomActions:
+      OnNodeConfigured:
+        Sequence:
+          - Script: s3://{your-s3-bucket}/dns.sh
+          - Script: s3://{your-s3-bucket}/hosts.sh
+DirectoryService:
+  DomainName: corp.pcluster.com
+  DomainAddr: ldaps://corp.pcluster.com
+  PasswordSecretArn: {secrets-manager-PasswordSecret} 
+  DomainReadOnlyUser: cn=ReadOnlyUser,ou=Users,ou=CORP,dc=corp,dc=pcluster,dc=com
+  LdapTlsCaCert: /opt/parallelcluster/shared/directory_service/domain-certificate.crt
+  LdapTlsReqCert: hard
