@@ -1,4 +1,4 @@
-Region: ${AWS::Partition}
+Region: {AWS-Region}
 Image:
   Os: alinux2
 HeadNode:
@@ -11,7 +11,7 @@ HeadNode:
     KeyName: {your-keypair}
   Iam:
     AdditionalIamPolicies: 
-      - Policy: arn:${AWS::Partition}:iam::aws:policy/AmazonSSMManagedInstanceCore
+      - Policy: arn:{AWS-Partition}:iam::aws:policy/AmazonSSMManagedInstanceCore
 SharedStorage:
   - MountDir: /ebs
     Name: EBSExtData
@@ -33,7 +33,7 @@ LoginNodes:
           - {your-security-group-id}
       Iam:
         AdditionalIamPolicies:
-          - Policy: arn:${AWS::Partition}:iam::aws:policy/AmazonSSMManagedInstanceCore
+          - Policy: arn:{AWS-Partition}:iam::aws:policy/AmazonSSMManagedInstanceCore
 Scheduling:
   Scheduler: slurm
   SlurmSettings:
@@ -56,4 +56,4 @@ Scheduling:
       - {your-security-group-id}
     Iam:
       AdditionalIamPolicies:
-        - Policy: arn:${AWS::Partition}:iam::aws:policy/AmazonSSMManagedInstanceCore
+        - Policy: arn:{AWS-Partition}:iam::aws:policy/AmazonSSMManagedInstanceCore

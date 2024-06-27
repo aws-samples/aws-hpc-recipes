@@ -1,4 +1,4 @@
-Region: ${AWS::Partition}
+Region: {AWS-Region}
 Image:
   Os: alinux2
 HeadNode:
@@ -12,7 +12,7 @@ HeadNode:
   Iam:
     AdditionalIamPolicies:
       - Policy: {DomainCertificateSecretReadPolicy} 
-      - Policy: arn:${AWS::Partition}:iam::aws:policy/AmazonSSMManagedInstanceCore
+      - Policy: arn:{AWS-Partition}:iam::aws:policy/AmazonSSMManagedInstanceCore
     S3Access:
       - BucketName: {your-s3-bucket}
         EnableWriteAccess: false
@@ -61,7 +61,7 @@ LoginNodes:
           - {your-security-group-id}
       Iam:
         AdditionalIamPolicies:
-          - Policy: arn:${AWS::Partition}:iam::aws:policy/AmazonSSMManagedInstanceCore
+          - Policy: arn:{AWS-Partition}:iam::aws:policy/AmazonSSMManagedInstanceCore
 Scheduling:
   Scheduler: slurm
   SlurmSettings:
@@ -84,8 +84,8 @@ Scheduling:
       - {your-security-group-id}
     Iam:
       AdditionalIamPolicies:
-        - Policy: arn:${AWS::Partition}:iam::aws:policy/AmazonSSMManagedInstanceCore
-        - Policy: arn:${AWS::Partition}:iam::aws:policy/AmazonS3ReadOnlyAccess
+        - Policy: arn:{AWS-Partition}:iam::aws:policy/AmazonSSMManagedInstanceCore
+        - Policy: arn:{AWS-Partition}:iam::aws:policy/AmazonS3ReadOnlyAccess
     CustomActions:
       OnNodeConfigured:
         Sequence:
