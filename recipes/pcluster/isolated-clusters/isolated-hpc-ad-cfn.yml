@@ -1185,7 +1185,7 @@ Resources:
               search $SEARCH_DOMAIN
               EOF
               chmod +x dns.sh
-              aws s3 cp /usr/bin/directory/dns.sh s3://${S3BucketName}/dns.sh --region ${AWS::Region}
+              aws s3 cp /usr/bin/directory/dns.sh s3://${S3BucketName}/dns.sh --region "${AWS::Region}"
               cat << 'EOF' > hosts.sh
               #!/bin/bash
               cat <<EOL > /etc/hosts
@@ -1193,7 +1193,7 @@ Resources:
               10.0.1.100 corp.pcluster.com
               EOF
               chmod +x hosts.sh
-              aws s3 cp /usr/bin/directory/hosts.sh s3://${S3BucketName}/hosts.sh --region ${AWS::Region}
+              aws s3 cp /usr/bin/directory/hosts.sh s3://${S3BucketName}/hosts.sh --region "${AWS::Region}"
               ADMIN_PW="${AdminPassword}"
               echo "$ADMIN_PW" | sudo realm join -U Admin "${DirectoryDomain}"
               sleep 10
