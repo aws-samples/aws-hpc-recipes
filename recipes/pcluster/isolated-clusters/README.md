@@ -102,7 +102,18 @@
 2.	Then select the original stack that you named and delete that one following the same process as Step 1.
 
 
+### Troubleshooting
+1. When attempting to perform ParallelCluster CLI commands, you get an error message stating: "Command not found"
 
+    a. Run the following command: source /etc/profile
+
+2. When attempting to perform ParallelCluster CLI commands, you get an error message stating: "Bad Request: region needs to be set"
+
+    a. Run the following command: source /etc/profile
+
+3. When attempting to launch a cluster, you get an error message stating: "Unable to find node executable"
+
+    a. Run the following command: source /home/ssm-user/.bash_profile
 
 
 ### Isolated HPC with AD Integration Deployment Guide
