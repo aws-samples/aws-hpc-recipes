@@ -98,3 +98,8 @@ DirectoryService:
   DomainReadOnlyUser: cn=ReadOnlyUser,ou=Users,ou=CORP,dc=corp,dc=pcluster,dc=com
   LdapTlsCaCert: /opt/parallelcluster/shared/directory_service/domain-certificate.crt
   LdapTlsReqCert: hard
+  
+  
+
+#Example create-cluster command to launch from a private subnet
+pcluster create-cluster --cluster-name {name} --cluster-configuration {file-name}.yml --suppress-validators ALL --rollback-on-failure false --region {region}

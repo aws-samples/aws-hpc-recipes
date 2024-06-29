@@ -283,7 +283,7 @@ Resources:
         - !Ref VpcEndpointSecurityGroup
       PrivateDnsEnabled: true
       
-  SSMessagesEndpoint:
+  SSMMessagesEndpoint:
     Type: 'AWS::EC2::VPCEndpoint'
     Properties:
       VpcId: !Ref PclusterVpc
@@ -771,7 +771,8 @@ Resources:
           export PATH=/usr/bin/pcluster/pcluster-installer-bundle:/usr/bin/pcluster/pcluster-installer-bundle/node-v*/bin:/bin:PATH
           export AWS_DEFAULT_REGION=${AWS::Region}
           EOF
-          export PATH=/usr/bin/pcluster/pcluster-installer-bundle:$PATH 
+          export PATH=/usr/bin/pcluster/pcluster-installer-bundle:$PATH
+          export AWS_STS_REGIONAL_ENDPOINTS=regional          
           cd /usr/bin/pcluster
           
           #Launch a Cluster

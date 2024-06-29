@@ -386,7 +386,7 @@ Resources:
         - !Ref IsolatedHPCSubnetTwo
       PrivateDnsEnabled: true
         
-  SSMessagesEndpoint:
+  SSMMessagesEndpoint:
     Type: 'AWS::EC2::VPCEndpoint'
     Condition: CreateVPC
     DependsOn: NetworkLoadBalancer
@@ -441,63 +441,7 @@ Resources:
       SubnetIds:
         - !Ref IsolatedHPCSubnetTwo
       PrivateDnsEnabled: true  
-        
-  EFSEndpoint:
-    Type: 'AWS::EC2::VPCEndpoint'
-    Condition: CreateVPC
-    DependsOn: NetworkLoadBalancer
-    Properties:
-      VpcId: !Ref PclusterVpc
-      ServiceName: !Sub 'com.amazonaws.${AWS::Region}.elasticfilesystem'
-      VpcEndpointType: 'Interface'
-      SecurityGroupIds: 
-        - !GetAtt VpcEndpointSecurityGroup.GroupId      
-      SubnetIds:
-        - !Ref IsolatedHPCSubnetTwo
-      PrivateDnsEnabled: true    
-        
-  FSxEndpoint:
-    Type: 'AWS::EC2::VPCEndpoint'
-    Condition: CreateVPC
-    DependsOn: NetworkLoadBalancer
-    Properties:
-      VpcId: !Ref PclusterVpc
-      ServiceName: !Sub 'com.amazonaws.${AWS::Region}.fsx'
-      VpcEndpointType: 'Interface'
-      SecurityGroupIds: 
-        - !GetAtt VpcEndpointSecurityGroup.GroupId      
-      SubnetIds:
-        - !Ref IsolatedHPCSubnetTwo
-      PrivateDnsEnabled: true      
-        
-  EBSEndpoint:
-    Type: 'AWS::EC2::VPCEndpoint'
-    Condition: CreateVPC
-    DependsOn: NetworkLoadBalancer
-    Properties:
-      VpcId: !Ref PclusterVpc
-      ServiceName: !Sub 'com.amazonaws.${AWS::Region}.ebs'
-      VpcEndpointType: 'Interface'
-      SecurityGroupIds: 
-        - !GetAtt VpcEndpointSecurityGroup.GroupId      
-      SubnetIds:
-        - !Ref IsolatedHPCSubnetTwo
-      PrivateDnsEnabled: true
-        
-  ImageBuilderEndpoint:
-    Type: 'AWS::EC2::VPCEndpoint'
-    Condition: CreateVPC
-    DependsOn: NetworkLoadBalancer
-    Properties:
-      VpcId: !Ref PclusterVpc
-      ServiceName: !Sub 'com.amazonaws.${AWS::Region}.imagebuilder'
-      VpcEndpointType: 'Interface'
-      SecurityGroupIds: 
-        - !GetAtt VpcEndpointSecurityGroup.GroupId      
-      SubnetIds:
-        - !Ref IsolatedHPCSubnetTwo
-      PrivateDnsEnabled: true
-  
+
   EC2MessagesEndpoint:
     Type: 'AWS::EC2::VPCEndpoint'
     Condition: CreateVPC
@@ -1403,7 +1347,8 @@ Resources:
               sudo bash install_pcluster.sh
               source ~/.bash_profile
               cd /usr/bin/pcluster
-              export PATH=/usr/bin/pcluster/pcluster-installer-bundle:$PATH              
+              export PATH=/usr/bin/pcluster/pcluster-installer-bundle:$PATH
+              export AWS_STS_REGIONAL_ENDPOINTS=regional              
               pcluster create-cluster --cluster-name "IsolatedClusterwithAD" --cluster-configuration "./IsolatedClusterWithAD.yaml" --suppress-validators ALL --rollback-on-failure false 
 
   PostRole:

@@ -57,3 +57,7 @@ Scheduling:
     Iam:
       AdditionalIamPolicies:
         - Policy: arn:{AWS-Partition}:iam::aws:policy/AmazonSSMManagedInstanceCore
+
+
+#Example create-cluster command to launch from a private subnet
+pcluster create-cluster --cluster-name {name} --cluster-configuration {file-name}.yml --suppress-validators ALL --rollback-on-failure false --region {region}
