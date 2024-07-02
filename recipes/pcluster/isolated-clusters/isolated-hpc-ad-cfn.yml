@@ -1349,7 +1349,7 @@ Resources:
               cd /usr/bin/pcluster
               export PATH=/usr/bin/pcluster/pcluster-installer-bundle:$PATH
               export AWS_STS_REGIONAL_ENDPOINTS=regional              
-              pcluster create-cluster --cluster-name "IsolatedClusterwithAD" --cluster-configuration "./IsolatedClusterWithAD.yaml" --suppress-validators ALL --rollback-on-failure false 
+              pcluster create-cluster --cluster-name "IsolatedClusterwithAD" --cluster-configuration "./IsolatedClusterWithAD.yaml" --suppress-validators type:AdditionalIamPolicyValidator --rollback-on-failure false 
 
   PostRole:
     Type: AWS::IAM::Role
@@ -1794,4 +1794,4 @@ Outputs:
   DomainAddrLdaps:
     Value: !Sub ldaps://${DomainName}
   DomainCertificateSecretReadPolicy:
-    Value: !Ref DomainCertificateSecretReadPolicy   
+    Value: !Ref DomainCertificateSecretReadPolicy

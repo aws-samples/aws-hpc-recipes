@@ -94,7 +94,7 @@
 
     e. Type 'export AWS_STS_REGIONAL_ENDPOINTS=regional'
 
-    f.	You can now type pcluster commands like ‘pcluster list-official-images’ and 'pcluster create-cluster'. Note that when creating a cluster from an instance in a private subnet (which is what we are doing) you will need to add the suppress validators command in create-cluster. For example, pcluster create-cluster --cluster-name "IsolatedCluster" --cluster-configuration "./IsolatedCluster.yaml" --suppress-validators ALL --rollback-on-failure false
+    f.	You can now type pcluster commands like ‘pcluster list-official-images’ and 'pcluster create-cluster'. Note that when creating a cluster from an instance in a private subnet (which is what we are doing) you will need to add the suppress validators command in create-cluster. For example, pcluster create-cluster --cluster-name "IsolatedCluster" --cluster-configuration "./IsolatedCluster.yaml" --suppress-validators type:AdditionalIamPolicyValidator --rollback-on-failure false
 
     g.	The sample ParallelCluster configuration file can be found in this directory by typing ‘cat IsolatedCluster.yaml’ 
 
@@ -274,7 +274,7 @@
 
     d. Type 'export AWS_STS_REGIONAL_ENDPOINTS=regional'
 
-    e.	You can now type pcluster commands like ‘pcluster list-official-images’ and 'pcluster create-cluster'. Note that when creating a cluster from an instance in a private subnet (which is what we are doing) you will need to add the suppress validators command in create-cluster. For example, pcluster create-cluster --cluster-name "IsolatedCluster" --cluster-configuration "./IsolatedClusterWithAD.yaml" --suppress-validators ALL --rollback-on-failure false
+    e.	You can now type pcluster commands like ‘pcluster list-official-images’ and 'pcluster create-cluster'. Note that when creating a cluster from an instance in a private subnet (which is what we are doing) you will need to add the suppress validators command in create-cluster. For example, pcluster create-cluster --cluster-name "IsolatedCluster" --cluster-configuration "./IsolatedClusterWithAD.yaml" --suppress-validators type:AdditionalIamPolicyValidator --rollback-on-failure false
 
     f.	The sample ParallelCluster configuration file can be found in this directory by typing ‘cat IsolatedCluster.yaml’ 
 

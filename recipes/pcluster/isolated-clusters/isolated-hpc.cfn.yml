@@ -839,7 +839,7 @@ Resources:
           EOF
             
           # Initialize ParallelCluster with the above configuration
-          pcluster create-cluster --cluster-name "IsolatedCluster" --cluster-configuration "./IsolatedCluster.yaml" --suppress-validators ALL --rollback-on-failure false 
+          pcluster create-cluster --cluster-name "IsolatedCluster" --cluster-configuration "./IsolatedCluster.yaml" --suppress-validators type:AdditionalIamPolicyValidator --rollback-on-failure false 
 
 Outputs:
   VPCId:
