@@ -86,13 +86,17 @@
 
     a.	Repeat the process described in Step 16 to connect to the ParallelClusterAdminNode
 
-    b.	Type ‘cd pcluster’
+    b. Type sudo su
 
-    c.	Type ‘source /etc/profile’
+    c.	Type ‘cd pcluster’
 
-    d.	You can now type pcluster commands like ‘pcluster list-official-images’ and 'pcluster create-cluster'
+    d.	Type ‘source /root/.bash_profile’
 
-    e.	The sample ParallelCluster configuration file can be found in this directory by typing ‘cat IsolatedCluster.yaml’ 
+    e. Type 'export AWS_STS_REGIONAL_ENDPOINTS=regional'
+
+    f.	You can now type pcluster commands like ‘pcluster list-official-images’ and 'pcluster create-cluster'. Note that when creating a cluster from an instance in a private subnet (which is what we are doing) you will need to add the suppress validators command in create-cluster. For example, pcluster create-cluster --cluster-name "IsolatedCluster" --cluster-configuration "./IsolatedCluster.yaml" --suppress-validators ALL --rollback-on-failure false
+
+    g.	The sample ParallelCluster configuration file can be found in this directory by typing ‘cat IsolatedCluster.yaml’ 
 
 15.	You can experiment with installing software on the cluster similarly to how we installed ParallelCluster on the Admin Node. You can upload the software to S3, then utilize the existing private connection between our subnet and S3 to download files. Once those files are on the instance you can install the software locally. [here](example.pcluster.yml)
 
@@ -262,7 +266,17 @@
 
 16.	You can also launch new clusters from the CLI of the ParrallelClusterAdminNode
    
-    a.	The sample ParallelCluster configuration file can be found in the /usr/bin/plcuster directory by typing ‘cat IsolatedClusterWithAD.yaml’ 
+    a. Type sudo su
+
+    b.	Type ‘cd pcluster’
+
+    c.	Type ‘source /root/.bash_profile’
+
+    d. Type 'export AWS_STS_REGIONAL_ENDPOINTS=regional'
+
+    e.	You can now type pcluster commands like ‘pcluster list-official-images’ and 'pcluster create-cluster'. Note that when creating a cluster from an instance in a private subnet (which is what we are doing) you will need to add the suppress validators command in create-cluster. For example, pcluster create-cluster --cluster-name "IsolatedCluster" --cluster-configuration "./IsolatedClusterWithAD.yaml" --suppress-validators ALL --rollback-on-failure false
+
+    f.	The sample ParallelCluster configuration file can be found in this directory by typing ‘cat IsolatedCluster.yaml’ 
 
 17.	You can experiment with installing software on the cluster similarly to how we installed ParallelCluster on the ParallelClusterAdminNode. You can upload the software to S3, then utilize the existing private connection between our subnet and S3 to download files. Once those files are on the instance you can install the software locally. Also note that an example parallelcluster configuration file for AD integration can be found [here](example.pcluster-ad.yml)
 
