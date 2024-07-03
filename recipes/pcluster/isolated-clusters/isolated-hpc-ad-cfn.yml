@@ -1310,10 +1310,24 @@ Resources:
               EOF
               cd /usr/bin/pcluster
               export AWS_DEFAULT_REGION=${AWS::Region}
-              cat << EOF | sudo tee -a /etc/profile.d/pcluster.sh
+              cat << 'EOF' > active-directory.head.post.sh
+              #!/bin/bash
+
+              CERTIFICATE_SECRET_ARN="$1"
+              CERTIFICATE_PATH="$2"
+
+              source /etc/parallelcluster/cfnconfig
+              REGION="${AWS::Region}"
+
+              mkdir -p $(dirname $CERTIFICATE_PATH)
+              aws secretsmanager get-secret-value --region $REGION --secret-id $CERTIFICATE_SECRET_ARN --query SecretString --output text > $CERTIFICATE_PATH
+              EOF
+              cd /usr/bin/pcluster
+              chmod +x active-directory.head.post.sh
               export PATH=/usr/bin/pcluster/pcluster-installer-bundle:/usr/bin/pcluster/pcluster-installer-bundle/node-v*/bin:/bin:PATH
               export AWS_DEFAULT_REGION=${AWS::Region}
               EOF
+              aws s3 cp active-directory.head.post.sh s3://${S3BucketName}/active-directory.head.post.sh --region "${AWS::Region}"
               aws s3 cp s3://${S3BucketName}/dns.sh /usr/bin/pcluster
               chmod +x dns.sh
               ./dns.sh
@@ -1794,4 +1808,4 @@ Outputs:
   DomainAddrLdaps:
     Value: !Sub ldaps://${DomainName}
   DomainCertificateSecretReadPolicy:
-    Value: !Ref DomainCertificateSecretReadPolicy
+    Value: !Ref DomainCertificateSecretReadPolicy   
