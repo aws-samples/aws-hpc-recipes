@@ -61,7 +61,14 @@
 
     e. Leave the ParallelClusterEC2InstanceAmiId as the default value
 
-9.	On the configure stack options page, select Next
+9.	On the configure stack options page
+
+    a. Under Stack failure options, select 'Preserve successfully provisioned resources'
+    
+    b. Under Stack failure options, select 'Delete all newly created resources'
+
+    c. Leave all other values as default, and select Next on the bottom right
+
 10.	On the review page, acknowledge the fact that AWS Cloudformation might create IAM resources and select Submit
 11.	You can view the stack’s progress through the CloudFormation page.
 
@@ -198,7 +205,14 @@
    
     f.	Select Next
 
-9.	Select Next on the Configure stack options page
+9.	On the configure stack options page
+
+    a. Under Stack failure options, select 'Preserve successfully provisioned resources'
+    
+    b. Under Stack failure options, select 'Delete all newly created resources'
+
+    c. Leave all other values as default, and select Next on the bottom right
+    
 10.	Scroll all the way down on the Review page and acknowledge the checkboxes. Then select Submit.
 11.	You can view the stack’s progress through the CloudFormation page.
    
