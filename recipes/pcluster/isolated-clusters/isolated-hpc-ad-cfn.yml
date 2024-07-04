@@ -414,20 +414,6 @@ Resources:
         - !Ref IsolatedHPCSubnetTwo
       PrivateDnsEnabled: true
         
-  KMSEndpoint:
-    Type: 'AWS::EC2::VPCEndpoint'
-    Condition: CreateVPC
-    DependsOn: NetworkLoadBalancer
-    Properties:
-      VpcId: !Ref PclusterVpc
-      ServiceName: !Sub 'com.amazonaws.${AWS::Region}.kms'
-      VpcEndpointType: 'Interface'
-      SecurityGroupIds: 
-        - !GetAtt VpcEndpointSecurityGroup.GroupId      
-      SubnetIds:
-        - !Ref IsolatedHPCSubnetTwo
-      PrivateDnsEnabled: true
-        
   AutoscalingEndpoint:
     Type: 'AWS::EC2::VPCEndpoint'
     Condition: CreateVPC
@@ -1604,8 +1590,6 @@ Resources:
           import logging
           import random
           import string
-          import botocore
-
           logger = logging.getLogger()
           logger.setLevel(logging.INFO)
           iam = boto3.client("iam")
@@ -1615,34 +1599,18 @@ Resources:
               alnum = string.ascii_uppercase + string.ascii_lowercase + string.digits
               return ''.join(random.choice(alnum) for _ in range(16))
 
-          def import_certificate(certificate_secret_arn, private_key_secret_arn, domain_name, tags, max_retries=5, retry_delay=2):
-              logger.info('Reading secrets from Secrets Manager...')
+          def import_certificate(certificate_secret_arn, private_key_secret_arn, domain_name, tags):
+            logger.info('Reading secrets from Secrets Manager...')
+            domain_certificate = sm.get_secret_value(SecretId=certificate_secret_arn)["SecretString"]
+            domain_private_key = sm.get_secret_value(SecretId=private_key_secret_arn)["SecretString"]
+            logger.info('Importing certificate into IAM...')
 
-              retries = 0
-              while retries < max_retries:
-                  try:
-                      domain_certificate = sm.get_secret_value(SecretId=certificate_secret_arn)["SecretString"]
-                      domain_private_key = sm.get_secret_value(SecretId=private_key_secret_arn)["SecretString"]
-                      break
-                  except botocore.exceptions.ClientError as e:
-                      if e.response['Error']['Code'] not in ['ThrottlingException', 'ResourceNotFoundException']:
-                          raise e
-                      retries += 1
-                      logger.info(f"Retrying due to exception: {e}")
-                      time.sleep(retry_delay)
-
-              if retries == max_retries:
-                  raise Exception("Maximum retries reached while retrieving secrets from Secrets Manager")
-
-              logger.info('Importing certificate into IAM...')
-
-              certificate_arn = iam.upload_server_certificate(
-                  ServerCertificateName=domain_name,
-                  CertificateBody=domain_certificate,
-                  PrivateKey=domain_private_key,
-                  Tags=tags
-              )["ServerCertificateMetadata"]["Arn"]
-              return certificate_arn
+            certificate_arn = iam.upload_server_certificate(
+              ServerCertificateName=domain_name,
+              CertificateBody=domain_certificate,
+              PrivateKey=domain_private_key, Tags=tags
+            )["ServerCertificateMetadata"]["Arn"]
+            return certificate_arn
 
           def handler(event, context):
               logger.info(f"Context: {context}")
@@ -1652,24 +1620,23 @@ Resources:
               domain_name = event['ResourceProperties']['DomainName']
               certificate_secret_arn = event['ResourceProperties']['DomainCertificateSecretArn']
               private_key_secret_arn = event['ResourceProperties']['DomainPrivateKeySecretArn']
-              tags = [{'Key': 'StackId', 'Value': event['StackId']}]
+              tags = [{ 'Key': 'StackId', 'Value': event['StackId']}]
 
-              response_data = {}  # Initialize response_data
+              response_data = {}
               reason = None
               response_status = cfnresponse.SUCCESS
 
               physical_resource_id = event.get("PhysicalResourceId", create_physical_resource_id())
 
               try:
-                  if event['RequestType'] == 'Create':
-                      certificate_arn = import_certificate(certificate_secret_arn, private_key_secret_arn, domain_name, tags, max_retries=5, retry_delay=2)
-                      time.sleep(60)
-                      response_data['DomainCertificateArn'] = certificate_arn
-                      response_data['Message'] = f"Resource creation successful! IAM certificate imported: {certificate_arn}"
+                if event['RequestType'] == 'Create':
+                  certificate_arn = import_certificate(certificate_secret_arn, private_key_secret_arn, domain_name, tags)
+                  time.sleep(60)
+                  response_data['DomainCertificateArn'] = certificate_arn
+                  response_data['Message'] = f"Resource creation successful! IAM certificate imported: {certificate_arn}"
               except Exception as e:
-                  response_status = cfnresponse.FAILED
-                  reason = str(e)
-
+                response_status = cfnresponse.FAILED
+                reason = str(e)
               cfnresponse.send(event, context, response_status, response_data, physical_resource_id, reason)
 
   DomainCertificateSetup:
@@ -1713,7 +1680,7 @@ Resources:
             Statement:
               - Effect: Allow
                 Action:
-                  - acm:DeleteCertificate
+                  - iam:DeleteServerCertificate
                 Resource: !GetAtt DomainCertificateSetup.DomainCertificateArn
 
   CleanupLambda:
@@ -1785,6 +1752,7 @@ Resources:
       - DomainCertificateSetup
     Properties:
       ServiceToken: !GetAtt CleanupLambda.Arn
+      DomainName: !Ref DomainName
       DomainCertificateArn: !GetAtt DomainCertificateSetup.DomainCertificateArn
 
   DomainCertificateSecretReadPolicy:
