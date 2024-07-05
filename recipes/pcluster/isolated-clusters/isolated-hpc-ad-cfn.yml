@@ -1590,6 +1590,7 @@ Resources:
           import logging
           import random
           import string
+
           logger = logging.getLogger()
           logger.setLevel(logging.INFO)
           iam = boto3.client("iam")
@@ -1600,19 +1601,22 @@ Resources:
               return ''.join(random.choice(alnum) for _ in range(16))
 
           def import_certificate(certificate_secret_arn, private_key_secret_arn, domain_name, tags):
-            logger.info('Reading secrets from Secrets Manager...')
-            domain_certificate = sm.get_secret_value(SecretId=certificate_secret_arn)["SecretString"]
-            domain_private_key = sm.get_secret_value(SecretId=private_key_secret_arn)["SecretString"]
-            logger.info('Importing certificate into IAM...')
+              logger.info('Reading secrets from Secrets Manager...')
+              domain_certificate = sm.get_secret_value(SecretId=certificate_secret_arn)["SecretString"]
+              domain_private_key = sm.get_secret_value(SecretId=private_key_secret_arn)["SecretString"]
+              logger.info('Importing certificate into IAM...')
 
-            certificate_arn = iam.upload_server_certificate(
-              ServerCertificateName=domain_name,
-              CertificateBody=domain_certificate,
-              PrivateKey=domain_private_key, Tags=tags
-            )["ServerCertificateMetadata"]["Arn"]
-            return certificate_arn
+              certificate_arn = iam.upload_server_certificate(
+                  ServerCertificateName=domain_name,
+                  CertificateBody=domain_certificate,
+                  PrivateKey=domain_private_key, Tags=tags
+              )["ServerCertificateMetadata"]["Arn"]
+              return certificate_arn
 
           def handler(event, context):
+              # Delay the start of the function by 30 seconds
+              time.sleep(30)
+
               logger.info(f"Context: {context}")
               logger.info(f"Event: {event}")
               logger.info(f"Boto version: {boto3.__version__}")
@@ -1620,7 +1624,7 @@ Resources:
               domain_name = event['ResourceProperties']['DomainName']
               certificate_secret_arn = event['ResourceProperties']['DomainCertificateSecretArn']
               private_key_secret_arn = event['ResourceProperties']['DomainPrivateKeySecretArn']
-              tags = [{ 'Key': 'StackId', 'Value': event['StackId']}]
+              tags = [{'Key': 'StackId', 'Value': event['StackId']}]
 
               response_data = {}
               reason = None
@@ -1629,14 +1633,14 @@ Resources:
               physical_resource_id = event.get("PhysicalResourceId", create_physical_resource_id())
 
               try:
-                if event['RequestType'] == 'Create':
-                  certificate_arn = import_certificate(certificate_secret_arn, private_key_secret_arn, domain_name, tags)
-                  time.sleep(60)
-                  response_data['DomainCertificateArn'] = certificate_arn
-                  response_data['Message'] = f"Resource creation successful! IAM certificate imported: {certificate_arn}"
+                  if event['RequestType'] == 'Create':
+                      certificate_arn = import_certificate(certificate_secret_arn, private_key_secret_arn, domain_name, tags)
+                      response_data['DomainCertificateArn'] = certificate_arn
+                      response_data['Message'] = f"Resource creation successful! IAM certificate imported: {certificate_arn}"
               except Exception as e:
-                response_status = cfnresponse.FAILED
-                reason = str(e)
+                  response_status = cfnresponse.FAILED
+                  reason = str(e)
+
               cfnresponse.send(event, context, response_status, response_data, physical_resource_id, reason)
 
   DomainCertificateSetup:
