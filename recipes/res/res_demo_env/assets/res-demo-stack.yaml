@@ -26,10 +26,8 @@ Parameters:
     Description: Provide name of the RES Environment. Must be unique for your account and AWS Region.
     Type: String
     Default: res-demo
-    MinLength: 5
-    MaxLength: 10
-    AllowedPattern: ^(?!.*aws)res-[a-z0-9-]{1,6}$
-    ConstraintDescription: EnvironmentName must start with "res-", cannot contain "aws", and entire name must be less than or equal to 10 characters (lowercase, numbers, hypens are permitted).
+    AllowedPattern: ^res-[A-Za-z\-\_0-9]{0,7}$
+    ConstraintDescription: EnvironmentName must start with "res-" and should be less than or equal to 11 characters.
 
   AdministratorEmail:
     Type: String
