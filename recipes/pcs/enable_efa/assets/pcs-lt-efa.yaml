@@ -12,9 +12,10 @@ Metadata:
           default: Networking
         Parameters:
           - NumberOfNetworkCards
+          - VpcId
           - NodeGroupSubnetId
           - VpcSecurityGroupId
-          - EfaSecurityGroupId
+          # - EfaSecurityGroupId
 
 Parameters:
 
@@ -22,15 +23,18 @@ Parameters:
     Type: String
     Default: AWSPCS-efa-lt
     Description: Launch template name
+  VpcId:
+    Type: 'AWS::EC2::VPC::Id'
+    Description: Cluster VPC where EFA-enabled instances will be launched
   NodeGroupSubnetId:
     Type: AWS::EC2::Subnet::Id
     Description: Subnet within cluster VPC where EFA-enabled instances will be launched
   VpcSecurityGroupId:
     Type: AWS::EC2::SecurityGroup::Id
     Description: Security group allowing access within the cluster VPC [default]
-  EfaSecurityGroupId:
-    Type: AWS::EC2::SecurityGroup::Id
-    Description: Security group allowing EFA traffic amongst instances in cluster VPC
+  # EfaSecurityGroupId:
+  #   Type: AWS::EC2::SecurityGroup::Id
+  #   Description: Security group allowing EFA traffic amongst instances in cluster VPC
   PlacementGroupName:
     Type: String
     Description: Cluster placement group name (leave blank to create one for this LT)
@@ -43,9 +47,6 @@ Parameters:
          - "1"
          - "2"
          - "4"
-         - "8"
-         - "16"
-         - "32"
 
 Conditions:
   CreatePlacementGroup:
@@ -90,6 +91,29 @@ Conditions:
 
 Resources:
 
+  EfaSecurityGroup:
+    Type: 'AWS::EC2::SecurityGroup'
+    Properties:
+      GroupDescription: Support EFA
+      GroupName: !Join ['-', ['efa-sg', !Select [4, !Split ['-', !Select [2, !Split ['/', !Ref AWS::StackId]]]]]]
+      VpcId: !Ref VpcId
+
+  EfaSecurityGroupOutboundSelfRule:
+    Type: 'AWS::EC2::SecurityGroupEgress'
+    Properties:
+      IpProtocol: '-1'
+      GroupId: !Ref EfaSecurityGroup
+      Description: Allow outbound EFA traffic to SG members
+      DestinationSecurityGroupId: !Ref EfaSecurityGroup
+
+  EfaSecurityGroupInboundSelfRule:
+    Type: 'AWS::EC2::SecurityGroupIngress'
+    Properties:
+      IpProtocol: '-1'
+      GroupId: !Ref EfaSecurityGroup
+      Description: Allow inbound EFA traffic to SG members
+      SourceSecurityGroupId: !Ref EfaSecurityGroup
+
   EfaClusterPg:
     Condition: CreatePlacementGroup
     Type: AWS::EC2::PlacementGroup
@@ -101,6 +125,11 @@ Resources:
     Properties:
       LaunchTemplateName: !Ref LaunchTemplateName
       LaunchTemplateData:
+        TagSpecifications:
+          - ResourceType: instance
+            Tags:
+              - Key: HPCRecipes
+                Value: "true"
         MetadataOptions:
           HttpEndpoint: enabled
           HttpPutResponseHopLimit: 4
@@ -113,7 +142,7 @@ Resources:
             NetworkCardIndex: 0
             SubnetId: !Ref NodeGroupSubnetId
             Groups:
-            - !Ref EfaSecurityGroupId
+            - !Ref EfaSecurityGroup
             - !Ref VpcSecurityGroupId
           - Fn::If:
             - CardCount2
@@ -122,27 +151,27 @@ Resources:
               NetworkCardIndex: 1
               SubnetId: !Ref NodeGroupSubnetId
               Groups:
-              - !Ref EfaSecurityGroupId
+              - !Ref EfaSecurityGroup
               - !Ref VpcSecurityGroupId
             - !Ref AWS::NoValue
           - Fn::If:
             - CardCount4
-            - DeviceIndex: 2
+            - DeviceIndex: 1
               InterfaceType: efa
               NetworkCardIndex: 2
               SubnetId: !Ref NodeGroupSubnetId
               Groups:
-              - !Ref EfaSecurityGroupId
+              - !Ref EfaSecurityGroup
               - !Ref VpcSecurityGroupId
             - !Ref AWS::NoValue
           - Fn::If:
             - CardCount4
-            - DeviceIndex: 3
+            - DeviceIndex: 1
               InterfaceType: efa
               NetworkCardIndex: 3
               SubnetId: !Ref NodeGroupSubnetId
               Groups:
-              - !Ref EfaSecurityGroupId
+              - !Ref EfaSecurityGroup
               - !Ref VpcSecurityGroupId
             - !Ref AWS::NoValue
 
