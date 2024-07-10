@@ -158,6 +158,9 @@ Resources:
       Runtime: python3.12
       Timeout: 30
 
+  # We create a placement group using a Lambda so we can give it a name. This is a 
+  # workaround for AWS::EC2::PlacementGroup not having support for setting 
+  # placement group name.
   PlacementGroup:
     Condition: CreatePlacementGroup
     Type: Custom::PlacementGroup
@@ -205,7 +208,8 @@ Resources:
         Placement:
           GroupName: !If [ CreatePlacementGroup, !GetAtt PlacementGroup.PlacementGroupName, !Ref PlacementGroupName ]
         NetworkInterfaces:
-          - DeviceIndex: 0
+          - Description: Primary network interface
+            DeviceIndex: 0
             InterfaceType: efa
             NetworkCardIndex: 0
             SubnetId: !Ref NodeGroupSubnetId
