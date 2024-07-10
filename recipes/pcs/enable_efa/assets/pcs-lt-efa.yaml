@@ -246,6 +246,9 @@ Resources:
             - !Ref AWS::NoValue
 
 Outputs:
+  LaunchTemplateName:
+    Description: Launch template name
+    Value: !Ref LaunchTemplateName
   LaunchTemplateId:
     Description: Launch template Id
     Value: !Ref LaunchTemplate
