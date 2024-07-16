@@ -1,0 +1,102 @@
+Description: Create standalone login node for a PCS cluster.
+
+Metadata:
+  AWS::CloudFormation::Interface:
+    ParameterGroups:
+      - Label:
+          default: PCS cluster
+        Parameters:
+          - ClusterId
+          - ClusterAccessSecurityGroup
+          - ClusterVPC
+      - Label:
+          default: EC2 instance
+        Parameters:
+          - InstanceName
+          - InstanceType
+          - InstanceAmiId
+          - InstanceHomeDirectoryEfsFilesystemId
+          - InstanceProfile
+          - InstanceSshKeyName
+          - InstanceAdditionalSecurityGroups
+    
+Parameters:
+  ClusterId:
+    Type: String
+    Description: Name of the PCS cluster.
+
+  ClusterAccessSecurityGroup:
+    Type: AWS::EC2::SecurityGroup::Id
+    Description: Security group of the PCS cluster.
+
+  ClusterVPC:
+    Type: AWS::EC2::VPC::Id
+    Description: VPC of the PCS cluster.
+
+Resources:
+
+  LoginInstanceRole:
+    Type: AWS::IAM::Role
+    Properties:
+      AssumeRolePolicyDocument:
+        Version: 2012-10-17
+        Statement:
+          - Effect: Allow
+            Principal:
+              Service: ec2.amazonaws.com
+            Action: sts:AssumeRole
+      ManagedPolicyArns:
+        # Allow access to Cluster
+        - XXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXX
+        - XXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXX
+      Path: /
+
+  LoginInstanceProfile:
+    Type: AWS::IAM::InstanceProfile
+    Properties:
+      Path: /
+      Roles:
+        - !Ref LoginInstanceRole
+
+  LoginNode:
+    Type: AWS::EC2::Instance
+    Metadata:
+      cfn-lint:
+        config:
+          ignore_checks:
+            - E3002
+            - W3002
+            - W3003
+            - W3006
+    CreationPolicy:
+      ResourceSignal:
+        Timeout: PT15M
+    Properties:
+      ImageId: ami-XXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXX
+      InstanceType: t3.large
+      KeyName: XXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXX
+      SecurityGroupIds:
+        - !Ref ClusterAccessSecurityGroup
+      SubnetId:
+        Fn::Select:
+          - 0
+          - Fn::Split:
+              - ','
+              - !Ref ClusterVPC
+      UserData:
+        Fn::Base64: !Sub |
+          #!/bin/bash -xe
+          echo ECS_CLUSTER=${ClusterId} >> /etc/ecs/ecs.config
+          yum install -y aws-cfn-bootstrap
+          /opt/aws/bin/cfn-signal -e $? --stack ${AWS::StackName} --resource LoginNode --region ${AWS::Region}
+
+# ClusterConnectLambda
+# Lambda has role allowing it to access secrets named pcs! in customer account
+# Lambda has role allowing it GetCluster in customer account
+# Should be able to create the policy from cluster ID so role is scoped down
+# Return cluster IP, port, base64 secret in a response
+# Can pass to EC2 user data vis sub. ClusterConnectLambda.ipAddress, ClusterConnectLambda.port, ClusterConnectLambda.clusterSecretBase64
+
+# UserData
+# Install Slurm from PCS installer
+# Fetch cluster 
