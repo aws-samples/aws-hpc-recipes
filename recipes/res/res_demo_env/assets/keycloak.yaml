@@ -67,6 +67,15 @@ Parameters:
     AllowedPattern: https://.+\.amazoncognito\.com/saml2/idpresponse
     Description: Please provide the SAML redirect URL
 
+  CertificateArn:
+    Type: String
+    AllowedPattern: ^arn:[a-z0-9-]+:acm:[a-z0-9-]+:[0-9]{12}:certificate/[a-zA-Z0-9-]+$
+    Description: Please provide an ARN to the certificate in ACM that will secure HTTPS auth traffic 
+
+  AdminPrefixListId: 
+    Type: String
+    Description: Prefix list ID for hosts allowed to access the keycloak administration interface
+
 Mappings:
   Keycloak:
     Config: 
@@ -131,7 +140,11 @@ Resources:
         - IpProtocol: tcp
           FromPort: 80
           ToPort: 80
-          CidrIp: "0.0.0.0/0"
+          SourcePrefixListId: !Ref AdminPrefixListId
+        - IpProtocol: tcp
+          FromPort: 80
+          ToPort: 80
+          SourceSecurityGroupId: !Ref LoadBalancerSecurityGroup
 
   KeycloakEC2Instance:
     Type: AWS::EC2::Instance
@@ -226,6 +239,9 @@ Resources:
               ./bin/kcadm.sh update realms/master -s sslRequired=NONE --server $SERVER_URL
               ./bin/kcadm.sh update realms/res -s sslRequired=NONE --server $SERVER_URL
               
+              # Redirect auth process to ALB frontend
+              ./bin/kcadm.sh update realms/res -s attributes.frontendUrl="https://${KeycloakLoadBalancer.DNSName}" --server $SERVER_URL
+              
               #Configure Keycloak
               #Get ServiceAccount passsword
               set +x
@@ -303,8 +319,57 @@ Resources:
               /opt/aws/bin/cfn-signal -e $? --stack "${AWS::StackName}" --resource "KeycloakEC2Instance" --region "${AWS::Region}"
             - KeycloakVersion: !FindInMap [Keycloak, Config, Version]
 
+  KeycloakLoadBalancer:
+    Type: AWS::ElasticLoadBalancingV2::LoadBalancer
+    Properties:
+      Scheme: internet-facing
+      SecurityGroups: 
+        - !Ref LoadBalancerSecurityGroup
+      Subnets: 
+        - !Ref PublicSubnet 
+      Type: application
+
+  LoadBalancerSecurityGroup:
+    Type: AWS::EC2::SecurityGroup
+    Properties:
+      GroupDescription: Security group for the load balancer
+      SecurityGroupIngress:
+        - IpProtocol: tcp
+          FromPort: 443
+          ToPort: 443
+          CidrIp: 0.0.0.0/0
+      VpcId: !Ref VpcId
+
+  HttpsListener:
+    Type: AWS::ElasticLoadBalancingV2::Listener
+    Properties:
+      DefaultActions:
+        - Type: forward
+          TargetGroupArn: !Ref KeycloakTargetGroup
+      LoadBalancerArn: !Ref KeycloakLoadBalancer
+      Port: 443
+      Protocol: HTTPS
+      Certificates:
+        - CertificateArn: !Ref CertificateArn
+
+  KeycloakTargetGroup:
+    Type: AWS::ElasticLoadBalancingV2::TargetGroup
+    Properties:
+      HealthCheckPath: /auth/
+      HealthCheckProtocol: HTTP
+      Port: 80
+      Protocol: HTTP
+      TargetType: instance
+      Targets: 
+        - !Ref KeycloakEC2Instance
+      VpcId: !Ref VpcId
+
 Outputs:
   KeycloakUrl:
+    Description: DNS name of the load balancer
+    Value: !GetAtt KeycloakLoadBalancer.DNSName
+    Value: !Sub https://${KeycloakLoadBalancer.DNSName}
+  KeycloakAdminUrl:
     Description: Keycloak administrator URL
     Value: !Sub http://${KeycloakEC2Instance.PublicIp}:80
   KeycloakAdminPasswordSecretArn:
