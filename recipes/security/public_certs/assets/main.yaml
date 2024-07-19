@@ -153,7 +153,7 @@ Resources:
               mkdir -p $HOME
 
               cd /tmp
-              wget https://bootstrap.pypa.io/get-pip.py
+              wget https://bootstrap.pypa.io/pip/3.7/get-pip.py 
               python3 ./get-pip.py
               pip3 install boto3
               eval $(python3 -c "from botocore.credentials import InstanceMetadataProvider, InstanceMetadataFetcher; provider = InstanceMetadataProvider(iam_role_fetcher=InstanceMetadataFetcher(timeout=1000, num_attempts=2)); c = provider.load().get_frozen_credentials(); print(f'export AWS_ACCESS_KEY_ID={c.access_key}'); print(f'export AWS_SECRET_ACCESS_KEY={c.secret_key}'); print(f'export AWS_SESSION_TOKEN={c.token}')")
@@ -305,7 +305,7 @@ Resources:
                   mkdir -p $HOME
 
                   cd /tmp
-                  wget https://bootstrap.pypa.io/get-pip.py
+                  wget https://bootstrap.pypa.io/pip/3.7/get-pip.py 
                   python3 ./get-pip.py
                   pip3 install boto3
                   eval $(python3 -c "from botocore.credentials import InstanceMetadataProvider, InstanceMetadataFetcher; provider = InstanceMetadataProvider(iam_role_fetcher=InstanceMetadataFetcher(timeout=1000, num_attempts=2)); c = provider.load().get_frozen_credentials(); print(f'export AWS_ACCESS_KEY_ID={c.access_key}'); print(f'export AWS_SECRET_ACCESS_KEY={c.secret_key}'); print(f'export AWS_SESSION_TOKEN={c.token}')")
