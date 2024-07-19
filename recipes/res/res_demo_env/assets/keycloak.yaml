@@ -366,7 +366,7 @@ Resources:
 
 Outputs:
   KeycloakUrl:
-    Description: DNS name of the load balancer
+    Description: "Keycloak auth URL for the 'res' realm"
     Value: !Sub https://${KeycloakLoadBalancer.DNSName}
   KeycloakAdminUrl:
     Description: Keycloak administrator URL
