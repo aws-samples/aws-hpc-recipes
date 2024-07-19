@@ -9,7 +9,7 @@ Metadata:
           - Keypair
           - ServiceAccountPasswordSecretArn
           - VpcId
-          - PublicSubnet
+          - PublicSubnets
           - ServiceAccountUserDN
           - UsersDN
           - LDAPConnectionURI
@@ -32,10 +32,10 @@ Parameters:
     AllowedPattern: vpc-[0-9a-f]{17}
     ConstraintDescription: VpcId must begin with 'vpc-', only contain letters (a-f) or numbers(0-9) and must be 21 characters in length
   
-  PublicSubnet:
-    Type: AWS::EC2::Subnet::Id
-    AllowedPattern: subnet-.+
-    Description: Select a public subnet from the already selected VPC
+  PublicSubnets:
+    Type: List<AWS::EC2::Subnet::Id>
+    #AllowedPattern: subnet-.+
+    Description: Select at least two public subnets from the already selected VPC
   
   ServiceAccountUserDN:
     Type: String
@@ -160,7 +160,7 @@ Resources:
       InstanceType: t3.micro
       KeyName: !Ref Keypair
       IamInstanceProfile: !Ref KeycloakEC2InstanceProfile
-      SubnetId: !Ref PublicSubnet
+      SubnetId: !Select [0, !Ref PublicSubnets]
       SecurityGroupIds:
         - !Ref KeycloakSecurityGroup
       Tags:
@@ -325,8 +325,7 @@ Resources:
       Scheme: internet-facing
       SecurityGroups: 
         - !Ref LoadBalancerSecurityGroup
-      Subnets: 
-        - !Ref PublicSubnet 
+      Subnets: !Ref PublicSubnets
       Type: application
 
   LoadBalancerSecurityGroup:
@@ -361,7 +360,8 @@ Resources:
       Protocol: HTTP
       TargetType: instance
       Targets: 
-        - !Ref KeycloakEC2Instance
+        - Id: !Ref KeycloakEC2Instance
+          Port: 80
       VpcId: !Ref VpcId
 
 Outputs:
