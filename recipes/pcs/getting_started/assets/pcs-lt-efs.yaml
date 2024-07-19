@@ -1,5 +1,5 @@
 AWSTemplateFormatVersion: 2010-09-09
-Description: Create a launch template to support a PCS compute node group mounting EFS
+Description: Create a launch template for AWS PCS supporting a shared /home filesystem and optional /shared filesystem.
 
 Metadata:
   AWS::CloudFormation::Interface:
@@ -9,31 +9,36 @@ Metadata:
         Parameters:
           - LaunchTemplateName
       - Label:
-          default: Security
+          default: Security groups
         Parameters:
-          - VpcSecurityGroupId
+          - NodeGroupSecurityGroupIds
       - Label:
-          default: Filesystems
+          default: Filesystems (/home and optional /shared)
         Parameters:
           - EfsFilesystemId
-          - HostMountPoint
+          - FSxLustreFilesystemId
+          - FSxLustreFilesystemMountName
 
 Parameters:
 
   LaunchTemplateName:
     Type: String
-    Default: "AWSPCS-demo-launch-template"
+    Default: "AWSPCS-getting-started-lt"
     Description: Launch template name
-  VpcSecurityGroupId:
-    Type: AWS::EC2::SecurityGroup::Id
-    Description: Security group allowing access within the VPC
+  NodeGroupSecurityGroupIds:
+      Type: List<AWS::EC2::SecurityGroup::Id>
+      Description: Security group(s).
   EfsFilesystemId:
     Type: String
     Description: Amazon EFS Filesystem ID
-  HostMountPoint:
+  FSxLustreFilesystemId:
     Type: String
-    Description: Mount path on the host
-    Default: "/shared"
+    Description: (Optional) Amazon FSx for Lustre Filesystem ID
+    Default: ""
+  FSxLustreFilesystemMountName:
+    Type: String
+    Description: (Optional) Amazon FSx for Lustre Mount Name (required if FSxLustreFilesystemId is provided)
+    Default: ""
 
 Resources:
 
@@ -46,8 +51,7 @@ Resources:
           HttpEndpoint: enabled
           HttpPutResponseHopLimit: 4
           HttpTokens: required
-        SecurityGroupIds:
-          - !Ref VpcSecurityGroupId
+        SecurityGroupIds: !Ref NodeGroupSecurityGroupIds    
         UserData:
           Fn::Base64: !Sub |
             MIME-Version: 1.0
@@ -61,10 +65,15 @@ Resources:
             - amazon-efs-utils
             
             runcmd:
-            - mkdir -p ${HostMountPoint}
-            - echo "${EfsFilesystemId}:/ ${HostMountPoint} efs tls,_netdev" >> /etc/fstab
+            # Mount EFS filesystem as /home
+            - mkdir -p /tmp/home
+            - rsync -a /home/ /tmp/home
+            - echo "${EfsFilesystemId}:/ /home efs tls,_netdev" >> /etc/fstab
             - mount -a -t efs defaults
-            - chmod a+rwx ${HostMountPoint}
+            - rsync -a --ignore-existing /tmp/home/ /home
+            - rm -rf /tmp/home/
+            # If provided, mount FSxL filesystem as /shared
+            - if [ ! -z "${FSxLustreFilesystemId}" ]; then amazon-linux-extras install -y lustre=latest; mkdir -p /shared; chmod a+rwx /shared; mount -t lustre ${FSxLustreFilesystemId}.fsx.${AWS::Region}.amazonaws.com@tcp:/${FSxLustreFilesystemMountName} /shared; fi
 
             --==MYBOUNDARY==
 
