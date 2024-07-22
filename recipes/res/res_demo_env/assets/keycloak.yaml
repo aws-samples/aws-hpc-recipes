@@ -299,6 +299,27 @@ Resources:
               (crontab -l; echo "*/30 * * * * /root/bootstrap/password_rotation.sh") | crontab -
               (crontab -l; echo "*/5 * * * * /root/bootstrap/user_sync.sh") | crontab -
 
+              # Monitoring script to restart Keycloak if it goes down
+              echo -e "#!/bin/sh -x
+              exec >> /root/bootstrap/logs/userdata.log 2>&1
+              SERVER_URL=\"http://0.0.0.0:80\"
+              while true; do
+                response=\$(curl -s -o /dev/null -w \"%{http_code}\" \"\$SERVER_URL\")
+                if [ \"\$response\" != \"200\" ] && [ \"\$response\" != \"302\" ]; then
+                  echo \"Keycloak server is down. Restarting...\"
+                  cd /root/bootstrap/keycloak-$KEYCLOAK_VERSION
+                  sudo -E nohup ./bin/kc.sh start-dev --http-port 80 > keycloak.log &
+                else
+                  echo \"Keycloak server is running.\"
+                fi
+                sleep 60
+              done
+              " > /root/bootstrap/monitor_keycloak.sh
+              chmod +x /root/bootstrap/monitor_keycloak.sh
+
+              # Start the monitoring script in the background
+              nohup /root/bootstrap/monitor_keycloak.sh &
+
               # Signal stack to continue based on last command output
               /opt/aws/bin/cfn-signal -e $? --stack "${AWS::StackName}" --resource "KeycloakEC2Instance" --region "${AWS::Region}"
             - KeycloakVersion: !FindInMap [Keycloak, Config, Version]
