@@ -303,17 +303,32 @@ Resources:
               echo -e "#!/bin/sh -x
               exec >> /root/bootstrap/logs/userdata.log 2>&1
               SERVER_URL=\"http://0.0.0.0:80\"
+              RETRY_INTERVAL=10
+
               while true; do
                 response=\$(curl -s -o /dev/null -w \"%{http_code}\" \"\$SERVER_URL\")
                 if [ \"\$response\" != \"200\" ] && [ \"\$response\" != \"302\" ]; then
                   echo \"Keycloak server is down. Restarting...\"
                   cd /root/bootstrap/keycloak-$KEYCLOAK_VERSION
                   sudo -E nohup ./bin/kc.sh start-dev --http-port 80 > keycloak.log &
+
+                  server_started=false
+                  while [ \"\$server_started\" = false ]; do
+                    sleep \$RETRY_INTERVAL
+                    response=\$(curl -s -o /dev/null -w \"%{http_code}\" \"\$SERVER_URL\")
+                    if [ \"\$response\" == \"200\" ] || [ \"\$response\" == \"302\" ]; then
+                      echo \"Keycloak server restarted successfully.\"
+                      server_started=true
+                    else
+                      echo \"Waiting for Keycloak server to start...\"
+                    fi
+                  done
                 else
                   echo \"Keycloak server is running.\"
                 fi
                 sleep 60
               done
+
               " > /root/bootstrap/monitor_keycloak.sh
               chmod +x /root/bootstrap/monitor_keycloak.sh
 
