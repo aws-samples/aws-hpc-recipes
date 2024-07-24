@@ -162,6 +162,29 @@ Resources:
               mkdir -p /root/bootstrap/logs/
               exec > /root/bootstrap/logs/userdata.log 2>&1
 
+              # Create utils.sh script
+              echo -e "#!/bin/sh
+              wait_for_server() {
+                SERVER_URL=\$1
+                MAX_ATTEMPTS=\$2
+                RETRY_INTERVAL=\$3
+                attempt=0
+                while [ \$attempt -lt \$MAX_ATTEMPTS ]; do
+                  response=\$(curl -s -o /dev/null -w \"%{http_code}\" \"\$SERVER_URL\")
+                  if [ \"\$response\" == \"200\" ] || [ \"\$response\" == \"302\" ]; then
+                    echo \"Server is up!\"
+                    return 0
+                  else
+                    echo \"Server is not yet up. Retrying in \$RETRY_INTERVAL seconds...\"
+                    sleep \$RETRY_INTERVAL
+                    ((attempt++))
+                  fi
+                done
+                echo \"Server is not up after \$MAX_ATTEMPTS attempts, exiting...\"
+                return 1
+              }
+              " > /root/bootstrap/utils.sh
+
               #Install java17
               MAX_ATTEMPTS=5
               RETRY_INTERVAL=5
@@ -195,23 +218,14 @@ Resources:
               SERVER_URL="http://0.0.0.0:80"
               MAX_ATTEMPTS=15
               RETRY_INTERVAL=10
-              attempt=0
-              while [ $attempt -lt $MAX_ATTEMPTS ]; do
-                response=$(curl -s -o /dev/null -w "%{http_code}" "$SERVER_URL")
-                if [ "$response" == "200" ] || [ "$response" == "302" ]; then
-                  echo "Server is up!"
-                  break
-                else
-                  echo "Server is not yet up. Retrying in $RETRY_INTERVAL seconds..."
-                  sleep $RETRY_INTERVAL
-                  ((attempt++))
-                  if [ $attempt == $MAX_ATTEMPTS ]; then
-                    echo "Server is not up, exiting.."
-                    /opt/aws/bin/cfn-signal -e 1 --stack "${AWS::StackName}" --resource "KeycloakEC2Instance" --region "${AWS::Region}"
-                    sleep 30
-                  fi
-                fi
-              done
+
+              # Initial setup to wait for the server to be up
+              . /root/bootstrap/utils.sh
+              wait_for_server "$SERVER_URL" $MAX_ATTEMPTS $RETRY_INTERVAL
+              if [ $? -ne 0 ]; then
+                /opt/aws/bin/cfn-signal -e 1 --stack "${AWS::StackName}" --resource "KeycloakEC2Instance" --region "${AWS::Region}"
+                sleep 30
+              fi
 
               echo "Keycloak server is up"
               # Login to Keycloak
@@ -298,6 +312,41 @@ Resources:
 
               (crontab -l; echo "*/30 * * * * /root/bootstrap/password_rotation.sh") | crontab -
               (crontab -l; echo "*/5 * * * * /root/bootstrap/user_sync.sh") | crontab -
+
+              # Monitoring script to restart Keycloak if it goes down
+              echo -e "#!/bin/sh -x
+              exec >> /root/bootstrap/logs/userdata.log 2>&1
+              . /root/bootstrap/utils.sh
+              SERVER_URL=\"http://0.0.0.0:80\"
+              MAX_ATTEMPTS=15
+              RETRY_INTERVAL=10
+
+              while true; do
+                echo \"Start monitoring keycloak server...\"
+                response=\$(curl -s -o /dev/null -w \"%{http_code}\" \"\$SERVER_URL\")
+                if [ \"\$response\" == \"200\" ] || [ \"\$response\" == \"302\" ]; then
+                  echo \"Keycloak server is running.\"
+                else
+                  # Check for running Keycloak processes and kill them if found
+                  if pgrep -f \"keycloak\" > /dev/null; then
+                    pkill -f \"keycloak\"
+                    echo \"Killed existing Keycloak processes.\"
+                  else
+                    echo \"No Keycloak processes found.\"
+                  fi
+                  echo \"Keycloak server is down. Restarting...\"
+
+                  cd /root/bootstrap/keycloak-$KEYCLOAK_VERSION
+                  sudo -E nohup ./bin/kc.sh start-dev --http-port 80 > keycloak.log &
+                  wait_for_server \"\$SERVER_URL\" \$MAX_ATTEMPTS \$RETRY_INTERVAL
+                fi
+                sleep 60
+              done
+              " > /root/bootstrap/monitor.sh
+              chmod +x /root/bootstrap/monitor.sh
+
+              # Start the monitoring script in the background
+              nohup /root/bootstrap/monitor.sh &
 
               # Signal stack to continue based on last command output
               /opt/aws/bin/cfn-signal -e $? --stack "${AWS::StackName}" --resource "KeycloakEC2Instance" --region "${AWS::Region}"
