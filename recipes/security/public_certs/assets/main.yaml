@@ -208,7 +208,7 @@ Resources:
               - Action:
                 - ssm:GetParameter
                 Effect: Allow
-                Resource: "arn:aws:ssm:us-east-1::parameter/aws/service/ami-amazon-linux-latest/amzn2-ami-hvm-x86_64-gp2"
+                Resource: !Sub "arn:${AWS::Partition}:ssm:${AWS::Region}::parameter/aws/service/ami-amazon-linux-latest/amzn2-ami-hvm-x86_64-gp2"
         - PolicyName: LaunchEC2Instance
           PolicyDocument:
             Version: 2012-10-17
