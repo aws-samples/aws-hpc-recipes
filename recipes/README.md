@@ -18,7 +18,7 @@ You can use an HPC Recipe for AWS in several ways:
 
 ### :arrow_right: db: Database management
 
-#### slurm_accounting_db ![tag](https://img.shields.io/badge/-aurora-%237DCEA0) ![tag](https://img.shields.io/badge/-core-%23146EB4) ![tag](https://img.shields.io/badge/-parallelcluster-%23FF9900) ![tag](https://img.shields.io/badge/-serverless-%23AAB7B8) 
+#### slurm_accounting_db ![tag](https://img.shields.io/badge/-aurora=-%23AAB7B8) ![tag](https://img.shields.io/badge/-core-%23146EB4) ![tag](https://img.shields.io/badge/-parallelcluster-%23FF9900) ![tag](https://img.shields.io/badge/-serverless-%23AAB7B8) 
 
 * **About**: Set up a replicated Amazon Aurora database that can support Slurm accounting.
 * **Usage**: [README.md](db/slurm_accounting_db/README.md)
@@ -67,6 +67,11 @@ You can use an HPC Recipe for AWS in several ways:
 
 * **About**: Demonstrate decoupled shared storage using Amazon EFS.
 * **Usage**: [README.md](pcluster/decoupled_storage/README.md)
+
+#### isolated-clusters ![tag](https://img.shields.io/badge/-parallelcluster-%23FF9900) 
+
+* **About**: Provides templates to configure AWS ParallelCluster for isolated environments/those with no Internet access.
+* **Usage**: [README.md](pcluster/isolated-clusters/README.md)
 
 #### latest ![tag](https://img.shields.io/badge/-core-%23146EB4) ![tag](https://img.shields.io/badge/-parallelcluster-%23FF9900) 
 
