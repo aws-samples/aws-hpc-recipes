@@ -1,10 +1,10 @@
 ---
 # The name of the recipe. This has the same character requirements as namespace.
-name: spack_shared_fs
+name: spack_for_pcs
 # The version of the recipe. Must be compatible with semantic versioning.
 version: "1.0.0"
 # A short summary description of the recipe
-description: Install Spack on a shared filesystem in PCS
+description: Install Spack on a shared filesystem in AWS PCS
 # The path to the README for the recipe relative to its root directory.
 readme: README.md
 # Optional URL for external documentation
@@ -19,7 +19,6 @@ authors:
 tags:
   - pcs
   - spack
-  - efs
   - beta
 # A list of file glob-like patterns used to filter any files or directories that should not be included in the S3 release. 
 build_ignore: []
