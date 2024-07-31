@@ -50,6 +50,11 @@ Resources:
     Properties:
       LaunchTemplateName: !Sub 'login-${AWS::StackName}'
       LaunchTemplateData:
+        TagSpecifications:
+          - ResourceType: instance
+            Tags:
+              - Key: HPCRecipes
+                Value: "true"
         MetadataOptions:
           HttpEndpoint: enabled
           HttpPutResponseHopLimit: 4
@@ -89,6 +94,11 @@ Resources:
     Properties:
       LaunchTemplateName: !Sub 'compute-${AWS::StackName}'
       LaunchTemplateData:
+        TagSpecifications:
+          - ResourceType: instance
+            Tags:
+              - Key: HPCRecipes
+                Value: "true"
         MetadataOptions:
           HttpEndpoint: enabled
           HttpPutResponseHopLimit: 4

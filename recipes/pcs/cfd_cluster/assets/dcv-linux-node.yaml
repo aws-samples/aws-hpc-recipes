@@ -8,7 +8,6 @@ Parameters:
     AllowedValues:
     - AmazonLinux2-x64
     - AmazonLinux2-x64-Graphics-Intensive
-    - AmazonLinux2-ARM
   Password:
     Description: Password for "dcvuser" on Linux instances. The default password is Ch4ng3M3!
     Default: Ch4ng3M3!
@@ -19,7 +18,7 @@ Parameters:
       of the following sets: lowercase letters, uppercase letters, base 10 digits,
       non-alphanumeric characters'
     NoEcho: 'true'
-  KeyName:
+  SshKeyName:
     Description: Name of an existing EC2 KeyPair to assign to the DCV instance
     Type: AWS::EC2::KeyPair::KeyName
     ConstraintDescription: Must be the name of an existing EC2 KeyPair.
@@ -46,17 +45,22 @@ Parameters:
     Type: Number
     Default: '50'
     MinValue: '30'
-  ExistingSubnetId:
-    Description: Id of an existing Subnet to use.
+  ClusterId:
+    Description: Id of an existing PCS cluster
     Type: String
-    Default: ''
+  PublicSubnetId:
+    Description: Id of a public subnet in the same VPC as the PCS cluster.
+    Type: AWS::EC2::Subnet::Id
   ClusterSecurityGroupId:
     Description: Id for the PCS cluster security group
     Type: AWS::EC2::SecurityGroup::Id
   FSxLustreFilesystemId:
     Type: String
-    Description: Id of an existing FSx for Lustre file system to mount at /fsx.
-
+    Description: Id of the FSx for Lustre file system mounted in the PCS cluster.
+  FSxLustreMountDirectory:
+    Type: String
+    Description: Mount directory for the FSx for Lustre file system.
+    Default: /shared
 
 Metadata: 
   AWS::CloudFormation::Interface: 
@@ -67,16 +71,20 @@ Metadata:
         Parameters: 
           - OperatingSystem
           - Password
-          - KeyName
+          - SshKeyName
           - AllowList
           - StreamingPort
           - DiskSize
       - 
         Label: 
-          default: "Network Configuration"
-        Parameters: 
-          - ExistingSubnetId
+          default: "PCS Cluster Configuration"
+        Parameters:
+          - ClusterId
+          - PublicSubnetId
           - ClusterSecurityGroupId
+          - FSxLustreFilesystemId
+          - FSxLustreMountDirectory
+          
 Mappings:
   AmiMap:
     AmazonLinux2-x64:
@@ -85,9 +93,6 @@ Mappings:
     AmazonLinux2-x64-Graphics-Intensive:
       Name: /aws/service/marketplace/prod-copiwia5b4a2c/latest
       InstanceType: g4dn.xlarge
-    AmazonLinux2-ARM:
-      Name: /aws/service/marketplace/prod-5cck6e3zgohpy/latest
-      InstanceType: m6g.xlarge
 Conditions:
   CreateLinuxResources: !Or 
       - !Equals ["AmazonLinux2-x64", !Ref OperatingSystem]
@@ -173,7 +178,7 @@ Resources:
     Type: Custom::GetVPC
     Properties:
       ServiceToken: !Sub ${GetVpcIdForSubnetId.Arn}
-      SubnetId: !Ref ExistingSubnetId
+      SubnetId: !Ref PublicSubnetId
 
   DcvHostSecurityGroup:
     Type: AWS::EC2::SecurityGroup
@@ -258,11 +263,11 @@ Resources:
           VolumeSize: !Ref DiskSize
       InstanceType: !FindInMap [AmiMap, !Ref OperatingSystem, InstanceType]
       KeyName:
-        Ref: KeyName
+        Ref: SshKeyName
       NetworkInterfaces:
         - AssociatePublicIpAddress: 'True'
           DeleteOnTermination: 'True'
-          SubnetId: !Ref ExistingSubnetId
+          SubnetId: !Ref PublicSubnetId
           DeviceIndex: '0'
           GroupSet:
             - Fn::GetAtt:
@@ -276,7 +281,10 @@ Resources:
         Ref: DcvHostInstanceProfile
       Tags:
       - Key: Name
-        Value: !Sub 'DcvHostLinux-${AWS::StackName}'
+        Value: !Join 
+          - '-'
+          - - 'DCV-Host'
+            - !Ref ClusterId
       - Key: HPCRecipes
         Value: "true"
       UserData:
@@ -352,10 +360,10 @@ Resources:
                 Fn::Sub:
                 - |
                   amazon-linux-extras install -y lustre
-                  mkdir -p /fsx
-                  mount -t lustre -o relatime,flock ${FSxLustreDns}.fsx.${AWS::Region}.amazonaws.com@tcp:/${FSxLustreMountName} /fsx
-                  chmod 777 /fsx
-                - { FSxLustreDns: !GetAtt FSxLustreLookupCustomResource.DNSName, FSxLustreMountName: !GetAtt FSxLustreLookupCustomResource.MountName }
+                  mkdir -p ${MountDir}
+                  mount -t lustre -o relatime,flock ${FSxLustreDns}@tcp:/${FSxLustreMountName} /fsx
+                  chmod 777 ${MountDir}
+                - { FSxLustreDns: !GetAtt FSxLustreLookup.DNSName, FSxLustreMountName: !GetAtt FSxLustreLookup.MountName, MountDir: !Ref FSxLustreMountDirectory }
               cwd: "~"
               ignoreErrors: 'false'
 
@@ -493,7 +501,7 @@ Resources:
                       'Reason': str(e)
                   })
 
-  FSxLustreLookupCustomResource:
+  FSxLustreLookup:
     Type: Custom::FSxLustreLookup
     Properties:
       ServiceToken: !GetAtt FSxLustreLookupLambda.Arn
