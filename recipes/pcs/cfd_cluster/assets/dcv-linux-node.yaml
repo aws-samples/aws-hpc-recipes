@@ -1,0 +1,500 @@
+---
+AWSTemplateFormatVersion: '2010-09-09'
+Parameters:
+  OperatingSystem:
+    Description: The Operating System type to stream
+    Type: String
+    Default: AmazonLinux2-x64-Graphics-Intensive
+    AllowedValues:
+    - AmazonLinux2-x64
+    - AmazonLinux2-x64-Graphics-Intensive
+    - AmazonLinux2-ARM
+  Password:
+    Description: Password for "dcvuser" on Linux instances. The default password is Ch4ng3M3!
+    Default: Ch4ng3M3!
+    MinLength: '8'
+    Type: String
+    AllowedPattern: "^((?=.*[a-z])(?=.*[A-Z])(?=.*[\\d])|(?=.*[a-z])(?=.*[A-Z])(?=.*[\\W_])|(?=.*[a-z])(?=.*[\\d])(?=.*[\\W_])|(?=.*[A-Z])(?=.*[\\d])(?=.*[\\W_])).+$"
+    ConstraintDescription: 'Password must contain at least one element from three
+      of the following sets: lowercase letters, uppercase letters, base 10 digits,
+      non-alphanumeric characters'
+    NoEcho: 'true'
+  KeyName:
+    Description: Name of an existing EC2 KeyPair to assign to the DCV instance
+    Type: AWS::EC2::KeyPair::KeyName
+    ConstraintDescription: Must be the name of an existing EC2 KeyPair.
+  AllowList:
+    Description: The source CIDR range allowed to connect to the DCV instance, leave
+      0.0.0.0/0 to connect from any address. To limit access to a single IP address
+      use x.x.x.x/32
+    Type: String
+    MinLength: '9'
+    MaxLength: '18'
+    Default: 0.0.0.0/0
+    AllowedPattern: "(\\d{1,3})\\.(\\d{1,3})\\.(\\d{1,3})\\.(\\d{1,3})/(\\d{1,2})"
+    ConstraintDescription: must be a valid IP CIDR range of the form x.x.x.x/x.
+  StreamingPort:
+    Description: The port to connect to the DCV instance on
+    Type: String
+    MinLength: '1'
+    MaxLength: '5'
+    Default: '8443'
+    AllowedPattern: "^(102[4-9]|10[3-9]\\d|1[1-9]\\d{2}|[2-9]\\d{3}|[1-5]\\d{4}|6[0-4]\\d{3}|65[0-4]\\d{2}|655[0-2]\\d|6553[0-5])$"
+    ConstraintDescription: must be a valid TCP port 1024 - 65535.
+  DiskSize:
+    Description: Disk size in GB
+    Type: Number
+    Default: '50'
+    MinValue: '30'
+  ExistingSubnetId:
+    Description: Id of an existing Subnet to use.
+    Type: String
+    Default: ''
+  ClusterSecurityGroupId:
+    Description: Id for the PCS cluster security group
+    Type: AWS::EC2::SecurityGroup::Id
+  FSxLustreFilesystemId:
+    Type: String
+    Description: Id of an existing FSx for Lustre file system to mount at /fsx.
+
+
+Metadata: 
+  AWS::CloudFormation::Interface: 
+    ParameterGroups: 
+      - 
+        Label: 
+          default: "DCV Host Configuration"
+        Parameters: 
+          - OperatingSystem
+          - Password
+          - KeyName
+          - AllowList
+          - StreamingPort
+          - DiskSize
+      - 
+        Label: 
+          default: "Network Configuration"
+        Parameters: 
+          - ExistingSubnetId
+          - ClusterSecurityGroupId
+Mappings:
+  AmiMap:
+    AmazonLinux2-x64:
+      Name: /aws/service/marketplace/prod-copiwia5b4a2c/latest
+      InstanceType: t2.medium
+    AmazonLinux2-x64-Graphics-Intensive:
+      Name: /aws/service/marketplace/prod-copiwia5b4a2c/latest
+      InstanceType: g4dn.xlarge
+    AmazonLinux2-ARM:
+      Name: /aws/service/marketplace/prod-5cck6e3zgohpy/latest
+      InstanceType: m6g.xlarge
+Conditions:
+  CreateLinuxResources: !Or 
+      - !Equals ["AmazonLinux2-x64", !Ref OperatingSystem]
+      - !Equals ["AmazonLinux2-x64-Graphics-Intensive", !Ref OperatingSystem]
+      - !Equals ["AmazonLinux2-ARM", !Ref OperatingSystem]
+
+Outputs:
+  LinuxInstanceId:
+    Value: !Ref DcvHostLinux
+    Condition: CreateLinuxResources
+  LinuxPublicDNS:
+    Value: !GetAtt 
+      - DcvHostLinux
+      - PublicDnsName
+    Condition: CreateLinuxResources
+    Description: DNS Name of the newly created EC2 instance
+  LinuxPublicIp:
+    Value: !GetAtt 
+      - DcvHostLinux
+      - PublicIp
+    Condition: CreateLinuxResources
+    Description: Public Ip of the newly created EC2 instance
+  LinuxDcvURL:
+    Value: !Join 
+      - ''
+      - - 'https://'
+        - !GetAtt 
+          - DcvHostLinux
+          - PublicIp
+        - !Sub ':${StreamingPort}'
+    Condition: CreateLinuxResources
+    Description: Dcv connection URL for the newly created EC2 instance
+Resources:
+
+  DescribeSubnetsRole:
+    Type: AWS::IAM::Role
+    Properties:
+      AssumeRolePolicyDocument:
+        Version: '2012-10-17'
+        Statement:
+          - Action: sts:AssumeRole
+            Effect: Allow
+            Principal:
+              Service: lambda.amazonaws.com
+      ManagedPolicyArns:
+        - arn:aws:iam::aws:policy/service-role/AWSLambdaBasicExecutionRole
+      Policies:
+        - PolicyName: DescribeSubnets
+          PolicyDocument:
+            Version: '2012-10-17'
+            Statement:
+              - Action: ec2:DescribeSubnets
+                Effect: Allow
+                Resource: "*"
+
+  GetVpcIdForSubnetId:
+    Type: AWS::Lambda::Function
+    Properties:
+      Runtime: python3.11
+      Handler: index.handler
+      Role: !Sub ${DescribeSubnetsRole.Arn}
+      Timeout: 60
+      Code:
+        ZipFile: |
+          import boto3
+          import cfnresponse
+          import json
+          import traceback
+
+          def handler(event, context):
+            try:
+              response = boto3.client('ec2').describe_subnets(
+                  SubnetIds=[event['ResourceProperties']['SubnetId']]
+              )
+
+              id = response['Subnets'][0]['VpcId']
+
+              cfnresponse.send(event, context, cfnresponse.SUCCESS, {}, id)
+            except:
+              traceback.print_last()
+              cfnresponse.send(event, context, cfnresponse.FAIL, {}, "ok")
+  CustomVpcId:
+    Type: Custom::GetVPC
+    Properties:
+      ServiceToken: !Sub ${GetVpcIdForSubnetId.Arn}
+      SubnetId: !Ref ExistingSubnetId
+
+  DcvHostSecurityGroup:
+    Type: AWS::EC2::SecurityGroup
+    Properties:
+      GroupDescription: dcv-host-security-group
+      SecurityGroupIngress:
+      - CidrIp: 
+          Ref: AllowList
+        Description: Allow DCV TCP inbound
+        FromPort: 
+          Ref: StreamingPort
+        IpProtocol: tcp
+        ToPort: 
+          Ref: StreamingPort
+      - CidrIp: 
+          Ref: AllowList
+        Description: Allow DCV UDP inbound
+        FromPort: 
+          Ref: StreamingPort
+        IpProtocol: udp
+        ToPort: 
+          Ref: StreamingPort
+      VpcId: !Ref CustomVpcId
+
+  DcvHostRole:
+    Type: AWS::IAM::Role
+    Properties:
+      AssumeRolePolicyDocument:
+        Statement:
+        - Action: sts:AssumeRole
+          Effect: Allow
+          Principal:
+            Service: ec2.amazonaws.com
+        Version: '2012-10-17'
+      ManagedPolicyArns:
+      - Fn::Join:
+        - ''
+        - - 'arn:'
+          - Ref: AWS::Partition
+          - ":iam::aws:policy/AmazonS3ReadOnlyAccess"
+      - Fn::Join:
+        - ''
+        - - 'arn:'
+          - Ref: AWS::Partition
+          - ":iam::aws:policy/AmazonSSMManagedInstanceCore"
+  
+  DcvHostRoleDefaultPolicy:
+    Type: AWS::IAM::Policy
+    Properties:
+      PolicyDocument:
+        Statement:
+        - Action: s3:GetObject
+          Effect: Allow
+          Resource: !Sub 'arn:${AWS::Partition}:s3:::dcv-license.${AWS::Region}/*'
+        - Action:
+          - cloudformation:DescribeStackResource
+          - cloudformation:SignalResource
+          Effect: Allow
+          Resource:
+            Ref: AWS::StackId
+        Version: '2012-10-17'
+      PolicyName: DcvHostRoleDefaultPolicy
+      Roles:
+      - Ref: DcvHostRole
+  
+  DcvHostInstanceProfile:
+    Type: AWS::IAM::InstanceProfile
+    Properties:
+      Roles:
+      - Ref: DcvHostRole
+  
+  DcvHostLinux:
+    Type: AWS::EC2::Instance
+    Condition: CreateLinuxResources
+    Properties:
+      ImageId: !Sub
+        - '{{resolve:ssm:${Value}}}'
+        - { Value: !FindInMap [AmiMap, !Ref OperatingSystem, Name] }
+      BlockDeviceMappings:
+      - DeviceName: "/dev/xvda"
+        Ebs:
+          VolumeSize: !Ref DiskSize
+      InstanceType: !FindInMap [AmiMap, !Ref OperatingSystem, InstanceType]
+      KeyName:
+        Ref: KeyName
+      NetworkInterfaces:
+        - AssociatePublicIpAddress: 'True'
+          DeleteOnTermination: 'True'
+          SubnetId: !Ref ExistingSubnetId
+          DeviceIndex: '0'
+          GroupSet:
+            - Fn::GetAtt:
+              - DcvHostSecurityGroup
+              - GroupId
+            - !Ref ClusterSecurityGroupId
+            - Fn::GetAtt:
+              - VpcDefaultSecurityGroup
+              - GroupId
+      IamInstanceProfile:
+        Ref: DcvHostInstanceProfile
+      Tags:
+      - Key: Name
+        Value: !Sub 'DcvHostLinux-${AWS::StackName}'
+      - Key: HPCRecipes
+        Value: "true"
+      UserData:
+        Fn::Base64: !Sub |
+           #!/bin/bash -xe
+           yum update -y aws-cfn-bootstrap
+           /opt/aws/bin/cfn-init -v --stack ${AWS::StackName} --resource DcvHostLinux --region ${AWS::Region}
+           /opt/aws/bin/cfn-signal -e $? --stack ${AWS::StackName} --resource DcvHostLinux --region ${AWS::Region}
+    CreationPolicy:
+      ResourceSignal:
+        Count: 1
+        Timeout: PT20M
+    Metadata:
+      AWS::CloudFormation::Init:
+        config:
+          files:
+            "/usr/local/dcv-server-linux.sh":
+              content: !Sub |
+                #!/bin/bash
+                # Validate parameters
+                if [ -z "$1" ]
+                  then
+                    echo "Missing username as 1st parameter"
+                    exit
+                fi
+
+                if [ -z "$2" ]
+                  then
+                    echo "Missing password as 2nd parameter"
+                    exit
+                fi
+
+                if [ -z "$3" ]
+                  then
+                    echo "Missing streaming port as 3rd parameter"
+                    exit
+                fi
+
+                # Enable Quick & automatic-console-session
+                sed -i '/^\[connectivity\]/a enable-quic-frontend=true' /etc/dcv/dcv.conf
+                sed -i "/^\[connectivity\]/a web-port=$3" /etc/dcv/dcv.conf
+                sed -i "/^\[connectivity\]/a quick-port=$3" /etc/dcv/dcv.conf
+                sed -i '/^\[session-management]/a create-session = true' /etc/dcv/dcv.conf
+                sed -i "/^\[session-management\/automatic-console-session]/a owner = \"$1\"" /etc/dcv/dcv.conf
+                sed -i "/^\[session-management\/automatic-console-session]/a storage-root = \"%home%/session-storage\"" /etc/dcv/dcv.conf
+
+                systemctl restart dcvserver
+
+                # Create session storage dir for all users
+                mkdir /etc/skel/session-storage
+
+                # Create dcvuser and add to sudoers
+                adduser $1
+                echo "$1:$2" | chpasswd
+                usermod -a -G wheel $1
+              mode: '000644'
+              owner: root
+              group: root
+          commands:
+            dcv-server-linux:
+              command:
+                Fn::Join:
+                - ''
+                - - sh /usr/local/dcv-server-linux.sh
+                  - " dcvuser "
+                  - Ref: Password
+                  - " "
+                  - Ref: StreamingPort
+              cwd: "~"
+              ignoreErrors: 'false'
+            mount-fsxl-al2:
+              command: 
+                Fn::Sub:
+                - |
+                  amazon-linux-extras install -y lustre
+                  mkdir -p /fsx
+                  mount -t lustre -o relatime,flock ${FSxLustreDns}.fsx.${AWS::Region}.amazonaws.com@tcp:/${FSxLustreMountName} /fsx
+                  chmod 777 /fsx
+                - { FSxLustreDns: !GetAtt FSxLustreLookupCustomResource.DNSName, FSxLustreMountName: !GetAtt FSxLustreLookupCustomResource.MountName }
+              cwd: "~"
+              ignoreErrors: 'false'
+
+  SgLambdaExecutionRole:
+    Type: 'AWS::IAM::Role'
+    Properties:
+      AssumeRolePolicyDocument:
+        Version: '2012-10-17'
+        Statement:
+          - Effect: Allow
+            Principal:
+              Service: lambda.amazonaws.com
+            Action: 'sts:AssumeRole'
+      ManagedPolicyArns:
+        - arn:aws:iam::aws:policy/service-role/AWSLambdaBasicExecutionRole
+      Policies:
+        - PolicyName: EC2DescribeSecurityGroups
+          PolicyDocument:
+            Version: '2012-10-17'
+            Statement:
+              - Effect: Allow
+                Action:
+                  - 'ec2:DescribeSecurityGroups'
+                Resource: '*'
+
+  SgLambdaFunction:
+    Type: 'AWS::Lambda::Function'
+    Properties:
+      Handler: index.lambda_handler
+      Role: !GetAtt SgLambdaExecutionRole.Arn
+      Runtime: python3.11
+      Code:
+        ZipFile: |
+          import boto3
+          import cfnresponse
+          
+          def lambda_handler(event, context):
+              vpc_id = event['ResourceProperties'].get('VpcId')
+              
+              if event['RequestType'] == 'Delete':
+                  cfnresponse.send(event, context, cfnresponse.SUCCESS, {})
+                  return
+              
+              if not vpc_id:
+                  cfnresponse.send(event, context, cfnresponse.FAILED, {'error': 'VPC ID is required'})
+                  return
+              
+              ec2 = boto3.client('ec2')
+              
+              try:
+                  response = ec2.describe_security_groups(
+                      Filters=[
+                          {'Name': 'vpc-id', 'Values': [vpc_id]},
+                          {'Name': 'group-name', 'Values': ['default']}
+                      ]
+                  )
+                  
+                  if response['SecurityGroups']:
+                      default_sg = response['SecurityGroups'][0]
+                      result = {
+                          'VpcId': vpc_id,
+                          'GroupId': default_sg['GroupId'],
+                          'GroupName': default_sg['GroupName']
+                      }
+                      cfnresponse.send(event, context, cfnresponse.SUCCESS, result, result['GroupId'])
+                  else:
+                      cfnresponse.send(event, context, cfnresponse.FAILED, {'error': f'No default security group found for VPC {vpc_id}'})
+              
+              except Exception as e:
+                  cfnresponse.send(event, context, cfnresponse.FAILED, {'error': str(e)})
+
+  VpcDefaultSecurityGroup:
+    Type: 'Custom::DefaultSecurityGroupLookup'
+    Properties:
+      ServiceToken: !GetAtt SgLambdaFunction.Arn
+      VpcId: !Ref CustomVpcId
+
+  FSxLustreLookupLambdaRole:
+    Type: AWS::IAM::Role
+    Properties:
+      AssumeRolePolicyDocument:
+        Version: '2012-10-17'
+        Statement:
+          - Effect: Allow
+            Principal:
+              Service: lambda.amazonaws.com
+            Action: sts:AssumeRole
+      Policies:
+        - PolicyName: FSxLustreLookupPolicy
+          PolicyDocument:
+            Version: '2012-10-17'
+            Statement:
+              - Effect: Allow
+                Action:
+                  - fsx:DescribeFileSystems
+                Resource: '*'
+      ManagedPolicyArns:
+        - arn:aws:iam::aws:policy/service-role/AWSLambdaBasicExecutionRole
+
+  FSxLustreLookupLambda:
+    Type: AWS::Lambda::Function
+    Properties:
+      Handler: index.lambda_handler
+      Role: !GetAtt FSxLustreLookupLambdaRole.Arn
+      Runtime: python3.11
+      Timeout: 30
+      Code:
+        ZipFile: |
+          import boto3
+          import cfnresponse
+
+          def lambda_handler(event, context):
+              fsx_client = boto3.client('fsx')
+              
+              try:
+                  filesystem_id = event['ResourceProperties']['FilesystemId']
+                  
+                  response = fsx_client.describe_file_systems(FileSystemIds=[filesystem_id])
+                  
+                  if 'FileSystems' in response and len(response['FileSystems']) > 0:
+                      filesystem = response['FileSystems'][0]
+                      dns_name = filesystem['DNSName']
+                      mount_name = filesystem['LustreConfiguration']['MountName']
+                      
+                      cfnresponse.send(event, context, cfnresponse.SUCCESS, {
+                          'DNSName': dns_name,
+                          'MountName': mount_name
+                      })
+                  else:
+                      cfnresponse.send(event, context, cfnresponse.FAILED, {
+                          'Reason': f'Filesystem {filesystem_id} not found'
+                      })
+              except Exception as e:
+                  cfnresponse.send(event, context, cfnresponse.FAILED, {
+                      'Reason': str(e)
+                  })
+
+  FSxLustreLookupCustomResource:
+    Type: Custom::FSxLustreLookup
+    Properties:
+      ServiceToken: !GetAtt FSxLustreLookupLambda.Arn
+      FilesystemId: !Ref FSxLustreFilesystemId
