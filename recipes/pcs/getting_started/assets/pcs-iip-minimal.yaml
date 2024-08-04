@@ -1,5 +1,5 @@
 AWSTemplateFormatVersion: 2010-09-09
-Description: Minimal IAM instance profile for PCS compute node groups
+Description: Minimal IAM instance profile for AWS PCS compute node groups
 
 Metadata:
   AWS::CloudFormation::Interface:

@@ -1,5 +1,5 @@
 AWSTemplateFormatVersion: 2010-09-09
-Description: Create a launch template for AWS PCS supporting a shared /home filesystem and optional /shared filesystem.
+Description: Launch templates for AWS PCS login and compute node groups, supporting shared EFS and FSx for Lustre file systems
 
 Metadata:
   AWS::CloudFormation::Interface:
@@ -25,20 +25,19 @@ Parameters:
     Description: Cluster VPC 'default' security group. Make sure you choose the one from your cluster VPC!
   ClusterSecurityGroupId:
     Type: AWS::EC2::SecurityGroup::Id
-    Description: Security group for PCS controller, compute nodes, and login nodes
+    Description: Security group for PCS cluster controller and nodes.
   SshSecurityGroupId:
     Type: AWS::EC2::SecurityGroup::Id
     Description: Security group for SSH into login nodes
   SshKeyName:
     Type: AWS::EC2::KeyPair::KeyName
-    Description: SSH key name for login nodes
-    Default: ''
+    Description: SSH key name for access to login nodes
   EfsFilesystemId:
     Type: String
-    Description: Amazon EFS Filesystem ID
+    Description: Amazon EFS file system Id
   FSxLustreFilesystemId:
     Type: String
-    Description: Amazon FSx for Lustre filesystem ID
+    Description: Amazon FSx for Lustre file system Id
   FSxLustreFilesystemMountName:
     Type: String
     Description: Amazon FSx for Lustre mount name
@@ -108,12 +107,6 @@ Resources:
           - !Ref ClusterSecurityGroupId
           - !Ref VpcDefaultSecurityGroupId
         KeyName: !Ref SshKeyName
-        BlockDeviceMappings:
-          - DeviceName: /dev/xvda  # Root volume
-            Ebs:
-              VolumeType: gp3
-              VolumeSize: 128 
-              DeleteOnTermination: true
         UserData:
           Fn::Base64: !Sub |
             MIME-Version: 1.0
@@ -141,14 +134,14 @@ Resources:
 
 Outputs:
   LoginLaunchTemplateId:
-    Description: "Login template ID"
+    Description: "Login nodes template ID"
     Value: !Ref LoginLaunchTemplate
   LoginLaunchTemplateName:
-    Description: "Login template name"
+    Description: "Login nodes template name"
     Value: !Sub 'login-${AWS::StackName}'
   ComputeLaunchTemplateId:
-    Description: "Compute template ID"
+    Description: "Compute nodes template ID"
     Value: !Ref ComputeLaunchTemplate
   ComputeLaunchTemplateName:
-    Description: "Compute template name"
+    Description: "Compute nodes template name"
     Value: !Sub 'compute-${AWS::StackName}'
