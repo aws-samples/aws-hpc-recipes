@@ -4,7 +4,7 @@ name: getting_started
 # The version of the recipe. Must be compatible with semantic versioning.
 version: "1.0.0"
 # A short summary description of the recipe
-description: Cloudformation and other assets to get started with AWS PCS"
+description: Supports "Getting Started with AWS PCS" in AWS PCS user guide.
 # The path to the README for the recipe relative to its root directory.
 readme: README.md
 # Optional URL for external documentation
@@ -18,11 +18,12 @@ authors:
 tags:
   - pcs
   - efs
+  - fsx
   - iam
-  - beta
+  - ec2
 # A list of file glob-like patterns used to filter any files or directories that should not be included in the S3 release. 
 build_ignore: []
 # Recipe type
-type: other
+type: cloudformation
 # Default asset path
 default: 
