@@ -1,5 +1,5 @@
 AWSTemplateFormatVersion: 2010-09-09
-Description: Creates a security group that enables EFA traffic.
+Description: Create a security group to enables EFA traffic
 
 Parameters:
   SecurityGroupName:

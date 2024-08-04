@@ -1,28 +1,26 @@
 AWSTemplateFormatVersion: 2010-09-09
-Description: Create a launch template that enables EFA on instances in a PCS node group
+Description: Create a launch template that enables EFA on instances in an AWS PCS node group
 
 Metadata:
   AWS::CloudFormation::Interface:
     ParameterGroups:
-      - Label:
-          default: Launch Template
-        Parameters:
-          - LaunchTemplateName
       - Label:
           default: Networking
         Parameters:
           - NumberOfNetworkCards
           - VpcId
           - NodeGroupSubnetId
-          - ClusterSecurityGroupId
           - PlacementGroupName
+          - ClusterSecurityGroupId
+          - SshSecurityGroupId
+          - SshKeyName
 
 Parameters:
 
   LaunchTemplateName:
     Type: String
-    Default: pcs-efa-lt
-    Description: Launch template name
+    Description: Name of EC2 launch template to create. Must be unique in your account within the selected region.
+    Default: NODEGROUPNAME-efa
   VpcId:
     Type: 'AWS::EC2::VPC::Id'
     Description: Cluster VPC where EFA-enabled instances will be launched
@@ -35,13 +33,16 @@ Parameters:
   SshSecurityGroupId:
     Type: AWS::EC2::SecurityGroup::Id
     Description: Security group allowing inbound SSH access
+  SshKeyName:
+    Type: AWS::EC2::KeyPair::KeyName
+    Description: Key pair name for SSH access
   PlacementGroupName:
     Type: String
     Description: Cluster placement group name (leave blank to create one)
     Default: ""
   NumberOfNetworkCards:
     Type: String
-    Description: Number of network cards in the target instances
+    Description: Number of network cards in the target EC2 instances
     Default: "1"
     AllowedValues:
          - "1"
@@ -166,13 +167,13 @@ Resources:
     Type: Custom::PlacementGroup
     Properties:
       ServiceToken: !GetAtt PlacementGroupFunction.Arn
-      PlacementGroupName: !Join ['-', ['efa-pg-for', !Ref LaunchTemplateName]]
+      PlacementGroupName: !Sub 'efa-${AWS::StackName}'
 
   EfaSecurityGroup:
     Type: 'AWS::EC2::SecurityGroup'
     Properties:
       GroupDescription: Support EFA
-      GroupName: !Join ['-', ['efa-sg-for', !Ref LaunchTemplateName]]
+      GroupName: !Sub 'efa-${AWS::StackName}'
       VpcId: !Ref VpcId
 
   EfaSecurityGroupOutboundSelfRule:

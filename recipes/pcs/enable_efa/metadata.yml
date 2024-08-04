@@ -4,7 +4,7 @@ name: enable_efa
 # The version of the recipe. Must be compatible with semantic versioning.
 version: "1.0.0"
 # A short summary description of the recipe
-description: Enable EFA in a compute node group
+description: Templates to enable EFA in an AWS PCS compute node group
 # The path to the README for the recipe relative to its root directory.
 readme: README.md
 # Optional URL for external documentation
@@ -19,10 +19,10 @@ tags:
   - efa
   - pcs
   - hpc
-  - beta
+  - ec2
 # A list of file glob-like patterns used to filter any files or directories that should not be included in the S3 release. 
 build_ignore: []
 # Recipe type
-type: other
+type: cloudformation
 # Default asset path
 default: 
