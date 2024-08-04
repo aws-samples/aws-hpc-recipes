@@ -1,9 +1,9 @@
-# cloudwatch_logs
+# Enable CloudWatch Logs on PCS instances
 
 ## Info
 
-Supports using CloudWatch Logs with AWS PCS
+This recipe contains assets to help you implement the recommendations in _Monitoring AWS PCS instances using Amazon CloudWatch_ in the AWS PCS user guide.
 
 ## Usage
 
-## Cost Estimate
+* `config.json` - Example configuration file for CloudWatch Agent
