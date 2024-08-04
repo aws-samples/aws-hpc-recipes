@@ -56,6 +56,12 @@ Resources:
           HttpPutResponseHopLimit: 4
           HttpTokens: required
         KeyName: !Ref SshKeyName
+        BlockDeviceMappings:
+          - DeviceName: /dev/xvda  # Root volume
+            Ebs:
+              VolumeType: gp3
+              VolumeSize: 128 
+              DeleteOnTermination: true
         SecurityGroupIds:
           - !Ref ClusterSecurityGroupId
           - !Ref SshSecurityGroupId
@@ -101,6 +107,12 @@ Resources:
           HttpPutResponseHopLimit: 4
           HttpTokens: required
         KeyName: !Ref SshKeyName
+        BlockDeviceMappings:
+          - DeviceName: /dev/xvda  # Root volume
+            Ebs:
+              VolumeType: gp3
+              VolumeSize: 128 
+              DeleteOnTermination: true
         Placement:
           GroupName: !GetAtt PlacementGroup.PlacementGroupName
         # hpc6a instances have a single network card, so only need a single network interface

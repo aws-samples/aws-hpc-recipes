@@ -361,7 +361,7 @@ Resources:
                 - |
                   amazon-linux-extras install -y lustre
                   mkdir -p ${MountDir}
-                  mount -t lustre -o relatime,flock ${FSxLustreDns}@tcp:/${FSxLustreMountName} /fsx
+                  mount -t lustre -o relatime,flock ${FSxLustreDns}@tcp:/${FSxLustreMountName} ${MountDir}
                   chmod 777 ${MountDir}
                 - { FSxLustreDns: !GetAtt FSxLustreLookup.DNSName, FSxLustreMountName: !GetAtt FSxLustreLookup.MountName, MountDir: !Ref FSxLustreMountDirectory }
               cwd: "~"
