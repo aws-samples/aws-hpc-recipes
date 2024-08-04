@@ -21,6 +21,11 @@ Resources:
     Properties:
       LaunchTemplateName: !Ref LaunchTemplateName
       LaunchTemplateData:
+        TagSpecifications:
+          - ResourceType: instance
+            Tags:
+              - Key: HPCRecipes
+                Value: "true"
         # Require IMDS v2
         MetadataOptions:
           HttpEndpoint: enabled
