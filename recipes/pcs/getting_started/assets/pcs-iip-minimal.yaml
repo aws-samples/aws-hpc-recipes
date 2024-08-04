@@ -1,0 +1,96 @@
+AWSTemplateFormatVersion: 2010-09-09
+Description: Minimal IAM instance profile for PCS compute node groups
+
+Metadata:
+  AWS::CloudFormation::Interface:
+    ParameterGroups:
+      - Label:
+          default: IAM Instance Profile Settings
+        Parameters:
+          - RoleName
+          - EnableSsm
+          - EnableS3ReadOnly
+          - EnableCloudwatchAgent
+
+Parameters:
+  RoleName:
+    Type: String
+    Default: MinimalRole
+    Description: Name of the AWS PCS IAM role. Must be unique in your account and across all regions. The value you provide here will be prefixed with "AWSPCS-".
+  EnableSsm:
+    Type: String
+    Default: "True"
+    Description: "Enable AWS Systems Manager service on instances"
+    AllowedValues:
+      - "True"
+      - "False"
+  EnableS3ReadOnly:
+    Type: String
+    Default: "True"
+    Description: "Grant instances read-only access to Amazon S3"
+    AllowedValues:
+      - "True"
+      - "False"
+  EnableCloudwatchAgent:
+    Type: String
+    Default: "False"
+    Description: "Grant instances permissions to use use Amazon CloudWatch Agent"
+    AllowedValues:
+      - "True"
+      - "False"
+
+Conditions:
+  EnableSsmCondition: !Equals [!Ref EnableSsm, "True"]
+  EnableS3ReadOnlyCondition: !Equals [!Ref EnableS3ReadOnly, "True"]
+  EnableCloudwatchAgentCondition: !Equals [!Ref EnableCloudwatchAgent, "True"]
+
+Resources:
+
+  PcsInstanceIamRole:
+    Type: AWS::IAM::Role
+    Properties:
+      RoleName: !Sub "AWSPCS-${RoleName}-role"
+      Description: "AWS IAM role for PCS node group instances"
+      AssumeRolePolicyDocument:
+        Statement:
+          - Action: sts:AssumeRole
+            Effect: Allow
+            Principal:
+              Service: ec2.amazonaws.com
+        Version: "2012-10-17"
+      ManagedPolicyArns:
+        - !If
+          - EnableSsmCondition
+          - "arn:aws:iam::aws:policy/AmazonSSMManagedInstanceCore"
+          - !Ref AWS::NoValue
+        - !If
+          - EnableS3ReadOnlyCondition
+          - "arn:aws:iam::aws:policy/AmazonS3ReadOnlyAccess"
+          - !Ref AWS::NoValue
+        - !If
+          - EnableCloudwatchAgentCondition
+          - "arn:aws:iam::aws:policy/CloudWatchAgentServerPolicy"
+          - !Ref AWS::NoValue
+      Policies:
+        - PolicyDocument:
+            Version: "2012-10-17"
+            Statement:
+              - Action:
+                  - pcs:RegisterComputeNodeGroupInstance
+                Effect: Allow
+                Resource: "*"
+          PolicyName: PcsRegisterInstancePolicy
+
+  PcsInstanceProfile:
+    Type: AWS::IAM::InstanceProfile
+    Properties:
+      Roles:
+            - !Ref PcsInstanceIamRole
+      InstanceProfileName: !Sub "AWSPCS-${RoleName}"
+
+Outputs:
+  InstanceProfile:
+    Value: !Ref PcsInstanceProfile
+  InstanceProfileArn:
+    Value: !GetAtt PcsInstanceProfile.Arn
+
