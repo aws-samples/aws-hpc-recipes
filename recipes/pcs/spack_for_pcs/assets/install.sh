@@ -31,6 +31,7 @@ Options:
  --no-arm-compiler      Don't install ARM compilers (ACFL)
  --no-intel-compiler    Don't install Intel compilers
  --directory            Installation directory [/shared]
+ --slurm-directory      Installation directory for Slurm [/opt/slurm]
  [spec]                 "spec" to be installed after initial
                         configuration: e.g., gcc@12.3.0 or "gcc @ 13.0".
                         Multiple specs can be listed, but they need to either
@@ -53,6 +54,7 @@ export CONFIG_REPO="spack/spack-configs"
 export CONFIG_BRANCH="main"
 export SPACK_REPO="spack/spack"
 export SPACK_BRANCH="develop"
+export SLURM_INSTALL_DIRECTORY="/opt/slurm"
 install_specs=()
 export generic_buildcache=""
 install_in_foreground=false
@@ -92,6 +94,10 @@ while [ $# -gt 0 ]; do
             ;;
         --directory )
             export INSTALL_DIRECTORY="$2"
+            shift 2
+            ;;
+        --slurm-directory )
+            export SLURM_INSTALL_DIRECTORY="$2"
             shift 2
             ;;
         --spack-branch )
@@ -243,9 +249,9 @@ set_modules() {
          -o "${install_path}/etc/spack/modules.yaml"
 }
 
-set_pcluster_defaults() {
+set_cluster_defaults() {
     # Set versions of pre-installed software in packages.yaml
-    [ -z "${SLURM_VERSION}" ] && SLURM_VERSION=$(strings /opt/slurm/lib/libslurm.so | grep  -e '^VERSION'  | awk '{print $2}'  | sed -e 's?"??g')
+    [ -z "${SLURM_VERSION}" ] && SLURM_VERSION=$(strings ${SLURM_INSTALL_DIRECTORY}/lib/libslurm.so | grep  -e '^VERSION'  | awk '{print $2}'  | sed -e 's?"??g')
     [ -z "${LIBFABRIC_VERSION}" ] && LIBFABRIC_VERSION=$(awk '/Version:/{print $2}' "$(find /opt/amazon/efa/ -name libfabric.pc | head -n1)" | sed -e 's?~??g' -e 's?amzn.*??g')
     export SLURM_VERSION LIBFABRIC_VERSION
 
@@ -491,7 +497,7 @@ echo "$(declare -pf)
     if \${generic_buildcache}; then
        setup_pcluster_buildcache_stack
     else
-        set_pcluster_defaults
+        set_cluster_defaults
         setup_spack
         install_compilers
         install_acfl
