@@ -672,6 +672,14 @@ Resources:
       Name: !Sub [ "PasswordSecret-${StackIdSuffix}", {StackIdSuffix: !Select [1, !Split ['/', !Ref 'AWS::StackId']]}]
       SecretString: !Ref ServiceAccountPassword
 
+  CredentialsSecret:
+    Type: AWS::SecretsManager::Secret
+    Properties:
+      Description: Credentials for Microsoft Active Directory
+      Name: !Sub [ "CredentialsSecret-${StackIdSuffix}", {StackIdSuffix: !Select [1, !Split ['/', !Ref 'AWS::StackId']]}]
+      SecretString:
+        Fn::Sub: '{"ServiceAccount":"${ServiceAccountPassword}"}'
+
   DomainCertificateSecret:
     Type: AWS::SecretsManager::Secret
     Properties:
@@ -1033,6 +1041,10 @@ Outputs:
     Value: !Ref PasswordSecret
     Export:
         Name: !Sub ${AWS::StackName}-PasswordSecretArn
+  CredentialsSecretArn:
+    Value: !Ref CredentialsSecret
+    Export:
+        Name: !Sub ${AWS::StackName}-CredentialsSecretArn
   DomainCertificateArn:
     Value: !GetAtt DomainCertificateSetup.DomainCertificateArn
     Export:

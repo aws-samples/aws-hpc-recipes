@@ -131,7 +131,8 @@ Resources:
         Vpc: !GetAtt [ Networking, Outputs.VPC ]
         PrivateSubnetOne: {"Fn::Select": [0, { "Fn::Split" : [",", !GetAtt [ Networking, Outputs.PrivateSubnets ]] }]}
         PrivateSubnetTwo: {"Fn::Select": [1, { "Fn::Split" : [",", !GetAtt [ Networking, Outputs.PrivateSubnets ]] }]}
-      TemplateURL: https://aws-hpc-recipes.s3.us-east-1.amazonaws.com/main/recipes/dir/demo_managed_ad/assets/main.yaml
+      # TemplateURL: https://aws-hpc-recipes.s3.us-east-1.amazonaws.com/main/recipes/dir/demo_managed_ad/assets/main.yaml
+      TemplateURL: https://test-res-gitlab.s3.us-east-2.amazonaws.com/main.yaml
 
   WindowsManagementHost:
     Type: AWS::CloudFormation::Stack
@@ -547,10 +548,10 @@ Outputs:
     Value: !Sub
       - dc=${dc}
       - { dc: !Join [",dc=", !Split [".", !If [ SubDomainNotProvided, !Ref DomainName, !Join [ ".", [ !Ref SubDomain, !Ref DomainName] ] ] ]] }
-  ServiceAccountUsername:
-    Value: ServiceAccount
   ServiceAccountPasswordSecretArn:
     Value: !GetAtt [ DirectoryService, Outputs.PasswordSecretArn ]
+  ServiceAccountCredentialsSecretArn:
+    Value: !GetAtt [ DirectoryService, Outputs.CredentialsSecretArn ]
   ServiceAccountUserDN:
     Description: The Distinguished Name (DN) of the ServiceAccount user in your Active Directory
     Value: !Sub
