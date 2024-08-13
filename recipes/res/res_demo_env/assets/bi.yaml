@@ -547,10 +547,10 @@ Outputs:
     Value: !Sub
       - dc=${dc}
       - { dc: !Join [",dc=", !Split [".", !If [ SubDomainNotProvided, !Ref DomainName, !Join [ ".", [ !Ref SubDomain, !Ref DomainName] ] ] ]] }
-  ServiceAccountUsername:
-    Value: ServiceAccount
   ServiceAccountPasswordSecretArn:
     Value: !GetAtt [ DirectoryService, Outputs.PasswordSecretArn ]
+  ServiceAccountCredentialsSecretArn:
+    Value: !GetAtt [ DirectoryService, Outputs.CredentialsSecretArn ]
   ServiceAccountUserDN:
     Description: The Distinguished Name (DN) of the ServiceAccount user in your Active Directory
     Value: !Sub
