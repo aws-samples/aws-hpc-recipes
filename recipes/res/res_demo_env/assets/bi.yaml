@@ -548,10 +548,8 @@ Outputs:
     Value: !Sub
       - dc=${dc}
       - { dc: !Join [",dc=", !Split [".", !If [ SubDomainNotProvided, !Ref DomainName, !Join [ ".", [ !Ref SubDomain, !Ref DomainName] ] ] ]] }
-  ServiceAccountUsername:
-    Value: ServiceAccount
-  ServiceAccountPasswordSecretArn:
-    Value: !GetAtt [ DirectoryService, Outputs.PasswordSecretArn ]
+  ServiceAccountCredentialsSecretArn:
+    Value: !GetAtt [ DirectoryService, Outputs.CredentialsSecretArn ]
   ServiceAccountUserDN:
     Description: The Distinguished Name (DN) of the ServiceAccount user in your Active Directory
     Value: !Sub
@@ -566,11 +564,6 @@ Outputs:
       - { dc: !Join [",DC=", !Split [".", !If [ SubDomainNotProvided, !Ref DomainName, !Join [ ".", [ !Ref SubDomain, !Ref DomainName]]]]], ou:  !GetAtt [ DirectoryService, Outputs.DomainShortName ]}
   GroupsOU:
     Description: The OU for groups that users belong to who might join the system. The value provided here is based off of a supplied LDIF file.
-    Value: !Sub
-      - OU=Users,OU=RES,OU=${ou},DC=${dc}
-      - { dc: !Join [",DC=", !Split [".", !If [ SubDomainNotProvided, !Ref DomainName, !Join [ ".", [ !Ref SubDomain, !Ref DomainName]]]]], ou:  !GetAtt [ DirectoryService, Outputs.DomainShortName ]}
-  SudoersOU:
-    Description: The OU for users who should have sudoers permission across all projects. The value provided here is based off of a supplied LDIF file.
     Value: !Sub
       - OU=Users,OU=RES,OU=${ou},DC=${dc}
       - { dc: !Join [",DC=", !Split [".", !If [ SubDomainNotProvided, !Ref DomainName, !Join [ ".", [ !Ref SubDomain, !Ref DomainName]]]]], ou:  !GetAtt [ DirectoryService, Outputs.DomainShortName ]}
