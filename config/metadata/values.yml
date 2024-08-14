@@ -24,6 +24,9 @@ tags:
   community: black
   beta: purple
   alinux2: orange
+  rhel: black
+  rockylinux: black
+  ubuntu: black
   parallelcluster: orange
   fsx: green
   cloudformation: green
