@@ -76,16 +76,12 @@ Resources:
               --==MYBOUNDARY==
               Content-Type: text/cloud-config; charset="us-ascii"
               MIME-Version: 1.0
-
-              packages:
-              - amazon-efs-utils
               
               runcmd:
               # Mount EFS filesystem as /home
               - mkdir -p /tmp/home
               - rsync -a /home/ /tmp/home
-              - echo "${EfsFilesystem}:/ /home efs tls,_netdev" >> /etc/fstab
-              - mount -a -t efs defaults
+              - sudo mount -t nfs4 -o nfsvers=4.1,rsize=1048576,wsize=1048576,hard,timeo=600,retrans=2,noresvport ${EfsFilesystem}.efs.${Region}.amazonaws.com:/ /home
               - rsync -a --ignore-existing /tmp/home/ /home
               - rm -rf /tmp/home/
               # If provided, mount FSxL filesystem as /shared
@@ -95,7 +91,7 @@ Resources:
               - chmod 777 /shared
 
               --==MYBOUNDARY==
-            - {EfsFilesystem: !Ref EfsFilesystemId, FSxLustreDns: !GetAtt FSxLustreLookup.DNSName, FSxLustreMountName: !GetAtt FSxLustreLookup.MountName}
+            - {EfsFilesystem: !Ref EfsFilesystemId, FSxLustreDns: !GetAtt FSxLustreLookup.DNSName, FSxLustreMountName: !GetAtt FSxLustreLookup.MountName, Region: !Ref AWS::Region}
 
   ComputeLaunchTemplate:
     Type: AWS::EC2::LaunchTemplate
@@ -137,16 +133,12 @@ Resources:
                 --==MYBOUNDARY==
                 Content-Type: text/cloud-config; charset="us-ascii"
                 MIME-Version: 1.0
-
-                packages:
-                - amazon-efs-utils
                 
                 runcmd:
                 # Mount EFS filesystem as /home
                 - mkdir -p /tmp/home
                 - rsync -a /home/ /tmp/home
-                - echo "${EfsFilesystem}:/ /home efs tls,_netdev" >> /etc/fstab
-                - mount -a -t efs defaults
+                - sudo mount -t nfs4 -o nfsvers=4.1,rsize=1048576,wsize=1048576,hard,timeo=600,retrans=2,noresvport ${EfsFilesystem}.efs.${Region}.amazonaws.com:/ /home
                 - rsync -a --ignore-existing /tmp/home/ /home
                 - rm -rf /tmp/home/
                 # If provided, mount FSxL filesystem as /shared
@@ -156,7 +148,7 @@ Resources:
                 - chmod 777 /shared
 
                 --==MYBOUNDARY==
-              - {EfsFilesystem: !Ref EfsFilesystemId, FSxLustreDns: !GetAtt FSxLustreLookup.DNSName, FSxLustreMountName: !GetAtt FSxLustreLookup.MountName}
+              - {EfsFilesystem: !Ref EfsFilesystemId, FSxLustreDns: !GetAtt FSxLustreLookup.DNSName, FSxLustreMountName: !GetAtt FSxLustreLookup.MountName, Region: !Ref AWS::Region}
 
   # Retrieve the default security group for a given VPC
   SgLambdaExecutionRole:
