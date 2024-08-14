@@ -1,5 +1,5 @@
 AWSTemplateFormatVersion: '2010-09-09'
-Description: Create a SCRATCH FSxL filesystem and the Security Group for use with with ParallelCluster
+Description: Create a SCRATCH FSx for Lustre filesystem and a security group for accessing the filesystem
 
 ### Stack metadata
 Metadata:

@@ -4,7 +4,7 @@ name: fsx_lustre
 # The version of the recipe. Must be compatible with semantic versioning.
 version: "1.0.0"
 # A short summary description of the recipe
-description: Creates either a scratch or persistent FSxL filesystem and the relevant security groups for use with ParallelCluster. 
+description: Creates either a scratch or persistent FSxL filesystem and a security group for accessing the filesystem.
 # The path to the README for the recipe relative to its root
 readme: README.md
 # Optional URL for external documentation
