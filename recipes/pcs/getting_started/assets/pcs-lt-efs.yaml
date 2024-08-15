@@ -42,6 +42,11 @@ Resources:
     Properties:
       LaunchTemplateName: !Ref LaunchTemplateName
       LaunchTemplateData:
+        TagSpecifications:
+          - ResourceType: instance
+            Tags:
+              - Key: HPCRecipes
+                Value: "true"
         MetadataOptions:
           HttpEndpoint: enabled
           HttpPutResponseHopLimit: 4
