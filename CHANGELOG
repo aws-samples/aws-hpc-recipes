@@ -25,7 +25,6 @@ The format is based on [Keep a Changelog](http://keepachangelog.com/)
 * In `public_certs`, `ssm:GetParameter` permissions now use partition and region parameters
 * In `res_demo_env`, RES environment name is now optional
 * In `res_demo_env`, the Secrets Manager ARN now supports `il-central-1` region
-* In `res_demo_env`, AD service account is now passed in as a Secrets Manager ARN
 * In `login_node_for_res`, template URLs are fixed to point to public resources
 
 ### Changed
