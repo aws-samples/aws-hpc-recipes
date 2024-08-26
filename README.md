@@ -3,6 +3,8 @@
 [![DOI](https://zenodo.org/badge/DOI/10.5281/zenodo.8360274.svg)](https://doi.org/10.5281/zenodo.8360274)
 [![Static Badge](https://img.shields.io/badge/aws%20hpc%20blog-FF9900)](https://aws.amazon.com/blogs/hpc/introducing-a-community-recipe-library-for-hpc-infrastructure-on-aws/)
 
+# HPC Recipes for AWS
+
 This repository contains example recipes that demonstrate how to build HPC systems using [AWS Parallel Computing Service](https://aws.amazon.com/hpc/pcs/), [AWS ParallelCluster](https://aws.amazon.com/hpc/parallelcluster/), [Research and Engineering Studio](https://aws.amazon.com/hpc/res/), and several other AWS products.
 
 ## Getting Started
