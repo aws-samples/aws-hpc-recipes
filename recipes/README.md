@@ -18,7 +18,7 @@ You can use an HPC Recipe for AWS in several ways:
 
 ### :arrow_right: db: Database management
 
-#### slurm_accounting_db ![tag](https://img.shields.io/badge/-aurora-%237DCEA0) ![tag](https://img.shields.io/badge/-core-%23146EB4) ![tag](https://img.shields.io/badge/-parallelcluster-%23FF9900) ![tag](https://img.shields.io/badge/-serverless-%23AAB7B8) 
+#### slurm_accounting_db ![tag](https://img.shields.io/badge/-aurora=-%23AAB7B8) ![tag](https://img.shields.io/badge/-core-%23146EB4) ![tag](https://img.shields.io/badge/-parallelcluster-%23FF9900) ![tag](https://img.shields.io/badge/-serverless-%23AAB7B8) 
 
 * **About**: Set up a replicated Amazon Aurora database that can support Slurm accounting.
 * **Usage**: [README.md](db/slurm_accounting_db/README.md)
@@ -63,6 +63,16 @@ You can use an HPC Recipe for AWS in several ways:
 
 ### :arrow_right: pcluster: AWS ParallelCluster
 
+#### decoupled_storage ![tag](https://img.shields.io/badge/-beta-%23800080) ![tag](https://img.shields.io/badge/-efs-%237DCEA0) ![tag](https://img.shields.io/badge/-fsx-%237DCEA0) ![tag](https://img.shields.io/badge/-pcluster-%23AAB7B8) 
+
+* **About**: Demonstrate decoupled shared storage using Amazon EFS.
+* **Usage**: [README.md](pcluster/decoupled_storage/README.md)
+
+#### isolated-clusters ![tag](https://img.shields.io/badge/-parallelcluster-%23FF9900) 
+
+* **About**: Provides templates to configure AWS ParallelCluster for isolated environments/those with no Internet access.
+* **Usage**: [README.md](pcluster/isolated-clusters/README.md)
+
 #### latest ![tag](https://img.shields.io/badge/-core-%23146EB4) ![tag](https://img.shields.io/badge/-parallelcluster-%23FF9900) 
 
 * **About**: Quick demo of the latest ParallelCluster release
@@ -72,6 +82,11 @@ You can use an HPC Recipe for AWS in several ways:
 
 * **About**: Demonstrates the new Login Nodes feature in ParallelCluster 3.7.2
 * **Usage**: [README.md](pcluster/login_nodes/README.md)
+
+#### login_nodes_ami_for_res ![tag](https://img.shields.io/badge/-pcluster-%23AAB7B8) ![tag](https://img.shields.io/badge/-res-%237DCEA0) ![tag](https://img.shields.io/badge/-ssm-%23AAB7B8) 
+
+* **About**: Create an AMI of a ParallelCluster LoginNode compatible with Research and Engineering Studio
+* **Usage**: [README.md](pcluster/login_nodes_ami_for_res/README.md)
 
 #### multi_az ![tag](https://img.shields.io/badge/-parallelcluster-%23FF9900) 
 
@@ -92,6 +107,16 @@ You can use an HPC Recipe for AWS in several ways:
 
 * **About**: Create an instance of AWS ParallelCluster with Slurm accounting enabled, using Amazon RDS as the DBMS.
 * **Usage**: [README.md](pcluster/slurm_accounting/README.md)
+
+#### slurm_accounting_with_email ![tag](https://img.shields.io/badge/-core-%23146EB4) ![tag](https://img.shields.io/badge/-email-%23AAB7B8) ![tag](https://img.shields.io/badge/-parallelcluster-%23FF9900) ![tag](https://img.shields.io/badge/-rds-%237DCEA0) ![tag](https://img.shields.io/badge/-sms-%23AAB7B8) 
+
+* **About**: Create an instance of AWS ParallelCluster with Slurm accounting enabled and e-mail notifications using Slurm-Mail, using Amazon RDS as the DBMS.
+* **Usage**: [README.md](pcluster/slurm_accounting_with_email/README.md)
+
+#### stig ![tag](https://img.shields.io/badge/-ec2imagebuilder-%23AAB7B8) ![tag](https://img.shields.io/badge/-parallelcluster-%23FF9900) ![tag](https://img.shields.io/badge/-systemsmanager-%23AAB7B8) 
+
+* **About**: Includes files to accelerate STIG compliance for Parallelcluster images as well as scripts to verify OSCAP results
+* **Usage**: [README.md](pcluster/stig/README.md)
 
 #### try_hpc6a ![tag](https://img.shields.io/badge/-hpc6a-%23AAB7B8) ![tag](https://img.shields.io/badge/-parallelcluster-%23FF9900) ![tag](https://img.shields.io/badge/-x86_64-%23AAB7B8) 
 
@@ -117,6 +142,19 @@ You can use an HPC Recipe for AWS in several ways:
 
 * **About**: Create a ParallelCluster system to try out Trn1 instances.
 * **Usage**: [README.md](pcluster/try_trn1/README.md)
+
+
+### :arrow_right: res: Research and Engineering Studio on AWS
+
+#### entra_id ![tag](https://img.shields.io/badge/-beta-%23800080) ![tag](https://img.shields.io/badge/-entra_id-%23AAB7B8) ![tag](https://img.shields.io/badge/-identity-%23AAB7B8) ![tag](https://img.shields.io/badge/-res-%237DCEA0) 
+
+* **About**: Set up Entra ID with RES
+* **Usage**: [README.md](res/entra_id/README.md)
+
+#### res_demo_env ![tag](https://img.shields.io/badge/-ad-%23AAB7B8) ![tag](https://img.shields.io/badge/-cognito-%237DCEA0) ![tag](https://img.shields.io/badge/-dcv-%23AAB7B8) ![tag](https://img.shields.io/badge/-ec2-%23AAB7B8) ![tag](https://img.shields.io/badge/-efs-%237DCEA0) ![tag](https://img.shields.io/badge/-res-%237DCEA0) ![tag](https://img.shields.io/badge/-sso-%23AAB7B8) 
+
+* **About**: Research and Engineering Studio (RES) on AWS demo environment
+* **Usage**: [README.md](res/res_demo_env/README.md)
 
 
 ### :arrow_right: security: Security configuration

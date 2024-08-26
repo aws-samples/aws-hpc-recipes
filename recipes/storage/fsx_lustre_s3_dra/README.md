@@ -21,14 +21,9 @@ By default, this template will create a bidirectional DRA. That means that files
 
 The key difference between this template and the read-only version is in resource `FSxLDra`, where we create both an `AutoExportPolicy` and an `AutoImportPolicy`, rather than just an `AutoImportPolicy`.
 
-### Alternative Import Stack
-
-You can import networking configuration from an existing stack, rather than specifying specific VPC and subnet IDs. 
-* Use the [alternative import stack](https://console.aws.amazon.com/cloudformation/home?region=us-east-2#/stacks/create/review?stackName=fsxl-dra&templateURL=https://aws-hpc-recipes.s3.us-east-1.amazonaws.com/main/recipes/storage/fsx_lustre_s3_dra/assets/persistent-dra.yaml) to launch a persistent filesystem with DRA.
-
 ### Use with AWS ParallelCluster
 
-Add the new FSx for Lustre filesystem to your ParallelCluster deployment with an entry in the `SharedStorage` configuration section.
+Add the new FSx for Lustre filesystem to your ParallelCluster deployment with an entry in the `SharedStorage` configuration section. 
 
 ```yaml
 # Example shared storage configuration
@@ -39,6 +34,17 @@ SharedStorage:
     MountDir: /shared/fsx
     FsxLustreSettings:
       VolumeId: fs-0123456789abcdef0
+```
+
+You also need to retrieve `FSxLustreSecurityGroupId` from the CloudFormation stack output and add its value the `HeadNode` and `Scheduling` sections.
+
+```yaml
+# Example of allowing head node access
+---
+HeadNode:
+  Networking:
+    AdditionalSecurityGroups:
+      - sg-0123456789abcdef0
 ```
 
 ### Testing It Out

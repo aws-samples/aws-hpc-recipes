@@ -153,7 +153,7 @@ Resources:
               mkdir -p $HOME
 
               cd /tmp
-              wget https://bootstrap.pypa.io/get-pip.py
+              wget https://bootstrap.pypa.io/pip/3.7/get-pip.py 
               python3 ./get-pip.py
               pip3 install boto3
               eval $(python3 -c "from botocore.credentials import InstanceMetadataProvider, InstanceMetadataFetcher; provider = InstanceMetadataProvider(iam_role_fetcher=InstanceMetadataFetcher(timeout=1000, num_attempts=2)); c = provider.load().get_frozen_credentials(); print(f'export AWS_ACCESS_KEY_ID={c.access_key}'); print(f'export AWS_SECRET_ACCESS_KEY={c.secret_key}'); print(f'export AWS_SESSION_TOKEN={c.token}')")
@@ -187,6 +187,184 @@ Resources:
                 CertificateSecret: !Ref CertificateSecret,
                 PrivateKeySecret: !Ref PrivateKeySecret,
               }
+
+  CertificateRenewalLambdaRole:
+    Type: AWS::IAM::Role
+    Properties:
+      AssumeRolePolicyDocument:
+        Version: 2012-10-17
+        Statement:
+          - Action:
+              - sts:AssumeRole
+            Effect: Allow
+            Principal:
+              Service:
+                - lambda.amazonaws.com
+      Policies:
+        - PolicyName: GetLatestALAMIID
+          PolicyDocument:
+            Version: 2012-10-17
+            Statement:
+              - Action:
+                - ssm:GetParameter
+                Effect: Allow
+                Resource: !Sub "arn:${AWS::Partition}:ssm:${AWS::Region}::parameter/aws/service/ami-amazon-linux-latest/amzn2-ami-hvm-x86_64-gp2"
+        - PolicyName: LaunchEC2Instance
+          PolicyDocument:
+            Version: 2012-10-17
+            Statement:
+              - Action:
+                - ec2:RunInstances
+                - ec2:CreateTags
+                Effect: Allow
+                Resource: "*"
+        - PolicyName: AllowPassRoleToInstanceRole
+          PolicyDocument:
+            Version: 2012-10-17
+            Statement:
+              - Action:
+                - iam:PassRole
+                Effect: Allow
+                Resource:
+                  - !GetAtt InstanceRole.Arn
+
+  CertificateRenewalLambda:
+    Type: AWS::Lambda::Function
+    Properties:
+      Description: !Sub "${AWS::StackName}: custom resource handler to launch EC2 instances to renew hosts."
+      Handler: index.handler
+      Role: !GetAtt CertificateRenewalLambdaRole.Arn
+      Runtime: python3.9
+      TracingConfig:
+        Mode: Active
+      Code:
+        ZipFile: 
+          !Sub 
+            - |
+              import boto3
+              import logging
+              logger = logging.getLogger()
+              logger.setLevel(logging.INFO)
+
+              ssm = boto3.client('ssm')
+              ec2 = boto3.client('ec2')
+
+              logger.info("LaunchTemplateID: ${LaunchTemplateID}")
+              logger.info("LaunchTemplateVersion: ${LaunchTemplateVersion}")
+              logger.info("InstanceProfileARN: ${InstanceProfileARN}")
+              logger.info("CertificateNodeInstancetype: ${CertificateNodeInstancetype}")
+              logger.info("SubnetId: ${SubnetId}")
+              logger.info("NameTag: ${NameTag}")
+              logger.info("CertificateSecret: ${CertificateSecret}")
+              logger.info("PrivateKeySecret: ${PrivateKeySecret}")
+
+              def get_latest_al_ami_id():
+                latest_al_ami_id = ssm.get_parameter(Name='/aws/service/ami-amazon-linux-latest/amzn2-ami-hvm-x86_64-gp2')['Parameter']['Value']
+                logger.info('latest Amazon Linux AMI ID: '+ latest_al_ami_id)
+                return latest_al_ami_id
+
+              def handler(event, context):
+                latest_ami_id = get_latest_al_ami_id()
+
+                instance = ec2.run_instances(
+                  IamInstanceProfile={
+                    'Arn': '${InstanceProfileARN}',
+                  },
+                  ImageId=latest_ami_id,
+                  InstanceType='${CertificateNodeInstancetype}',
+                  MinCount=1,
+                  MaxCount=1,
+                  LaunchTemplate={
+                    'LaunchTemplateId': '${LaunchTemplateID}',
+                    'Version': '${LaunchTemplateVersion}',
+                  },
+                  SubnetId='${SubnetId}',
+                  TagSpecifications=[
+                    {
+                      'ResourceType': 'instance',
+                      'Tags':[
+                        {
+                          'Key': 'Name',
+                          'Value': '${NameTag}'
+                        }
+                      ]
+                    }
+                  ],
+                  InstanceInitiatedShutdownBehavior='terminate',
+                  UserData="""#!/bin/bash -e
+                  set -o pipefail
+                  exec > >(tee /var/log/user-data.log|logger -t user-data -s 2>/dev/console) 2>&1
+                  yum update -y aws-cfn-bootstrap
+                  sudo yum install -y git
+
+                  echo "Domain Name: ${DomainName}"
+                  echo "Domain Certificate Secret: ${CertificateSecret}"
+                  echo "Domain Private Key Secret: ${PrivateKeySecret}"
+
+                  export HOME=/tmp/home
+                  mkdir -p $HOME
+
+                  cd /tmp
+                  wget https://bootstrap.pypa.io/pip/3.7/get-pip.py 
+                  python3 ./get-pip.py
+                  pip3 install boto3
+                  eval $(python3 -c "from botocore.credentials import InstanceMetadataProvider, InstanceMetadataFetcher; provider = InstanceMetadataProvider(iam_role_fetcher=InstanceMetadataFetcher(timeout=1000, num_attempts=2)); c = provider.load().get_frozen_credentials(); print(f'export AWS_ACCESS_KEY_ID={c.access_key}'); print(f'export AWS_SECRET_ACCESS_KEY={c.secret_key}'); print(f'export AWS_SESSION_TOKEN={c.token}')")
+
+                  mkdir certificates
+                  cd certificates
+                  git clone https://github.com/Neilpang/acme.sh.git
+                  cd acme.sh
+                  ./acme.sh --install
+                  ./acme.sh --set-default-ca --server letsencrypt
+                  ./acme.sh --issue --dns dns_aws --ocsp-must-staple --keylength 4096  -d ${DomainName} -d "*.${DomainName}"
+
+                  CERTKEYFILE=$HOME/.acme.sh/${DomainName}/${DomainName}.key
+                  CERTCERFILE=$HOME/.acme.sh/${DomainName}/${DomainName}.cer
+
+                  aws secretsmanager put-secret-value \
+                    --secret-id ${PrivateKeySecret} \
+                    --secret-string file://$CERTKEYFILE \
+                    --region "${AWS::Region}"
+
+                  aws secretsmanager put-secret-value \
+                    --secret-id ${CertificateSecret} \
+                    --secret-string file://$CERTCERFILE \
+                    --region "${AWS::Region}"
+
+                  sudo shutdown now -h
+                  """,
+                )
+
+            - { LaunchTemplateID: !Ref DisableImdsv1LaunchTemplate,
+                LaunchTemplateVersion: !GetAtt DisableImdsv1LaunchTemplate.LatestVersionNumber,
+                InstanceProfileARN: !GetAtt InstanceProfile.Arn,
+                CertificateNodeInstancetype: !Ref CertificateNodeInstancetype,
+                SubnetId: !Ref SubnetId,
+                NameTag: !Sub [ "CertificateRenewalNode-${StackIdSuffix}", {StackIdSuffix: !Select [1, !Split ['/', !Ref 'AWS::StackId']]}],
+                DomainName: !Ref DomainName,
+                CertificateSecret: !Ref CertificateSecret,
+                PrivateKeySecret: !Ref PrivateKeySecret,
+              }
+
+  InvokeLambdaPermission:
+    Type: AWS::Lambda::Permission
+    Properties: 
+      FunctionName: !Ref CertificateRenewalLambda
+      Action: lambda:InvokeFunction
+      Principal: events.amazonaws.com
+      SourceArn: !GetAtt CertAutoRenewalTriggerRule.Arn
+
+
+  CertAutoRenewalTriggerRule:
+    Type: AWS::Events::Rule
+    Properties: 
+      Description: "Trigger certificate renewal periodically"
+      ScheduleExpression: "rate(60 days)"
+      State: "ENABLED"
+      Targets:  
+        - Arn: !GetAtt CertificateRenewalLambda.Arn
+          Id: "CertificateRenewalLambda"
+  
 
 Outputs:
   CertificateArn:

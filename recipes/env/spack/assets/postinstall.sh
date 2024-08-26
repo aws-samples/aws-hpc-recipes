@@ -6,24 +6,111 @@ set -e
 # # Use as postinstall in AWS ParallelCluster (https://docs.aws.amazon.com/parallelcluster/) #
 ##############################################################################################
 
+print_help() {
+    cat <<EOF
+Usage: postinstall.sh [-fg] [-v] [spec] [spec...]
+
+Installs spack on a parallel cluster with recommended configurations.
+Spack directory is cloned into a shared directory and recommended packages are
+configured.
+
+As the install can take more than an hour (especially on smaller instances), the
+default is to run the script in the background so that it can be used as
+pcluster's postinstall CloudFormation script without timing out during cluster
+initialization.  Output can be monitored in /var/log/spack-postinstall.log
+
+Options:
+ -h|--help              Print this help message.
+ -fg                    Run in foreground, without logs, blocking until
+                        complete.
+                        Ensure ssh connection is stable.
+ -v                     Be verbose during execution
+ --[no-]buildcache      Use the generic target buildcache provided by the
+                        aws-pcluster-[x86_64_v4,neoverse_v1] stacks. Enabled by
+                        default for Amazon Linux2, disabled for other OSs.
+ --no-arm-compiler      Don't install ARM compilers (ACFL)
+ --no-intel-compiler    Don't install Intel compilers
+ [spec]                 "spec" to be installed after initial
+                        configuration: e.g., gcc@12.3.0 or "gcc @ 13.0".
+                        Multiple specs can be listed, but they need to either
+                        be quoted or contain no spaces.
+
+Developer Options:
+ --config-branch        Pull configuration (e.g., packages.yaml) from this
+                        branch.  Default is "main".
+ --config-repo          Pull configuration (e.g., packages.yaml) from this
+                        github user/repo.  Default is "spack/spack-configs".
+ --spack-branch         Clone spack using this branch.  Default is "develop"
+ --spack-repo           Clone spack using this github user/repo. Default is
+                        "spack/spack".
+EOF
+}
+
+# CONFIG_REPO: a the user/repo on github to use for configuration.a custom user/repo/branch in case users wish to
+# provide or test their own configurations.
+export CONFIG_REPO="spack/spack-configs"
+export CONFIG_BRANCH="main"
+export SPACK_REPO="spack/spack"
+export SPACK_BRANCH="develop"
+install_specs=()
+export generic_buildcache=""
 install_in_foreground=false
 while [ $# -gt 0 ]; do
     case $1 in
-        -v )
-            set -v
+        --buildcache )
+            generic_buildcache=true
             shift
+            ;;
+        --config-branch )
+            CONFIG_BRANCH="$2"
+            shift 2
+            ;;
+        --config-repo )
+            CONFIG_REPO="$2"
+            shift 2
             ;;
         -fg )
             install_in_foreground=true
             shift
             ;;
-        -nointel )
+        -h|--help )
+            print_help
+            exit 0
+            ;;
+        --no-arm-compiler )
+            export NO_ARM_COMPILER=1
+            shift
+            ;;
+        --no-buildcache )
+            generic_buildcache=false
+            shift
+            ;;
+        --no-intel-compiler )
             export NO_INTEL_COMPILER=1
             shift
             ;;
-        * )
-            echo "Unknown argument: $1"
+        --spack-branch )
+            SPACK_BRANCH="$2"
+            shift 2
+            ;;
+        --spack-repo )
+            SPACK_REPO="$2"
+            shift 2
+            ;;
+        -v )
+            set -v
+            shift
+            ;;
+        -* )
+            print_help
+            echo
+            echo "ERROR: Unknown option: $1"
             exit 1
+            ;;
+        * )
+            echo "Going to install: $1"
+            install_specs+=("${1}")
+            shift
             ;;
     esac
 done
@@ -86,9 +173,16 @@ EOF
 
     install_path=${SPACK_ROOT:-"${cfn_ebs_shared_dirs}/spack"}
     echo "Installing Spack into ${install_path}."
-    spack_branch="develop"
 
-    scriptdir="$( cd "$( dirname "${BASH_SOURCE[0]}" )" && pwd )"
+    if [ "true" == "${generic_buildcache}" ] && [ "alinux2" != "${os}" ]; then
+        echo "Generic buildcache only available for Alinux2."
+    fi
+    if [ -z "${generic_buildcache}" ] && [ "alinux2" == "${os}" ]; then
+        generic_buildcache=true
+    else
+        generic_buildcache=false
+    fi
+    # TODO: Turn off generic_buildcache if SPACK_BRANCH is not develop or >v0.21.2
 }
 
 major_version() {
@@ -109,14 +203,14 @@ fix_owner() {
 download_spack() {
     if [ -z "${SPACK_ROOT}" ]
     then
-        [ -d ${install_path} ] || \
-            if [ -n "${spack_branch}" ]
+        [ -d "${install_path}" ] || \
+            if [ -n "${SPACK_BRANCH}" ]
             then
-                git clone -c feature.manyFiles=true https://github.com/spack/spack -b ${spack_branch} ${install_path}
+                git clone -c feature.manyFiles=true "https://github.com/${SPACK_REPO}" -b "${SPACK_BRANCH}" "${install_path}"
             elif [ -n "${spack_commit}" ]
             then
-                git clone -c feature.manyFiles=true https://github.com/spack/spack ${install_path}
-                cd ${install_path} && git checkout ${spack_commit}
+                git clone -c feature.manyFiles=true "https://github.com/${SPACK_REPO}" "${install_path}"
+                cd "${install_path}" && git checkout "${spack_commit}"
             fi
         return 0
     else
@@ -125,33 +219,35 @@ download_spack() {
     fi
 }
 
-architecture() {
-    lscpu  | grep "Architecture:" | awk '{print $2}'
-}
-
 # zen3 EC2 instances (e.g. hpc6a) is misidentified as zen2 so zen3 packages are found under packages-zen2.yaml.
 target() {
     (
-        . ${install_path}/share/spack/setup-env.sh
+        . "${install_path}/share/spack/setup-env.sh"
         spack arch -t
     )
 }
 
-cp_packages_yaml() {
-    . ${install_path}/share/spack/setup-env.sh
-    target="${1}"
-    if [ -f $SPACK_ROOT/share/spack/gitlab/cloud_pipelines/stacks/aws-pcluster-"${target}"/packages.yaml ]; then
-        cp $SPACK_ROOT/share/spack/gitlab/cloud_pipelines/stacks/aws-pcluster-"${target}"/packages.yaml /tmp/packages.yaml
-    else
-        false
-    fi
+stack_arch() {
+    (
+        . "${install_path}/share/spack/setup-env.sh"
+        case $(arch) in
+            aarch64)
+                # neoverse_n1 packages also included in neoverse_v1 stack
+                spack arch -t | sed -e 's?neoverse_n1?neoverse_v1?g'
+                ;;
+            x86_64*)
+                # x86_64_v3 packages also included in x86_64_v4 stack
+                spack arch -g | sed -e 's?x86_64_v3?x86_64_v4?g'
+                ;;
+        esac
+    )
 }
 
 download_packages_yaml() {
     # $1: spack target
-    . ${install_path}/share/spack/setup-env.sh
+    . "${install_path}/share/spack/setup-env.sh"
     target="${1}"
-    curl -Ls https://raw.githubusercontent.com/spack/spack-configs/main/AWS/parallelcluster/packages-"${target}".yaml -o /tmp/packages.yaml
+    curl -Ls "https://raw.githubusercontent.com/${CONFIG_REPO}/${CONFIG_BRANCH}/AWS/parallelcluster/packages-${target}.yaml" -o /tmp/packages.yaml
     if [ "$(cat /tmp/packages.yaml)" = "404: Not Found" ]; then
         # Pick up parent if current generation is not available
         for target in $(spack-python -c 'print(" ".join(spack.platforms.host().target("'"${target}"'").microarchitecture.to_dict()["parents"]))'); do
@@ -167,28 +263,28 @@ download_packages_yaml() {
     fi
 }
 
+set_modules() {
+    mkdir -p "${install_path}/etc/spack"
+    curl -Ls "https://raw.githubusercontent.com/${CONFIG_REPO}/${CONFIG_BRANCH}/AWS/parallelcluster/modules.yaml" \
+         -o "${install_path}/etc/spack/modules.yaml"
+}
+
 set_pcluster_defaults() {
     # Set versions of pre-installed software in packages.yaml
     [ -z "${SLURM_VERSION}" ] && SLURM_VERSION=$(strings /opt/slurm/lib/libslurm.so | grep  -e '^VERSION'  | awk '{print $2}'  | sed -e 's?"??g')
-    [ -z "${LIBFABRIC_MODULE_VERSION}" ] && LIBFABRIC_MODULE_VERSION=$(grep 'Version:' "$(find /opt/amazon/efa/ -name libfabric.pc | head -n1)" | awk '{print $2}' | sed -e 's?~??g')
-    [ -z "${LIBFABRIC_MODULE}" ] && LIBFABRIC_MODULE="libfabric-aws/${LIBFABRIC_MODULE_VERSION}"
-    [ -z "${LIBFABRIC_VERSION}" ] && LIBFABRIC_VERSION=${LIBFABRIC_MODULE_VERSION//amzn*}
-    [ -z "${GCC_VERSION}" ] && GCC_VERSION=$(gcc -v 2>&1 |tail -n 1| awk '{print $3}' )
+    [ -z "${LIBFABRIC_VERSION}" ] && LIBFABRIC_VERSION=$(awk '/Version:/{print $2}' "$(find /opt/amazon/efa/ -name libfabric.pc | head -n1)" | sed -e 's?~??g' -e 's?amzn.*??g')
+    export SLURM_VERSION LIBFABRIC_VERSION
 
     # Write the above as actual yaml file and only parse the \$.
-    mkdir -p ${install_path}/etc/spack
+    mkdir -p "${install_path}/etc/spack"
+    ( download_packages_yaml "$(target)" )
 
-    # Find suitable packages.yaml. If not for this architecture then for its parents.
-    ( cp_packages_yaml "$(echo $(target) | sed -e 's?_avx512??1')" || download_packages_yaml "$(target)" )
-    eval "echo \"$(cat /tmp/packages.yaml)\"" > ${install_path}/etc/spack/packages.yaml
-
-    curl -Ls https://raw.githubusercontent.com/spack/spack-configs/main/AWS/parallelcluster/modules.yaml -o ${install_path}/etc/spack/modules.yaml
+    if [ "$(cat /tmp/packages.yaml)" != "404: Not Found" ]; then
+        envsubst < /tmp/packages.yaml > "${install_path}/etc/spack/packages.yaml"
+    fi
 }
 
-setup_spack() {
-    cd "${install_path}"
-
-    # Load spack at login
+load_spack_at_login() {
     if [ -z "${SPACK_ROOT}" ]
     then
         case "${scheduler}" in
@@ -204,16 +300,45 @@ setup_spack() {
                 echo ". ${install_path}/share/spack/setup-env.csh" > /etc/profile.d/spack.csh
         esac
     fi
+}
+setup_bootstrap_mirrors() {
+    . "${install_path}/share/spack/setup-env.sh"
 
+    # `gcc@12.3.0` is created as part of building the containers in https://github.com/spack/gitlab-runners
+    # and mirrored onto `$bootstrap_gcc_cache`:
+    bootstrap_gcc_cache="https://bootstrap.spack.io/pcluster/$(spack arch -o)/$(arch)"
+    if curl -sf "${bootstrap_gcc_cache}/build_cache/index.json" >/dev/null; then
+        spack mirror add --scope=site bootstrap-gcc-cache "${bootstrap_gcc_cache}"
+    fi
+
+    # Newer gpg2 versions on Ainux2 will not be able to validate the key. This allows spack to accept the buildcache keys.
+    if [ "$(gpg --version | awk '/gpg/{print $3}')" == "2.0.22" ]; then
+        mkdir -m 700 -p ${SPACK_ROOT}/opt/spack/gpg
+        echo "openpgp" >> ${SPACK_ROOT}/opt/spack/gpg/gpg.conf
+    fi
+    spack buildcache keys -it
+}
+
+setup_pcluster_buildcache_stack() {
+    . "${install_path}/share/spack/setup-env.sh"
+    # Make sure the subshell which install the Intel compiler find the correct installation prefix
+    echo -e "config:\n  install_tree:\n    root: ${SPACK_ROOT}/opt/spack\n" > $SPACK_ROOT/etc/spack/config.yaml
+    export SPACK_CI_STACK_NAME="aws-pcluster-$(stack_arch)"
+    bash "${SPACK_ROOT}/share/spack/gitlab/cloud_pipelines/scripts/pcluster/setup-pcluster.sh"
+    rm -f $SPACK_ROOT/etc/spack/config.yaml
+}
+
+setup_spack() {
     . "${install_path}/share/spack/setup-env.sh"
     spack compiler add --scope site
-    spack external find --scope site
-
-    # Remove all autotools/buildtools packages. These versions need to be managed by spack or it will
+    # Do not add  autotools/buildtools packages. These versions need to be managed by spack or it will
     # eventually end up in a version mismatch (e.g. when compiling gmp).
-    spack tags build-tools | xargs -I {} spack config --scope site rm packages:{}
-    [ -z "${CI_PROJECT_DIR}" ] && spack mirror add --scope site "aws-pcluster" "https://binaries.spack.io/develop/aws-pcluster-$(target | sed -e 's?_avx512??1')"
-    spack buildcache keys --install --trust
+    spack external find --scope site --tag core-packages
+
+    # Remove gcc-12 if identified in ubuntu2204. There is no g++ for gfortran that goes with it and this will cause problems.
+    for compiler in $(spack compiler list | grep -v '-' |grep -v '=>' | xargs); do
+        spack compiler info --scope=site ${compiler} 2>/dev/null | grep -q " None" && spack compiler rm --scope=site ${compiler}
+    done
 }
 
 patch_compilers_yaml() {
@@ -226,8 +351,8 @@ patch_compilers_yaml() {
     }
 
     # System ld is too old for amzn linux2
-    spack_gcc_version=$(spack find --format '{version}' gcc)
-    binutils_path=$(spack find -p binutils | awk '/binutils/ {print $2}')
+    spack_gcc_version=$(spack find --format '{version}' gcc | xargs -n1 | tail -n1)
+    binutils_path=$(spack find -p binutils | awk '/binutils/ {print $2}' | head -n1)
     if [ -d "${binutils_path}" ] && [ -n "${spack_gcc_version}" ]; then python3 <<EOF
 import yaml
 
@@ -235,9 +360,12 @@ with open("${compilers_yaml}",'r') as f:
     compilers=yaml.safe_load(f)
 
 for c in compilers["compilers"]:
-    if "arm" in c["compiler"]["spec"] or "intel" in c["compiler"]["spec"] or "oneapi" in c["compiler"]["spec"] \
+    if "aocc" in c["compiler"]["spec"] or "arm" in c["compiler"]["spec"] or "intel" in c["compiler"]["spec"] or "oneapi" in c["compiler"]["spec"] \
        or "${spack_gcc_version}" in c["compiler"]["spec"]:
-        compilers["compilers"][compilers["compilers"].index(c)]["compiler"]["environment"] = {"prepend_path":{"PATH":"${binutils_path}/bin"}}
+           if "prepend_path" in compilers["compilers"][compilers["compilers"].index(c)]["compiler"]["environment"]:
+               compilers["compilers"][compilers["compilers"].index(c)]["compiler"]["environment"]["prepend_path"]["PATH"] = "${binutils_path}/bin"
+           else:
+               compilers["compilers"][compilers["compilers"].index(c)]["compiler"]["environment"] = {"prepend_path":{"PATH":"${binutils_path}/bin"}}
 
 with open("${compilers_yaml}",'w') as f:
     yaml.dump(compilers, f)
@@ -245,8 +373,8 @@ EOF
     fi
 
     # Oneapi needs extra_rpath to gcc libstdc++.so.6
-    if oneapi_gcc_version=$(spack find --format '{compiler}' intel-oneapi-compilers | sed -e 's/=//g') && \
-            [ -n "${oneapi_gcc_version}" ] && oneapi_gcc_path=$(spack find -p "${oneapi_gcc_version}" | grep "${oneapi_gcc_version}" | awk '{print $2}') && \
+    if oneapi_gcc_version=$(spack find --format '{compiler}' intel-oneapi-compilers 2>/dev/null | sed -e 's/=//g') && \
+            [ -n "${oneapi_gcc_version}" ] && oneapi_gcc_path=$(spack find -p "${oneapi_gcc_version}" | grep "${oneapi_gcc_version}" | awk '{print $2}' | head -n1) && \
             [ -d "${oneapi_gcc_path}" ]; then  python3 <<EOF
 import yaml
 
@@ -262,10 +390,11 @@ with open("${compilers_yaml}",'w') as f:
 EOF
     fi
 
+    # TODO: Who needs this? WRF? gromacs will not build when this is active.
     # Armclang needs to find its own libraries
-    if acfl_path=$(spack find -p acfl | awk '/acfl/ {print $2}') && \
+    if acfl_path=$(spack find -p acfl 2>/dev/null | awk '/acfl/ {print $2}') && \
             [ -d "${acfl_path}" ] && cpp_include_path=$(dirname "$(find "${acfl_path}" -name cassert)") && \
-            [ -d "${cpp_include_path}" ]; then  python3 <<EOF
+            [ -d "${cpp_include_path}" ]; then python3 <<EOF
 import yaml
 
 with open("${compilers_yaml}",'r') as f:
@@ -273,7 +402,10 @@ with open("${compilers_yaml}",'r') as f:
 
 for c in compilers["compilers"]:
     if "arm" in c["compiler"]["spec"]:
-        compilers["compilers"][compilers["compilers"].index(c)]["compiler"]["environment"] = {"prepend_path":{"CPATH":"${cpp_include_path}:${cpp_include_path}/aarch64-linux-gnu"}}
+        if "prepend_path" in compilers["compilers"][compilers["compilers"].index(c)]["compiler"]["environment"]:
+            compilers["compilers"][compilers["compilers"].index(c)]["compiler"]["environment"]["prepend_path"]["CPATH"] = "${cpp_include_path}:${cpp_include_path}/aarch64-linux-gnu"
+        else:
+            compilers["compilers"][compilers["compilers"].index(c)]["compiler"]["environment"] = {"prepend_path":{"CPATH":"${cpp_include_path}:${cpp_include_path}/aarch64-linux-gnu"}}
 
 with open("${compilers_yaml}",'w') as f:
     yaml.dump(compilers, f)
@@ -281,7 +413,8 @@ EOF
     fi
 
     # Armclang needs extra_rpath to libstdc++.so
-    if acfl_path=$(spack find -p acfl | awk '/acfl/ {print $2}') && \
+    # TODO: FYI ACFL installer does this by adding libstdc++.so.6 path to LD_LIBRARY_PATH
+    if acfl_path=$(spack find -p acfl 2>/dev/null | awk '/acfl/ {print $2}') && \
             acfl_libstdcpp_path=$(dirname "$(find "${acfl_path}" -name libstdc++.so | head -n1)") && \
             [ -d "${acfl_libstdcpp_path}" ]; then python3 <<EOF
 import yaml
@@ -299,7 +432,7 @@ EOF
     fi
 }
 
-install_packages() {
+install_compilers() {
     if [ -z "${SPACK_ROOT}" ]; then
         if [ -f /opt/slurm/etc/slurm.sh ]; then
             . /opt/slurm/etc/slurm.sh
@@ -309,48 +442,40 @@ install_packages() {
     fi
 
     # Compiler needed for all kinds of codes. It makes no sense not to install it.
-    # Get gcc from buildcache
-    cache_zip=$(mktemp)
-    # TODO: Enable. It runs without error right now, but needs to be changed once bootstrap-gcc-cache is available
-    # [ -z "${CI_PROJECT_DIR}" ] && curl -L "" -o "${cache_zip}"
-    # `gcc@12.3.0%gcc@7.3.1` is created as part of building the pipeline containers.
-    # https://github.com/spack/gitlab-runners/pkgs/container/pcluster-amazonlinux-2/106126845?tag=v2023-07-01 produced the following hashes.
-    if [ "x86_64" == "$(architecture)" ]; then
-        gcc_hash="yyvkvlgimaaxjhy32oa5x5eexqekrevc"
-    else
-        gcc_hash="jttj24nibqy5jsqf34as5m63umywfa3d"
-    fi
-    if file -b "${cache_zip}"  | grep -q "Zip archive"; then
-        pushd "$(dirname "${cache_zip}")"
-        unzip -uq "${cache_zip}"
-        spack mirror add --scope=site bootstrap-gcc-cache file://"$PWD"/bootstrap-gcc-cache && \
-            spack buildcache update-index bootstrap-gcc-cache
-        popd
+    mirrors_entry=$(grep bootstrap-gcc-cache $SPACK_ROOT/etc/spack/mirrors.yaml)
+    if [ -n "${mirrors_entry}" ]; then
+        # Make sure we select the gcc from the cache we just added (temporarily override all mirrors.yaml configuration files):
+        tmpdir=$(mktemp -d)
+        echo -e "mirrors::\n${mirrors_entry}" > "${tmpdir}/mirrors.yaml"
+        gcc_hash=$(spack --config-scope ${tmpdir} buildcache list -a -v -l gcc | grep -v -- "----" | tail -n1 | awk '{print $1}')
     fi
 
-    spack install --no-check-signature /${gcc_hash} || spack install gcc
-
-    if spack mirror list | grep -q "bootstrap-gcc-cache"; then
-        pushd "$(dirname "${cache_zip}")"
-        spack mirror rm --scope=site bootstrap-gcc-cache
-        rm -rf bootstrap-gcc-cache "${cache_zip}"
-        popd
-    fi
-
+    # Try to install from bootstrap-gcc-buildcache, fall back to generic version.
+    spack install /${gcc_hash} 2>/dev/null || spack install gcc
     (
         spack load gcc
         spack compiler add --scope site
     )
 
-    if [ -z "${NO_INTEL_COMPILER}" ] && [ "x86_64" == "$(architecture)" ]
+    if [ -z "${NO_INTEL_COMPILER}" ] && [ "x86_64" == "$(arch)" ]
     then
         # Add oneapi@latest & intel@latest
         spack install intel-oneapi-compilers-classic
         bash -c ". "$(spack location -i intel-oneapi-compilers)/setvars.sh"; spack compiler add --scope site"
     fi
+}
 
-    # TODO: Handle this compiler in pipeline once WRF package gets added
-    if [ -z "${CI_PROJECT_DIR}" ] && [ "aarch64" == "$(architecture)" ]
+# TODO: Handle this compiler in buildcache stack once wrf%acfl package gets added
+install_acfl() {
+    if [ -z "${SPACK_ROOT}" ]; then
+        if [ -f /opt/slurm/etc/slurm.sh ]; then
+            . /opt/slurm/etc/slurm.sh
+        else
+            . /etc/profile.d/spack.sh
+        fi
+    fi
+
+    if [ -z "${NO_ARM_COMPILER}" ] && [ "aarch64" == "$(arch)" ]
     then
         spack install acfl
         (
@@ -358,9 +483,20 @@ install_packages() {
             spack compiler add --scope site
         )
     fi
+}
 
-    patch_compilers_yaml
+setup_mirrors() {
+    . "${install_path}/share/spack/setup-env.sh"
 
+    if ${generic_buildcache}; then
+        spack mirror add --scope site "aws-pcluster-$(stack_arch)" "https://binaries.spack.io/develop/aws-pcluster-$(stack_arch)"
+    fi
+    # Add older specific target mirrors
+    spack mirror add --scope site "aws-pcluster-legacy" "https://binaries.spack.io/develop/aws-pcluster-$(target | sed -e 's?_avx512??1')"
+    spack buildcache keys -it
+}
+
+install_packages() {
     # Install any specs provided to the script.
     for spec in "$@"
     do
@@ -379,9 +515,20 @@ echo "$(declare -pf)
     setup_variables
     download_spack | true
     downloaded=\${PIPESTATUS[0]}
-    set_pcluster_defaults
-    setup_spack
-    install_packages \"$@\"
+    set_modules
+    load_spack_at_login
+    setup_bootstrap_mirrors
+    if \${generic_buildcache}; then
+       setup_pcluster_buildcache_stack
+    else
+        set_pcluster_defaults
+        setup_spack
+        install_compilers
+        install_acfl
+        patch_compilers_yaml
+    fi
+    setup_mirrors
+    install_packages \"${install_specs}\"
     echo \"*** Spack setup completed ***\"
     rm -f ${tmpfile}
 " > ${tmpfile}

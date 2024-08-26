@@ -7,7 +7,7 @@ build: assets
 .PHONY: assets
 assets:
 	@echo "Build assets for slurm_accounting_db"
-	curl -skL -o "assets/serverless-database.yaml" "https://raw.githubusercontent.com/aws/aws-parallelcluster/develop/cloudformation/database/serverless-database.yaml"
+	curl -skL -o "assets/main.yaml" "https://raw.githubusercontent.com/aws/aws-parallelcluster/develop/cloudformation/database/main.yaml"
 
 run: build
 	@echo "Run assets for slurm_accounting_db"

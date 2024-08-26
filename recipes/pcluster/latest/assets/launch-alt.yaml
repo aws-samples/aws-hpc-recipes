@@ -13,6 +13,7 @@ Metadata:
           - Architecture
           - QueueName
           - ComputeInstanceMax
+          - SharedStorageType
       - Label:
           default: Networking and Access
         Parameters:
@@ -60,10 +61,11 @@ Parameters:
     Default: alinux2
     AllowedValues:
       - alinux2
-      - centos7
-      - ubuntu2004
+      - alinux2023
       - ubuntu2204
       - rhel8
+      - rhel9
+      - rocky8
     Description: Cluster operating system
 
   Architecture:
@@ -83,10 +85,19 @@ Parameters:
     Description: Subnet for compute nodes. Private subnet is recommended. Should be in the same AZ as HeadNodeSubnetIp. Can even be the same value as HeadNodeSubnetId.
     Type: AWS::EC2::Subnet::Id
 
+  SharedStorageType:
+    Type: String
+    Default: "Ebs"
+    Description: Choose whether to use EFS for the cluster shared filesystem
+    AllowedValues:
+         - "Ebs"
+         - "Efs"
+
+
 Mappings:
   ParallelCluster:
     Constants:
-      Version: 3.7.2
+      Version: 3.10.1
   Recipes:
     Constants:
       Version: main
@@ -128,6 +139,7 @@ Resources:
           Os: !Ref OS
         HeadNode:
           InstanceType: !FindInMap [ InstanceTypeForArchitecture, HeadNode, !Ref Architecture ]
+          SharedStorageType: !Ref SharedStorageType
           Networking:
             SubnetId: !Ref HeadNodeSubnetId
           Ssh:

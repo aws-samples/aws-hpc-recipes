@@ -3,7 +3,7 @@ set -e
 
 # Install Mountpoint for S3 as per its GitHub page
 #
-# https://github.com/aws/mountpoint-s3
+# https://github.com/awslabs/mountpoint-s3
 #
 # Usage: sudo bash install.sh
 

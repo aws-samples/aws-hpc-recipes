@@ -1,0 +1,304 @@
+AWSTemplateFormatVersion: '2010-09-09'
+Description: >
+  Demonstrates how to enable Research and Engineering Studio (RES) to integrate with a ParallelCluster LoginNode.
+
+# Add VPC Id parameter
+Parameters:
+  VPC:
+    Type: AWS::EC2::VPC::Id
+    Description: VPC where RES is deployed
+
+Resources:
+  UpdateHeadNodeSGLambdaRole:
+    Type: "AWS::IAM::Role"
+    Properties:
+      AssumeRolePolicyDocument:
+        Version: "2012-10-17"
+        Statement:
+          - Effect: Allow
+            Principal:
+              Service: "lambda.amazonaws.com"
+            Action: "sts:AssumeRole"
+      Policies:
+        - PolicyName: UpdateSecurityGroup
+          PolicyDocument:
+            Version: '2012-10-17'
+            Statement:
+            - Effect: Allow
+              Action: 
+                - ec2:AuthorizeSecurityGroupIngress
+              Resource: "*"
+              Condition:
+                ForAllValues:StringEquals:
+                  aws:TagKeys: 
+                    - parallelcluster:cluster-name
+        - PolicyName: DescribeStackResources
+          PolicyDocument:
+            Version: '2012-10-17'
+            Statement:
+            - Effect: Allow
+              Action: cloudformation:DescribeStackResources
+              Resource: "*"
+        - PolicyName: AllowCloudWatchLogs
+          PolicyDocument:
+            Version: '2012-10-17'
+            Statement:
+            - Effect: Allow
+              Action:
+                - logs:CreateLogGroup
+              Resource: !Sub "arn:${AWS::Partition}:logs:${AWS::Region}:${AWS::AccountId}:*"
+            - Effect: Allow
+              Action:
+                - logs:CreateLogStream
+                - logs:PutLogEvents
+              Resource: !Sub "arn:${AWS::Partition}:logs:${AWS::Region}:${AWS::AccountId}:log-group:/aws/lambda/*UpdateHeadNodeSGLambda*"
+
+  # Create EC2 Security Group for RES
+  RESPCLoginNodeSG:
+    Type: AWS::EC2::SecurityGroup
+    Properties:
+      GroupDescription: "Security Group for RES PC Login Node"
+      GroupName: "RESPCLoginNodeSG"
+      VpcId: !Ref VPC
+      Tags:
+        - Key: res:Resource
+          Value: vdi-security-group
+
+  UpdateHeadNodeSGLambda:
+    Type: AWS::Lambda::Function
+    Properties:
+      Handler: index.lambda_handler
+      Runtime: python3.11
+      Timeout: 300
+      Description: |
+        Update the ParallelCluster HeadNode Security Group.
+        Adds an Ingress route for Research and Engineering VDI
+      Role: !GetAtt UpdateHeadNodeSGLambdaRole.Arn
+      Code:
+        ZipFile: |
+          import boto3
+          import logging
+          import os
+
+          logger = logging.getLogger()
+          logger.setLevel(logging.INFO)
+          logger.info("Loading function")
+
+          def lambda_handler(events, context):
+
+              pclusterStackName = events["pclusterStackName"]
+              logger.info("Updating security groups for ParallelCluster HeadNodeSecurityGroup")
+              logger.info(f"pclusterStackName: {pclusterStackName}")
+
+              HEADNODE_SG_NAME = os.environ["HEADNODE_SG_NAME"]
+              RES_PCLOGINNODE_SG = os.environ["RES_PCLOGINNODE_SG"]
+
+              # Get the cloudformation resources from the pclusterStackName stack
+              cfn_client = boto3.client("cloudformation")
+              stack_resources = cfn_client.describe_stack_resources(StackName=pclusterStackName)[
+                  "StackResources"
+              ]
+
+              headnode_sg = next(
+                  (
+                      resource
+                      for resource in stack_resources
+                      if resource["LogicalResourceId"].startswith(HEADNODE_SG_NAME)
+                      and resource["ResourceType"] == "AWS::EC2::SecurityGroup"
+                  ),
+                  None,
+              )["PhysicalResourceId"]
+
+              logger.info(f"Updating security group: '{headnode_sg}'")
+              logger.info(f"Adding security group: '{RES_PCLOGINNODE_SG}'")
+
+              ec2_client = boto3.client("ec2")
+
+              try:
+                  ec2_client.authorize_security_group_ingress(
+                      GroupId=headnode_sg,
+                      IpPermissions=[
+                          {
+                              "FromPort": 2049,
+                              "ToPort": 2049,
+                              "IpProtocol": "tcp",
+                              "UserIdGroupPairs": [{"GroupId": RES_PCLOGINNODE_SG, "Description": "Allow access to Head Node from RES VDI"}],
+                          },
+                          {
+                              "FromPort": 6819,
+                              "ToPort": 6829,
+                              "IpProtocol": "tcp",
+                              "UserIdGroupPairs": [{"GroupId": RES_PCLOGINNODE_SG, "Description": "Allow access to Head Node from RES VDI"}],
+                              
+                          },
+                      ],
+                  )
+              except Exception as e:
+                  logger.error(f"Error: {e}")
+      Environment:
+        Variables:
+          HEADNODE_SG_NAME: HeadNodeSecurityGroup
+          RES_PCLOGINNODE_SG: !Ref RESPCLoginNodeSG
+
+  ConfigureLoginNodeforRES:
+    Type: AWS::SSM::Document
+    Properties:
+      DocumentType: Automation
+      Content:
+        schemaVersion: '0.3'
+        description: |
+          Enable Research and Engineering Studio (RES) integration with ParallelCluster LoginNode.
+        assumeRole: !GetAtt SSMExecutionRole.Arn
+        parameters:
+          pclusterStackName:
+            type: String
+        mainSteps:
+          - description: Get the LoginNode instance id
+            name: getInstanceId
+            action: aws:executeAwsApi
+            nextStep: UpdateHeadNodeSG
+            isEnd: false
+            inputs:
+              Filters:
+                - Values:
+                    - LoginNode
+                  Name: tag:Name
+                - Values:
+                    - '{{pclusterStackName}}'
+                  Name: tag:parallelcluster:cluster-name
+                - Values:
+                    - running
+                  Name: instance-state-name
+              Service: ec2
+              Api: DescribeInstances
+            outputs:
+              - Type: StringList
+                Name: InstanceId
+                Selector: $.Reservations[0].Instances[0].InstanceId
+          - description: Adds ingress rules to ParallelCluster HeadNode SG
+            name: UpdateHeadNodeSG
+            action: aws:invokeLambdaFunction
+            nextStep: allowDcv
+            isEnd: false
+            inputs:
+              FunctionName: !Ref UpdateHeadNodeSGLambda
+              Payload: '{"pclusterStackName": "{{pclusterStackName}}" }'
+          - name: allowDcv
+            action: aws:runCommand
+            nextStep: createAMI
+            isEnd: false
+            onFailure: Abort
+            inputs:
+              Parameters:
+                commands:
+                  - sudo /opt/parallelcluster/scripts/imds/imds-access.sh --allow dcv
+              InstanceIds:
+                - '{{getInstanceId.InstanceId}}'
+              DocumentName: AWS-RunShellScript
+          - name: createAMI
+            action: aws:createImage
+            nextStep: unsetDcv
+            isEnd: false
+            inputs:
+              ImageName: LoginNode_{{getInstanceId.InstanceId}}_{{global:DATE_TIME}}
+              InstanceId: '{{getInstanceId.InstanceId}}'
+            outputs:
+              - Type: String
+                Name: AMIImageId
+                Selector: $.ImageId
+          - name: unsetDcv
+            action: aws:runCommand
+            isEnd: true
+            inputs:
+              Parameters:
+                commands:
+                  - sudo /opt/parallelcluster/scripts/imds/imds-access.sh --unset dcv
+              InstanceIds:
+                - '{{getInstanceId.InstanceId}}'
+              DocumentName: AWS-RunShellScript
+        outputs:
+          - createAMI.AMIImageId
+
+
+  SSMExecutionRole:
+    Type: "AWS::IAM::Role"
+    Properties:
+      AssumeRolePolicyDocument:
+        Version: "2012-10-17"
+        Statement:
+          - Effect: Allow
+            Principal:
+              Service: "ssm.amazonaws.com"
+            Action: "sts:AssumeRole"
+      Policies:
+        - PolicyName: EC2LambdaAccessPolicy
+          PolicyDocument:
+            Version: '2012-10-17'
+            Statement:
+              - Effect: Allow
+                Action:
+                  - "ec2:DescribeInstances"
+                Resource: "*"
+        - PolicyName: CreateLoginNodeImage
+          PolicyDocument:
+            Version: '2012-10-17'
+            Statement:
+            - Effect: Allow
+              Action: 
+                - ec2:CreateImage
+                - ec2:AuthorizeSecurityGroupIngress
+              Resource: "*"
+              Condition:
+                ForAllValues:StringEquals:
+                  aws:TagKeys: 
+                    - parallelcluster:cluster-name
+        - PolicyName: DescribeStackResources
+          PolicyDocument:
+            Version: '2012-10-17'
+            Statement:
+            - Effect: Allow
+              Action: cloudformation:DescribeStackResources
+              Resource: "*"
+        - PolicyName: InvokeLambda
+          PolicyDocument:
+            Version: '2012-10-17'
+            Statement:
+            - Effect: Allow
+              Action: lambda:InvokeFunction
+              Resource: !GetAtt UpdateHeadNodeSGLambda.Arn
+      ManagedPolicyArns:
+        - "arn:aws:iam::aws:policy/service-role/AmazonSSMAutomationRole"
+
+  # Add an ImageBuilder::Component
+  RESPCLoginNodeComponent:
+    Type: 'AWS::ImageBuilder::Component'
+    Properties:
+      Name: 'res-pc-login-node'
+      Description: 'Component to enable RES integration with ParallelCluster LoginNode'
+      Platform: Linux
+      Version: '1.0.0'
+      Data: |
+        name: res-pc-login-node
+        description: A component to configure a ParallelCluster Login Node
+        schemaVersion: 1.0
+        phases:
+          - name: build
+            steps:
+              - name: Install
+                action: ExecuteBash
+                onFailure: Abort
+                maxAttempts: 3
+                inputs:
+                    commands:
+                      - |
+                        sed -i '/\([0-9]\{1,3\}\.\)\{3\}[0-9]\{1,3\}:\/home/ s/^/#/' /etc/fstab
+                        iptables -F PARALLELCLUSTER_IMDS && iptables -F OUTPUT
+
+# Add outputs
+Outputs:
+  ConfigureLoginNodeforRES:
+    Description: "SSM Document to enable RES integration with ParallelCluster LoginNode"
+    Value: !Ref ConfigureLoginNodeforRES
+  RESPCLoginNodeSG:
+    Description: "Security Group for RES PC Login Node"
+    Value: !Ref RESPCLoginNodeSG
