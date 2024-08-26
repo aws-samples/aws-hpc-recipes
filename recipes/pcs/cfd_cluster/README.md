@@ -2,7 +2,7 @@
 
 ## Info
 
-Run OpenFOAM on PCS
+This is a walkthrough for running and visualizing a simple OpenFOAM example using AWS Parallel Computing Service. The resulting cluster and results are highlighted in the AWS News Blog article [_Announcing AWS Parallel Computing Service to run HPC workloads at virtually any scale_](https://aws.amazon.com/blogs/aws/announcing-aws-parallel-computing-service-to-run-hpc-workloads-at-virtually-any-scale).
 
 ## Usage
 
@@ -158,5 +158,29 @@ Running reconstructPar on /shared/motorBike
 Mon Aug 26 19:42:07 UTC 2024
 ```
 
-Assuming that is the case, make the `motorBike` directory world-accessible (`chmod -R 777 /shared/motorBike`) so it can be read by the `dcvuser` on the DCV workstation node. 
+Assuming that is the case, make the `motorBike` directory world-accessible (`chmod -R 777 /shared/motorBike`) so it can be read and written by the `dcvuser` on the DCV workstation node. 
 
+### Connect the to DCV workstation and visualize the result
+
+1. Connect to the DCV session. You can use the URL (as we did before when verifying the workstation was active), or by using a DCV client. For more information, see [Connecting to a NICE DCV session](https://docs.aws.amazon.com/dcv/latest/userguide/using-connecting.html) in the DCV user guide. 
+2. Open a command line terminal in the desktop session.
+3. Load Spack `. /shared/spack/share/spack/setup-env.sh`
+4. Load the OpenFOAM module `spack load openfoam-org`
+5. Add ParaView to the path `export PATH=$PATH:/shared/ParaView-5.12.1-MPI-Linux-Python3.10-x86_64/bin`
+6. Change into the project directory `cd /shared/motorBike`
+7. Launch Paraview `paraFoam -builtin`
+
+You should be ready to explore the results from the simulation. We recommend you follow along with this online tutorial video: [Simulating the flow around a Motorbike with SnappyHexMesh](https://youtu.be/1C4Av_yCfpw?si=j31WRWtRBJ4-W-ea&t=738), starting at 12:18. This will walk you through examining the volume, the motorbike mesh, and the resulting simulation results.
+
+### Cleaning up
+
+Delete each resource in reverse order it was created.
+* DCV instance CloudFormation stack
+* PCS queue
+* PCS compute node groups
+* IAM instance profile CloudFormation stack
+* Launch templates CloudFormation stack
+* FSx for Lustre filesystem
+* EFS filesystem
+* PCS cluster
+* Cluster security group CloudFormation stack
