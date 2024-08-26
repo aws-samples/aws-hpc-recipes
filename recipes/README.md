@@ -63,7 +63,7 @@ You can use an HPC Recipe for AWS in several ways:
 
 ### :arrow_right: pcluster: AWS ParallelCluster
 
-#### decoupled_storage ![tag](https://img.shields.io/badge/-beta-%23800080) ![tag](https://img.shields.io/badge/-efs-%237DCEA0) ![tag](https://img.shields.io/badge/-fsx-%237DCEA0) ![tag](https://img.shields.io/badge/-pcluster-%23AAB7B8) 
+#### decoupled_storage ![tag](https://img.shields.io/badge/-beta-%23800080) ![tag](https://img.shields.io/badge/-efs-%237DCEA0) ![tag](https://img.shields.io/badge/-fsx-%237DCEA0) ![tag](https://img.shields.io/badge/-parallelcluster-%23FF9900) 
 
 * **About**: Demonstrate decoupled shared storage using Amazon EFS.
 * **Usage**: [README.md](pcluster/decoupled_storage/README.md)
@@ -83,7 +83,7 @@ You can use an HPC Recipe for AWS in several ways:
 * **About**: Demonstrates the new Login Nodes feature in ParallelCluster 3.7.2
 * **Usage**: [README.md](pcluster/login_nodes/README.md)
 
-#### login_nodes_ami_for_res ![tag](https://img.shields.io/badge/-pcluster-%23AAB7B8) ![tag](https://img.shields.io/badge/-res-%237DCEA0) ![tag](https://img.shields.io/badge/-ssm-%23AAB7B8) 
+#### login_nodes_ami_for_res ![tag](https://img.shields.io/badge/-parallelcluster-%23FF9900) ![tag](https://img.shields.io/badge/-res-%237DCEA0) ![tag](https://img.shields.io/badge/-ssm-%23AAB7B8) 
 
 * **About**: Create an AMI of a ParallelCluster LoginNode compatible with Research and Engineering Studio
 * **Usage**: [README.md](pcluster/login_nodes_ami_for_res/README.md)
@@ -144,6 +144,44 @@ You can use an HPC Recipe for AWS in several ways:
 * **Usage**: [README.md](pcluster/try_trn1/README.md)
 
 
+### :arrow_right: pcs: AWS Parallel Computing Service
+
+#### byo_login ![tag](https://img.shields.io/badge/-ec2-%23AAB7B8) ![tag](https://img.shields.io/badge/-lambda-%237DCEA0) ![tag](https://img.shields.io/badge/-pcs-%23FF9900) ![tag](https://img.shields.io/badge/-secretsmanager-%237DCEA0) 
+
+* **About**: Connect standalone access nodes to AWS PCS
+* **Usage**: [README.md](pcs/byo_login/README.md)
+
+#### cfd_cluster ![tag](https://img.shields.io/badge/-beta-%23800080) ![tag](https://img.shields.io/badge/-cfd-%23AAB7B8) ![tag](https://img.shields.io/badge/-dcv-%23AAB7B8) ![tag](https://img.shields.io/badge/-efs-%237DCEA0) ![tag](https://img.shields.io/badge/-fsx-%237DCEA0) ![tag](https://img.shields.io/badge/-pcs-%23FF9900) ![tag](https://img.shields.io/badge/-spack-%23AAB7B8) 
+
+* **About**: Run OpenFOAM on PCS
+* **Usage**: [README.md](pcs/cfd_cluster/README.md)
+
+#### cloudwatch ![tag](https://img.shields.io/badge/-cloudwatch-%237DCEA0) ![tag](https://img.shields.io/badge/-pcs-%23FF9900) ![tag](https://img.shields.io/badge/-s3-%237DCEA0) ![tag](https://img.shields.io/badge/-ssm-%23AAB7B8) 
+
+* **About**: Enable CloudWatch Logs on PCS instances
+* **Usage**: [README.md](pcs/cloudwatch/README.md)
+
+#### enable_efa ![tag](https://img.shields.io/badge/-ec2-%23AAB7B8) ![tag](https://img.shields.io/badge/-efa-%23AAB7B8) ![tag](https://img.shields.io/badge/-hpc-%23AAB7B8) ![tag](https://img.shields.io/badge/-pcs-%23FF9900) 
+
+* **About**: Use EFA with AWS PCS compute node groups
+* **Usage**: [README.md](pcs/enable_efa/README.md)
+
+#### getting_started ![tag](https://img.shields.io/badge/-ec2-%23AAB7B8) ![tag](https://img.shields.io/badge/-efs-%237DCEA0) ![tag](https://img.shields.io/badge/-fsx-%237DCEA0) ![tag](https://img.shields.io/badge/-iam-%23AAB7B8) ![tag](https://img.shields.io/badge/-pcs-%23FF9900) 
+
+* **About**: Supports "Getting Started with AWS PCS" in AWS PCS user guide.
+* **Usage**: [README.md](pcs/getting_started/README.md)
+
+#### multiuser_demo ![tag](https://img.shields.io/badge/-beta-%23800080) ![tag](https://img.shields.io/badge/-pcs-%23FF9900) 
+
+* **About**: Example for configuration for multi-user AWS PCS using LDAPS
+* **Usage**: [README.md](pcs/multiuser_demo/README.md)
+
+#### spack_for_pcs ![tag](https://img.shields.io/badge/-beta-%23800080) ![tag](https://img.shields.io/badge/-pcs-%23FF9900) ![tag](https://img.shields.io/badge/-spack-%23AAB7B8) 
+
+* **About**: Install Spack on AWS PCS
+* **Usage**: [README.md](pcs/spack_for_pcs/README.md)
+
+
 ### :arrow_right: res: Research and Engineering Studio on AWS
 
 #### entra_id ![tag](https://img.shields.io/badge/-beta-%23800080) ![tag](https://img.shields.io/badge/-entra_id-%23AAB7B8) ![tag](https://img.shields.io/badge/-identity-%23AAB7B8) ![tag](https://img.shields.io/badge/-res-%237DCEA0) 
@@ -178,7 +216,7 @@ You can use an HPC Recipe for AWS in several ways:
 
 #### fsx_lustre ![tag](https://img.shields.io/badge/-core-%23146EB4) ![tag](https://img.shields.io/badge/-fsx-%237DCEA0) ![tag](https://img.shields.io/badge/-lustre-%23AAB7B8) 
 
-* **About**: Creates either a scratch or persistent FSxL filesystem and the relevant security groups for use with ParallelCluster.
+* **About**: Creates either a scratch or persistent FSxL filesystem and a security group for accessing the filesystem.
 * **Usage**: [README.md](storage/fsx_lustre/README.md)
 
 #### fsx_lustre_s3_dra ![tag](https://img.shields.io/badge/-beta-%23800080) ![tag](https://img.shields.io/badge/-fsx-%237DCEA0) ![tag](https://img.shields.io/badge/-lustre-%23AAB7B8) ![tag](https://img.shields.io/badge/-s3-%237DCEA0) 
@@ -186,9 +224,9 @@ You can use an HPC Recipe for AWS in several ways:
 * **About**: Demonstrates an FSx for Lustre filesystem with an S3 data repository association
 * **Usage**: [README.md](storage/fsx_lustre_s3_dra/README.md)
 
-#### fsx_openzfs ![tag](https://img.shields.io/badge/-beta-%23800080) ![tag](https://img.shields.io/badge/-fsx-%237DCEA0) ![tag](https://img.shields.io/badge/-nfs-%23AAB7B8) ![tag](https://img.shields.io/badge/-openzfs-%23AAB7B8) 
+#### fsx_openzfs ![tag](https://img.shields.io/badge/-fsx-%237DCEA0) ![tag](https://img.shields.io/badge/-nfs-%23AAB7B8) ![tag](https://img.shields.io/badge/-openzfs-%23AAB7B8) 
 
-* **About**: Provision an FSx for OpenZFS filesystem and relevant security groups for use with ParallelCluster
+* **About**: Provision an FSx for OpenZFS filesystem and a security groups for accessing the filesystem
 * **Usage**: [README.md](storage/fsx_openzfs/README.md)
 
 #### mountpoint_s3 ![tag](https://img.shields.io/badge/-beta-%23800080) ![tag](https://img.shields.io/badge/-parallelcluster-%23FF9900) ![tag](https://img.shields.io/badge/-s3-%237DCEA0) 
