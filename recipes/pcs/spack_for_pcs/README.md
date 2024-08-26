@@ -1,4 +1,4 @@
-# Spack on PCS with shared filesystem
+# Spack on PCS
 
 ## Info
 
