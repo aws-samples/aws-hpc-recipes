@@ -2,7 +2,7 @@
 
 ## Info
 
-This is a walkthrough for running and visualizing a simple OpenFOAM example using AWS Parallel Computing Service. The resulting cluster and results are highlighted in the AWS News Blog article [_Announcing AWS Parallel Computing Service to run HPC workloads at virtually any scale_](https://aws.amazon.com/blogs/aws/announcing-aws-parallel-computing-service-to-run-hpc-workloads-at-virtually-any-scale).
+This is a walkthrough for running and visualizing a simple OpenFOAM example using AWS Parallel Computing Service. This is the same cluster design and project highlighted in the AWS News Blog article [_Announcing AWS Parallel Computing Service to run HPC workloads at virtually any scale_](https://aws.amazon.com/blogs/aws/announcing-aws-parallel-computing-service-to-run-hpc-workloads-at-virtually-any-scale).
 
 You will create an HPC architecture cluster with this design.
 

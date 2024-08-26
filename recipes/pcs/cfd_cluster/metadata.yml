@@ -18,6 +18,10 @@ authors:
 tags:
   - pcs
   - dcv
+  - fsx
+  - efs
+  - spack
+  - cfd
   - beta
 # A list of file glob-like patterns used to filter any files or directories that should not be included in the S3 release. 
 build_ignore: []
