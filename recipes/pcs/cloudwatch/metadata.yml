@@ -1,10 +1,10 @@
 ---
 # The name of the recipe. This has the same character requirements as namespace.
-name: Enable CloudWatch Logs on PCS instances
+name: cloudwatch
 # The version of the recipe. Must be compatible with semantic versioning.
 version: "1.0.0"
 # A short summary description of the recipe
-description: Assets to help enable CloudWatch Logs on PCS instances
+description: Enable CloudWatch Logs on PCS instances
 # The path to the README for the recipe relative to its root directory.
 readme: README.md
 # Optional URL for external documentation

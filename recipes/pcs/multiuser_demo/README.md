@@ -1,10 +1,10 @@
-# Multi-user PCS Compute Node Groups
+# Example: Multi-user PCS
 
 ## Info
 
 This recipe provides a pattern you can extend to build multi-user compute node groups with PCS, powered by a directory service with an LDAP interface. Examples for AWS Managed Microsoft AD and a self-hosted OpenLDAP server running on Amazon ECS are provided. It should be possible to extend the designs shown here to most directory service providers. Contributions are welcome!
 
-**Note** The code samples included here should not be used for anything beyond demonstration or training purposes, as they configures LDAP without TLS encryption.
+**Note** The code samples included here should not be used for anything beyond demonstration or training purposes, as they configure LDAP without TLS encryption.
 
 ## Usage
 
