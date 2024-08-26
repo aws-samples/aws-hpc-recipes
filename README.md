@@ -1,15 +1,16 @@
 ![Site Banner](docs/media/banner.png "The HPC Recipe Library - stand on the shoulders of... someone else.")
 
 [![DOI](https://zenodo.org/badge/DOI/10.5281/zenodo.8360274.svg)](https://doi.org/10.5281/zenodo.8360274)
+[![Static Badge](https://img.shields.io/badge/aws%20hpc%20blog-FF9900)](https://aws.amazon.com/blogs/hpc/introducing-a-community-recipe-library-for-hpc-infrastructure-on-aws/)
 
-This repository contains example recipes that demonstrate how to build HPC systems using AWS Parallel Computing Service, AWS ParallelCluster, Research and Engineering Studio, and several other AWS products.
+This repository contains example recipes that demonstrate how to build HPC systems using [AWS Parallel Computing Service](https://aws.amazon.com/hpc/pcs/), [AWS ParallelCluster](https://aws.amazon.com/hpc/parallelcluster/), [Research and Engineering Studio](https://aws.amazon.com/hpc/res/), and several other AWS products.
 
 ## Getting Started
 
 * If you are new to AWS Parallel Computing Service (AWS PCS), you can watch this [short introductory video](https://youtu.be/gmw7A3kOh60).
 * You can learn about ParallelCluster from this [quick explainer video](https://youtu.be/gmw7A3kOh60).
 * [This video](https://www.youtube.com/watch?v=2Nku6MWDwT0) introduces Research and Engineering Studio on AWS.
-* Discover recipes to help you [get started with AWS PCS](recipes/pcs/README.md)
+* Discover recipes to help you [get started with AWS PCS](recipes/pcs/)
 * Try launching an HPC cluster in the cloud [with just a few clicks](recipes/pcluster/latest/README.md).
 * Need to set up HPC-ready networking? Choose from a [simple example](recipes/net/hpc_basic/README.md) or a [more advanced configuration](recipes/net/hpc_large_scale/README.md).
 * There are also examples of setting up HPC-ready filesystems on AWS [for you to try and learn from](recipes/README.md#arrow_right-storage-storage).
