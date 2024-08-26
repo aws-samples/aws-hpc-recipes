@@ -178,6 +178,10 @@ Assuming that is the case, make the `motorBike` directory world-accessible (`chm
 
 You should be ready to explore the results from the simulation. We recommend you follow along with this online tutorial video: [Simulating the flow around a Motorbike with SnappyHexMesh](https://youtu.be/1C4Av_yCfpw?si=j31WRWtRBJ4-W-ea&t=738), starting at 12:18. This will walk you through examining the volume, the motorbike mesh, and the resulting simulation results.
 
+It should be possible to generate a view that resembles this screenshot:
+
+![Image](docs/pcs-motorbike-dcv.png)
+
 ### Cleaning up
 
 Delete each resource in reverse order it was created.
