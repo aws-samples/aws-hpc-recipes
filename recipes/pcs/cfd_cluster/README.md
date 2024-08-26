@@ -4,6 +4,12 @@
 
 This is a walkthrough for running and visualizing a simple OpenFOAM example using AWS Parallel Computing Service. The resulting cluster and results are highlighted in the AWS News Blog article [_Announcing AWS Parallel Computing Service to run HPC workloads at virtually any scale_](https://aws.amazon.com/blogs/aws/announcing-aws-parallel-computing-service-to-run-hpc-workloads-at-virtually-any-scale).
 
+You will create an HPC architecture cluster with this design.
+
+![Image](docs/pcs-cfd-arch-diagram.png)
+
+You will install Spack then use Spack to install OpenFOAM. Then, you will run an example CFD project on the cluster and visualize the results using a DCV workstation.
+
 ## Usage
 
 ### Launch and configure a PCS cluster.
