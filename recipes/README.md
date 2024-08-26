@@ -31,6 +31,11 @@ You can use an HPC Recipe for AWS in several ways:
 * **About**: Stand up a basic AWS Managed Microsoft AD for use with AWS ParallelCluster.
 * **Usage**: [README.md](dir/demo_managed_ad/README.md)
 
+#### demo_openldap ![tag](https://img.shields.io/badge/-beta-%23800080) ![tag](https://img.shields.io/badge/-ecs-%23AAB7B8) ![tag](https://img.shields.io/badge/-fargate-%23AAB7B8) ![tag](https://img.shields.io/badge/-openldap-%23AAB7B8) 
+
+* **About**: Simple OpenLDAP service running on ECS
+* **Usage**: [README.md](dir/demo_openldap/README.md)
+
 
 ### :arrow_right: env: User environment
 
