@@ -2,6 +2,7 @@
 # List of namespaces
 namespace:
   aws: General AWS (default)
+  batch: AWS Batch
   db: Database management
   dir: Directory services
   env: User environment
