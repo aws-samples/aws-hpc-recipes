@@ -26,7 +26,7 @@ You can use an HPC Recipe for AWS in several ways:
 
 ### :arrow_right: db: Database management
 
-#### slurm_accounting_db ![tag](https://img.shields.io/badge/-aurora=-%23AAB7B8) ![tag](https://img.shields.io/badge/-core-%23146EB4) ![tag](https://img.shields.io/badge/-parallelcluster-%23FF9900) ![tag](https://img.shields.io/badge/-serverless-%23AAB7B8) 
+#### slurm_accounting_db ![tag](https://img.shields.io/badge/-core-%23146EB4) ![tag](https://img.shields.io/badge/-parallelcluster-%23FF9900) ![tag](https://img.shields.io/badge/-rds-%237DCEA0) ![tag](https://img.shields.io/badge/-serverless-%23AAB7B8) 
 
 * **About**: Set up a replicated Amazon Aurora database that can support Slurm accounting.
 * **Usage**: [README.md](db/slurm_accounting_db/README.md)
@@ -106,7 +106,7 @@ You can use an HPC Recipe for AWS in several ways:
 * **About**: Create a cluster that can launch instances in multiple Availability Zones
 * **Usage**: [README.md](pcluster/multi_az/README.md)
 
-#### multi_user ![tag](https://img.shields.io/badge/-activedirectory-%23AAB7B8) ![tag](https://img.shields.io/badge/-beta-%23800080) ![tag](https://img.shields.io/badge/-parallelcluster-%23FF9900) ![tag](https://img.shields.io/badge/-secretsmanager-%237DCEA0) 
+#### multi_user ![tag](https://img.shields.io/badge/-activedirectory-%23AAB7B8) ![tag](https://img.shields.io/badge/-parallelcluster-%23FF9900) ![tag](https://img.shields.io/badge/-secretsmanager-%237DCEA0) 
 
 * **About**: Creates a multi-user instance of AWS ParallelCluster using AWS Managed AD as the directory service.
 * **Usage**: [README.md](pcluster/multi_user/README.md)
@@ -159,7 +159,7 @@ You can use an HPC Recipe for AWS in several ways:
 
 ### :arrow_right: pcs: AWS Parallel Computing Service
 
-#### byo_login ![tag](https://img.shields.io/badge/-ec2-%23AAB7B8) ![tag](https://img.shields.io/badge/-lambda-%237DCEA0) ![tag](https://img.shields.io/badge/-pcs-%23FF9900) ![tag](https://img.shields.io/badge/-secretsmanager-%237DCEA0) 
+#### byo_login ![tag](https://img.shields.io/badge/-core-%23146EB4) ![tag](https://img.shields.io/badge/-ec2-%23AAB7B8) ![tag](https://img.shields.io/badge/-lambda-%237DCEA0) ![tag](https://img.shields.io/badge/-pcs-%23FF9900) ![tag](https://img.shields.io/badge/-secretsmanager-%237DCEA0) 
 
 * **About**: Connect standalone access nodes to AWS PCS
 * **Usage**: [README.md](pcs/byo_login/README.md)
@@ -174,12 +174,12 @@ You can use an HPC Recipe for AWS in several ways:
 * **About**: Enable CloudWatch Logs on PCS instances
 * **Usage**: [README.md](pcs/cloudwatch/README.md)
 
-#### enable_efa ![tag](https://img.shields.io/badge/-ec2-%23AAB7B8) ![tag](https://img.shields.io/badge/-efa-%23AAB7B8) ![tag](https://img.shields.io/badge/-hpc-%23AAB7B8) ![tag](https://img.shields.io/badge/-pcs-%23FF9900) 
+#### enable_efa ![tag](https://img.shields.io/badge/-core-%23146EB4) ![tag](https://img.shields.io/badge/-ec2-%23AAB7B8) ![tag](https://img.shields.io/badge/-efa-%23AAB7B8) ![tag](https://img.shields.io/badge/-hpc-%23AAB7B8) ![tag](https://img.shields.io/badge/-pcs-%23FF9900) 
 
 * **About**: Use EFA with AWS PCS compute node groups
 * **Usage**: [README.md](pcs/enable_efa/README.md)
 
-#### getting_started ![tag](https://img.shields.io/badge/-ec2-%23AAB7B8) ![tag](https://img.shields.io/badge/-efs-%237DCEA0) ![tag](https://img.shields.io/badge/-fsx-%237DCEA0) ![tag](https://img.shields.io/badge/-iam-%23AAB7B8) ![tag](https://img.shields.io/badge/-pcs-%23FF9900) 
+#### getting_started ![tag](https://img.shields.io/badge/-core-%23146EB4) ![tag](https://img.shields.io/badge/-ec2-%23AAB7B8) ![tag](https://img.shields.io/badge/-efs-%237DCEA0) ![tag](https://img.shields.io/badge/-fsx-%237DCEA0) ![tag](https://img.shields.io/badge/-iam-%23AAB7B8) ![tag](https://img.shields.io/badge/-pcs-%23FF9900) 
 
 * **About**: Supports "Getting Started with AWS PCS" in AWS PCS user guide.
 * **Usage**: [README.md](pcs/getting_started/README.md)
@@ -202,7 +202,7 @@ You can use an HPC Recipe for AWS in several ways:
 * **About**: Set up Entra ID with RES
 * **Usage**: [README.md](res/entra_id/README.md)
 
-#### res_demo_env ![tag](https://img.shields.io/badge/-ad-%23AAB7B8) ![tag](https://img.shields.io/badge/-cognito-%237DCEA0) ![tag](https://img.shields.io/badge/-dcv-%23AAB7B8) ![tag](https://img.shields.io/badge/-ec2-%23AAB7B8) ![tag](https://img.shields.io/badge/-efs-%237DCEA0) ![tag](https://img.shields.io/badge/-res-%237DCEA0) ![tag](https://img.shields.io/badge/-sso-%23AAB7B8) 
+#### res_demo_env ![tag](https://img.shields.io/badge/-ad-%23AAB7B8) ![tag](https://img.shields.io/badge/-cognito-%237DCEA0) ![tag](https://img.shields.io/badge/-core-%23146EB4) ![tag](https://img.shields.io/badge/-dcv-%23AAB7B8) ![tag](https://img.shields.io/badge/-ec2-%23AAB7B8) ![tag](https://img.shields.io/badge/-efs-%237DCEA0) ![tag](https://img.shields.io/badge/-res-%237DCEA0) ![tag](https://img.shields.io/badge/-sso-%23AAB7B8) 
 
 * **About**: Research and Engineering Studio (RES) on AWS demo environment
 * **Usage**: [README.md](res/res_demo_env/README.md)
@@ -242,7 +242,7 @@ You can use an HPC Recipe for AWS in several ways:
 * **About**: Provision an FSx for OpenZFS filesystem and a security groups for accessing the filesystem
 * **Usage**: [README.md](storage/fsx_openzfs/README.md)
 
-#### mountpoint_s3 ![tag](https://img.shields.io/badge/-beta-%23800080) ![tag](https://img.shields.io/badge/-parallelcluster-%23FF9900) ![tag](https://img.shields.io/badge/-s3-%237DCEA0) 
+#### mountpoint_s3 ![tag](https://img.shields.io/badge/-core-%23146EB4) ![tag](https://img.shields.io/badge/-parallelcluster-%23FF9900) ![tag](https://img.shields.io/badge/-s3-%237DCEA0) 
 
 * **About**: Configure AWS ParallelCluster to mount S3 buckets to directories using mountpoint-s3
 * **Usage**: [README.md](storage/mountpoint_s3/README.md)
