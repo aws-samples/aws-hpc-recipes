@@ -43,6 +43,7 @@ tags:
   inferentia: green
   trainium: green
   pcs: orange
+  ec2: orange
   100: blue
   200: blue
   300: blue

@@ -159,7 +159,7 @@ You can use an HPC Recipe for AWS in several ways:
 
 ### :arrow_right: pcs: AWS Parallel Computing Service
 
-#### byo_login ![tag](https://img.shields.io/badge/-core-%23146EB4) ![tag](https://img.shields.io/badge/-ec2-%23AAB7B8) ![tag](https://img.shields.io/badge/-lambda-%237DCEA0) ![tag](https://img.shields.io/badge/-pcs-%23FF9900) ![tag](https://img.shields.io/badge/-secretsmanager-%237DCEA0) 
+#### byo_login ![tag](https://img.shields.io/badge/-core-%23146EB4) ![tag](https://img.shields.io/badge/-ec2-%23FF9900) ![tag](https://img.shields.io/badge/-lambda-%237DCEA0) ![tag](https://img.shields.io/badge/-pcs-%23FF9900) ![tag](https://img.shields.io/badge/-secretsmanager-%237DCEA0) 
 
 * **About**: Connect standalone access nodes to AWS PCS
 * **Usage**: [README.md](pcs/byo_login/README.md)
@@ -174,12 +174,12 @@ You can use an HPC Recipe for AWS in several ways:
 * **About**: Enable CloudWatch Logs on PCS instances
 * **Usage**: [README.md](pcs/cloudwatch/README.md)
 
-#### enable_efa ![tag](https://img.shields.io/badge/-core-%23146EB4) ![tag](https://img.shields.io/badge/-ec2-%23AAB7B8) ![tag](https://img.shields.io/badge/-efa-%23AAB7B8) ![tag](https://img.shields.io/badge/-hpc-%23AAB7B8) ![tag](https://img.shields.io/badge/-pcs-%23FF9900) 
+#### enable_efa ![tag](https://img.shields.io/badge/-core-%23146EB4) ![tag](https://img.shields.io/badge/-ec2-%23FF9900) ![tag](https://img.shields.io/badge/-efa-%23AAB7B8) ![tag](https://img.shields.io/badge/-hpc-%23AAB7B8) ![tag](https://img.shields.io/badge/-pcs-%23FF9900) 
 
 * **About**: Use EFA with AWS PCS compute node groups
 * **Usage**: [README.md](pcs/enable_efa/README.md)
 
-#### getting_started ![tag](https://img.shields.io/badge/-core-%23146EB4) ![tag](https://img.shields.io/badge/-ec2-%23AAB7B8) ![tag](https://img.shields.io/badge/-efs-%237DCEA0) ![tag](https://img.shields.io/badge/-fsx-%237DCEA0) ![tag](https://img.shields.io/badge/-iam-%23AAB7B8) ![tag](https://img.shields.io/badge/-pcs-%23FF9900) 
+#### getting_started ![tag](https://img.shields.io/badge/-core-%23146EB4) ![tag](https://img.shields.io/badge/-ec2-%23FF9900) ![tag](https://img.shields.io/badge/-efs-%237DCEA0) ![tag](https://img.shields.io/badge/-fsx-%237DCEA0) ![tag](https://img.shields.io/badge/-iam-%23AAB7B8) ![tag](https://img.shields.io/badge/-pcs-%23FF9900) 
 
 * **About**: Supports "Getting Started with AWS PCS" in AWS PCS user guide.
 * **Usage**: [README.md](pcs/getting_started/README.md)
@@ -202,7 +202,7 @@ You can use an HPC Recipe for AWS in several ways:
 * **About**: Set up Entra ID with RES
 * **Usage**: [README.md](res/entra_id/README.md)
 
-#### res_demo_env ![tag](https://img.shields.io/badge/-ad-%23AAB7B8) ![tag](https://img.shields.io/badge/-cognito-%237DCEA0) ![tag](https://img.shields.io/badge/-core-%23146EB4) ![tag](https://img.shields.io/badge/-dcv-%23AAB7B8) ![tag](https://img.shields.io/badge/-ec2-%23AAB7B8) ![tag](https://img.shields.io/badge/-efs-%237DCEA0) ![tag](https://img.shields.io/badge/-res-%237DCEA0) ![tag](https://img.shields.io/badge/-sso-%23AAB7B8) 
+#### res_demo_env ![tag](https://img.shields.io/badge/-ad-%23AAB7B8) ![tag](https://img.shields.io/badge/-cognito-%237DCEA0) ![tag](https://img.shields.io/badge/-core-%23146EB4) ![tag](https://img.shields.io/badge/-dcv-%23AAB7B8) ![tag](https://img.shields.io/badge/-ec2-%23FF9900) ![tag](https://img.shields.io/badge/-efs-%237DCEA0) ![tag](https://img.shields.io/badge/-res-%237DCEA0) ![tag](https://img.shields.io/badge/-sso-%23AAB7B8) 
 
 * **About**: Research and Engineering Studio (RES) on AWS demo environment
 * **Usage**: [README.md](res/res_demo_env/README.md)
