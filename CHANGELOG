@@ -15,6 +15,7 @@ The format is based on [Keep a Changelog](http://keepachangelog.com/)
 
 ### Added
 * Added support and several new recipes for AWS Parallel Computing Service (pcs)
+* New recipe - batch/whisper_transcription_awsbatch_inferentia
 * New recipe - pcluster/isolated_clusters
 
 ### Fixed
