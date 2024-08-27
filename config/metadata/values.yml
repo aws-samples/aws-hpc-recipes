@@ -40,7 +40,8 @@ tags:
   rds: green
   graviton: green
   aurora: green
-  tranium: green
+  inferentia: green
+  trainium: green
   pcs: orange
   100: blue
   200: blue
