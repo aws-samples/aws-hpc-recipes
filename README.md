@@ -21,7 +21,7 @@ If you just want to explore what all is available, the [recipes home page](./rec
 
 ![recipe](docs/media/recipe.png)
 
-This recipe is named **efs_simple**. It's part of the **storage** (storage collection). Its tags tell us its a **core** recipe (i.e. it's maintained by AWS staff) and that it pertains to Amazon EFS and NFS. 
+This recipe is named **byo_login**. It's part of the **pcs** (Parallel Computing Service) collection. Its tags tell us its a **core** recipe (i.e. maintained by AWS staff) and that it pertains to EC2, Lambda, and Secrets Manager as well as PCS. 
 
 ## Security
 
