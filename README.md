@@ -9,7 +9,7 @@ This repository contains example recipes that demonstrate how to build HPC syste
 
 ## Getting Started
 
-* If you are new to AWS Parallel Computing Service (AWS PCS), you can watch this [short introductory video](https://youtu.be/gmw7A3kOh60).
+* If you are new to AWS Parallel Computing Service (AWS PCS), you can watch this [short introductory video](https://youtu.be/BlgYbb6pdu0).
 * You can learn about ParallelCluster from this [quick explainer video](https://youtu.be/gmw7A3kOh60).
 * [This video](https://www.youtube.com/watch?v=2Nku6MWDwT0) introduces Research and Engineering Studio on AWS.
 * Discover recipes to help you [get started with AWS PCS](recipes/pcs/)
