@@ -16,6 +16,14 @@ You can use an HPC Recipe for AWS in several ways:
 
 *There are currently no recipes in this namespace.*
 
+### :arrow_right: batch: AWS Batch
+
+#### whisper_transcription_awsbatch_inferentia ![tag](https://img.shields.io/badge/-batch-%23FF9900) ![tag](https://img.shields.io/badge/-inferentia-%237DCEA0) 
+
+* **About**: Whisper audio transcription powered by AWS Batch and AWS Inferentia
+* **Usage**: [README.md](batch/whisper_transcription_awsbatch_inferentia/README.md)
+
+
 ### :arrow_right: db: Database management
 
 #### slurm_accounting_db ![tag](https://img.shields.io/badge/-aurora=-%23AAB7B8) ![tag](https://img.shields.io/badge/-core-%23146EB4) ![tag](https://img.shields.io/badge/-parallelcluster-%23FF9900) ![tag](https://img.shields.io/badge/-serverless-%23AAB7B8) 
@@ -143,7 +151,7 @@ You can use an HPC Recipe for AWS in several ways:
 * **About**: Create a ParallelCluster system to try out Hpc7g instances.
 * **Usage**: [README.md](pcluster/try_hpc7g/README.md)
 
-#### try_trn1 ![tag](https://img.shields.io/badge/-beta-%23800080) ![tag](https://img.shields.io/badge/-neuronsdk-%23AAB7B8) ![tag](https://img.shields.io/badge/-parallelcluster-%23FF9900) ![tag](https://img.shields.io/badge/-trainium-%23AAB7B8) 
+#### try_trn1 ![tag](https://img.shields.io/badge/-beta-%23800080) ![tag](https://img.shields.io/badge/-neuronsdk-%23AAB7B8) ![tag](https://img.shields.io/badge/-parallelcluster-%23FF9900) ![tag](https://img.shields.io/badge/-trainium-%237DCEA0) 
 
 * **About**: Create a ParallelCluster system to try out Trn1 instances.
 * **Usage**: [README.md](pcluster/try_trn1/README.md)

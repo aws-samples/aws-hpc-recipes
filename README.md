@@ -5,7 +5,7 @@
 
 # HPC Recipes for AWS
 
-This repository contains example recipes that demonstrate how to build HPC systems using [AWS Parallel Computing Service](https://aws.amazon.com/hpc/pcs/), [AWS ParallelCluster](https://aws.amazon.com/hpc/parallelcluster/), [Research and Engineering Studio](https://aws.amazon.com/hpc/res/), and several other AWS products.
+This repository contains example recipes that demonstrate how to build HPC systems using [AWS Parallel Computing Service](https://aws.amazon.com/hpc/pcs/), [AWS ParallelCluster](https://aws.amazon.com/hpc/parallelcluster/), [Research and Engineering Studio](https://aws.amazon.com/hpc/res/), [AWS Batch](https://aws.amazon.com/batch/), and several other AWS products.
 
 ## Getting Started
 
