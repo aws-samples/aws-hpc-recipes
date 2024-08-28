@@ -1,0 +1,44 @@
+AWSTemplateFormatVersion: 2010-09-09
+Description: IAM instance profile for AWS PCS compute node group instances
+
+Resources:
+
+  PcsInstanceIamRole:
+    Type: AWS::IAM::Role
+    Properties:
+      RoleName: !Sub 'AWSPCS-role-for-${AWS::StackName}'
+      Description: "AWS IAM role for PCS node group instances"
+      AssumeRolePolicyDocument:
+        Statement:
+          - Action: sts:AssumeRole
+            Effect: Allow
+            Principal:
+              Service: ec2.amazonaws.com
+        Version: "2012-10-17"
+      ManagedPolicyArns:
+           - "arn:aws:iam::aws:policy/AmazonSSMManagedInstanceCore"
+           - "arn:aws:iam::aws:policy/CloudWatchAgentServerPolicy"
+           - "arn:aws:iam::aws:policy/AmazonS3ReadOnlyAccess"
+      Policies:
+        - PolicyDocument:
+            Version: "2012-10-17"
+            Statement:
+              - Action:
+                  - pcs:RegisterComputeNodeGroupInstance
+                Effect: Allow
+                Resource: "*"
+          PolicyName: PcsRegisterInstancePolicy
+
+  PcsInstanceProfile:
+    Type: AWS::IAM::InstanceProfile
+    Properties:
+      InstanceProfileName: !Sub 'AWSPCS-${AWS::StackName}'
+      Roles:
+            - !Ref PcsInstanceIamRole
+
+Outputs:
+  InstanceProfile:
+    Value: !Ref PcsInstanceProfile
+  InstanceProfileArn:
+    Value: !GetAtt PcsInstanceProfile.Arn
+

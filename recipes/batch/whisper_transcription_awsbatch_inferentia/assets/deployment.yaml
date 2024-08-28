@@ -1,0 +1,465 @@
+# Copyright Amazon.com, Inc. or its affiliates. All Rights Reserved.
+# SPDX-License-Identifier: MIT-0
+#
+# Permission is hereby granted, free of charge, to any person obtaining a copy of this
+# software and associated documentation files (the "Software"), to deal in the Software
+# without restriction, including without limitation the rights to use, copy, modify,
+# merge, publish, distribute, sublicense, and/or sell copies of the Software, and to
+# permit persons to whom the Software is furnished to do so.
+#
+# THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND, EXPRESS OR IMPLIED,
+# INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF MERCHANTABILITY, FITNESS FOR A
+# PARTICULAR PURPOSE AND NONINFRINGEMENT. IN NO EVENT SHALL THE AUTHORS OR COPYRIGHT
+# HOLDERS BE LIABLE FOR ANY CLAIM, DAMAGES OR OTHER LIABILITY, WHETHER IN AN ACTION
+# OF CONTRACT, TORT OR OTHERWISE, ARISING FROM, OUT OF OR IN CONNECTION WITH THE
+# SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
+
+AWSTemplateFormatVersion: 2010-09-09
+Description: >
+  Deploys resources for an AWS Batch environment.
+  Author: yusongw@
+  
+Metadata:
+  AWS::CloudFormation::Interface:
+    ParameterGroups:
+      - Label:
+          default: "AWS Batch Environment Config"
+        Parameters:
+        - VPCId
+        - SubnetIds
+        - SGIds
+        - RTIds
+        - DefaultCEMinvCpus
+        - DefaultCEMaxvCpus
+
+    ParameterLabels:
+      VPCId:
+        default: VPC ID
+      SubnetIds:
+        default: VPC Subnet IDs
+      SGIds:
+        default: VPC security group IDs
+      RTIds:
+        default: 'VPC route table IDs'
+      DefaultCEMinvCpus:
+        default: Default Queue Min vCPU count
+      DefaultCEMaxvCpus:
+        default: Default Queue Max vCPU count
+
+Parameters:
+  VPCId:
+    Type: AWS::EC2::VPC::Id
+    Description: 'The VPC to create security groups and deploy AWS Batch to. NOTE: Must be the same VPC as the provided subnet IDs.'
+  SubnetIds:
+    Type: List<AWS::EC2::Subnet::Id>
+    Description: 'Subnets you want your batch compute environment to launch in. We recommend private subnets. NOTE: Must be from the VPC provided.'
+  SGIds:
+    Type: List<AWS::EC2::SecurityGroup::Id>
+    Description: 'Security groups for compute environment in the same VPC. NOTE: A custom security group is recommended'
+  RTIds:
+    Type: String
+    Description: 'The IDs of the route tables.'  
+  DefaultCEMinvCpus:
+    Type: Number
+    Description: Minimum number of CPUs in the default compute environment. Default 0.
+    Default: 0
+    MinValue: 0
+  DefaultCEMaxvCpus:
+    Type: Number
+    Description: Maximum number of CPUs in the default compute environment. Should be >= than MinCpus
+    Default: 20000
+    MinValue: 0
+  EBSBootSize:
+    Type: Number
+    Default: 50
+    Description: Size in GiB of EBS root volume
+
+Resources:
+  BatchLaunchTemplate:
+    Type: 'AWS::EC2::LaunchTemplate'
+    Properties:
+      LaunchTemplateData:
+          BlockDeviceMappings:
+          - DeviceName: '/dev/xvda'
+            Ebs:
+              DeleteOnTermination: true
+              Encrypted: false
+              Iops: 3000
+              VolumeSize: !Ref EBSBootSize
+              VolumeType: 'gp3'
+          UserData:
+            Fn::Base64: !Sub |
+                MIME-Version: 1.0
+                Content-Type: multipart/mixed; boundary="==MYBOUNDARY=="
+
+                --==MYBOUNDARY==
+                Content-Type: text/x-shellscript; charset="us-ascii"
+
+                #!/bin/bash
+
+                # Configure Neuron Monitor
+                cat > /tmp/monitor.conf << EOF
+                {
+                  "period": "1s",
+                  "neuron_runtimes": [
+                    {
+                      "tag_filter": ".*",
+                      "metrics": [
+                        {
+                          "type": "neuroncore_counters"
+                        },
+                        {
+                          "type": "memory_used"
+                        },
+                        {
+                          "type": "neuron_runtime_vcpu_usage"
+                        },
+                        {
+                          "type": "execution_stats"
+                        }
+                      ]
+                    }
+                  ],
+                  "system_metrics": [
+                    {
+                      "type": "vcpu_usage"
+                    },
+                    {
+                      "type": "memory_info"
+                    },
+                    {
+                       "period": "2s",
+                       "type": "neuron_hw_counters"
+                    }
+                  ]
+                }
+                EOF
+
+                # Install pip and boto3
+                yum install pip -y && pip install boto3
+
+                # Run Neuron Monitor and pipe the output to Neuron Monitor CloudWatch
+                /opt/aws/neuron/bin/neuron-monitor -c /tmp/monitor.conf \
+                | /opt/aws/neuron/bin/neuron-monitor-cloudwatch.py \
+                --namespace neuron_monitor -d instance_id --region ${AWS::Region} &
+
+                --==MYBOUNDARY==--
+
+  DefaultComputeEnv:
+    Type: AWS::Batch::ComputeEnvironment
+    Properties:
+      ComputeEnvironmentName: !Sub ${AWS::StackName}-ce
+      ReplaceComputeEnvironment: false
+      Type: MANAGED
+      State: ENABLED
+      ComputeResources:
+        AllocationStrategy: BEST_FIT_PROGRESSIVE
+        LaunchTemplate:
+          LaunchTemplateId: !Ref BatchLaunchTemplate
+          Version: $Latest
+        UpdateToLatestImageVersion: true #use the enhanced updating of compute environments to update AMIs
+        InstanceRole: !GetAtt ECSInstanceProfile.Arn
+        SecurityGroupIds: !Ref SGIds
+        InstanceTypes:
+          - inf2.8xlarge
+        MinvCpus: !Ref DefaultCEMinvCpus
+        MaxvCpus: !Ref DefaultCEMaxvCpus
+        Subnets: !Ref SubnetIds
+        Type: EC2
+        Tags:
+          Name: "Inference-demo-batch"
+        Ec2Configuration:
+          - ImageType: ECS_AL2023
+            ImageIdOverride: ami-07979ad4c774a29ab
+
+  DefaultQueue:
+    Type: AWS::Batch::JobQueue
+    Properties:
+      JobQueueName: !Sub ${AWS::StackName}-jq
+      Priority: 10
+      State: ENABLED
+      ComputeEnvironmentOrder:
+        - Order: 1
+          ComputeEnvironment: !Ref DefaultComputeEnv
+
+  BatchServiceRole:
+    Type: AWS::IAM::Role
+    Properties:
+      AssumeRolePolicyDocument:
+        Version: '2012-10-17'
+        Statement:
+        - Effect: Allow
+          Principal:
+            Service: batch.amazonaws.com
+          Action: sts:AssumeRole
+      ManagedPolicyArns:
+      - arn:aws:iam::aws:policy/service-role/AWSBatchServiceRole
+
+  ECSInstanceRole:
+    Type: AWS::IAM::Role
+    Properties:
+      AssumeRolePolicyDocument:
+        Version: '2012-10-17'
+        Statement:
+        - Effect: Allow
+          Principal:
+            Service: ec2.amazonaws.com
+          Action: sts:AssumeRole
+      ManagedPolicyArns:
+      - arn:aws:iam::aws:policy/service-role/AmazonEC2ContainerServiceforEC2Role
+      - arn:aws:iam::aws:policy/CloudWatchFullAccessV2
+      - arn:aws:iam::aws:policy/AmazonS3FullAccess
+
+  ECSInstanceProfile:
+    Type: AWS::IAM::InstanceProfile
+    Properties:
+      Path: /
+      Roles:
+        - !Ref ECSInstanceRole 
+
+# Batch job definition
+  JobDefinition:
+    Type: AWS::Batch::JobDefinition
+    Properties:
+      Type: container
+      JobDefinitionName: !Sub ${AWS::StackName}-jd
+      ContainerProperties:
+        Image:  !Sub
+          - ${AWS::AccountId}.dkr.ecr.${AWS::Region}.${AWS::URLSuffix}/${Repository}:${Version}
+          - Repository: whisper
+            Version: latest
+        ResourceRequirements:
+        - Type: VCPU
+          Value: '32'
+        - Type: MEMORY
+          Value: '125000'
+        LinuxParameters:
+          Devices:
+          - HostPath: /dev/neuron0
+            ContainerPath: /dev/neuron0
+            Permissions:
+            - READ
+            - WRITE
+            - MKNOD
+        Environment:
+          - Name: OUTPUT_BUCKET_NAME
+            Value: !Sub ${AWS::StackName}-${AWS::Region}-${AWS::AccountId}-outbucket
+          - Name: OUTPUT_FILE_PREFIX
+            Value: 'transcription-output/'
+          - Name: MODEL_BUCKET_NAME
+            Value: !Sub ${AWS::StackName}-${AWS::Region}-${AWS::AccountId}-inbucket
+          - Name: MODEL_ENCODER_S3_KEY
+            Value: 'model-artifacts/whisper_large-v3_1_neuron_encoder.pt'
+          - Name: MODEL_DECODER_S3_KEY
+            Value: 'model-artifacts/whisper_large-v3_1_448_neuron_decoder.pt'
+        Command:
+        - python3
+        - inference.py
+        - Ref::S3bucket
+        - Ref::S3key
+      Timeout:
+        AttemptDurationSeconds: 3600
+      RetryStrategy:
+        Attempts: 2
+        
+# S3 Gateway 
+  S3GatewayEndpoint:
+    Type: 'AWS::EC2::VPCEndpoint'
+    Properties:
+      RouteTableIds: 
+        - !Ref RTIds
+      ServiceName: !Sub 'com.amazonaws.${AWS::Region}.s3'
+      VpcId: !Ref VPCId
+
+# S3 buckets
+  InputBucket:
+    Type: 'AWS::S3::Bucket'
+    Metadata:
+      Comment: The suppressed guard rules are not vital for this sample but should be considered for production infrastructure
+      guard:
+        SuppressedRules:
+          - S3_BUCKET_DEFAULT_LOCK_ENABLED
+          - S3_BUCKET_REPLICATION_ENABLED
+          - S3_BUCKET_NO_PUBLIC_RW_ACL
+      cfn_nag:
+        rules_to_suppress:
+          - id: W51
+            reason: "Block Public Access settings are turned on for this demo"
+    Properties:
+      BucketName: !Sub ${AWS::StackName}-${AWS::Region}-${AWS::AccountId}-inbucket
+      LoggingConfiguration:
+        DestinationBucketName: !Ref S3BucketLogs
+        LogFilePrefix: "Inference-input-bucket/"
+      PublicAccessBlockConfiguration:
+        BlockPublicAcls: true
+        BlockPublicPolicy: true
+        IgnorePublicAcls: true
+        RestrictPublicBuckets: true
+      NotificationConfiguration:
+        EventBridgeConfiguration:
+          EventBridgeEnabled: true
+      VersioningConfiguration:
+        Status: Enabled
+      BucketEncryption:
+        ServerSideEncryptionConfiguration:
+          - ServerSideEncryptionByDefault:
+              SSEAlgorithm: AES256
+  OutputBucket:
+    Type: 'AWS::S3::Bucket'
+    Metadata:
+      Comment: The suppressed guard rules are not vital for this sample but should be considered for production infrastructure
+      guard:
+        SuppressedRules:
+          - S3_BUCKET_DEFAULT_LOCK_ENABLED
+          - S3_BUCKET_REPLICATION_ENABLED
+          - S3_BUCKET_NO_PUBLIC_RW_ACL
+      cfn_nag:
+        rules_to_suppress:
+          - id: W51
+            reason: "Block Public Access settings are turned on for this demo"
+    Properties:
+      BucketName: !Sub ${AWS::StackName}-${AWS::Region}-${AWS::AccountId}-outbucket
+      LoggingConfiguration:
+        DestinationBucketName: !Ref S3BucketLogs
+        LogFilePrefix: "Inference-output-bucket/"
+      PublicAccessBlockConfiguration:
+        BlockPublicAcls: true
+        BlockPublicPolicy: true
+        IgnorePublicAcls: true
+        RestrictPublicBuckets: true
+      VersioningConfiguration:
+        Status: Enabled
+      BucketEncryption:
+        ServerSideEncryptionConfiguration:
+          - ServerSideEncryptionByDefault:
+              SSEAlgorithm: AES256
+  S3BucketLogs:
+    Type: AWS::S3::Bucket
+    Metadata:
+      Comment: The suppressed guard rules are not vital for this sample but should be considered for production infrastructure
+      guard:
+        SuppressedRules:
+          - S3_BUCKET_DEFAULT_LOCK_ENABLED
+          - S3_BUCKET_REPLICATION_ENABLED
+          - S3_BUCKET_NO_PUBLIC_RW_ACL
+      cfn_nag:
+        rules_to_suppress:
+          - id: W35
+            reason: "This the S3 bucket to store the access logs"
+          - id: W51
+            reason: "Block Public Access settings are turned on for this demo"
+    Properties:
+      BucketName: !Sub ${AWS::StackName}-${AWS::Region}-${AWS::AccountId}-logbucket
+      LifecycleConfiguration:
+        Rules:
+          - Id: Rule for log expiration
+            AbortIncompleteMultipartUpload:
+              DaysAfterInitiation: 7
+            Status: Enabled
+            Transitions:
+              - StorageClass: GLACIER
+                TransitionInDays: 10
+            ExpirationInDays: 30
+      PublicAccessBlockConfiguration:
+        BlockPublicAcls: true
+        BlockPublicPolicy: true
+        IgnorePublicAcls: true
+        RestrictPublicBuckets: true
+      OwnershipControls:
+        Rules:
+          - ObjectOwnership: ObjectWriter
+      Tags:
+        -
+          Key: Description
+          Value: S3 Access Logs
+      VersioningConfiguration:
+        Status: Enabled
+      BucketEncryption:
+        ServerSideEncryptionConfiguration:
+          - ServerSideEncryptionByDefault:
+              SSEAlgorithm: AES256
+
+  BucketPolicy:
+    Type: AWS::S3::BucketPolicy
+    Metadata:
+      Comment: The suppressed guard rules are not vital for this sample but should be considered for production infrastructure
+      guard:
+        SuppressedRules:
+          - S3_BUCKET_SSL_REQUESTS_ONLY
+    Properties:
+      Bucket: !Ref S3BucketLogs
+      PolicyDocument:
+        Version: "2012-10-17"
+        Statement:
+          - Effect: Allow
+            Principal:
+              Service: logging.s3.amazonaws.com
+            Action: s3:PutObject
+            Resource: !Sub arn:aws:s3:::${S3BucketLogs}/*
+  
+# Invoke a Batch job through EventBridge
+  InferenceEventBridgeRole:
+    Type: AWS::IAM::Role
+    Properties:
+      AssumeRolePolicyDocument:
+        Statement:
+          - Effect: Allow
+            Action: sts:AssumeRole
+            Principal:
+              Service: events.amazonaws.com
+      ManagedPolicyArns:
+        - !Sub arn:${AWS::Partition}:iam::aws:policy/service-role/AWSBatchServiceEventTargetRole
+  BatchJobEventRule:
+    Type: AWS::Events::Rule
+    Properties:
+      Description: Event Rule for AWS Batch jobs
+      EventPattern:
+        source:
+          - aws.s3
+        account: 
+          - !Ref AWS::AccountId
+        detail-type:
+          - Object Created
+        detail:
+          bucket:
+            name:
+              - !Ref InputBucket
+          object:
+            key:
+              - prefix: audio-input/
+            #  - suffix: .csv  It is not supported now to have both rules
+      State: ENABLED
+      Targets:
+        - Arn: !Ref DefaultQueue
+          RoleArn: !GetAtt InferenceEventBridgeRole.Arn
+          BatchParameters:
+            JobDefinition: !Ref JobDefinition
+            JobName: Inference-demo #!Ref S3key
+            RetryStrategy:
+              Attempts: 2
+          Id: Inference-demo
+          InputTransformer:
+            InputPathsMap:
+              S3BucketNameValue: "$.detail.bucket.name"
+              S3KeyValue: "$.detail.object.key"
+            InputTemplate: 
+              '{"Parameters" : 
+                 {"S3bucket": <S3BucketNameValue>,
+                  "S3key": <S3KeyValue>
+                 }
+              }'
+
+
+Outputs:
+  DefaultJobQueueArn: 
+    Description: 'Batch job queue'
+    Value: !Ref DefaultQueue
+  DefaultJobDefinition: 
+    Description: 'Batch job definition'
+    Value: !Ref JobDefinition
+  InputBucket:
+    Description: 'Input bucket name'
+    Value: !Ref InputBucket
+  OutputBucket:
+    Description: 'Output bucket name'
+    Value: !Ref OutputBucket
