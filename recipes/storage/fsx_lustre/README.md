@@ -2,7 +2,7 @@
 
 ## Info
 
-This recipe shows how to use CloudFormation to set up an FSx for Lustre filesystem. It also illustrates a way to configure security groups to allow filesystem access from AWS ParallelCluster.
+This recipe shows how to use CloudFormation to set up an FSx for Lustre filesystem. It also illustrates a way to configure security groups to allow access to the filesystem.
 
 ## Usage
 
