@@ -16,7 +16,7 @@ authors:
   - Matt Vaughn
 # A list of tags you want to associate with the collection for indexing/searching. Tags have the same character requirements as namespace.
 tags:
-  - pcluster
+  - parallelcluster
   - efs
   - fsx
   - beta

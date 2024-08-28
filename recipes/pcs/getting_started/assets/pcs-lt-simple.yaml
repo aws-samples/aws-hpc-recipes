@@ -1,0 +1,47 @@
+AWSTemplateFormatVersion: 2010-09-09
+Description: Simple launch template for an AWS PCS compute node group
+
+Metadata:
+  AWS::CloudFormation::Interface:
+    ParameterGroups:
+      - Label:
+          default: Security
+        Parameters:
+          - ClusterSecurityGroupId
+
+Parameters:
+
+  ClusterSecurityGroupId:
+    Type: AWS::EC2::SecurityGroup::Id
+    Description: Security group for PCS cluster controller and nodes.
+
+Resources:
+
+  ComputeLaunchTemplate:
+    Type: AWS::EC2::LaunchTemplate
+    Properties:
+      LaunchTemplateName: !Sub 'simple-compute-${AWS::StackName}'
+      # Tag so we know this came from HPC Recipes
+      LaunchTemplateData:
+        TagSpecifications:
+          - ResourceType: instance
+            Tags:
+              - Key: HPCRecipes
+                Value: "true"
+        # Require IMDS v2
+        MetadataOptions:
+          HttpEndpoint: enabled
+          HttpPutResponseHopLimit: 4
+          HttpTokens: required
+        # Include cluster security group
+        SecurityGroupIds:
+          - !Ref ClusterSecurityGroupId
+
+
+Outputs:
+  ComputeLaunchTemplateName:
+    Description: "Node group template name"
+    Value: !Sub 'simple-compute-${AWS::StackName}'
+  ComputeLaunchTemplateId:
+    Description: "Node group template ID"
+    Value: !Ref ComputeLaunchTemplate

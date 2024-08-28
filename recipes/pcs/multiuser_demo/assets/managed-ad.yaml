@@ -1,0 +1,174 @@
+Description: Managed AD to support a multi-user HPC environment.
+
+Metadata:
+  AWS::CloudFormation::Interface:
+    ParameterGroups:
+      - Label:
+          default: Active Directory Configuration
+        Parameters:
+          - DomainName
+          - SubDomain
+      - Label:
+          default: Networking
+        Parameters:
+          - VpcId
+          - SubnetIds
+      - Label:
+          default: Sample Active Directory User
+        Parameters:
+          - Username
+          - Password
+      - Label:
+          default: Management Host and Secrets
+        Parameters:
+          - Keypair
+          - ClientIpCidr
+          - ClientPrefixList
+          - SecretsPrefix
+
+Parameters:
+
+  DomainName:
+    Description: Domain name
+    Type: String
+    Default: "corp.example.com"
+    AllowedPattern: ^([a-zA-Z0-9]+[\\.-])+([a-zA-Z0-9])+$
+
+  SubDomain:
+    Description: (Optional, but required for GovCloud regions) SubDomain for the Active Directory Domain Name. If provided, Active Directory Domain Name will be {SubDomain}.{DomainName}
+    Type: String
+    Default: ""
+
+  ServiceAccountName:
+    Description: Username for LDAP binding
+    Type: String
+    Default: ReadOnly
+    MinLength: 4
+    MaxLength: 24
+    AllowedValues:
+         - "ReadOnly"
+         - "ServiceAccount"
+
+  VpcId:
+    Description: VPC where AD will be created.
+    Type: AWS::EC2::VPC::Id
+
+  SubnetIds:
+    Description: Select two subnet(s) for AD servers in different AZs. Private subnets are recommended. 
+    Type: List<AWS::EC2::Subnet::Id>
+
+  Username:
+    Description: Sample user that is created in the AD.
+    Type: String
+    Default: user123
+    MinLength: 4
+    MaxLength: 24
+
+  Password:
+    Description: Strong password for the sample AD user.
+    Type: String
+    MinLength: 8
+    MaxLength: 64
+    AllowedPattern: (?=^.{8,64}$)((?=.*\d)(?=.*[A-Z])(?=.*[a-z])|(?=.*\d)(?=.*[^A-Za-z0-9\s])(?=.*[a-z])|(?=.*[^A-Za-z0-9\s])(?=.*[A-Z])(?=.*[a-z])|(?=.*\d)(?=.*[A-Z])(?=.*[^A-Za-z0-9\s]))^.*
+    NoEcho: true
+
+  Keypair:
+    Description: EC2 Keypair to access the AD management instance.
+    Type: AWS::EC2::KeyPair::KeyName
+    Default: ""
+
+  ClientIpCidr:
+    Description: IP(s) allowed to directly access the AD management instance. We recommend that you restrict it with your own IP/subnet (x.x.x.x/32 for your own ip or x.x.x.x/24 for range. Replace x.x.x.x with your own PUBLIC IP. You can get your public IP using tools such as https://ifconfig.co/)
+    Default: 0.0.0.0/0
+    Type: String
+    AllowedPattern: (\d{1,3})\.(\d{1,3})\.(\d{1,3})\.(\d{1,3})/(\d{1,2})
+    ConstraintDescription: Value must be a valid IP or network range of the form x.x.x.x/x.
+
+  ClientPrefixList:
+    Description: (Optional) VPC Prefix List controlling access to the AD management instance. 
+    Default: ""
+    Type: String
+    AllowedPattern: ^(pl-[a-z0-9]{8,20})?$
+    ConstraintDescription: Must be a valid VPC Prefix List ID, which begins with `pl-` or be empty.
+
+  SecretsPrefix:
+    Description: Prefix for naming configuration secrets in AWS Secrets Manager
+    Type: String
+    Default: HPC
+    AllowedPattern: ^([A-Za-z0-9]{3,12})?$
+
+Resources:
+
+  AdminPassword:
+    Type: AWS::SecretsManager::Secret
+    Properties:
+      Description: Active Directory Administrator Account Password.
+      Name: !Sub 
+        - "${SecretsPrefix}-AD-AdminPassword-${StackName}"
+        - SecretsPrefix: !Ref SecretsPrefix
+          StackName: !Ref AWS::StackName
+      GenerateSecretString:
+        ExcludePunctuation: true
+
+  ServiceAccountPassword:
+    Type: AWS::SecretsManager::Secret
+    Properties:
+      Description: Active Directory Service Account Password.
+      Name: !Sub 
+        - "${SecretsPrefix}-AD-ServiceAccountPassword-${StackName}"
+        - SecretsPrefix: !Ref SecretsPrefix
+          StackName: !Ref AWS::StackName
+      GenerateSecretString:
+        ExcludePunctuation: true
+
+  DirectoryService:
+    Type: AWS::CloudFormation::Stack
+    Properties:
+      Parameters:
+        DomainName: !Ref DomainName
+        SubDomain: !Ref SubDomain
+        AdminPassword: !Sub "{{resolve:secretsmanager:${AdminPassword}}}"
+        ServiceAccountPassword: !Sub "{{resolve:secretsmanager:${ServiceAccountPassword}}}"
+        ServiceAccountName: !Ref ServiceAccountName
+        LDIFS3Path: ""
+        Keypair: !Ref Keypair
+        UserName: !Ref Username
+        UserPassword: !Ref Password
+        AllowedIps: !Ref ClientIpCidr
+        ClientPrefixList: !Ref ClientPrefixList
+        Vpc: !Ref VpcId
+        PrivateSubnetOne: !Select [0, !Ref SubnetIds]
+        PrivateSubnetTwo: !Select [1, !Ref SubnetIds]
+      TemplateURL: https://aws-hpc-recipes.s3.us-east-1.amazonaws.com/main/recipes/dir/demo_managed_ad/assets/main.yaml
+
+Outputs:
+  AdminPasswordSecretArn:
+    Value: !Ref AdminPassword
+  VpcId:
+    Value: !GetAtt [ DirectoryService, Outputs.VpcId ]
+  PrivateSubnetIds:
+    Value: !GetAtt [ DirectoryService, Outputs.PrivateSubnetIds ]
+  DomainName:
+    Value: !GetAtt [ DirectoryService, Outputs.DomainName ]
+  DomainShortName:
+    Value: !GetAtt [ DirectoryService, Outputs.DomainShortName ]
+  DomainComponents:
+    Value: !GetAtt [ DirectoryService, Outputs.DomainComponents ]
+  DomainServiceAccount:
+    Value: !GetAtt [ DirectoryService, Outputs.DomainServiceAccount ]
+  DirectoryId:
+    Value: !GetAtt [ DirectoryService, Outputs.DirectoryId ]
+  DomainManagementNodeId:
+    Value: !GetAtt [ DirectoryService, Outputs.DomainManagementNodeId ]
+  DomainManagementNodeSystemManagerUrl:
+    Value: !GetAtt [ DirectoryService, Outputs.DomainManagementNodeSystemManagerUrl ]
+  DomainAddrLdap:
+    Value: !Sub
+      - "ldap://${Domain}"
+      - Domain: !GetAtt [ DirectoryService, Outputs.DomainName ]
+  DomainAddrLdaps:
+    Value: !Sub
+      - "ldaps://${Domain}"
+      - Domain: !GetAtt [ DirectoryService, Outputs.DomainName ]
+  PasswordSecretArn:
+    Value: !GetAtt [ DirectoryService, Outputs.PasswordSecretArn ]

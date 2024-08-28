@@ -2,6 +2,7 @@
 # List of namespaces
 namespace:
   aws: General AWS (default)
+  batch: AWS Batch
   db: Database management
   dir: Directory services
   env: User environment
@@ -9,6 +10,7 @@ namespace:
   ide: IDEs and GUIs
   net: Networking
   pcluster: AWS ParallelCluster
+  pcs: AWS Parallel Computing Service
   res: Research and Engineering Studio on AWS
   security: Security configuration
   scheduler: HPC scheduler
@@ -24,6 +26,9 @@ tags:
   community: black
   beta: purple
   alinux2: orange
+  rhel: black
+  rockylinux: black
+  ubuntu: black
   parallelcluster: orange
   fsx: green
   cloudformation: green
@@ -35,7 +40,10 @@ tags:
   rds: green
   graviton: green
   aurora: green
-  tranium: green
+  inferentia: green
+  trainium: green
+  pcs: orange
+  ec2: orange
   100: blue
   200: blue
   300: blue

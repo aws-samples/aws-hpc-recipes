@@ -1,0 +1,81 @@
+AWSTemplateFormatVersion: 2010-09-09
+Description: IAM instance profile enabling PCS compute node groups to be configured with LDAP support
+
+Parameters:
+
+  SssdConfigTemplateS3Path:
+    Description: An S3 Path (without the s3://) to a configuration file template for configuring SSSD. 
+    Type: String
+    # TODO - update with published recipe locations
+    Default: awspcs-hpc-recipes-demo/ad.sssd.conf.template
+    AllowedValues:
+         - "awspcs-hpc-recipes-demo/ad.sssd.conf.template"
+         - "awspcs-hpc-recipes-demo/openldap.sssd.conf.template"
+
+  PasswordSecretArn:
+    Type: String
+    Description: Secrets Manager ARN where bind password is stored.
+    # TODO: Add validation
+
+Resources:
+
+  PcsInstanceIamRole:
+    Type: AWS::IAM::Role
+    Properties:
+      RoleName: !Sub "AWSPCS-LDAP-${AWS::StackName}"
+      Description: "AWS IAM role for PCS node group instances with LDAP support"
+      AssumeRolePolicyDocument:
+        Statement:
+          - Action: sts:AssumeRole
+            Effect: Allow
+            Principal:
+              Service: ec2.amazonaws.com
+        Version: "2012-10-17"
+      ManagedPolicyArns:
+           - "arn:aws:iam::aws:policy/AmazonSSMManagedInstanceCore"
+           - "arn:aws:iam::aws:policy/CloudWatchAgentServerPolicy"
+           - "arn:aws:iam::aws:policy/AmazonS3ReadOnlyAccess"
+      Policies:
+        - PolicyDocument:
+            Version: "2012-10-17"
+            Statement:
+              - Action:
+                  - pcs:RegisterComputeNodeGroupInstance
+                Effect: Allow
+                Resource: "*"
+          PolicyName: PcsRegisterCngInstance
+        - PolicyDocument:
+            Version: "2012-10-17"
+            Statement:
+              - Action:
+                  - s3:getObject
+                Effect: Allow
+                Resource: !Sub 
+                  - "arn:${AWS::Partition}:s3:::${S3Path}"
+                  - S3Path: !Ref SssdConfigTemplateS3Path
+          PolicyName: GetSsdConfigTemplate
+        - PolicyDocument:
+            Version: "2012-10-17"
+            Statement:
+              - Action:
+                  - secretsmanager:GetResourcePolicy
+                  - secretsmanager:GetSecretValue
+                  - secretsmanager:DescribeSecret
+                  - secretsmanager:ListSecretVersionIds
+                Effect: Allow
+                Resource: !Ref PasswordSecretArn
+          PolicyName: GetSsdConfigSecrets
+
+  PcsInstanceProfile:
+    Type: AWS::IAM::InstanceProfile
+    Properties:
+      Roles:
+            - !Ref PcsInstanceIamRole
+      InstanceProfileName: !Sub "AWSPCS-LDAP-${AWS::StackName}"
+
+Outputs:
+  InstanceProfile:
+    Value: !Ref PcsInstanceProfile
+  InstanceProfileArn:
+    Value: !GetAtt PcsInstanceProfile.Arn
+
