@@ -6,19 +6,33 @@ The format is based on [Keep a Changelog](http://keepachangelog.com/)
 ## [Unreleased]
 
 ### Added
-* New recipe - `pcluster/isolated_clusters`
 
 ### Fixed
-* In `res_demo_env`, improvements to KeyCloak support
-* In `res_demo_env`, support for automatically shutting down Windows AD domain management host
-* In `slurm_accounting_with_email`, fixes to misdirected Cfn TemplateURLs
-* In `res_demo_env`, automatically encrypt domain host EBS volume
-* In `res_demo_env`, fixes to pip and Python enviroments
-* In `public_certs`, `ssm:GetParameter` permissions now use partition and region parameters
-
 
 ### Changed
-* Updated all instances of ParallelCluster 3.9.0 to 3.9.2 to pick up a critical bug fix.
+
+## [1.6.0] - 2024-08-28
+
+### Added
+* Added support and several new recipes for AWS Parallel Computing Service (pcs)
+* New recipe - batch/whisper_transcription_awsbatch_inferentia
+* New recipe - pcluster/isolated_clusters
+
+### Fixed
+* In res_demo_env, improvements to KeyCloak support
+* In res_demo_env, support for automatically shutting down Windows AD domain management host
+* In slurm_accounting_with_email`, fixes to misdirected Cfn TemplateURLs
+* In res_demo_env, automatically encrypt domain host EBS volume
+* In res_demo_env, fixes to pip and Python enviroments
+* In public_certs, ssm:GetParameter permissions now use partition and region parameters
+* In res_demo_env, RES environment name is now optional
+* In res_demo_env, the Secrets Manager ARN now supports il-central-1 region
+* In login_node_for_res, template URLs are fixed to point to public resources
+
+### Changed
+* Updated all recipes where ParallelCluster was version 3.9.0 to 3.9.2 to pick up a critical bug fix.
+* In hpc_large_scale, VPC Flow Logs are now enabled.
+* Updated pcluster/latest to ParallelCluster 3.10.1
 
 ## [1.5.0] - 2024-06-12
 

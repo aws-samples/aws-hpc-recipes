@@ -61,11 +61,11 @@ Parameters:
     Default: alinux2
     AllowedValues:
       - alinux2
-      - centos7
-      - ubuntu2004
+      - alinux2023
       - ubuntu2204
       - rhel8
       - rhel9
+      - rocky8
     Description: Cluster operating system
 
   Architecture:
@@ -97,7 +97,7 @@ Parameters:
 Mappings:
   ParallelCluster:
     Constants:
-      Version: 3.9.2
+      Version: 3.10.1
   Recipes:
     Constants:
       Version: main

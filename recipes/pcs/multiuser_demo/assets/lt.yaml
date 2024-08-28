@@ -1,0 +1,143 @@
+AWSTemplateFormatVersion: 2010-09-09
+Description: Create a launch template to support a compute node group
+
+Metadata:
+  AWS::CloudFormation::Interface:
+    ParameterGroups:
+      - Label: 
+          default: LDAP Configuration
+        Parameters:
+          - DomainName
+          - LdapUri
+          - LdapSearchBase
+          - DomainServiceAccount
+          - PasswordSecretArn
+          - SssdConfigTemplateS3Path
+      - Label:
+          default: Node Group Options
+        Parameters:
+          - KeyName
+          - NodeGroupSecurityGroupIds
+
+Parameters:
+
+  NodeGroupSecurityGroupIds:
+    Type: List<AWS::EC2::SecurityGroup::Id>
+    Description: Security group(s) for compute node group instances.
+  KeyName:
+    Type: AWS::EC2::KeyPair::KeyName
+    Description: SSH keypair to log into compute node group instances
+    Default: ""
+  PasswordSecretArn:
+    Type: String
+    Description: ARN where bind password is stored.
+  SssdConfigTemplateS3Path:
+    Description: An S3 Path (without the s3://) to a configuration file template for configuring SSSD. 
+    Type: String
+    # TODO - update with published recipe locations
+    Default: awspcs-hpc-recipes-demo/ad.sssd.conf.template
+    AllowedValues:
+         - "awspcs-hpc-recipes-demo/ad.sssd.conf.template"
+         - "awspcs-hpc-recipes-demo/openldap.sssd.conf.template"
+  DomainName:
+    Type: String
+    Description: LDAP domain name (e.g. corp.example.com)
+    Default: corp.example.com
+    AllowedPattern: ^([a-zA-Z0-9]+[\\.-])+([a-zA-Z0-9])+$
+  LdapSearchBase:
+    Type: String
+    Description: LDAP search base (e.g. dc=corp,dc=example,dc=com)
+    Default: dc=corp,dc=example,dc=com
+  LdapUri:
+    Type: String
+    Default: "ldap://corp.example.com"
+    # TODO: Add validation
+  DomainServiceAccount:
+    Type: String
+    Description: Bind account as DN (e.g cn=ReadOnly,ou=CORP,ou=Users,dc=corp,dc=example,dc=com)
+    # TODO: Add validation
+
+Resources:
+
+  LaunchTemplate:
+    Type: AWS::EC2::LaunchTemplate
+    Properties:
+      LaunchTemplateName: !Sub "AWSPCS-LDAP-${AWS::StackName}"
+      LaunchTemplateData:
+        # Enforce IMDS v2
+        MetadataOptions:
+          HttpEndpoint: enabled
+          HttpPutResponseHopLimit: 4
+          HttpTokens: required
+        # Configure SSH keypair
+        KeyName: !Ref KeyName
+        # Configure node group instance security groups
+        SecurityGroupIds: !Ref NodeGroupSecurityGroupIds
+        UserData:
+          Fn::Base64: !Sub 
+            - |
+              MIME-Version: 1.0
+              Content-Type: multipart/mixed; boundary="==MYBOUNDARY=="
+
+              --==MYBOUNDARY==
+              Content-Type: text/x-shellscript; charset="us-ascii"
+              #!/bin/bash -xe
+
+              # Function to handle errors
+              handle_error() {
+                  echo "An error occurred: $1" >&2
+                  exit 1
+              }
+
+              # Function to execute main code
+              main() {
+                  # Install software dependencies. Can also be done in the AMI
+                  yum install -y sssd sssd-tools sssd-ldap authconfig
+                  # Fetch LDAP connection password
+                  export BIND_PASSWORD=$(aws secretsmanager get-secret-value --region ${AWS::Region} --secret-id ${BindSecretArn} --query SecretString --output text)
+                  # Other config options
+                  export BIND_DN="${ServiceAccountDn}"
+                  export DOMAIN_NAME="${DomainName}"
+                  export LDAP_SEARCH_BASE="${LdapSearchBase}"
+                  export LDAP_URI="${LdapUri}"
+                  # Write sssd.conf file injecting BIND_DN and BIND_PASSWORD variables
+                  aws s3 cp --region ${AWS::Region} s3://${ConfigTemplateS3Path} - | envsubst > /etc/sssd/sssd.conf
+                  # Set ownership and permissions. Only root can see this file. 
+                  chown root:root /etc/sssd/sssd.conf
+                  chmod 0600 /etc/sssd/sssd.conf
+                  # Configure system authentication resources for sssd
+                  authconfig --enablemkhomedir --enablesssdauth --enablesssd --updateall
+                  # Enable SSH password authentication
+                  sed -ri 's/\s*PasswordAuthentication\s+no$/PasswordAuthentication yes/g' /etc/ssh/sshd_config
+                  # Restart services
+                  /usr/bin/systemctl restart sshd && /usr/bin/systemctl restart sssd
+              }
+
+              trap 'handle_error "$BASH_COMMAND" $?' ERR
+
+              main
+
+              echo "Script executed successfully"
+
+              --==MYBOUNDARY==--
+
+            - { BindSecretArn: !Ref PasswordSecretArn,
+                DomainName: !Ref DomainName,
+                ConfigTemplateS3Path: !Ref SssdConfigTemplateS3Path,
+                LdapSearchBase: !Ref LdapSearchBase,
+                LdapUri: !Ref LdapUri,
+                ServiceAccountDn: !Ref DomainServiceAccount }
+  
+Outputs:
+  LaunchTemplateName:
+    Description: "Launch template name"
+    Value: !Sub "AWSPCS-LDAP-${AWS::StackName}"
+  LaunchTemplateId:
+    Description: "Launch template Id"
+    Value: !Ref LaunchTemplate
+  DefaultVersionNumber:
+    Description: "Default version number"
+    Value: !GetAtt LaunchTemplate.DefaultVersionNumber
+  LatestVersionNumber:
+    Description: "Latest version number"
+    Value: !GetAtt LaunchTemplate.DefaultVersionNumber    

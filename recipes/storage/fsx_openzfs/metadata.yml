@@ -4,7 +4,7 @@ name: fsx_openzfs
 # The version of the recipe. Must be compatible with semantic versioning.
 version: "1.0.0"
 # A short summary description of the recipe
-description: Provision an FSx for OpenZFS filesystem and relevant security groups for use with ParallelCluster
+description: Provision an FSx for OpenZFS filesystem and a security groups for accessing the filesystem
 # The path to the README for the recipe relative to its root
 readme: README.md
 # Optional URL for external documentation
@@ -16,7 +16,6 @@ authors:
   - Matt Vaughn
 # A list of tags you want to associate with the collection for indexing/searching. Tags have the same character requirements as namespace.
 tags:
-  - beta
   - fsx
   - openzfs
   - nfs

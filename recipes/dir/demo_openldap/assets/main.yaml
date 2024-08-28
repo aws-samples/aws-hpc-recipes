@@ -1,0 +1,432 @@
+AWSTemplateFormatVersion: '2010-09-09'
+Transform: AWS::Serverless-2016-10-31
+Description: Example of how to operate OpenLDAP on Fargate.
+
+Metadata:
+  AWS::CloudFormation::Interface:
+    ParameterGroups:
+      - Label:
+          default: "OpenLDAP Configuration"
+        Parameters:
+          - DomainName
+          - SubDomain
+          - AdminPassword
+          - ServiceAccountName
+          - ServiceAccountPassword
+      - Label:
+          default: "OpenLDAP Bootstrapping"
+        Parameters:
+          - UserName
+          - UserPassword
+      - Label:
+          default: "Network Configuration"
+        Parameters:
+          - Vpc
+          - PrivateSubnetOne
+          - PrivateSubnetTwo
+
+Parameters:
+  Vpc:
+    Description: VPC to create the OpenLDAP service in
+    Type: AWS::EC2::VPC::Id
+  PrivateSubnetOne:
+    Description: Subnet ID of the first private subnet in the VPC
+    Type: AWS::EC2::Subnet::Id
+  PrivateSubnetTwo:
+    Description: Subnet ID of the second private subnet in the VPC
+    Type: AWS::EC2::Subnet::Id
+  DomainName:
+    Description: OpenLDAP domain name
+    Type: String
+    Default: corp.directory.com
+    AllowedPattern: ^([a-zA-Z0-9]+[\\.-])+([a-zA-Z0-9])+$
+  SubDomain:
+    Description: (Optional, but required for GovCloud regions) SubDomain for the OpenLDAP domain name. If provided OpenLDAP domain name will be (SubDomain).(DomainName).
+    Type: String
+    Default: ""
+  AdminPassword:
+    Description: OpenLDAP admin password
+    Type: String
+    MinLength: 8
+    MaxLength: 64
+    AllowedPattern: (?=^.{8,64}$)((?=.*\d)(?=.*[A-Z])(?=.*[a-z])|(?=.*\d)(?=.*[^A-Za-z0-9\s])(?=.*[a-z])|(?=.*[^A-Za-z0-9\s])(?=.*[A-Z])(?=.*[a-z])|(?=.*\d)(?=.*[A-Z])(?=.*[^A-Za-z0-9\s]))^.*
+    NoEcho: true
+  ServiceAccountName:
+    Description: OpenLDAP service account username
+    Type: String
+    MinLength: 4
+    Default: ReadOnlyUser
+  ServiceAccountPassword:
+    Description: OpenLDAP service account password
+    Type: String
+    AllowedPattern: (?=^.{8,64}$)((?=.*\d)(?=.*[A-Z])(?=.*[a-z])|(?=.*\d)(?=.*[^A-Za-z0-9\s])(?=.*[a-z])|(?=.*[^A-Za-z0-9\s])(?=.*[A-Z])(?=.*[a-z])|(?=.*\d)(?=.*[A-Z])(?=.*[^A-Za-z0-9\s]))^.*
+    NoEcho: true
+  UserName:
+    Description: Example OpenLDAP cluster user
+    Type: String
+    Default: "user123"
+  UserPassword:
+    Description: Password for OpenLDAP cluster user
+    Type: String
+    AllowedPattern: (?=^.{8,64}$)((?=.*\d)(?=.*[A-Z])(?=.*[a-z])|(?=.*\d)(?=.*[^A-Za-z0-9\s])(?=.*[a-z])|(?=.*[^A-Za-z0-9\s])(?=.*[A-Z])(?=.*[a-z])|(?=.*\d)(?=.*[A-Z])(?=.*[^A-Za-z0-9\s]))^.*
+    NoEcho: true
+
+Conditions:
+  SubDomainNotProvided: !Equals [!Ref SubDomain, ""]
+
+Resources:
+
+  ServiceAccountPasswordSecret:
+    Type: AWS::SecretsManager::Secret
+    Properties:
+      Description: Stored password for OpenLDAP service account
+      Name: !Sub [ "PasswordSecret-${StackIdSuffix}", {StackIdSuffix: !Select [1, !Split ['/', !Ref 'AWS::StackId']]}]
+      SecretString: !Ref ServiceAccountPassword
+
+  PrepRole:
+    Type: AWS::IAM::Role
+    Properties:
+      AssumeRolePolicyDocument:
+        Version: 2012-10-17
+        Statement:
+          - Action:
+              - sts:AssumeRole
+            Effect: Allow
+            Principal:
+              Service:
+                - lambda.amazonaws.com
+      Policies:
+        - PolicyName: LogOutput
+          PolicyDocument:
+            Version: 2012-10-17
+            Statement:
+              - Action:
+                - logs:CreateLogGroup
+                - logs:CreateLogStream
+                - logs:PutLogEvents
+                Effect: Allow
+                # Resource: !Sub arn:${AWS::Partition}:logs:${AWS::Region}:${AWS::AccountId}:log-group:/aws/lambda/${AWS::StackName}-Prep:*
+                Resource: '*'
+
+  PrepLambda:
+    Type: AWS::Lambda::Function
+    Properties:
+      Description: !Sub "${AWS::StackName}: custom resource handler to prepare the stack."
+      Handler: index.handler
+      MemorySize: 128
+      Role: !GetAtt PrepRole.Arn
+      Runtime: python3.9
+      Timeout: 300
+      TracingConfig:
+        Mode: Active
+      Code:
+        ZipFile: |
+          import time
+          import cfnresponse
+          import boto3
+          import logging
+          import random
+          import string
+          logger = logging.getLogger()
+          logger.setLevel(logging.INFO)
+          ec2 = boto3.client("ec2")
+          ds = boto3.client("ds")
+
+          def create_physical_resource_id():
+              alnum = string.ascii_uppercase + string.ascii_lowercase + string.digits
+              return "".join(random.choice(alnum) for _ in range(16))
+
+          def handler(event, context):
+              print(event)
+              print( 'boto version {}'.format(boto3.__version__))
+              domain = event['ResourceProperties']['DomainName']
+              vpc_id = event['ResourceProperties']['Vpc']
+              subnet1_id = event['ResourceProperties']['PrivateSubnetOne']
+              subnet2_id = event['ResourceProperties']['PrivateSubnetTwo']
+
+              response_data = {}
+              reason = None
+              response_status = cfnresponse.SUCCESS
+              stack_id_suffix = event['StackId'].split("/")[1]
+
+              if event['RequestType'] == 'Create':
+                  response_data['Message'] = 'Resource creation successful!'
+                  physical_resource_id = create_physical_resource_id()
+
+                  # provide outputs
+                  response_data['DomainName'] = domain
+                  response_data['DomainShortName'] = domain.split(".")[0].upper()
+                  response_data['DomainComponents'] = ','.join(['dc=' + x for  x in domain.split('.')])
+                  response_data['VpcId'] = vpc_id
+                  response_data['Subnet1Id'] = subnet1_id
+                  response_data['Subnet2Id'] = subnet2_id
+              else:
+                  physical_resource_id = event['PhysicalResourceId']
+              cfnresponse.send(event, context, response_status, response_data, physical_resource_id, reason)
+
+  Prep:
+    Type: Custom::PrepLambda
+    Properties:
+      ServiceToken: !GetAtt PrepLambda.Arn
+      DomainName:  !If [ SubDomainNotProvided, !Ref DomainName, !Join [ ".", [ !Ref SubDomain, !Ref DomainName] ] ]
+      Vpc: !Ref Vpc
+      PrivateSubnetOne: !Ref PrivateSubnetOne
+      PrivateSubnetTwo: !Ref PrivateSubnetTwo
+
+  # The ECS cluster that will be controlling the tasks in AWS Fargate
+  Cluster:
+    Type: AWS::ECS::Cluster
+
+  # This role is used to setup the execution environment for
+  # the OpenLDAP Fargate task, allowing it to connect to EFS
+  TaskExecutionRole:
+    Type: AWS::IAM::Role
+    Properties:
+      AssumeRolePolicyDocument:
+        Statement:
+          - Effect: Allow
+            Principal:
+              Service: [ecs-tasks.amazonaws.com]
+            Action: ['sts:AssumeRole']
+            Condition:
+              ArnLike:
+                aws:SourceArn: !Sub arn:aws:ecs:${AWS::Region}:${AWS::AccountId}:*
+              StringEquals:
+                aws:SourceAccount: !Ref AWS::AccountId
+      ManagedPolicyArns:
+        - arn:aws:iam::aws:policy/service-role/AmazonECSTaskExecutionRolePolicy
+
+  # This role is used at runtime.
+  TaskRole:
+    Type: AWS::IAM::Role
+    Properties:
+      AssumeRolePolicyDocument:
+        Statement:
+          - Effect: Allow
+            Principal:
+              Service: [ecs-tasks.amazonaws.com]
+            Action: ['sts:AssumeRole']
+            Condition:
+              ArnLike:
+                aws:SourceArn: !Sub arn:aws:ecs:${AWS::Region}:${AWS::AccountId}:*
+              StringEquals:
+                aws:SourceAccount: !Ref AWS::AccountId
+      Policies:
+        - PolicyName: ExecAccess
+          PolicyDocument:
+            Version: '2012-10-17'
+            Statement:
+              - Effect: Allow
+                Action:
+                  - ssmmessages:CreateControlChannel
+                  - ssmmessages:CreateDataChannel
+                  - ssmmessages:OpenControlChannel
+                  - ssmmessages:OpenDataChannel
+                Resource: '*'
+
+
+  LdapTaskLogGroup:
+    DeletionPolicy: Retain
+    UpdateReplacePolicy: Retain
+    Type: AWS::Logs::LogGroup
+    Properties:
+      RetentionInDays: 7
+
+  TaskDefinition:
+    Type: AWS::ECS::TaskDefinition
+    Properties:
+      Family: openldap-tasks
+      TaskRoleArn: !GetAtt TaskRole.Arn
+      ExecutionRoleArn: !GetAtt TaskExecutionRole.Arn
+      NetworkMode: awsvpc
+      ContainerDefinitions:
+        - Name: openldap
+          Image: bitnami/openldap:2.6.7
+          Environment:
+            - Name: LDAP_ROOT
+              Value: !GetAtt Prep.DomainComponents
+            - Name: LDAP_ALLOW_ANON_BINDING
+              Value: "no"
+            - Name: LDAP_LOGLEVEL
+              Value: 256
+            - Name: LDAP_ADMIN_USERNAME
+              Value: Admin
+            - Name: LDAP_ADMIN_PASSWORD
+              Value: !Ref AdminPassword
+            - Name: LDAP_USERS
+              Value: !Sub
+                - '${ServiceAccount},${UserName}'
+                - ServiceAccount: !Ref ServiceAccountName
+                  UserName: !Ref UserName
+            - Name: LDAP_PASSWORDS
+              Value: !Sub
+                - '${ServiceAccountPassword},${UserPassword}'
+                - ServiceAccountPassword: !Ref ServiceAccountPassword
+                  UserPassword: !Ref UserPassword
+          Essential: true
+          LinuxParameters:
+            InitProcessEnabled: true
+          LogConfiguration:
+            LogDriver: awslogs
+            Options:
+              mode: non-blocking
+              max-buffer-size: 25m
+              awslogs-group: !Ref LdapTaskLogGroup
+              awslogs-region: !Ref AWS::Region
+              awslogs-stream-prefix: openldap-task
+          PortMappings:
+            - ContainerPort: 1389
+              Protocol: tcp
+      RequiresCompatibilities:
+        - FARGATE
+      Cpu: '256'
+      Memory: '512'
+
+  # Launch OpenLDAP task as a service
+  Service:
+    Type: AWS::ECS::Service
+    DependsOn:
+      - ServiceListener1389
+    Properties:
+      ServiceName: 'openldap'
+      Cluster: !Ref Cluster
+      LaunchType: FARGATE
+      DeploymentConfiguration:
+        MaximumPercent: 200
+        MinimumHealthyPercent: 75
+      DesiredCount: 1
+      EnableExecuteCommand: true
+      NetworkConfiguration:
+        AwsvpcConfiguration:
+          AssignPublicIp: DISABLED
+          SecurityGroups:
+            - !Ref ServiceSecurityGroup
+          Subnets:
+            - !Ref PrivateSubnetOne
+            - !Ref PrivateSubnetTwo
+      TaskDefinition: !Ref 'TaskDefinition'
+      LoadBalancers:
+        - ContainerName: 'openldap'
+          ContainerPort: 1389
+          TargetGroupArn: !Ref ServiceTargetGroup1389
+
+  # Security group that limits network access
+  # to the task
+  ServiceSecurityGroup:
+    Type: AWS::EC2::SecurityGroup
+    Properties:
+      GroupDescription: Security group for service
+      VpcId: !Ref Vpc
+
+#  LDAP high port
+  ServiceTargetGroup1389:
+    Type: AWS::ElasticLoadBalancingV2::TargetGroup
+    Properties:
+      HealthCheckEnabled: true
+      HealthCheckIntervalSeconds: 120
+      HealthCheckTimeoutSeconds: 30
+      HealthCheckPort: 1389
+      HealthCheckProtocol: TCP
+      HealthyThresholdCount: 3
+      UnhealthyThresholdCount: 10
+      Port: 1389
+      Protocol: TCP
+      TargetType: ip
+      VpcId: !Ref Vpc
+      TargetGroupAttributes:
+        - Key: deregistration_delay.timeout_seconds
+          Value: 60
+
+  # Open up the service's security group to traffic originating
+  # from the security group of the load balancer.
+  ServiceIngressfromLoadBalancer:
+    Type: AWS::EC2::SecurityGroupIngress
+    Properties:
+      Description: Ingress from the public ALB
+      GroupId: !Ref ServiceSecurityGroup
+      IpProtocol: -1
+      SourceSecurityGroupId: !Ref 'PublicLoadBalancerSG'
+
+  # A public facing load balancer, this is used as ingress for
+  # public facing internet traffic.
+  PublicLoadBalancerSG:
+    Type: AWS::EC2::SecurityGroup
+    Properties:
+      GroupDescription: Access to the public facing load balancer
+      VpcId: !Ref Vpc
+      SecurityGroupIngress:
+        # Allow access to public facing ALB from any IP address
+        - CidrIp: 0.0.0.0/0
+          IpProtocol: -1
+
+  PublicLoadBalancer:
+    Type: AWS::ElasticLoadBalancingV2::LoadBalancer
+    Properties: 
+      IpAddressType: ipv4
+      Scheme: internal
+      SecurityGroups:
+           - !Ref PublicLoadBalancerSG
+      Subnets: 
+        - !Ref PrivateSubnetOne
+        - !Ref PrivateSubnetTwo
+      Type: network
+
+  ServiceListener1389:
+    Type: AWS::ElasticLoadBalancingV2::Listener
+    Properties: 
+      DefaultActions: 
+        - Type: "forward"
+          TargetGroupArn: !Ref ServiceTargetGroup1389
+      LoadBalancerArn: !Ref PublicLoadBalancer
+      Port: 1389
+      Protocol: TCP
+
+  DNS:
+    Type: AWS::Route53::HostedZone
+    Properties:
+      Name: !Ref DomainName
+      VPCs:
+        - VPCId: !Ref Vpc
+          VPCRegion: !Ref AWS::Region
+
+  # Enables DNS lookup for NLB within VPC
+  DNSRecord:
+    Type: AWS::Route53::RecordSet
+    Properties:
+      HostedZoneId: !Ref DNS
+      Name: !Ref DomainName
+      AliasTarget:
+        DNSName: !GetAtt PublicLoadBalancer.DNSName
+        HostedZoneId: !GetAtt PublicLoadBalancer.CanonicalHostedZoneID
+      Type: A
+
+Outputs:
+  DomainName:
+    Value: !If [ SubDomainNotProvided, !Ref DomainName, !Join [ ".", [ !Ref SubDomain, !Ref DomainName] ] ]
+    Export:
+        Name: !Sub ${AWS::StackName}-DomainName
+  DomainShortName:
+    Value: !GetAtt Prep.DomainShortName
+  DomainComponents:
+    Description: "Domain name as Domain Components"
+    Value: !GetAtt Prep.DomainComponents
+    Export:
+      Name: !Sub ${AWS::StackName}-DomainComponents
+  DomainServiceAccount:
+    Description: Service account username
+    Value: !Sub
+      - cn=${service_account_name},ou=users,${dc}
+      - { service_account_name: !Ref ServiceAccountName, dc: !GetAtt Prep.DomainComponents }
+    Export:
+        Name: !Sub ${AWS::StackName}-DomainServiceAccount
+  DomainAddrLdap:
+    Value: !Sub
+      - ldap://${address}:1389
+      - address: !Ref DomainName
+    Export:
+        Name: !Sub ${AWS::StackName}-DomainAddrLdap
+  PasswordSecretArn:
+    Value: !Ref ServiceAccountPasswordSecret
+    Description: Secrets Manager secret where service account password is stored.
+    Export:
+        Name: !Sub ${AWS::StackName}-PasswordSecretArn
