@@ -1,0 +1,460 @@
+AWSTemplateFormatVersion: 2010-09-09
+Description: Create launch templates for AWS PCS supporting networked /home and /shared filesystems, and enabling EFA on compute nodes.
+
+Metadata:
+  AWS::CloudFormation::Interface:
+    ParameterGroups:
+      - Label:
+          default: Networking and security
+        Parameters:
+          - PublicSubnetId
+          - PrivateSubnetId
+          - ClusterSecurityGroupId
+          - SshSecurityGroupId
+          - SshKeyName
+      - Label:
+          default: File systems
+        Parameters:
+          - EfsFilesystemId
+          - FSxLustreFilesystemId
+
+Parameters:
+
+  PublicSubnetId:
+    Description: Id of a public subnet in the same VPC as the PCS cluster.
+    Type: AWS::EC2::Subnet::Id
+  PrivateSubnetId:
+    Description: Id of a private subnet in the same VPC as the PCS cluster.
+    Type: AWS::EC2::Subnet::Id
+  ClusterSecurityGroupId:
+    Type: AWS::EC2::SecurityGroup::Id
+    Description: Security group for PCS controller, compute nodes, and login nodes
+  SshSecurityGroupId:
+    Type: AWS::EC2::SecurityGroup::Id
+    Description: Security group for SSH into login nodes
+  SshKeyName:
+    Type: AWS::EC2::KeyPair::KeyName
+    Description: SSH key name for login nodes
+    Default: ''
+  EfsFilesystemId:
+    Type: String
+    Description: Amazon EFS Filesystem ID
+  FSxLustreFilesystemId:
+    Type: String
+    Description: Amazon FSx for Lustre filesystem ID
+
+Resources:
+
+  # Login CNG launch template
+  LoginLaunchTemplate:
+    Type: AWS::EC2::LaunchTemplate
+    Properties:
+      LaunchTemplateName: !Sub 'login-${AWS::StackName}'
+      LaunchTemplateData:
+        MetadataOptions:
+          HttpEndpoint: enabled
+          HttpPutResponseHopLimit: 4
+          HttpTokens: required
+        KeyName: !Ref SshKeyName
+        BlockDeviceMappings:
+          - DeviceName: /dev/xvda  # Root volume
+            Ebs:
+              VolumeType: gp3
+              VolumeSize: 128 
+              DeleteOnTermination: true
+        SecurityGroupIds:
+          - !Ref ClusterSecurityGroupId
+          - !Ref SshSecurityGroupId
+          - !GetAtt VpcDefaultSecurityGroup.GroupId
+        UserData:
+          Fn::Base64: 
+            Fn::Sub:
+            - |
+              MIME-Version: 1.0
+              Content-Type: multipart/mixed; boundary="==MYBOUNDARY=="
+
+              --==MYBOUNDARY==
+              Content-Type: text/cloud-config; charset="us-ascii"
+              MIME-Version: 1.0
+              
+              runcmd:
+              # Mount EFS filesystem as /home
+              - mkdir -p /tmp/home
+              - rsync -a /home/ /tmp/home
+              - sudo mount -t nfs4 -o nfsvers=4.1,rsize=1048576,wsize=1048576,hard,timeo=600,retrans=2,noresvport ${EfsFilesystem}.efs.${Region}.amazonaws.com:/ /home
+              - rsync -a --ignore-existing /tmp/home/ /home
+              - rm -rf /tmp/home/
+              # If provided, mount FSxL filesystem as /shared
+              - amazon-linux-extras install -y lustre=latest
+              - mkdir -p /shared 
+              - mount -t lustre ${FSxLustreDns}@tcp:/${FSxLustreMountName} /shared
+              - chmod 777 /shared
+
+              --==MYBOUNDARY==
+            - {EfsFilesystem: !Ref EfsFilesystemId, FSxLustreDns: !GetAtt FSxLustreLookup.DNSName, FSxLustreMountName: !GetAtt FSxLustreLookup.MountName, Region: !Ref AWS::Region}
+
+  ComputeLaunchTemplate:
+    Type: AWS::EC2::LaunchTemplate
+    Properties:
+      LaunchTemplateName: !Sub 'compute-1-${AWS::StackName}'
+      LaunchTemplateData:
+        MetadataOptions:
+          HttpEndpoint: enabled
+          HttpPutResponseHopLimit: 4
+          HttpTokens: required
+        KeyName: !Ref SshKeyName
+        BlockDeviceMappings:
+          - DeviceName: /dev/xvda  # Root volume
+            Ebs:
+              VolumeType: gp3
+              VolumeSize: 128 
+              DeleteOnTermination: true
+        Placement:
+          GroupName: !GetAtt PlacementGroup.PlacementGroupName
+        # hpc6a instances have a single network card, so only need a single network interface
+        NetworkInterfaces:
+          - Description: Primary network interface
+            DeviceIndex: 0
+            InterfaceType: efa
+            NetworkCardIndex: 0
+            SubnetId: !Ref PrivateSubnetId
+            Groups:
+            - !Ref EfaSecurityGroup
+            - !Ref ClusterSecurityGroupId
+            - !Ref SshSecurityGroupId
+            - !GetAtt VpcDefaultSecurityGroup.GroupId
+        UserData:
+          Fn::Base64: 
+            Fn::Sub:
+              - |
+                MIME-Version: 1.0
+                Content-Type: multipart/mixed; boundary="==MYBOUNDARY=="
+
+                --==MYBOUNDARY==
+                Content-Type: text/cloud-config; charset="us-ascii"
+                MIME-Version: 1.0
+                
+                runcmd:
+                # Mount EFS filesystem as /home
+                - mkdir -p /tmp/home
+                - rsync -a /home/ /tmp/home
+                - sudo mount -t nfs4 -o nfsvers=4.1,rsize=1048576,wsize=1048576,hard,timeo=600,retrans=2,noresvport ${EfsFilesystem}.efs.${Region}.amazonaws.com:/ /home
+                - rsync -a --ignore-existing /tmp/home/ /home
+                - rm -rf /tmp/home/
+                # If provided, mount FSxL filesystem as /shared
+                - amazon-linux-extras install -y lustre=latest
+                - mkdir -p /shared 
+                - mount -t lustre ${FSxLustreDns}@tcp:/${FSxLustreMountName} /shared
+                - chmod 777 /shared
+
+                --==MYBOUNDARY==
+              - {EfsFilesystem: !Ref EfsFilesystemId, FSxLustreDns: !GetAtt FSxLustreLookup.DNSName, FSxLustreMountName: !GetAtt FSxLustreLookup.MountName, Region: !Ref AWS::Region}
+
+  # Retrieve the default security group for a given VPC
+  SgLambdaExecutionRole:
+    Type: 'AWS::IAM::Role'
+    Properties:
+      AssumeRolePolicyDocument:
+        Version: '2012-10-17'
+        Statement:
+          - Effect: Allow
+            Principal:
+              Service: lambda.amazonaws.com
+            Action: 'sts:AssumeRole'
+      ManagedPolicyArns:
+        - arn:aws:iam::aws:policy/service-role/AWSLambdaBasicExecutionRole
+      Policies:
+        - PolicyName: EC2DescribeSecurityGroups
+          PolicyDocument:
+            Version: '2012-10-17'
+            Statement:
+              - Effect: Allow
+                Action:
+                  - 'ec2:DescribeSecurityGroups'
+                Resource: '*'
+
+  SgLambdaFunction:
+    Type: 'AWS::Lambda::Function'
+    Properties:
+      Handler: index.lambda_handler
+      Role: !GetAtt SgLambdaExecutionRole.Arn
+      Runtime: python3.11
+      Code:
+        ZipFile: |
+          import boto3
+          import cfnresponse
+          
+          def lambda_handler(event, context):
+              vpc_id = event['ResourceProperties'].get('VpcId')
+              
+              if event['RequestType'] == 'Delete':
+                  cfnresponse.send(event, context, cfnresponse.SUCCESS, {})
+                  return
+              
+              if not vpc_id:
+                  cfnresponse.send(event, context, cfnresponse.FAILED, {'error': 'VPC ID is required'})
+                  return
+              
+              ec2 = boto3.client('ec2')
+              
+              try:
+                  response = ec2.describe_security_groups(
+                      Filters=[
+                          {'Name': 'vpc-id', 'Values': [vpc_id]},
+                          {'Name': 'group-name', 'Values': ['default']}
+                      ]
+                  )
+                  
+                  if response['SecurityGroups']:
+                      default_sg = response['SecurityGroups'][0]
+                      result = {
+                          'VpcId': vpc_id,
+                          'GroupId': default_sg['GroupId'],
+                          'GroupName': default_sg['GroupName']
+                      }
+                      cfnresponse.send(event, context, cfnresponse.SUCCESS, result, result['GroupId'])
+                  else:
+                      cfnresponse.send(event, context, cfnresponse.FAILED, {'error': f'No default security group found for VPC {vpc_id}'})
+              
+              except Exception as e:
+                  cfnresponse.send(event, context, cfnresponse.FAILED, {'error': str(e)})
+
+  VpcDefaultSecurityGroup:
+    Type: 'Custom::DefaultSecurityGroupLookup'
+    Properties:
+      ServiceToken: !GetAtt SgLambdaFunction.Arn
+      VpcId: !Ref CustomVpcId
+
+  # Look up VPC given a subnet
+  DescribeSubnetsRole:
+    Type: AWS::IAM::Role
+    Properties:
+      AssumeRolePolicyDocument:
+        Version: '2012-10-17'
+        Statement:
+          - Action: sts:AssumeRole
+            Effect: Allow
+            Principal:
+              Service: lambda.amazonaws.com
+      ManagedPolicyArns:
+        - arn:aws:iam::aws:policy/service-role/AWSLambdaBasicExecutionRole
+      Policies:
+        - PolicyName: DescribeSubnets
+          PolicyDocument:
+            Version: '2012-10-17'
+            Statement:
+              - Action: ec2:DescribeSubnets
+                Effect: Allow
+                Resource: "*"
+
+  GetVpcIdForSubnetId:
+    Type: AWS::Lambda::Function
+    Properties:
+      Runtime: python3.11
+      Handler: index.handler
+      Role: !Sub ${DescribeSubnetsRole.Arn}
+      Timeout: 60
+      Code:
+        ZipFile: |
+          import boto3
+          import cfnresponse
+          import json
+          import traceback
+
+          def handler(event, context):
+            try:
+              response = boto3.client('ec2').describe_subnets(
+                  SubnetIds=[event['ResourceProperties']['SubnetId']]
+              )
+
+              id = response['Subnets'][0]['VpcId']
+
+              cfnresponse.send(event, context, cfnresponse.SUCCESS, {}, id)
+            except:
+              traceback.print_last()
+              cfnresponse.send(event, context, cfnresponse.FAIL, {}, "ok")
+  CustomVpcId:
+    Type: Custom::GetVPC
+    Properties:
+      ServiceToken: !Sub ${GetVpcIdForSubnetId.Arn}
+      SubnetId: !Ref PublicSubnetId
+
+  # Create an EFA security group
+  EfaSecurityGroup:
+    Type: 'AWS::EC2::SecurityGroup'
+    Properties:
+      GroupDescription: Support EFA
+      GroupName: !Sub 'efa-sg-${AWS::StackName}'
+      VpcId: !Ref CustomVpcId
+
+  EfaSecurityGroupOutboundSelfRule:
+    Type: 'AWS::EC2::SecurityGroupEgress'
+    Properties:
+      IpProtocol: '-1'
+      GroupId: !Ref EfaSecurityGroup
+      Description: Allow outbound EFA traffic to SG members
+      DestinationSecurityGroupId: !Ref EfaSecurityGroup
+
+  EfaSecurityGroupInboundSelfRule:
+    Type: 'AWS::EC2::SecurityGroupIngress'
+    Properties:
+      IpProtocol: '-1'
+      GroupId: !Ref EfaSecurityGroup
+      Description: Allow inbound EFA traffic to SG members
+      SourceSecurityGroupId: !Ref EfaSecurityGroup
+
+  # Create a placement group for use with EFA instances
+  PgLambdaExecutionRole:
+    Type: AWS::IAM::Role
+    Properties:
+      AssumeRolePolicyDocument:
+        Version: '2012-10-17'
+        Statement:
+          - Effect: Allow
+            Principal:
+              Service: lambda.amazonaws.com
+            Action: sts:AssumeRole
+      ManagedPolicyArns:
+        - arn:aws:iam::aws:policy/service-role/AWSLambdaBasicExecutionRole
+      Policies:
+        - PolicyName: AllowEC2PlacementGroupManagement
+          PolicyDocument:
+            Version: '2012-10-17'
+            Statement:
+              - Effect: Allow
+                Action:
+                  - ec2:CreatePlacementGroup
+                  - ec2:DeletePlacementGroup
+                  - ec2:DescribePlacementGroups
+                Resource: '*'
+
+  PlacementGroupFunction:
+    Type: AWS::Lambda::Function
+    Properties:
+      Handler: index.handler
+      Role: !GetAtt PgLambdaExecutionRole.Arn
+      Code:
+        ZipFile: |
+          import boto3
+          import cfnresponse
+
+          def handler(event, context):
+              ec2 = boto3.client('ec2')
+              responseData = {}
+
+              try:
+                  if event['RequestType'] == 'Create':
+                      ec2.create_placement_group(
+                          GroupName=event['ResourceProperties']['PlacementGroupName'],
+                          Strategy='cluster'
+                      )
+                      # Get the placement group ID
+                      response = ec2.describe_placement_groups(
+                          GroupNames=[event['ResourceProperties']['PlacementGroupName']]
+                      )
+                      placement_group_id = response['PlacementGroups'][0]['GroupId']
+                      responseData['PlacementGroupName'] = event['ResourceProperties']['PlacementGroupName']
+                      responseData['PlacementGroupId'] = placement_group_id
+                      responseData['Message'] = f"Placement group {event['ResourceProperties']['PlacementGroupName']} created successfully"
+                  elif event['RequestType'] == 'Delete':
+                      ec2.delete_placement_group(
+                          GroupName=event['ResourceProperties']['PlacementGroupName']
+                      )
+                      responseData['Message'] = f"Placement group {event['ResourceProperties']['PlacementGroupName']} deleted successfully"
+                  cfnresponse.send(event, context, cfnresponse.SUCCESS, responseData)
+              except Exception as e:
+                  responseData['Error'] = str(e)
+                  cfnresponse.send(event, context, cfnresponse.FAILED, responseData)
+
+      Runtime: python3.11
+      Timeout: 30
+
+  # We create a placement group using a Lambda so we can give it a name. This is a 
+  # workaround for AWS::EC2::PlacementGroup not having support for setting 
+  # placement group name.
+  PlacementGroup:
+    Type: Custom::PlacementGroup
+    Properties:
+      ServiceToken: !GetAtt PlacementGroupFunction.Arn
+      PlacementGroupName: !Sub 'efa-pg-${AWS::StackName}'
+
+  # Look up the DNS and mount name for an FSx for Lustre filesystem
+  FSxLustreLookupLambdaRole:
+    Type: AWS::IAM::Role
+    Properties:
+      AssumeRolePolicyDocument:
+        Version: '2012-10-17'
+        Statement:
+          - Effect: Allow
+            Principal:
+              Service: lambda.amazonaws.com
+            Action: sts:AssumeRole
+      Policies:
+        - PolicyName: FSxLustreLookupPolicy
+          PolicyDocument:
+            Version: '2012-10-17'
+            Statement:
+              - Effect: Allow
+                Action:
+                  - fsx:DescribeFileSystems
+                Resource: '*'
+      ManagedPolicyArns:
+        - arn:aws:iam::aws:policy/service-role/AWSLambdaBasicExecutionRole
+
+  FSxLustreLookupLambda:
+    Type: AWS::Lambda::Function
+    Properties:
+      Handler: index.lambda_handler
+      Role: !GetAtt FSxLustreLookupLambdaRole.Arn
+      Runtime: python3.11
+      Timeout: 30
+      Code:
+        ZipFile: |
+          import boto3
+          import cfnresponse
+
+          def lambda_handler(event, context):
+              fsx_client = boto3.client('fsx')
+              
+              try:
+                  filesystem_id = event['ResourceProperties']['FilesystemId']
+                  
+                  response = fsx_client.describe_file_systems(FileSystemIds=[filesystem_id])
+                  
+                  if 'FileSystems' in response and len(response['FileSystems']) > 0:
+                      filesystem = response['FileSystems'][0]
+                      dns_name = filesystem['DNSName']
+                      mount_name = filesystem['LustreConfiguration']['MountName']
+                      
+                      cfnresponse.send(event, context, cfnresponse.SUCCESS, {
+                          'DNSName': dns_name,
+                          'MountName': mount_name
+                      })
+                  else:
+                      cfnresponse.send(event, context, cfnresponse.FAILED, {
+                          'Reason': f'Filesystem {filesystem_id} not found'
+                      })
+              except Exception as e:
+                  cfnresponse.send(event, context, cfnresponse.FAILED, {
+                      'Reason': str(e)
+                  })
+
+  FSxLustreLookup:
+    Type: Custom::FSxLustreLookup
+    Properties:
+      ServiceToken: !GetAtt FSxLustreLookupLambda.Arn
+      FilesystemId: !Ref FSxLustreFilesystemId
+
+Outputs:
+  LoginLaunchTemplateId:
+    Description: "Login template ID"
+    Value: !Ref LoginLaunchTemplate
+  LoginLaunchTemplateName:
+    Description: "Login template name"
+    Value: !Sub 'login-${AWS::StackName}'
+  ComputeLaunchTemplateId:
+    Description: "Compute template ID"
+    Value: !Ref ComputeLaunchTemplate
+  ComputeLaunchTemplateName:
+    Description: "Compute template name"
+    Value: !Sub 'compute-1-${AWS::StackName}'

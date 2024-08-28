@@ -1,0 +1,271 @@
+AWSTemplateFormatVersion: 2010-09-09
+Description: Create a launch template that enables EFA on instances in an AWS PCS node group
+
+Metadata:
+  AWS::CloudFormation::Interface:
+    ParameterGroups:
+      - Label:
+          default: Networking
+        Parameters:
+          - NumberOfNetworkCards
+          - VpcId
+          - NodeGroupSubnetId
+          - PlacementGroupName
+          - ClusterSecurityGroupId
+          - SshSecurityGroupId
+          - SshKeyName
+
+Parameters:
+
+  LaunchTemplateName:
+    Type: String
+    Description: Name of EC2 launch template to create. Must be unique in your account within the selected region.
+    Default: NODEGROUPNAME-efa
+  VpcId:
+    Type: 'AWS::EC2::VPC::Id'
+    Description: Cluster VPC where EFA-enabled instances will be launched
+  NodeGroupSubnetId:
+    Type: AWS::EC2::Subnet::Id
+    Description: Subnet within cluster VPC where EFA-enabled instances will be launched
+  ClusterSecurityGroupId:
+    Type: AWS::EC2::SecurityGroup::Id
+    Description: Security group allowing access within the cluster VPC
+  SshSecurityGroupId:
+    Type: AWS::EC2::SecurityGroup::Id
+    Description: Security group allowing inbound SSH access
+  SshKeyName:
+    Type: AWS::EC2::KeyPair::KeyName
+    Description: Key pair name for SSH access
+  PlacementGroupName:
+    Type: String
+    Description: Cluster placement group name (leave blank to create one)
+    Default: ""
+  NumberOfNetworkCards:
+    Type: String
+    Description: Number of network cards in the target EC2 instances
+    Default: "1"
+    AllowedValues:
+         - "1"
+         - "2"
+         - "4"
+
+Conditions:
+  CreatePlacementGroup:
+    Fn::Equals:
+    - Ref: PlacementGroupName
+    - ""
+  CardCount32:
+    Fn::Equals:
+      - Ref: NumberOfNetworkCards
+      - "32"
+  CardCount16:
+    Fn::Or:
+      - Fn::Equals:
+        - Ref: NumberOfNetworkCards
+        - "16"
+      - !Condition CardCount32 
+  CardCount8:
+    Fn::Or:
+      - Fn::Equals:
+        - Ref: NumberOfNetworkCards
+        - "8"
+      - !Condition CardCount16 
+  CardCount4:
+    Fn::Or:
+      - Fn::Equals:
+        - Ref: NumberOfNetworkCards
+        - "4"
+      - !Condition CardCount8  
+  CardCount2:
+    Fn::Or:
+      - Fn::Equals:
+        - Ref: NumberOfNetworkCards
+        - "2"
+      - !Condition CardCount4  
+  CardCount1:
+    Fn::Or:
+      - Fn::Equals:
+        - Ref: NumberOfNetworkCards
+        - "1"
+      - !Condition CardCount2
+
+
+Resources:
+
+  LambdaExecutionRole:
+    Condition: CreatePlacementGroup
+    Type: AWS::IAM::Role
+    Properties:
+      AssumeRolePolicyDocument:
+        Version: '2012-10-17'
+        Statement:
+          - Effect: Allow
+            Principal:
+              Service: lambda.amazonaws.com
+            Action: sts:AssumeRole
+      ManagedPolicyArns:
+        - arn:aws:iam::aws:policy/service-role/AWSLambdaBasicExecutionRole
+      Policies:
+        - PolicyName: AllowEC2PlacementGroupManagement
+          PolicyDocument:
+            Version: '2012-10-17'
+            Statement:
+              - Effect: Allow
+                Action:
+                  - ec2:CreatePlacementGroup
+                  - ec2:DeletePlacementGroup
+                  - ec2:DescribePlacementGroups
+                Resource: '*'
+
+  PlacementGroupFunction:
+    Condition: CreatePlacementGroup
+    Type: AWS::Lambda::Function
+    Properties:
+      Handler: index.handler
+      Role: !GetAtt LambdaExecutionRole.Arn
+      Code:
+        ZipFile: |
+          import boto3
+          import cfnresponse
+
+          def handler(event, context):
+              ec2 = boto3.client('ec2')
+              responseData = {}
+
+              try:
+                  if event['RequestType'] == 'Create':
+                      ec2.create_placement_group(
+                          GroupName=event['ResourceProperties']['PlacementGroupName'],
+                          Strategy='cluster'
+                      )
+                      # Get the placement group ID
+                      response = ec2.describe_placement_groups(
+                          GroupNames=[event['ResourceProperties']['PlacementGroupName']]
+                      )
+                      placement_group_id = response['PlacementGroups'][0]['GroupId']
+                      responseData['PlacementGroupName'] = event['ResourceProperties']['PlacementGroupName']
+                      responseData['PlacementGroupId'] = placement_group_id
+                      responseData['Message'] = f"Placement group {event['ResourceProperties']['PlacementGroupName']} created successfully"
+                  elif event['RequestType'] == 'Delete':
+                      ec2.delete_placement_group(
+                          GroupName=event['ResourceProperties']['PlacementGroupName']
+                      )
+                      responseData['Message'] = f"Placement group {event['ResourceProperties']['PlacementGroupName']} deleted successfully"
+                  cfnresponse.send(event, context, cfnresponse.SUCCESS, responseData)
+              except Exception as e:
+                  responseData['Error'] = str(e)
+                  cfnresponse.send(event, context, cfnresponse.FAILED, responseData)
+
+      Runtime: python3.12
+      Timeout: 30
+
+  # We create a placement group using a Lambda so we can give it a name. This is a 
+  # workaround for AWS::EC2::PlacementGroup not having support for setting 
+  # placement group name.
+  PlacementGroup:
+    Condition: CreatePlacementGroup
+    Type: Custom::PlacementGroup
+    Properties:
+      ServiceToken: !GetAtt PlacementGroupFunction.Arn
+      PlacementGroupName: !Sub 'efa-${AWS::StackName}'
+
+  EfaSecurityGroup:
+    Type: 'AWS::EC2::SecurityGroup'
+    Properties:
+      GroupDescription: Support EFA
+      GroupName: !Sub 'efa-${AWS::StackName}'
+      VpcId: !Ref VpcId
+
+  EfaSecurityGroupOutboundSelfRule:
+    Type: 'AWS::EC2::SecurityGroupEgress'
+    Properties:
+      IpProtocol: '-1'
+      GroupId: !Ref EfaSecurityGroup
+      Description: Allow outbound EFA traffic to SG members
+      DestinationSecurityGroupId: !Ref EfaSecurityGroup
+
+  EfaSecurityGroupInboundSelfRule:
+    Type: 'AWS::EC2::SecurityGroupIngress'
+    Properties:
+      IpProtocol: '-1'
+      GroupId: !Ref EfaSecurityGroup
+      Description: Allow inbound EFA traffic to SG members
+      SourceSecurityGroupId: !Ref EfaSecurityGroup
+
+  LaunchTemplate:
+    Type: AWS::EC2::LaunchTemplate
+    Properties:
+      LaunchTemplateName: !Ref LaunchTemplateName
+      LaunchTemplateData:
+        TagSpecifications:
+          - ResourceType: instance
+            Tags:
+              - Key: HPCRecipes
+                Value: "true"
+        MetadataOptions:
+          HttpEndpoint: enabled
+          HttpPutResponseHopLimit: 4
+          HttpTokens: required
+        Placement:
+          GroupName: !If [ CreatePlacementGroup, !GetAtt PlacementGroup.PlacementGroupName, !Ref PlacementGroupName ]
+        NetworkInterfaces:
+          - Description: Primary network interface
+            DeviceIndex: 0
+            InterfaceType: efa
+            NetworkCardIndex: 0
+            SubnetId: !Ref NodeGroupSubnetId
+            Groups:
+            - !Ref EfaSecurityGroup
+            - !Ref ClusterSecurityGroupId
+            - !Ref SshSecurityGroupId
+          - Fn::If:
+            - CardCount2
+            - DeviceIndex: 1
+              InterfaceType: efa
+              NetworkCardIndex: 1
+              SubnetId: !Ref NodeGroupSubnetId
+              Groups:
+              - !Ref EfaSecurityGroup
+            - !Ref AWS::NoValue
+          - Fn::If:
+            - CardCount4
+            - DeviceIndex: 1
+              InterfaceType: efa
+              NetworkCardIndex: 2
+              SubnetId: !Ref NodeGroupSubnetId
+              Groups:
+              - !Ref EfaSecurityGroup
+            - !Ref AWS::NoValue
+          - Fn::If:
+            - CardCount4
+            - DeviceIndex: 1
+              InterfaceType: efa
+              NetworkCardIndex: 3
+              SubnetId: !Ref NodeGroupSubnetId
+              Groups:
+              - !Ref EfaSecurityGroup
+            - !Ref AWS::NoValue
+
+Outputs:
+  LaunchTemplateName:
+    Description: Launch template name
+    Value: !Ref LaunchTemplateName
+  LaunchTemplateId:
+    Description: Launch template Id
+    Value: !Ref LaunchTemplate
+  DefaultVersionNumber:
+    Description: Default version number
+    Value: !GetAtt LaunchTemplate.DefaultVersionNumber
+  LatestVersionNumber:
+    Description: Latest version number
+    Value: !GetAtt LaunchTemplate.DefaultVersionNumber
+  EfaSecurityGroupId:
+    Description: Security group created to support EFA communications
+    Value: !Ref EfaSecurityGroup
+  PlacementGroupName:
+    Description: Cluster placement group to support EFA
+    Value:
+      !If
+      - CreatePlacementGroup
+      - !GetAtt PlacementGroup.PlacementGroupName
+      - !Ref PlacementGroupName

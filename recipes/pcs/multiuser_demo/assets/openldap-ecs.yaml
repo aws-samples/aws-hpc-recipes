@@ -1,0 +1,124 @@
+Description: Sample OpenLDAP-on-ECS to support a multi-user HPC environment.
+
+Metadata:
+  AWS::CloudFormation::Interface:
+    ParameterGroups:
+      - Label:
+          default: OpenLDAP Configuration
+        Parameters:
+          - DomainName
+          - SubDomain
+      - Label:
+          default: Networking
+        Parameters:
+          - VpcId
+          - SubnetIds
+      - Label:
+          default: Sample OpenLDAP User
+        Parameters:
+          - Username
+          - Password
+      - Label:
+          default: Management Secrets
+        Parameters:
+          - SecretsPrefix
+
+Parameters:
+
+  DomainName:
+    Description: Domain name
+    Type: String
+    Default: "corp.sampledomain.com"
+    AllowedPattern: ^([a-zA-Z0-9]+[\\.-])+([a-zA-Z0-9])+$
+
+  SubDomain:
+    Description: (Optional, but required for GovCloud regions) SubDomain for the Active Directory Domain Name. If provided, Active Directory Domain Name will be {SubDomain}.{DomainName}
+    Type: String
+    Default: ""
+
+  ServiceAccountName:
+    Description: Username for LDAP binding
+    Type: String
+    Default: ReadOnly
+    MinLength: 4
+    MaxLength: 24
+    AllowedValues:
+         - "ReadOnly"
+         - "ServiceAccount"
+
+  VpcId:
+    Description: VPC where OpenLDAP will be created.
+    Type: AWS::EC2::VPC::Id
+
+  SubnetIds:
+    Description: Select two subnet(s) for OpenLDAP servers in different AZs. Private subnets are recommended. 
+    Type: List<AWS::EC2::Subnet::Id>
+
+  Username:
+    Description: Sample user that is created in the OpenLDAP.
+    Type: String
+    Default: user123
+    MinLength: 4
+    MaxLength: 24
+
+  Password:
+    Description: Strong password for the sample OpenLDAP user.
+    Type: String
+    MinLength: 8
+    MaxLength: 64
+    AllowedPattern: (?=^.{8,64}$)((?=.*\d)(?=.*[A-Z])(?=.*[a-z])|(?=.*\d)(?=.*[^A-Za-z0-9\s])(?=.*[a-z])|(?=.*[^A-Za-z0-9\s])(?=.*[A-Z])(?=.*[a-z])|(?=.*\d)(?=.*[A-Z])(?=.*[^A-Za-z0-9\s]))^.*
+    NoEcho: true
+
+Resources:
+
+  AdminPassword:
+    Type: AWS::SecretsManager::Secret
+    Properties:
+      Description: Active Directory Administrator Account Password.
+      Name: !Sub 
+        - "OPENLDAP-AdminPassword-${StackName}"
+        - StackName: !Ref AWS::StackName
+      GenerateSecretString:
+        ExcludePunctuation: true
+
+  ServiceAccountPassword:
+    Type: AWS::SecretsManager::Secret
+    Properties:
+      Description: Active Directory Service Account Password.
+      Name: !Sub 
+        - "OPENLDAP-ServiceAccountPassword-${StackName}"
+        - StackName: !Ref AWS::StackName
+      GenerateSecretString:
+        ExcludePunctuation: true
+
+  DirectoryService:
+    Type: AWS::CloudFormation::Stack
+    Properties:
+      Parameters:
+        DomainName: !Ref DomainName
+        SubDomain: !Ref SubDomain
+        AdminPassword: !Sub "{{resolve:secretsmanager:${AdminPassword}}}"
+        ServiceAccountPassword: !Sub "{{resolve:secretsmanager:${ServiceAccountPassword}}}"
+        ServiceAccountName: !Ref ServiceAccountName
+        UserName: !Ref Username
+        UserPassword: !Ref Password
+        Vpc: !Ref VpcId
+        PrivateSubnetOne: !Select [0, !Ref SubnetIds]
+        PrivateSubnetTwo: !Select [1, !Ref SubnetIds]
+      TemplateURL: https://aws-hpc-recipes.s3.amazonaws.com/demo-openldap-on-ecs/recipes/dir/demo_openldap/assets/main.yaml
+
+Outputs:
+  AdminPasswordSecretArn:
+    Value: !Ref AdminPassword
+  DomainName:
+    Value: !GetAtt [ DirectoryService, Outputs.DomainName ]
+  DomainShortName:
+    Value: !GetAtt [ DirectoryService, Outputs.DomainShortName ]
+  DomainComponents:
+    Value: !GetAtt [ DirectoryService, Outputs.DomainComponents ]
+  DomainServiceAccount:
+    Value: !GetAtt [ DirectoryService, Outputs.DomainServiceAccount ]
+  DomainAddrLdap:
+    Value: !GetAtt [ DirectoryService, Outputs.DomainAddrLdap ]
+  PasswordSecretArn:
+    Value: !GetAtt [ DirectoryService, Outputs.PasswordSecretArn ]

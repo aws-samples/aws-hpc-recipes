@@ -208,17 +208,8 @@ Resources:
       ManagedPolicyArns:
       - arn:aws:iam::aws:policy/service-role/AmazonEC2ContainerServiceforEC2Role
       - arn:aws:iam::aws:policy/CloudWatchFullAccessV2
-      Policies:
-        - PolicyName: "CustomizedECSInstancePolicy"
-          PolicyDocument:
-            Version: "2012-10-17"
-            Statement:
-              - Effect: "Allow"
-                Action:
-                  - "s3:GetObject"
-                  - "s3:PutObject"
-                Resource:
-                  - 'arn:aws:s3:::*'
+      - arn:aws:iam::aws:policy/AmazonS3FullAccess
+
   ECSInstanceProfile:
     Type: AWS::IAM::InstanceProfile
     Properties:
@@ -284,10 +275,14 @@ Resources:
   InputBucket:
     Type: 'AWS::S3::Bucket'
     Metadata:
+      Comment: The suppressed guard rules are not vital for this sample but should be considered for production infrastructure
+      guard:
+        SuppressedRules:
+          - S3_BUCKET_DEFAULT_LOCK_ENABLED
+          - S3_BUCKET_REPLICATION_ENABLED
+          - S3_BUCKET_NO_PUBLIC_RW_ACL
       cfn_nag:
         rules_to_suppress:
-          - id: W41
-            reason: "Default server-side encryption with Amazon S3 managed keys (SSE-S3) is used"
           - id: W51
             reason: "Block Public Access settings are turned on for this demo"
     Properties:
@@ -303,13 +298,23 @@ Resources:
       NotificationConfiguration:
         EventBridgeConfiguration:
           EventBridgeEnabled: true
+      VersioningConfiguration:
+        Status: Enabled
+      BucketEncryption:
+        ServerSideEncryptionConfiguration:
+          - ServerSideEncryptionByDefault:
+              SSEAlgorithm: AES256
   OutputBucket:
     Type: 'AWS::S3::Bucket'
     Metadata:
+      Comment: The suppressed guard rules are not vital for this sample but should be considered for production infrastructure
+      guard:
+        SuppressedRules:
+          - S3_BUCKET_DEFAULT_LOCK_ENABLED
+          - S3_BUCKET_REPLICATION_ENABLED
+          - S3_BUCKET_NO_PUBLIC_RW_ACL
       cfn_nag:
         rules_to_suppress:
-          - id: W41
-            reason: "Default server-side encryption with Amazon S3 managed keys (SSE-S3) is used"
           - id: W51
             reason: "Block Public Access settings are turned on for this demo"
     Properties:
@@ -322,13 +327,23 @@ Resources:
         BlockPublicPolicy: true
         IgnorePublicAcls: true
         RestrictPublicBuckets: true
+      VersioningConfiguration:
+        Status: Enabled
+      BucketEncryption:
+        ServerSideEncryptionConfiguration:
+          - ServerSideEncryptionByDefault:
+              SSEAlgorithm: AES256
   S3BucketLogs:
     Type: AWS::S3::Bucket
     Metadata:
+      Comment: The suppressed guard rules are not vital for this sample but should be considered for production infrastructure
+      guard:
+        SuppressedRules:
+          - S3_BUCKET_DEFAULT_LOCK_ENABLED
+          - S3_BUCKET_REPLICATION_ENABLED
+          - S3_BUCKET_NO_PUBLIC_RW_ACL
       cfn_nag:
         rules_to_suppress:
-          - id: W41
-            reason: "Default server-side encryption with Amazon S3 managed keys (SSE-S3) is used"
           - id: W35
             reason: "This the S3 bucket to store the access logs"
           - id: W51
@@ -357,9 +372,20 @@ Resources:
         -
           Key: Description
           Value: S3 Access Logs
+      VersioningConfiguration:
+        Status: Enabled
+      BucketEncryption:
+        ServerSideEncryptionConfiguration:
+          - ServerSideEncryptionByDefault:
+              SSEAlgorithm: AES256
 
   BucketPolicy:
     Type: AWS::S3::BucketPolicy
+    Metadata:
+      Comment: The suppressed guard rules are not vital for this sample but should be considered for production infrastructure
+      guard:
+        SuppressedRules:
+          - S3_BUCKET_SSL_REQUESTS_ONLY
     Properties:
       Bucket: !Ref S3BucketLogs
       PolicyDocument:
