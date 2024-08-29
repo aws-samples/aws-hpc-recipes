@@ -239,7 +239,7 @@ Resources:
                   - "logs:PutLogEvents"
                   - "logs:DescribeLogGroups"
                   - "logs:DescribeLogStreams"
-                Resource: !Sub "arn:aws:logs:${AWS::Region}:${AWS::AccountId}:log-group:${AWS::StackName}-VPCFlowLogs:*"
+                Resource: !Sub "arn:${AWS::Partition}:logs:${AWS::Region}:${AWS::AccountId}:log-group:${AWS::StackName}-VPCFlowLogs:*"
 
   PublicSubnetA:
     Type: AWS::EC2::Subnet
