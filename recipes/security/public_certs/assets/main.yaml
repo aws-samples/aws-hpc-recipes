@@ -160,7 +160,7 @@ Resources:
 
               mkdir certificates
               cd certificates
-              git clone https://github.com/Neilpang/acme.sh.git
+              git clone https://github.com/acmesh-official/acme.sh.git
               cd acme.sh
               ./acme.sh --install
               ./acme.sh --set-default-ca --server letsencrypt
