@@ -103,11 +103,27 @@ download_verify_and_install_software() {
     rm -rf "$temp_dir"
 }
 
+configure_paths() {
+    local SLURM_INSTALL_PATH="/opt/aws/pcs/scheduler/slurm-${PCS_SLURM_VERSION}"
+
+cat > /etc/profile.d/slurm.sh << EOF
+PATH=\$PATH:${SLURM_INSTALL_PATH}/bin
+MANPATH=\$MANPATH:${SLURM_INSTALL_PATH}/share/man
+
+export PATH MANPATH
+EOF
+
+    # Add slurm libraries to /etc/ld.so.conf.d/
+    echo "${SLURM_INSTALL_PATH}/lib/" > /etc/ld.so.conf.d/slurm.conf && chmod 0644 /etc/ld.so.conf.d/slurm.conf && ldconfig
+    
+}
+
 # Main function
 main() {
     parse_args "$@"
     download_and_verify_pubkey
     download_verify_and_install_software
+    configure_paths
 }
 
 # Call the main function
