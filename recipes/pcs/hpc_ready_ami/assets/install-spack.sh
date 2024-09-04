@@ -2,11 +2,15 @@
 
 # Define default value(s)
 PREFIX="/opt"
+NO_ARM_COMPILER=""
+NO_INTEL_COMPILER=""
 
 # Function to print usage
 usage() {
     echo "Usage: $0 [--prefix=PREFIX]"
     echo "  --prefix  Spack install destination [$PREFIX]"
+    echo "  --no-arm-compiler   Skip installation of the ARM compiler"
+    echo "  --no-intel-compiler  Skip installation of the Intel compiler"
 }
 
 # Function to parse command-line arguments
@@ -15,6 +19,14 @@ parse_args() {
         case "$1" in
             --prefix=*)
                 PREFIX="${1#*=}"
+                ;;
+            --no-arm-compiler )
+                NO_ARM_COMPILER="--no-arm-compiler"
+                shift
+                ;;
+            --no-intel-compiler )
+                NO_INTEL_COMPILER="--no-intel-compiler"
+                shift
                 ;;
             *)
                 echo "Invalid option: $1" >&2
@@ -38,10 +50,12 @@ download_and_install_spack() {
     cd "$temp_dir" || exit 1
 
     # Download Spack install script
+    # TODO - replace with link to file in spack-configs GitHub repo
+    # ref: https://raw.githubusercontent.com/spack/spack-configs/main/AWS/parallelcluster/postinstall.sh
     curl -fsSL "https://aws-hpc-recipes-dev.s3.us-east-1.amazonaws.com/pcs-ib/recipes/pcs/hpc_ready_ami/assets/postinstall.sh" -o "postinstall.sh"
 
     chmod a+x postinstall.sh
-    ./postinstall.sh --prefix "$PREFIX" -fg  --no-intel-compiler
+    ./postinstall.sh -fg --prefix "$PREFIX" ${NO_ARM_COMPILER} ${NO_INTEL_COMPILER}
 
     if [ $? -ne 0 ]; then
         echo "Error: Installation failed" >&2
