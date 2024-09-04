@@ -46,7 +46,7 @@ download_and_verify_pubkey() {
 
     # Get the actual fingerprint
     local ACTUAL_FINGERPRINT=$(gpg --fingerprint "$PUBKEY_ID" | grep -i "Key fingerprint" | awk -F'=' '{print $2}' | tr -d '[:space:]')
-    PUBKEY_EXPECTED_FINGERPRINT = $(echo -n $PUBKEY_EXPECTED_FINGERPRINT | tr -d '[:space:]')
+    PUBKEY_EXPECTED_FINGERPRINT=$(echo -n $PUBKEY_EXPECTED_FINGERPRINT | tr -d '[:space:]')
 
     # Compare the fingerprints
     if [ "$ACTUAL_FINGERPRINT" != "$PUBKEY_EXPECTED_FINGERPRINT" ]; then
