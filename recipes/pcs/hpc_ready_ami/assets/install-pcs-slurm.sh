@@ -89,7 +89,7 @@ download_verify_and_install_software() {
     fi
 
     # Unpack the agent and install
-    tar zxf "${PCS_SLURM_VERSION}-installer-${PCS_SLURM_INSTALLER_VERSION}.tar.gz" && cd "aws-pcs-slurm-${PCS_SLURM_VERSION}-installer"
+    tar zxf "aws-pcs-slurm-${PCS_SLURM_VERSION}-installer-${PCS_SLURM_INSTALLER_VERSION}.tar.gz" && cd "aws-pcs-slurm-${PCS_SLURM_VERSION}-installer"
     ./installer.sh -y
 
     if [ $? -ne 0 ]; then
