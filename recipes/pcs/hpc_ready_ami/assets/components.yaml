@@ -26,10 +26,10 @@ Parameters:
     AllowedPattern: '^(?!.*/\.git$)(?!.*/\.)(?!.*\\.\.)[a-zA-Z0-9-_\.]+$'
 
 Resources:
-  PcsAgentComponent:
+  PcsAgentInstallerComponent:
     Type: AWS::ImageBuilder::Component
     Properties:
-      Name: AWSPCSAgentInstaller
+      Name: PcsAgentInstaller
       Description: Download and install the AWS PCS agent
       Version: '0.0.1'
       Platform: Linux
@@ -56,10 +56,10 @@ Resources:
                     - 'chmod +x install-pcs-agent.sh'
                     - './install-pcs-agent.sh --aws-region=${AWS::Region} --pcs-agent-installer-version={{ PcsAgentInstallerVersion }}'
 
-  PcsSlurmComponent:
+  PcsSlurmInstallerComponent:
     Type: AWS::ImageBuilder::Component
     Properties:
-      Name: AWSPCSSlurmInstaller
+      Name: PcsSlurmInstaller
       Description: Download and install Slurm for AWS PCS
       Version: '0.0.1'
       Platform: Linux
@@ -90,7 +90,7 @@ Resources:
                     - 'chmod +x install-pcs-slurm.sh'
                     - './install-pcs-slurm.sh --aws-region=${AWS::Region} --pcs-slurm-version={{ PcsSlurmVersion }} --pcs-slurm-installer-version={{ PcsSlurmInstallerVersion }}'
 
-  EfaComponent:
+  EfaInstallerComponent:
     Type: AWS::ImageBuilder::Component
     Properties:
       Name: EfaInstaller
