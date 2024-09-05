@@ -29,7 +29,7 @@ Resources:
   PcsAgentInstallerComponent:
     Type: AWS::ImageBuilder::Component
     Properties:
-      Name: PcsAgentInstaller
+      Name: !Sub 'PcsAgentInstaller-${AWS::StackName}'
       Description: Download and install the AWS PCS agent
       Version: '0.0.1'
       Platform: Linux
@@ -59,7 +59,7 @@ Resources:
   PcsSlurmInstallerComponent:
     Type: AWS::ImageBuilder::Component
     Properties:
-      Name: PcsSlurmInstaller
+      Name: !Sub 'PcsSlurmInstaller-${AWS::StackName}'
       Description: Download and install Slurm for AWS PCS
       Version: '0.0.1'
       Platform: Linux
@@ -93,7 +93,7 @@ Resources:
   EfaInstallerComponent:
     Type: AWS::ImageBuilder::Component
     Properties:
-      Name: EfaInstaller
+      Name: !Sub 'EfaInstaller-${AWS::StackName}'
       Description: Download and install EFA software
       Version: '0.0.1'
       Platform: Linux
@@ -123,7 +123,7 @@ Resources:
   SpackInstallerComponent:
     Type: AWS::ImageBuilder::Component
     Properties:
-      Name: SpackInstaller
+      Name: !Sub 'SpackInstaller-${AWS::StackName}'
       Description: Install Spack and optimized configurations
       Version: '0.0.1'
       Platform: Linux
@@ -142,6 +142,7 @@ Resources:
                 action: ExecuteBash
                 inputs:
                   commands:
+                    - 'curl -fsSL https://${HpcRecipesS3Bucket}.s3.us-east-1.amazonaws.com/${HpcRecipesBranch}/recipes/pcs/hpc_ready_ami/assets/common.sh -o common.sh'
                     - 'curl -fsSL https://${HpcRecipesS3Bucket}.s3.us-east-1.amazonaws.com/${HpcRecipesBranch}/recipes/pcs/hpc_ready_ami/assets/install-spack.sh -o install-spack.sh'
               - name: InstallAgent
                 action: ExecuteBash
@@ -153,7 +154,7 @@ Resources:
   UpdateOsComponent:
     Type: AWS::ImageBuilder::Component
     Properties:
-      Name: UpdateOsForPcsAmi
+      Name: !Sub 'UpdateOs-${AWS::StackName}'
       Description: Update the OS on PCS-compatible AMI base images
       Version: '0.0.1'
       Platform: Linux
