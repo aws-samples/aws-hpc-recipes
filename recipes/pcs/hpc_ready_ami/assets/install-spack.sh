@@ -68,82 +68,41 @@ download_and_install_spack() {
     rm -rf "$temp_dir"
 }
 
-install_packages() {
+handle_ubuntu_22.04() {
+    logger "Installing deps for Ubuntu 22.04" "INFO"
+    apt update && apt install -y git && apt clean
+}
+
+handle_rhel_9() { 
+    logger "Installing deps for RHEL 9" "INFO"
+    dnf install -y git && dnf clean all
+}
+
+handle_rocky_9() {
+    logger "Installing deps for Rocky Linux 9" "INFO"
+    dnf install -y git && dnf clean all
+}
+
+handle_amzn_2() {
+    logger "Installing deps for Amazon Linux 2" "INFO"
+    yum makecache && yum install -y git && yum clean all
+}
+
+install_dependencies() {
     # The Spack installer requires presence of git to check out the spack-configs repository
 
-    # Detect the operating system
-    if [ -f /etc/os-release ]; then
-        # Read the contents of the /etc/os-release file
-        # shellcheck disable=SC1091
-        . /etc/os-release
-        # Extract the operating system ID and version
-        OS=$ID
-        VERSION=$VERSION_ID
-    else
-        echo "Unable to detect the operating system." >&2
-        exit 1
-    fi
+    # Common library that helps implement OS-specific code paths
+    if [ -f "common.sh" ]; then . common.sh; fi
+    detect_os_version
+    handle_${OS}_${VERSION}
 
-    # Verify if the OS is supported
-    case "$OS" in
-        ubuntu)
-            if [ "$VERSION" == "22.04" ]; then
-                echo "Running Ubuntu 22.04 scripts"
-                apt update 
-                apt install -y git
-                apt clean
-            else
-                echo "Unsupported Ubuntu version: $VERSION" >&2
-                exit 1
-            fi
-            ;;
-        rhel)
-            if [[ "$VERSION" =~ ^9\.* ]]; then
-                echo "Running RHEL 9 scripts"
-                VERSION=9
-                yum makecache
-                yum install -y git
-                yum clean all
-            else
-                echo "Unsupported RHEL version: $VERSION" >&2
-                exit 1
-            fi
-            ;;
-        rocky)
-            if [[ "$VERSION" =~ ^9\.* ]]; then
-                echo "Running Rocky Linux 9 scripts"
-                VERSION=9
-                yum makecache
-                yum install -y git
-                yum clean all
-            else
-                echo "Unsupported Rocky Linux version: $VERSION" >&2
-                exit 1
-            fi
-            ;;
-        amzn)
-            if [ "$VERSION" == "2" ]; then
-                yum makecache
-                yum install -y git
-                yum clean all
-                rm -rf /var/cache/yum
-            else
-                echo "Unsupported Amazon Linux version: $VERSION" >&2
-                exit 1
-            fi
-            ;;
-        *)
-            echo "Unsupported operating system: $OS" >&2
-            exit 1
-            ;;
-    esac
 }
 
 # Main function
 main() {
     parse_args "$@"
+    install_dependencies
     download_and_verify_pubkey
-    install_packages
     download_and_install_spack
 }
 
