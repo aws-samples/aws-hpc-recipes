@@ -1,9 +1,7 @@
 #!/usr/bin/env bash
 
-# This script update the OS and base packages for AMIs from 
-# operating systems supported by AWS PCS. It is intended to 
-# replace the UpdateOS ImageBuilder component with a solution
-# that is more flexible to the specifics of each supported OS.
+# This script applies performance optimizations to AMIs from 
+# operating systems supported by AWS PCS.
 
 set -o errexit -o pipefail -o nounset
 
@@ -91,9 +89,6 @@ detect_os_version() {
             exit 1
             ;;
     esac
-
-    export OS
-    export VERSION
 
 }
 
