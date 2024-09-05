@@ -1,100 +1,35 @@
 #!/usr/bin/env bash
 
-# This script update the OS and base packages for AMIs from 
+# This script updates the OS and base packages for AMIs from 
 # operating systems supported by AWS PCS. It is intended to 
 # replace the UpdateOS ImageBuilder component with a solution
 # that is more flexible to the specifics of each supported OS.
+#
+# It should be followed by an explicit, managed reboot 
+# before installing additional software. 
 
 set -o errexit -o pipefail -o nounset
 
-OS=""
-VERSION=""
-
-# Function to log
-logger() {
-   local script="$0";
-   local log_message="$1";
-   local log_level="${2:-INFO}";
-   local timestamp=$(date +"%Y-%m-%dT%H:%M:%S.%3N%:z");
-   echo "[$timestamp] - $script: $log_level: $log_message";
-}
+if [ -f "common.sh" ]; then . common.sh; fi
 
 handle_ubuntu_22.04() {
     logger "Updating Ubuntu 22.04" "INFO"
+    apt-get update && apt-get upgrade -y && apt-get autoremove -y && apt-get autoclean
 }
 
 handle_rhel_9() { 
     logger "Updating RHEL 9" "INFO"
+    dnf update -y && dnf clean all
 }
 
 handle_rocky_9() {
     logger "Updating Rocky Linux 9" "INFO"
+    dnf update -y && dnf clean all
 }
 
 handle_amzn_2() {
     logger "Updating Amazon Linux 2" "INFO"
-}
-
-detect_os_version() {
-
-    # Detect the operating system
-    if [ -f /etc/os-release ]; then
-        # Read the contents of the /etc/os-release file
-        # shellcheck disable=SC1091
-        . /etc/os-release
-        # Extract the operating system ID and version
-        OS=$ID
-        VERSION=$VERSION_ID
-    else
-        logger "Unable to detect the operating system." "ERROR"
-        exit 1
-    fi
-
-    # Verify if the OS is supported
-    case "$OS" in
-        ubuntu)
-            if [ "$VERSION" == "22.04" ]; then
-                logger "Detected Ubuntu 22.04"
-            else
-                logger "Unsupported Ubuntu version: $VERSION" "ERROR"
-                exit 1
-            fi
-            ;;
-        rhel)
-            if [[ "$VERSION" =~ ^9\.* ]]; then
-                logger "Detected RHEL 9"
-                VERSION=9
-            else
-                logger "Unsupported RHEL version: $VERSION" "ERROR" "ERROR"
-                exit 1
-            fi
-            ;;
-        rocky)
-            if [[ "$VERSION" =~ ^9\.* ]]; then
-                logger "Detected Rocky Linux 9"
-                VERSION=9
-            else
-                logger "Unsupported Rocky Linux version: $VERSION" "ERROR"
-                exit 1
-            fi
-            ;;
-        amzn)
-            if [ "$VERSION" == "2" ]; then
-                logger "Detected Amazon Linux 2"
-            else
-                logger "Unsupported Amazon Linux version: $VERSION" "ERROR"
-                exit 1
-            fi
-            ;;
-        *)
-            logger "Unsupported operating system: $OS" "ERROR"
-            exit 1
-            ;;
-    esac
-
-    export OS
-    export VERSION
-
+    yum update -y && yum clean all
 }
 
 # Main function
