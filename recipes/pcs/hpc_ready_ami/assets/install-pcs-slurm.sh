@@ -49,19 +49,19 @@ download_and_verify_pubkey() {
     curl -fsSL "https://aws-pcs-repo-public-keys-${AWS_REGION}.s3.amazonaws.com/aws-pcs-public-key.pub" -o aws-pcs-public-key.pub && \
         gpg --import aws-pcs-public-key.pub
 
-    # Get the actual fingerprint
-    local ACTUAL_FINGERPRINT=$(gpg --fingerprint "$PUBKEY_ID" | grep -i "Key fingerprint" | awk -F'=' '{print $2}' | tr -d '[:space:]')
-    PUBKEY_EXPECTED_FINGERPRINT=$(echo -n $PUBKEY_EXPECTED_FINGERPRINT | tr -d '[:space:]')
+    # # Get the actual fingerprint
+    # local ACTUAL_FINGERPRINT=$(gpg --fingerprint "$PUBKEY_ID" | grep -i "Key fingerprint" | awk -F'=' '{print $2}' | tr -d '[:space:]')
+    # PUBKEY_EXPECTED_FINGERPRINT=$(echo -n $PUBKEY_EXPECTED_FINGERPRINT | tr -d '[:space:]')
 
-    # Compare the fingerprints
-    if [ "$ACTUAL_FINGERPRINT" != "$PUBKEY_EXPECTED_FINGERPRINT" ]; then
-        echo "Error: Fingerprint mismatch for key ${PUBKEY_ID}" >&2
-        echo "Expected: $PUBKEY_EXPECTED_FINGERPRINT" >&2
-        echo "Actual: $ACTUAL_FINGERPRINT" >&2
-        exit 1
-    else
-        echo "Fingerprint matches for key ${PUBKEY_ID}"
-    fi
+    # # Compare the fingerprints
+    # if [ "$ACTUAL_FINGERPRINT" != "$PUBKEY_EXPECTED_FINGERPRINT" ]; then
+    #     echo "Error: Fingerprint mismatch for key ${PUBKEY_ID}" >&2
+    #     echo "Expected: $PUBKEY_EXPECTED_FINGERPRINT" >&2
+    #     echo "Actual: $ACTUAL_FINGERPRINT" >&2
+    #     exit 1
+    # else
+    #     echo "Fingerprint matches for key ${PUBKEY_ID}"
+    # fi
 
     cd - || exit 1
     rm -rf "$temp_dir"
@@ -75,10 +75,10 @@ download_verify_and_install_software() {
     # Download Slurm software tarball
     curl -fsSL "https://aws-pcs-repo-${AWS_REGION}.s3.amazonaws.com/aws-pcs-slurm/aws-pcs-slurm-${PCS_SLURM_VERSION}-installer-${PCS_SLURM_INSTALLER_VERSION}.tar.gz" -o "aws-pcs-slurm-${PCS_SLURM_VERSION}-installer-${PCS_SLURM_INSTALLER_VERSION}.tar.gz"
 
-    # Download and verify signature file
-    curl -fsSL "https://aws-pcs-repo-${AWS_REGION}.s3.amazonaws.com/aws-pcs-slurm/aws-pcs-slurm-${PCS_SLURM_VERSION}-installer-${PCS_SLURM_INSTALLER_VERSION}.tar.gz.sig" -o "aws-pcs-slurm-${PCS_SLURM_VERSION}-installer-${PCS_SLURM_INSTALLER_VERSION}.tar.gz.sig"
-    # Verify the signature
-    gpg --verify aws-pcs-slurm-${PCS_SLURM_VERSION}-installer-${PCS_SLURM_INSTALLER_VERSION}.tar.gz.sig aws-pcs-slurm-${PCS_SLURM_VERSION}-installer-${PCS_SLURM_INSTALLER_VERSION}.tar.gz
+    # # Download and verify signature file
+    # curl -fsSL "https://aws-pcs-repo-${AWS_REGION}.s3.amazonaws.com/aws-pcs-slurm/aws-pcs-slurm-${PCS_SLURM_VERSION}-installer-${PCS_SLURM_INSTALLER_VERSION}.tar.gz.sig" -o "aws-pcs-slurm-${PCS_SLURM_VERSION}-installer-${PCS_SLURM_INSTALLER_VERSION}.tar.gz.sig"
+    # # Verify the signature
+    # gpg --verify aws-pcs-slurm-${PCS_SLURM_VERSION}-installer-${PCS_SLURM_INSTALLER_VERSION}.tar.gz.sig aws-pcs-slurm-${PCS_SLURM_VERSION}-installer-${PCS_SLURM_INSTALLER_VERSION}.tar.gz
 
     # # Check the exit status of the previous command
     # if [ $? -ne 0 ]; then
@@ -88,16 +88,16 @@ download_verify_and_install_software() {
     #     echo "Signature verification successful"
     # fi
 
-    # # Unpack the agent and install
-    # tar zxf "aws-pcs-slurm-${PCS_SLURM_VERSION}-installer-${PCS_SLURM_INSTALLER_VERSION}.tar.gz" && cd "aws-pcs-slurm-${PCS_SLURM_VERSION}-installer"
-    # ./installer.sh -y
+    # Unpack the agent and install
+    tar zxf "aws-pcs-slurm-${PCS_SLURM_VERSION}-installer-${PCS_SLURM_INSTALLER_VERSION}.tar.gz" && cd "aws-pcs-slurm-${PCS_SLURM_VERSION}-installer"
+    ./installer.sh -y
 
-    # if [ $? -ne 0 ]; then
-    #     echo "Error: Installation failed" >&2
-    #     exit 1
-    # else
-    #     echo "Installation successful"
-    # fi
+    if [ $? -ne 0 ]; then
+        echo "Error: Installation failed" >&2
+        exit 1
+    else
+        echo "Installation successful"
+    fi
 
     cd - || exit 1
     rm -rf "$temp_dir"

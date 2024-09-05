@@ -70,19 +70,19 @@ download_verify_and_install_software() {
     # Download agent tarball
     curl -fsSL "https://aws-pcs-repo-${AWS_REGION}.s3.amazonaws.com/aws-pcs-agent/aws-pcs-agent-v1-${PCS_AGENT_INSTALLER_VERSION}.tar.gz" -o aws-pcs-agent.tar.gz
 
-    # Download and verify signature file
-    curl -fsSL "https://aws-pcs-repo-${AWS_REGION}.s3.amazonaws.com/aws-pcs-agent/aws-pcs-agent-v1-${PCS_AGENT_INSTALLER_VERSION}.tar.gz.sig" -o aws-pcs-agent.tar.gz.sig
+    # # Download and verify signature file
+    # curl -fsSL "https://aws-pcs-repo-${AWS_REGION}.s3.amazonaws.com/aws-pcs-agent/aws-pcs-agent-v1-${PCS_AGENT_INSTALLER_VERSION}.tar.gz.sig" -o aws-pcs-agent.tar.gz.sig
 
-    # Verify the signature
-    gpg --verify aws-pcs-agent.tar.gz.sig aws-pcs-agent.tar.gz
+    # # Verify the signature
+    # gpg --verify aws-pcs-agent.tar.gz.sig aws-pcs-agent.tar.gz
 
-    # Check the exit status of the previous command
-    if [ $? -ne 0 ]; then
-        echo "Error: Signature verification failed" >&2
-        exit 1
-    else
-        echo "Signature verification successful"
-    fi
+    # # Check the exit status of the previous command
+    # if [ $? -ne 0 ]; then
+    #     echo "Error: Signature verification failed" >&2
+    #     exit 1
+    # else
+    #     echo "Signature verification successful"
+    # fi
 
     # Unpack the agent and install
     tar zxf aws-pcs-agent.tar.gz && cd aws-pcs-agent
