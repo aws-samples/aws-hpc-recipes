@@ -89,7 +89,7 @@ install_packages() {
         ubuntu)
             if [ "$VERSION" == "22.04" ]; then
                 echo "Running Ubuntu 22.04 scripts"
-                apt update
+                apt update 
                 apt install -y git
                 apt clean
             else
@@ -101,11 +101,9 @@ install_packages() {
             if [[ "$VERSION" =~ ^9\.* ]]; then
                 echo "Running RHEL 9 scripts"
                 VERSION=9
-                yum install -y 'dnf-command(config-manager)'
                 yum makecache
                 yum install -y git
                 yum clean all
-                rm -rf /var/cache/yum
             else
                 echo "Unsupported RHEL version: $VERSION" >&2
                 exit 1
@@ -115,11 +113,9 @@ install_packages() {
             if [[ "$VERSION" =~ ^9\.* ]]; then
                 echo "Running Rocky Linux 9 scripts"
                 VERSION=9
-                yum install -y 'dnf-command(config-manager)'
                 yum makecache
                 yum install -y git
                 yum clean all
-                rm -rf /var/cache/yum
             else
                 echo "Unsupported Rocky Linux version: $VERSION" >&2
                 exit 1
