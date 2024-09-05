@@ -22,7 +22,7 @@ Parameters:
   HpcRecipesBranch:
     Type: String
     Default: main
-    Description: HPC Recipes for AWS S3 branch
+    Description: HPC Recipes for AWS release branch
     AllowedPattern: '^(?!.*/\.git$)(?!.*/\.)(?!.*\\.\.)[a-zA-Z0-9-_\.]+$'
 
 Resources:

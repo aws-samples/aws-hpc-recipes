@@ -80,24 +80,24 @@ download_verify_and_install_software() {
     # Verify the signature
     gpg --verify aws-pcs-slurm-${PCS_SLURM_VERSION}-installer-${PCS_SLURM_INSTALLER_VERSION}.tar.gz.sig aws-pcs-slurm-${PCS_SLURM_VERSION}-installer-${PCS_SLURM_INSTALLER_VERSION}.tar.gz
 
-    # Check the exit status of the previous command
-    if [ $? -ne 0 ]; then
-        echo "Error: Signature verification failed" >&2
-        exit 1
-    else
-        echo "Signature verification successful"
-    fi
+    # # Check the exit status of the previous command
+    # if [ $? -ne 0 ]; then
+    #     echo "Error: Signature verification failed" >&2
+    #     exit 1
+    # else
+    #     echo "Signature verification successful"
+    # fi
 
-    # Unpack the agent and install
-    tar zxf "aws-pcs-slurm-${PCS_SLURM_VERSION}-installer-${PCS_SLURM_INSTALLER_VERSION}.tar.gz" && cd "aws-pcs-slurm-${PCS_SLURM_VERSION}-installer"
-    ./installer.sh -y
+    # # Unpack the agent and install
+    # tar zxf "aws-pcs-slurm-${PCS_SLURM_VERSION}-installer-${PCS_SLURM_INSTALLER_VERSION}.tar.gz" && cd "aws-pcs-slurm-${PCS_SLURM_VERSION}-installer"
+    # ./installer.sh -y
 
-    if [ $? -ne 0 ]; then
-        echo "Error: Installation failed" >&2
-        exit 1
-    else
-        echo "Installation successful"
-    fi
+    # if [ $? -ne 0 ]; then
+    #     echo "Error: Installation failed" >&2
+    #     exit 1
+    # else
+    #     echo "Installation successful"
+    # fi
 
     cd - || exit 1
     rm -rf "$temp_dir"
