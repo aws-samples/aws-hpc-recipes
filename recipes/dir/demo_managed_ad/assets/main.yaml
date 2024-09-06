@@ -665,12 +665,13 @@ Resources:
       ServiceAccountPassword: !Ref ServiceAccountPassword
       StopAdAdminInstance: !Ref StopAdAdminInstance
 
-  PasswordSecret:
+  CredentialsSecret:
     Type: AWS::SecretsManager::Secret
     Properties:
-      Description: Password for Microsoft Active Directory
-      Name: !Sub [ "PasswordSecret-${StackIdSuffix}", {StackIdSuffix: !Select [1, !Split ['/', !Ref 'AWS::StackId']]}]
-      SecretString: !Ref ServiceAccountPassword
+      Description: Credentials for Microsoft Active Directory. The username and password for the Active Directory ServiceAccount user formatted as a username:password key/value pair.
+      Name: !Sub [ "CredentialsSecret-${StackIdSuffix}", {StackIdSuffix: !Select [1, !Split ['/', !Ref 'AWS::StackId']]}]
+      SecretString:
+        Fn::Sub: '{"ServiceAccount":"${ServiceAccountPassword}"}'
 
   DomainCertificateSecret:
     Type: AWS::SecretsManager::Secret
@@ -1029,10 +1030,10 @@ Outputs:
       - dc: !Join [",dc=", !Split [".", !If [ SubDomainNotProvided, !Ref DomainName, !Join [ ".", [ !Ref SubDomain, !Ref DomainName] ] ] ]]
     Export:
       Name: !Sub ${AWS::StackName}-DomainComponents
-  PasswordSecretArn:
-    Value: !Ref PasswordSecret
+  CredentialsSecretArn:
+    Value: !Ref CredentialsSecret
     Export:
-        Name: !Sub ${AWS::StackName}-PasswordSecretArn
+        Name: !Sub ${AWS::StackName}-CredentialsSecretArn
   DomainCertificateArn:
     Value: !GetAtt DomainCertificateSetup.DomainCertificateArn
     Export:
