@@ -37,22 +37,22 @@ build_and_install_deb() {
 }
 
 handle_ubuntu_22.04() {
-    logger "Updating Ubuntu 22.04" "INFO"
+    logger "Installing on Ubuntu 22.04" "INFO"
     build_and_install_deb
 }
 
 handle_rhel_9() { 
-    logger "Updating RHEL 9" "INFO"
+    logger "Installing on RHEL 9" "INFO"
     build_and_install_rpm
 }
 
 handle_rocky_9() {
-    logger "Updating Rocky Linux 9" "INFO"
+    logger "Installing on Rocky Linux 9" "INFO"
     build_and_install_rpm
 }
 
 handle_amzn_2() {
-    logger "Updating Amazon Linux 2" "INFO"
+    logger "Installing on Amazon Linux 2" "INFO"
     sudo yum -y install amazon-efs-utils
 }
 
