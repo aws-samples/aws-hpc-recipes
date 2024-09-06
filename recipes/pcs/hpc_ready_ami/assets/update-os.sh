@@ -19,12 +19,15 @@ handle_ubuntu_22.04() {
 
 handle_rhel_9() { 
     logger "Updating RHEL 9" "INFO"
-    dnf update -y && dnf clean all
+    # Do not upgrade kernel or risk breaking EFA and/or Lustre support
+    dnf update --exclude=kernel* -y && dnf clean all
 }
 
 handle_rocky_9() {
     logger "Updating Rocky Linux 9" "INFO"
-    dnf update -y && dnf clean all
+    # Do not upgrade kernel or risk breaking EFA and/or Lustre support
+    # Passing --exclude=kernel* does not work on Rocky-9-EC2-Base-9.4
+    dnf update --security -y && dnf clean all
 }
 
 handle_amzn_2() {
