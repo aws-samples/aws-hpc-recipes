@@ -1,5 +1,5 @@
 AWSTemplateFormatVersion: '2010-09-09'
-Description: ImageBuilder Component to install AWS PCS agent
+Description: ImageBuilder Component to install EFA software
 
 ### Stack metadata
 Metadata:
@@ -11,7 +11,7 @@ Metadata:
           - HpcRecipesS3Bucket
           - HpcRecipesBranch
 
-# TODO - parameterize PCS agent installer version
+# TODO - parameterize EfaVersion
 Parameters:
   HpcRecipesS3Bucket:
     Type: String
@@ -27,20 +27,20 @@ Parameters:
     AllowedPattern: '^(?!.*/\.git$)(?!.*/\.)(?!.*\\.\.)[a-zA-Z0-9-_\.]+$'
 
 Resources:
-  PcsAgentInstallerComponent:
+  EfaInstallerComponent:
     Type: AWS::ImageBuilder::Component
     Properties:
-      Name: !Sub 'PcsAgentInstaller'
-      Description: Download and install the AWS PCS agent
+      Name: !Sub 'EfaInstaller-${AWS::StackName}'
+      Description: Download and install EFA software
       Version: '0.0.1'
       Platform: Linux
       Data: !Sub |
-        name: 'AWS PCS agent installer'
+        name: 'Elastic Fabric Adapter installer'
         schemaVersion: 1.0
         parameters:
-          - PcsAgentInstallerVersion:
+          - EfaVersion:
               type: string
-              description: 'Version of the AWS PCS agent installer to use'
+              description: 'EFA version to install'
               default: 'latest'
         phases:
           - name: build
@@ -49,16 +49,17 @@ Resources:
                 action: ExecuteBash
                 inputs:
                   commands:
-                    - 'curl -fsSL https://${HpcRecipesS3Bucket}.s3.us-east-1.amazonaws.com/${HpcRecipesBranch}/recipes/pcs/hpc_ready_ami/assets/scripts/install-pcs-agent.sh -o install-pcs-agent.sh'
+                    - 'curl -fsSL https://${HpcRecipesS3Bucket}.s3.us-east-1.amazonaws.com/${HpcRecipesBranch}/recipes/pcs/hpc_ready_ami/assets/scripts/install-efa.sh -o install-efa.sh'
               - name: InstallAgent
                 action: ExecuteBash
                 inputs:
                   commands:
-                    - 'chmod +x install-pcs-agent.sh'
-                    - './install-pcs-agent.sh --aws-region=${AWS::Region} --pcs-agent-installer-version={{ PcsAgentInstallerVersion }}'
+                    - 'chmod +x install-efa.sh'
+                    - './install-efa.sh --efa-installer-version={{ EfaVersion }}'
+
 
 Outputs:
   ImageBuilderComponent:
-    Value: !Ref PcsAgentInstallerComponent
+    Value: !Ref EfaInstallerComponent
     Export:
-      Name: !Sub 'PcsAgentInstallerComponent'
+      Name: !Sub 'EfaInstallerComponent'

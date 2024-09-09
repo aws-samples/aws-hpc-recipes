@@ -1,5 +1,5 @@
 AWSTemplateFormatVersion: '2010-09-09'
-Description: ImageBuilder Component to install AWS PCS agent
+Description: ImageBuilder Component to install Amazon Cloudwatch agent
 
 ### Stack metadata
 Metadata:
@@ -11,7 +11,6 @@ Metadata:
           - HpcRecipesS3Bucket
           - HpcRecipesBranch
 
-# TODO - parameterize PCS agent installer version
 Parameters:
   HpcRecipesS3Bucket:
     Type: String
@@ -27,21 +26,16 @@ Parameters:
     AllowedPattern: '^(?!.*/\.git$)(?!.*/\.)(?!.*\\.\.)[a-zA-Z0-9-_\.]+$'
 
 Resources:
-  PcsAgentInstallerComponent:
+  CloudwatchAgentComponent:
     Type: AWS::ImageBuilder::Component
     Properties:
-      Name: !Sub 'PcsAgentInstaller'
-      Description: Download and install the AWS PCS agent
+      Name: !Sub 'CloudWatchAgentInstaller-${AWS::StackName}'
+      Description: Install CloudWatch Agent on PCS-compatible AMI base images
       Version: '0.0.1'
       Platform: Linux
       Data: !Sub |
-        name: 'AWS PCS agent installer'
+        name: 'Install CloudWatch Agent'
         schemaVersion: 1.0
-        parameters:
-          - PcsAgentInstallerVersion:
-              type: string
-              description: 'Version of the AWS PCS agent installer to use'
-              default: 'latest'
         phases:
           - name: build
             steps:
@@ -49,16 +43,18 @@ Resources:
                 action: ExecuteBash
                 inputs:
                   commands:
-                    - 'curl -fsSL https://${HpcRecipesS3Bucket}.s3.us-east-1.amazonaws.com/${HpcRecipesBranch}/recipes/pcs/hpc_ready_ami/assets/scripts/install-pcs-agent.sh -o install-pcs-agent.sh'
+                    - 'curl -fsSL https://${HpcRecipesS3Bucket}.s3.us-east-1.amazonaws.com/${HpcRecipesBranch}/recipes/pcs/hpc_ready_ami/assets/scripts/common.sh -o common.sh'
+                    - 'curl -fsSL https://${HpcRecipesS3Bucket}.s3.us-east-1.amazonaws.com/${HpcRecipesBranch}/recipes/pcs/hpc_ready_ami/assets/scripts/install-cloudwatch-agent.sh -o install-cloudwatch-agent.sh'
               - name: InstallAgent
                 action: ExecuteBash
                 inputs:
                   commands:
-                    - 'chmod +x install-pcs-agent.sh'
-                    - './install-pcs-agent.sh --aws-region=${AWS::Region} --pcs-agent-installer-version={{ PcsAgentInstallerVersion }}'
+                    - 'chmod +x install-cloudwatch-agent.sh'
+                    - './install-cloudwatch-agent.sh'
+
 
 Outputs:
   ImageBuilderComponent:
-    Value: !Ref PcsAgentInstallerComponent
+    Value: !Ref CloudwatchAgentComponent
     Export:
-      Name: !Sub 'PcsAgentInstallerComponent'
+      Name: !Sub 'CloudwatchAgentComponent'
