@@ -48,7 +48,7 @@ Resources:
                 action: ExecuteBash
                 inputs:
                   commands:
-                    - 'curl -fsSL https://${HpcRecipesS3Bucket}.s3.us-east-1.amazonaws.com/${HpcRecipesBranch}/recipes/pcs/hpc_ready_ami/assets/install-pcs-agent.sh -o install-pcs-agent.sh'
+                    - 'curl -fsSL https://${HpcRecipesS3Bucket}.s3.us-east-1.amazonaws.com/${HpcRecipesBranch}/recipes/pcs/hpc_ready_ami/assets/scripts/install-pcs-agent.sh -o install-pcs-agent.sh'
               - name: InstallAgent
                 action: ExecuteBash
                 inputs:
@@ -82,7 +82,7 @@ Resources:
                 action: ExecuteBash
                 inputs:
                   commands:
-                    - 'curl -fsSL https://${HpcRecipesS3Bucket}.s3.us-east-1.amazonaws.com/${HpcRecipesBranch}/recipes/pcs/hpc_ready_ami/assets/install-pcs-slurm.sh -o install-pcs-slurm.sh'
+                    - 'curl -fsSL https://${HpcRecipesS3Bucket}.s3.us-east-1.amazonaws.com/${HpcRecipesBranch}/recipes/pcs/hpc_ready_ami/assets/scripts/install-pcs-slurm.sh -o install-pcs-slurm.sh'
               - name: InstallAgent
                 action: ExecuteBash
                 inputs:
@@ -112,7 +112,7 @@ Resources:
                 action: ExecuteBash
                 inputs:
                   commands:
-                    - 'curl -fsSL https://${HpcRecipesS3Bucket}.s3.us-east-1.amazonaws.com/${HpcRecipesBranch}/recipes/pcs/hpc_ready_ami/assets/install-efa.sh -o install-efa.sh'
+                    - 'curl -fsSL https://${HpcRecipesS3Bucket}.s3.us-east-1.amazonaws.com/${HpcRecipesBranch}/recipes/pcs/hpc_ready_ami/assets/scripts/install-efa.sh -o install-efa.sh'
               - name: InstallAgent
                 action: ExecuteBash
                 inputs:
@@ -142,8 +142,8 @@ Resources:
                 action: ExecuteBash
                 inputs:
                   commands:
-                    - 'curl -fsSL https://${HpcRecipesS3Bucket}.s3.us-east-1.amazonaws.com/${HpcRecipesBranch}/recipes/pcs/hpc_ready_ami/assets/common.sh -o common.sh'
-                    - 'curl -fsSL https://${HpcRecipesS3Bucket}.s3.us-east-1.amazonaws.com/${HpcRecipesBranch}/recipes/pcs/hpc_ready_ami/assets/install-spack.sh -o install-spack.sh'
+                    - 'curl -fsSL https://${HpcRecipesS3Bucket}.s3.us-east-1.amazonaws.com/${HpcRecipesBranch}/recipes/pcs/hpc_ready_ami/assets/scripts/common.sh -o common.sh'
+                    - 'curl -fsSL https://${HpcRecipesS3Bucket}.s3.us-east-1.amazonaws.com/${HpcRecipesBranch}/recipes/pcs/hpc_ready_ami/assets/scripts/install-spack.sh -o install-spack.sh'
               - name: InstallAgent
                 action: ExecuteBash
                 inputs:
@@ -168,8 +168,8 @@ Resources:
                 action: ExecuteBash
                 inputs:
                   commands:
-                    - 'curl -fsSL https://${HpcRecipesS3Bucket}.s3.us-east-1.amazonaws.com/${HpcRecipesBranch}/recipes/pcs/hpc_ready_ami/assets/common.sh -o common.sh'
-                    - 'curl -fsSL https://${HpcRecipesS3Bucket}.s3.us-east-1.amazonaws.com/${HpcRecipesBranch}/recipes/pcs/hpc_ready_ami/assets/update-os.sh -o update-os.sh'
+                    - 'curl -fsSL https://${HpcRecipesS3Bucket}.s3.us-east-1.amazonaws.com/${HpcRecipesBranch}/recipes/pcs/hpc_ready_ami/assets/scripts/common.sh -o common.sh'
+                    - 'curl -fsSL https://${HpcRecipesS3Bucket}.s3.us-east-1.amazonaws.com/${HpcRecipesBranch}/recipes/pcs/hpc_ready_ami/assets/scripts/update-os.sh -o update-os.sh'
               - name: InstallAgent
                 action: ExecuteBash
                 inputs:
@@ -194,8 +194,8 @@ Resources:
                 action: ExecuteBash
                 inputs:
                   commands:
-                    - 'curl -fsSL https://${HpcRecipesS3Bucket}.s3.us-east-1.amazonaws.com/${HpcRecipesBranch}/recipes/pcs/hpc_ready_ami/assets/common.sh -o common.sh'
-                    - 'curl -fsSL https://${HpcRecipesS3Bucket}.s3.us-east-1.amazonaws.com/${HpcRecipesBranch}/recipes/pcs/hpc_ready_ami/assets/install-efs-utils.sh -o install-efs-utils.sh'
+                    - 'curl -fsSL https://${HpcRecipesS3Bucket}.s3.us-east-1.amazonaws.com/${HpcRecipesBranch}/recipes/pcs/hpc_ready_ami/assets/scripts/common.sh -o common.sh'
+                    - 'curl -fsSL https://${HpcRecipesS3Bucket}.s3.us-east-1.amazonaws.com/${HpcRecipesBranch}/recipes/pcs/hpc_ready_ami/assets/scripts/install-efs-utils.sh -o install-efs-utils.sh'
               - name: InstallAgent
                 action: ExecuteBash
                 inputs:
@@ -220,8 +220,8 @@ Resources:
                 action: ExecuteBash
                 inputs:
                   commands:
-                    - 'curl -fsSL https://${HpcRecipesS3Bucket}.s3.us-east-1.amazonaws.com/${HpcRecipesBranch}/recipes/pcs/hpc_ready_ami/assets/common.sh -o common.sh'
-                    - 'curl -fsSL https://${HpcRecipesS3Bucket}.s3.us-east-1.amazonaws.com/${HpcRecipesBranch}/recipes/pcs/hpc_ready_ami/assets/install-lustre.sh -o install-lustre.sh'
+                    - 'curl -fsSL https://${HpcRecipesS3Bucket}.s3.us-east-1.amazonaws.com/${HpcRecipesBranch}/recipes/pcs/hpc_ready_ami/assets/scripts/common.sh -o common.sh'
+                    - 'curl -fsSL https://${HpcRecipesS3Bucket}.s3.us-east-1.amazonaws.com/${HpcRecipesBranch}/recipes/pcs/hpc_ready_ami/assets/scripts/install-lustre.sh -o install-lustre.sh'
               - name: InstallAgent
                 action: ExecuteBash
                 inputs:
@@ -246,8 +246,8 @@ Resources:
                 action: ExecuteBash
                 inputs:
                   commands:
-                    - 'curl -fsSL https://${HpcRecipesS3Bucket}.s3.us-east-1.amazonaws.com/${HpcRecipesBranch}/recipes/pcs/hpc_ready_ami/assets/common.sh -o common.sh'
-                    - 'curl -fsSL https://${HpcRecipesS3Bucket}.s3.us-east-1.amazonaws.com/${HpcRecipesBranch}/recipes/pcs/hpc_ready_ami/assets/install-cloudwatch-agent.sh -o install-cloudwatch-agent.sh'
+                    - 'curl -fsSL https://${HpcRecipesS3Bucket}.s3.us-east-1.amazonaws.com/${HpcRecipesBranch}/recipes/pcs/hpc_ready_ami/assets/scripts/common.sh -o common.sh'
+                    - 'curl -fsSL https://${HpcRecipesS3Bucket}.s3.us-east-1.amazonaws.com/${HpcRecipesBranch}/recipes/pcs/hpc_ready_ami/assets/scripts/install-cloudwatch-agent.sh -o install-cloudwatch-agent.sh'
               - name: InstallAgent
                 action: ExecuteBash
                 inputs:
@@ -272,8 +272,8 @@ Resources:
                 action: ExecuteBash
                 inputs:
                   commands:
-                    - 'curl -fsSL https://${HpcRecipesS3Bucket}.s3.us-east-1.amazonaws.com/${HpcRecipesBranch}/recipes/pcs/hpc_ready_ami/assets/common.sh -o common.sh'
-                    - 'curl -fsSL https://${HpcRecipesS3Bucket}.s3.us-east-1.amazonaws.com/${HpcRecipesBranch}/recipes/pcs/hpc_ready_ami/assets/install-ssm-agent.sh -o install-ssm-agent.sh'
+                    - 'curl -fsSL https://${HpcRecipesS3Bucket}.s3.us-east-1.amazonaws.com/${HpcRecipesBranch}/recipes/pcs/hpc_ready_ami/assets/scripts/common.sh -o common.sh'
+                    - 'curl -fsSL https://${HpcRecipesS3Bucket}.s3.us-east-1.amazonaws.com/${HpcRecipesBranch}/recipes/pcs/hpc_ready_ami/assets/scripts/install-ssm-agent.sh -o install-ssm-agent.sh'
               - name: InstallAgent
                 action: ExecuteBash
                 inputs:
@@ -298,8 +298,8 @@ Resources:
                 action: ExecuteBash
                 inputs:
                   commands:
-                    - 'curl -fsSL https://${HpcRecipesS3Bucket}.s3.us-east-1.amazonaws.com/${HpcRecipesBranch}/recipes/pcs/hpc_ready_ami/assets/common.sh -o common.sh'
-                    - 'curl -fsSL https://${HpcRecipesS3Bucket}.s3.us-east-1.amazonaws.com/${HpcRecipesBranch}/recipes/pcs/hpc_ready_ami/assets/optimize-performance.sh -o optimize-performance.sh'
+                    - 'curl -fsSL https://${HpcRecipesS3Bucket}.s3.us-east-1.amazonaws.com/${HpcRecipesBranch}/recipes/pcs/hpc_ready_ami/assets/scripts/common.sh -o common.sh'
+                    - 'curl -fsSL https://${HpcRecipesS3Bucket}.s3.us-east-1.amazonaws.com/${HpcRecipesBranch}/recipes/pcs/hpc_ready_ami/assets/scripts/optimize-performance.sh -o optimize-performance.sh'
               - name: InstallAgent
                 action: ExecuteBash
                 inputs:
