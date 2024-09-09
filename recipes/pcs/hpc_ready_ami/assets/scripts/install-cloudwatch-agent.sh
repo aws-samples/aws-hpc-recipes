@@ -16,7 +16,7 @@ handle_ubuntu_22.04() {
     elif [ "${ARCHITECTURE}" == "x86_64" ]; then
         TARGET="amd64"
     fi
-    curl -fSsL "https://amazoncloudwatch-agent.s3.amazonaws.com/ubuntu/${TARGET}4/latest/amazon-cloudwatch-agent.deb" -o "amazon-cloudwatch-agent.deb"
+    curl -fSsL "https://amazoncloudwatch-agent.s3.amazonaws.com/ubuntu/${TARGET}/latest/amazon-cloudwatch-agent.deb" -o "amazon-cloudwatch-agent.deb"
     sudo dpkg -i -E ./amazon-cloudwatch-agent.deb
 }
 
