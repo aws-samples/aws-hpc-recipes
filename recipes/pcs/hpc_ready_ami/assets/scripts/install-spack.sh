@@ -52,7 +52,7 @@ download_and_install_spack() {
     # Download Spack install script
     # TODO - replace with link to file in spack-configs GitHub repo
     # ref: https://raw.githubusercontent.com/spack/spack-configs/main/AWS/parallelcluster/postinstall.sh
-    curl -fsSL "https://aws-hpc-recipes-dev.s3.us-east-1.amazonaws.com/pcs-ib/recipes/pcs/hpc_ready_ami/assets/postinstall.sh" -o "postinstall.sh"
+    curl -fsSL "https://aws-hpc-recipes-dev.s3.us-east-1.amazonaws.com/pcs-ib/recipes/pcs/hpc_ready_ami/assets/scripts/postinstall.sh" -o "postinstall.sh"
 
     chmod a+x postinstall.sh
     ./postinstall.sh -fg --prefix "$PREFIX" ${NO_ARM_COMPILER} ${NO_INTEL_COMPILER}
