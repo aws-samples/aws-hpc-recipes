@@ -4,11 +4,14 @@
 # operating systems supported by AWS PCS. It is intended to 
 # replace the UpdateOS ImageBuilder component with a solution
 # that is more flexible to the specifics of each supported OS.
+#
+# Exports OS, VERSION, ARCHITECTURE variables
 
 set -o errexit -o pipefail -o nounset
 
 OS=""
 VERSION=""
+ARCHITECTURE=""
 
 # Function to log
 logger() {
@@ -41,6 +44,8 @@ handle_amzn_2() {
 }
 
 detect_os_version() {
+
+    ARCHITECTURE=$(uname -m)
 
     # Detect the operating system
     if [ -f /etc/os-release ]; then
@@ -99,5 +104,6 @@ detect_os_version() {
 
     export OS
     export VERSION
+    export ARCHITECTURE
 
 }
