@@ -1,8 +1,8 @@
 #!/usr/bin/env bash
 
-# This script applies performance optimizations to AMIs from 
-# operating systems supported by AWS PCS.  Run it at the 
-# end of an AMI build pipeline.
+# This script applies generalized performance optimizations
+# AMIs built for AWS PCS. It should be run after core system 
+# packages are upgradded or installed.
 
 set -o errexit -o pipefail -o nounset
 
