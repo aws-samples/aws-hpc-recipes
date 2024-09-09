@@ -25,7 +25,7 @@ Parameters:
     Description: HPC Recipes for AWS release branch
     AllowedPattern: '^(?!.*/\.git$)(?!.*/\.)(?!.*\\.\.)[a-zA-Z0-9-_\.]+$'
 
-Resources
+Resources:
   PcsAgentInstallerComponent:
     Type: AWS::CloudFormation::Stack
     DeletionPolicy: Delete
