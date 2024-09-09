@@ -30,6 +30,9 @@ Options:
                         default for Amazon Linux2, disabled for other OSs.
  --no-arm-compiler      Don't install ARM compilers (ACFL)
  --no-intel-compiler    Don't install Intel compilers
+ --prefix <path>        This script will install Spack into the first shared drive
+                        found on ParallelCluster or $HOME if no shared drive can be
+                        found. Override the location with <path>.
  [spec]                 "spec" to be installed after initial
                         configuration: e.g., gcc@12.3.0 or "gcc @ 13.0".
                         Multiple specs can be listed, but they need to either
@@ -52,6 +55,7 @@ export CONFIG_REPO="spack/spack-configs"
 export CONFIG_BRANCH="main"
 export SPACK_REPO="spack/spack"
 export SPACK_BRANCH="develop"
+export PREFIX=""
 install_specs=()
 export generic_buildcache=""
 install_in_foreground=false
@@ -89,6 +93,10 @@ while [ $# -gt 0 ]; do
             export NO_INTEL_COMPILER=1
             shift
             ;;
+        --prefix )
+            PREFIX="$2"
+            shift 2
+            ;;
         --spack-branch )
             SPACK_BRANCH="$2"
             shift 2
@@ -116,32 +124,24 @@ while [ $# -gt 0 ]; do
 done
 
 setup_variables() {
+    # Determine default user
+    [ -f /etc/os-release ] && . /etc/os-release
+    case "$ID" in
+        amzn|rhel)
+            default_user="ec2-user"
+            ;;
+        centos|ubuntu|rocky)
+            default_user="${ID}"
+            ;;
+        *)
+            default_user=""
+            ;;
+    esac
+
     # Install onto first shared storage device
     cluster_config="/opt/parallelcluster/shared/cluster-config.yaml"
     pip3 install pyyaml
     if [ -f "${cluster_config}" ]; then
-        os=$(python3 << EOF
-#/usr/bin/env python
-import yaml
-with open("${cluster_config}", 'r') as s:
-    print(yaml.safe_load(s)["Image"]["Os"])
-EOF
-          )
-
-        case "${os}" in
-            alinux*)
-                cfn_cluster_user="ec2-user"
-                ;;
-            centos*)
-                cfn_cluster_user="centos"
-                ;;
-            ubuntu*)
-                cfn_cluster_user="ubuntu"
-                ;;
-            *)
-                cfn_cluster_user=""
-        esac
-
         cfn_ebs_shared_dirs=$(python3 << EOF
 #/usr/bin/env python
 import yaml
@@ -163,21 +163,26 @@ EOF
         cfn_ebs_shared_dirs=""
     fi
 
-    # If we cannot find any shared directory, use $HOME of standard user
-    if [ -z "${cfn_ebs_shared_dirs}" ]; then
-        for cfn_cluster_user in ec2-user centos ubuntu; do
-            [ -d "/home/${cfn_cluster_user}" ] && break
-        done
-        cfn_ebs_shared_dirs="/home/${cfn_cluster_user}"
-    fi
+    # If no shared drives are configured, try finding a Lustre, then an EFS
+    [ -z "${cfn_ebs_shared_dirs}" ] && cfn_ebs_shared_dirs="$(mount -t lustre | cut -d\  -f 3 | head -n1)"
+    [ -z "${cfn_ebs_shared_dirs}" ] && cfn_ebs_shared_dirs="$(mount -t efs | cut -d\  -f 3 | head -n1)"
 
+    # If we cannot find any shared directory, use default_user's $HOME
+    [ -z "${cfn_ebs_shared_dirs}" ] && cfn_ebs_shared_dirs=$(awk -F: '/'"${default_user}"'/{print $6}' /etc/passwd)
+
+    # Override install location with PREFIX if set
+    cfn_ebs_shared_dirs="${PREFIX:-${cfn_ebs_shared_dirs}}"
+
+    # Use external Spack if $SPACK_ROOT is already set
     install_path=${SPACK_ROOT:-"${cfn_ebs_shared_dirs}/spack"}
+    tmp_path="$(mktemp -d -p "${cfn_ebs_shared_dirs}")" && export TMPDIR="${tmp_path}"
+
     echo "Installing Spack into ${install_path}."
 
-    if [ "true" == "${generic_buildcache}" ] && [ "alinux2" != "${os}" ]; then
+    if [ "true" == "${generic_buildcache}" ] && [ "Amazon Linux 2" != "${PRETTY_NAME}" ]; then
         echo "Generic buildcache only available for Alinux2."
     fi
-    if [ -z "${generic_buildcache}" ] && [ "alinux2" == "${os}" ]; then
+    if [ -z "${generic_buildcache}" ] && [ "Amazon Linux 2" == "${PRETTY_NAME}" ]; then
         generic_buildcache=true
     else
         generic_buildcache=false
@@ -191,12 +196,13 @@ major_version() {
 }
 
 # Make first user owner of Spack installation when script exits.
-fix_owner() {
+cleanup() {
     rc=$?
     if [ ${downloaded} -eq 0 ]
     then
-        chown -R ${cfn_cluster_user}:${cfn_cluster_user} "${install_path}"
+        chown -R ${default_user}:${default_user} "${install_path}"
     fi
+    [ -d "${tmp_path}" ] && rm -rf "${tmp_path}"
     exit $rc
 }
 
@@ -269,12 +275,16 @@ set_modules() {
          -o "${install_path}/etc/spack/modules.yaml"
 }
 
-set_pcluster_defaults() {
+set_variables() {
     # Set versions of pre-installed software in packages.yaml
-    [ -z "${SLURM_VERSION}" ] && SLURM_VERSION=$(strings /opt/slurm/lib/libslurm.so | grep  -e '^VERSION'  | awk '{print $2}'  | sed -e 's?"??g')
+    [ -z "${SLURM_ROOT}" ] && SLURM_ROOT=$(dirname $(dirname "$(awk '/ExecStart=/ {print $1}' /etc/systemd/system/slurm* | sed -e 's?^.*=??1' | head -n1)"))
+    # Fallback to default location if SLURM not in systemd
+    [ -z "${SLURM_VERSION}" ] && SLURM_VERSION=$(strings "${SLURM_ROOT:-/opt/slurm}"/lib/libslurm.so | grep -e '^VERSION' | awk '{print $2}' | sed -e 's?"??g')
     [ -z "${LIBFABRIC_VERSION}" ] && LIBFABRIC_VERSION=$(awk '/Version:/{print $2}' "$(find /opt/amazon/efa/ -name libfabric.pc | head -n1)" | sed -e 's?~??g' -e 's?amzn.*??g')
-    export SLURM_VERSION LIBFABRIC_VERSION
+    export SLURM_VERSION SLURM_ROOT LIBFABRIC_VERSION
+}
 
+set_pcluster_defaults() {
     # Write the above as actual yaml file and only parse the \$.
     mkdir -p "${install_path}/etc/spack"
     ( download_packages_yaml "$(target)" )
@@ -326,6 +336,8 @@ setup_pcluster_buildcache_stack() {
     export SPACK_CI_STACK_NAME="aws-pcluster-$(stack_arch)"
     bash "${SPACK_ROOT}/share/spack/gitlab/cloud_pipelines/scripts/pcluster/setup-pcluster.sh"
     rm -f $SPACK_ROOT/etc/spack/config.yaml
+    # Fix SLURM location if it's not the ParallelCluster standard /opt/slurm
+    [ -d "${SLURM_ROOT}" ] && sed -i "" -e "s?/opt/slurm?${SLURM_ROOT}?g" "${SPACK_ROOT}"/etc/spack/packages.yaml
 }
 
 setup_spack() {
@@ -504,20 +516,21 @@ install_packages() {
     done
 }
 
-if [ "3" != "$(major_version)" ]; then
+if [ -f "/opt/parallelcluster/.bootstrapped" ] && [ "3" != "$(major_version)" ]; then
     echo "ParallelCluster version $(major_version) not supported."
     exit 1
 fi
 
 tmpfile=$(mktemp)
 echo "$(declare -pf)
-    trap \"fix_owner\" SIGINT EXIT
+    trap \"cleanup\" SIGINT EXIT
     setup_variables
     download_spack | true
     downloaded=\${PIPESTATUS[0]}
     set_modules
     load_spack_at_login
     setup_bootstrap_mirrors
+    set_variables
     if \${generic_buildcache}; then
        setup_pcluster_buildcache_stack
     else
