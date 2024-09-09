@@ -13,7 +13,6 @@ handle_ubuntu_22.04() {
     # This will force a reinstall
     logger "Installing on Ubuntu 22.04" "INFO"
     sudo snap install amazon-ssm-agent --classic
-    sudo snap services amazon-ssm-agent
 }
 
 handle_rhel_9() {
@@ -26,7 +25,6 @@ handle_rhel_9() {
         TARGET="linux_amd64"
     fi
     sudo dnf install -y https://s3.amazonaws.com/ec2-downloads-windows/SSMAgent/latest/${TARGET}/amazon-ssm-agent.rpm
-    sudo systemctl enable amazon-ssm-agent && sudo systemctl start amazon-ssm-agent && sudo systemctl status amazon-ssm-agent
 }
 
 handle_rocky_9() {
@@ -39,7 +37,6 @@ handle_rocky_9() {
         TARGET="linux_amd64"
     fi
     sudo dnf install -y https://s3.amazonaws.com/ec2-downloads-windows/SSMAgent/latest/${TARGET}/amazon-ssm-agent.rpm
-    sudo systemctl enable amazon-ssm-agent && sudo systemctl start amazon-ssm-agent && sudo systemctl status amazon-ssm-agent
 }
 
 handle_amzn_2() {
@@ -52,7 +49,6 @@ handle_amzn_2() {
         TARGET="linux_amd64"
     fi
     sudo yum install -y https://s3.amazonaws.com/ec2-downloads-windows/SSMAgent/latest/${TARGET}/amazon-ssm-agent.rpm
-    sudo systemctl enable amazon-ssm-agent && sudo systemctl start amazon-ssm-agent && sudo systemctl status amazon-ssm-agent
 }
 
 # Main function
