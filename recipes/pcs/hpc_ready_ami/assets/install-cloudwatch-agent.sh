@@ -11,18 +11,33 @@ if [ -f "common.sh" ]; then . common.sh; fi
 
 handle_ubuntu_22.04() {
     logger "Installing on Ubuntu 22.04" "INFO"
-    curl -fSsL "https://amazoncloudwatch-agent-region.s3.region.amazonaws.com/ubuntu/${ARCHITECTURE}/latest/amazon-cloudwatch-agent.deb" -o "amazon-cloudwatch-agent.deb"
+    if [ "${ARCHITECTURE}" == "arm64" ]; then
+        TARGET="arm64"
+    elif [ "${ARCHITECTURE}" == "x86_64" ]; then
+        TARGET="amd64"
+    fi
+    curl -fSsL "https://amazoncloudwatch-agent.s3.amazonaws.com/ubuntu/${TARGET}4/latest/amazon-cloudwatch-agent.deb" -o "amazon-cloudwatch-agent.deb"
     sudo dpkg -i -E ./amazon-cloudwatch-agent.deb
 }
 
 handle_rhel_9() { 
     logger "Installing on RHEL 9" "INFO"
-    sudo dnf install -y "https://amazoncloudwatch-agent.s3.amazonaws.com/redhat/${ARCHITECTURE}/latest/amazon-cloudwatch-agent.rpm"
+    if [ "${ARCHITECTURE}" == "arm64" ]; then
+        TARGET="arm64"
+    elif [ "${ARCHITECTURE}" == "x86_64" ]; then
+        TARGET="amd64"
+    fi
+    sudo dnf install -y "https://amazoncloudwatch-agent.s3.amazonaws.com/redhat/${TARGET}/latest/amazon-cloudwatch-agent.rpm"
 }
 
 handle_rocky_9() {
     logger "Installing on Rocky Linux 9" "INFO"
-    sudo dnf install -y "https://amazoncloudwatch-agent.s3.amazonaws.com/redhat/${ARCHITECTURE}/latest/amazon-cloudwatch-agent.rpm"
+    if [ "${ARCHITECTURE}" == "arm64" ]; then
+        TARGET="arm64"
+    elif [ "${ARCHITECTURE}" == "x86_64" ]; then
+        TARGET="amd64"
+    fi
+    sudo dnf install -y "https://amazoncloudwatch-agent.s3.amazonaws.com/redhat/${TARGET}/latest/amazon-cloudwatch-agent.rpm"
 }
 
 handle_amzn_2() {
