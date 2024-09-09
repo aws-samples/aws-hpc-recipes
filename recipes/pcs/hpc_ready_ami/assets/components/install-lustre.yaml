@@ -27,10 +27,10 @@ Parameters:
     AllowedPattern: '^(?!.*/\.git$)(?!.*/\.)(?!.*\\.\.)[a-zA-Z0-9-_\.]+$'
 
 Resources:
-  LustreComponent:
+  LustreInstallerComponent:
     Type: AWS::ImageBuilder::Component
     Properties:
-      Name: !Sub 'LustreInstaller-${AWS::StackName}'
+      Name: LustreInstaller
       Description: Install Lustre support on PCS-compatible AMI base images
       Version: '0.0.1'
       Platform: Linux
@@ -56,6 +56,6 @@ Resources:
 
 Outputs:
   ImageBuilderComponent:
-    Value: !Ref LustreComponent
+    Value: !Ref LustreInstallerComponent
     Export:
-      Name: !Sub 'LustreComponent'
+      Name: !Sub 'LustreInstallerComponent'

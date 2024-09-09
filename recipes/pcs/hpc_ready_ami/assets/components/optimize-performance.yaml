@@ -29,7 +29,7 @@ Resources:
   OptimizePerformanceComponent:
     Type: AWS::ImageBuilder::Component
     Properties:
-      Name: !Sub 'OptimizePerformance-${AWS::StackName}'
+      Name: OptimizePerformance
       Description: Optimize HPC application peformance on PCS-compatible AMI
       Version: '0.0.1'
       Platform: Linux
