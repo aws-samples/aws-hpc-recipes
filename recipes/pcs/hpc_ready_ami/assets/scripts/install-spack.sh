@@ -1,5 +1,9 @@
 #!/usr/bin/env bash
 
+set -o errexit -o pipefail -o nounset
+
+if [ -f "common.sh" ]; then . common.sh; fi
+
 # Define default value(s)
 PREFIX="/opt"
 NO_ARM_COMPILER=""
@@ -101,8 +105,8 @@ install_dependencies() {
 # Main function
 main() {
     parse_args "$@"
-    install_dependencies
-    download_and_verify_pubkey
+    detect_os_version
+    handle_${OS}_${VERSION}
     download_and_install_spack
 }
 
