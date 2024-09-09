@@ -60,7 +60,7 @@ Resources:
       TemplateURL: !Sub 'https://${HpcRecipesS3Bucket}.s3.us-east-1.amazonaws.com/${HpcRecipesBranch}/recipes/pcs/hpc_ready_ami/assets/components/install-efs-utils.yaml'
       TimeoutInMinutes: 10
 
-  LustreComponent:
+  LustreInstallerComponent:
     Type: AWS::CloudFormation::Stack
     DeletionPolicy: Delete
     UpdateReplacePolicy: Delete
@@ -147,9 +147,9 @@ Outputs:
   EfsUtilsInstallerComponent:
     Description: EfaInstallerComponent
     Value: !GetAtt [ EfsUtilsInstallerComponent, Outputs.ImageBuilderComponent ]
-  LustreComponent:
-    Description: LustreComponent
-    Value: !GetAtt [ LustreComponent, Outputs.ImageBuilderComponent ]
+  LustreInstallerComponent:
+    Description: LustreInstallerComponent
+    Value: !GetAtt [ LustreInstallerComponent, Outputs.ImageBuilderComponent ]
   PcsAgentInstallerComponent:
     Description: PcsAgentInstallerComponent
     Value: !GetAtt [ PcsAgentInstallerComponent, Outputs.ImageBuilderComponent ]

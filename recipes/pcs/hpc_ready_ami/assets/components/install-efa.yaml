@@ -30,7 +30,7 @@ Resources:
   EfaInstallerComponent:
     Type: AWS::ImageBuilder::Component
     Properties:
-      Name: !Sub 'EfaInstaller-${AWS::StackName}'
+      Name: EfaInstaller
       Description: Download and install EFA software
       Version: '0.0.1'
       Platform: Linux

@@ -29,7 +29,7 @@ Resources:
   EfsUtilsComponent:
     Type: AWS::ImageBuilder::Component
     Properties:
-      Name: !Sub 'EfsUtilsInstaller-${AWS::StackName}'
+      Name: EfsUtilsInstaller
       Description: Install EFS utils on PCS-compatible AMI base images
       Version: '0.0.1'
       Platform: Linux
