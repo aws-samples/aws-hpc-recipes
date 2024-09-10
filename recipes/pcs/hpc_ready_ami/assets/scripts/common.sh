@@ -28,19 +28,19 @@ logger() {
 # If the function isn't defined in the script, it will fall back to the one defined here.
 
 handle_ubuntu_22.04() {
-    logger "Default for Ubuntu 22.04" "INFO"
+    logger "Default for Ubuntu 22.04" "WARNING"
 }
 
 handle_rhel_9() { 
-    logger "Default for RHEL 9" "INFO"
+    logger "Default for RHEL 9" "WARNING"
 }
 
 handle_rocky_9() {
-    logger "Default for Rocky Linux 9" "INFO"
+    logger "Default for Rocky Linux 9" "WARNING"
 }
 
 handle_amzn_2() {
-    logger "Default for Amazon Linux 2" "INFO"
+    logger "Default for Amazon Linux 2" "WARNING"
 }
 
 detect_os_version() {
