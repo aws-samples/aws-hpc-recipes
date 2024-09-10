@@ -117,12 +117,38 @@ You can point the Packer template to alternative versions of HPC Recipes. To do 
 ```shell
 packer % packer build \
   -var "hpc_recipes_s3_bucket=aws-hpc-recipes-dev" \
-  -var "hpc_recipes_s3_branch=testbranch" \
+  -var "hpc_recipes_branch=testbranch" \
   -var-file <(./set_variables.sh amzn_2) \
   template.json
 ```
 
 ### HPC Recipes public URLs
+
+Assets directories from recipes in the `main` branch of HPC Recipes for AWS are mirrored to a public AWS S3 bucket. This means they can be accessed directly, using a browser or CLI tool like `wget`. 
+
+Here is an example of fetching the `update-os.sh` script from this recipe from the main HPC recipes bucket.
+
+```shell
+curl -fsSL "https://aws-hpc-recipes.s3.us-east-1.amazonaws.com/main/recipes/pcs/hpc_ready_ami/assets/scripts/update-os.sh" -o "update-os.sh"
+```
+
+Pre-release builds of HPC Recipes are maintained in branches. Their assets are published to an alternative bucket `aws-hpc-recipes-dev` under the name of their git branch. Here is an example of fetching `update-os.sh` from a branch named `testbranch`.
+
+```shell
+curl -fsSL "https://aws-hpc-recipes-dev.s3.us-east-1.amazonaws.com/testbranch/recipes/pcs/hpc_ready_ami/assets/scripts/update-os.sh" -o "update-os.sh"
+```
+
+The CloudFormation templates that deploy EC2 ImageBuilder components for this recipe have two parameters that can be set to direct them to pre-release HPC Recipes builds:
+
+* **HpcRecipesS3Bucket** - either `aws-hpc-recipes` or `aws-hpc-recipes-dev`
+* **HpcRecipesBranch** - either `main` or whatever branch name you or your collaborators are working on
+
+The Packer templates accept similar parameters:
+
+* **hpc_recipes_s3_bucket** - either `aws-hpc-recipes` or `aws-hpc-recipes-dev`
+* **hpc_recipes_branch** - either `main` or whatever branch name you or your collaborators are working on
+
+Note that while the `aws-hpc-recipes-dev` is a stable resource, any directories within it may be deleted or changed at any time. It is strictly for testing out pre-release recipe assets. 
 
 ## Road Map
 
