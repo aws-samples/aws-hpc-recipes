@@ -4,7 +4,7 @@ name: hpc_ready_ami
 # The version of the recipe. Must be compatible with semantic versioning.
 version: "1.0.0"
 # A short summary description of the recipe
-description: ImageBuilder assets to produce an HPC-ready AMI
+description: EC2 ImageBuilder and HashiCorp Packer assets to produce HPC-ready AMIs
 # The path to the README for the recipe relative to its root directory.
 readme: README.md
 # Optional URL for external documentation
@@ -14,11 +14,15 @@ homepage:
 # A list of recipe content authors
 authors:
   - Matt Vaughn
+  - Stephen Sachs
 # A list of tags you want to associate with the collection for indexing/searching. Tags have the same character requirements as namespace.
 tags:
   - pcs
   - imagebuilder
   - efa
+  - lustre
+  - packer
+  - ec2
   - beta
 # A list of file glob-like patterns used to filter any files or directories that should not be included in the S3 release. 
 build_ignore: []
