@@ -8,7 +8,7 @@
       "ssh_username": "ec2-user",
       "volume_size": "64",
       "volume_type": "gp2",
-      "distribution": "amzn",
+      "distribution": "amzn_2",
       "hpc_recipes_s3_bucket": "aws-hpc-recipes",
       "hpc_recipes_s3_branch": "main"
     },
