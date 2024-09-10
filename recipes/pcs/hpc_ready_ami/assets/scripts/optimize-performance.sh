@@ -6,7 +6,18 @@
 
 set -o errexit -o pipefail -o nounset
 
-if [ -f "common.sh" ]; then . common.sh; fi
+# Find the directory of the current script
+SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
+
+# Search for common.sh in the current directory and parent directory
+if [ -f "${SCRIPT_DIR}/common.sh" ]; then
+    . "${SCRIPT_DIR}/common.sh"
+elif [ -f "${SCRIPT_DIR}/../common.sh" ]; then
+    . "${SCRIPT_DIR}/../common.sh"
+else
+    echo "Error: common.sh not found!" >&2
+    exit 1
+fi
 
 handle_ubuntu_22.04() {
     logger "Optimizing Ubuntu 22.04" "INFO"
