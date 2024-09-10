@@ -19,7 +19,7 @@
         "source_ami": "{{user `source_ami`}}",
         "instance_type": "{{user `instance_type`}}",
         "ssh_username": "{{user `ssh_username`}}",
-        "ami_name": "{{user `ami_name_prefix`}}-{{user `distribution`}}-{{timestamp}}",
+        "ami_name": "{{user `ami_name_prefix`}}-{{user `distribution`}}-{{isotime \"2006-01-02-15-04\"}}",
         "ami_description": "{{user `ami_description`}}",
         "associate_public_ip_address": true,
         "launch_block_device_mappings": [
