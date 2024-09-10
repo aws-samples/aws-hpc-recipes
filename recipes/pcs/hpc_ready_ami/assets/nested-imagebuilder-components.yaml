@@ -145,7 +145,7 @@ Outputs:
     Description: EfaInstallerComponent
     Value: !GetAtt [ EfaInstallerComponent, Outputs.ImageBuilderComponent ]
   EfsUtilsInstallerComponent:
-    Description: EfaInstallerComponent
+    Description: EfsUtilsInstallerComponent
     Value: !GetAtt [ EfsUtilsInstallerComponent, Outputs.ImageBuilderComponent ]
   LustreInstallerComponent:
     Description: LustreInstallerComponent
