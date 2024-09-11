@@ -36,9 +36,9 @@ handle_rhel_9() {
 
 handle_rocky_9() {
     logger "Updating Rocky Linux 9" "INFO"
-    # Do not upgrade kernel or risk breaking EFA and/or Lustre support
-    # Passing --exclude=kernel* does not work on Rocky-9-EC2-Base-9.4
-    sudo dnf update --security -y && sudo dnf clean all
+    # As of 2024-09-11, upgrading kernel to 5.14.0-427.33.1.el9_4.x86_64
+    # and does not break EFA or Lustre support 
+    sudo dnf update -y && sudo dnf clean all
 }
 
 handle_amzn_2() {
