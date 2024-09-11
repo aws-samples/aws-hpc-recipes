@@ -22,7 +22,7 @@ fi
 
 handle_ubuntu_22.04() {
     logger "Installing on Ubuntu 22.04" "INFO"
-    if [ "${ARCHITECTURE}" == "arm64" ]; then
+    if [ "${ARCHITECTURE}" == "arm64" ] || [ "${ARCHITECTURE}" == "aarch64" ]; then
         TARGET="arm64"
     elif [ "${ARCHITECTURE}" == "x86_64" ]; then
         TARGET="amd64"
@@ -33,7 +33,7 @@ handle_ubuntu_22.04() {
 
 handle_rhel_9() { 
     logger "Installing on RHEL 9" "INFO"
-    if [ "${ARCHITECTURE}" == "arm64" ]; then
+    if [ "${ARCHITECTURE}" == "arm64" ] || [ "${ARCHITECTURE}" == "aarch64" ]; then
         TARGET="arm64"
     elif [ "${ARCHITECTURE}" == "x86_64" ]; then
         TARGET="amd64"
@@ -43,7 +43,7 @@ handle_rhel_9() {
 
 handle_rocky_9() {
     logger "Installing on Rocky Linux 9" "INFO"
-    if [ "${ARCHITECTURE}" == "arm64" ]; then
+    if [ "${ARCHITECTURE}" == "arm64" ] || [ "${ARCHITECTURE}" == "aarch64" ]; then
         TARGET="arm64"
     elif [ "${ARCHITECTURE}" == "x86_64" ]; then
         TARGET="amd64"
