@@ -30,7 +30,7 @@ handle_rhel_9() {
     # Ref: https://docs.aws.amazon.com/systems-manager/latest/userguide/agent-install-rhel-8-9.html
     # Requires Python 2 or 3 to be installed
     logger "Installing on RHEL 9" "INFO"
-    if [ "${ARCHITECTURE}" == "arm64" ]; then
+    if [ "${ARCHITECTURE}" == "arm64" ] || [ "${ARCHITECTURE}" == "aarch64" ]; then
         TARGET="linux_arm64"
     elif [ "${ARCHITECTURE}" == "x86_64" ]; then
         TARGET="linux_amd64"
@@ -42,7 +42,7 @@ handle_rocky_9() {
     # Ref: https://docs.aws.amazon.com/systems-manager/latest/userguide/agent-install-rocky.html
     # Requires Python 2 or 3 to be installed
     logger "Installing on Rocky Linux 9" "INFO"
-    if [ "${ARCHITECTURE}" == "arm64" ]; then
+    if [ "${ARCHITECTURE}" == "arm64" ] || [ "${ARCHITECTURE}" == "aarch64" ]; then
         TARGET="linux_arm64"
     elif [ "${ARCHITECTURE}" == "x86_64" ]; then
         TARGET="linux_amd64"
@@ -54,7 +54,7 @@ handle_amzn_2() {
     # Ref: https://docs.aws.amazon.com/systems-manager/latest/userguide/agent-install-al2.html
     # SSM Agent is expected to already be installed on Amazon Linux 2
     logger "Installing on Amazon Linux 2" "INFO"
-    if [ "${ARCHITECTURE}" == "arm64" ]; then
+    if [ "${ARCHITECTURE}" == "arm64" ] || [ "${ARCHITECTURE}" == "aarch64" ]; then
         TARGET="linux_arm64"
     elif [ "${ARCHITECTURE}" == "x86_64" ]; then
         TARGET="linux_amd64"
