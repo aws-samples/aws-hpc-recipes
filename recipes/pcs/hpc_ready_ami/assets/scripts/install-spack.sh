@@ -70,7 +70,7 @@ download_and_install_spack() {
     curl -fsSL "https://aws-hpc-recipes-dev.s3.us-east-1.amazonaws.com/pcs-ib/recipes/pcs/hpc_ready_ami/assets/scripts/postinstall.sh" -o "postinstall.sh"
 
     chmod a+x postinstall.sh
-    ./postinstall.sh -fg --prefix "$PREFIX" ${NO_ARM_COMPILER} ${NO_INTEL_COMPILER}
+    sudo ./postinstall.sh -fg --prefix "$PREFIX" ${NO_ARM_COMPILER} ${NO_INTEL_COMPILER}
 
     if [ $? -ne 0 ]; then
         echo "Error: Installation failed" >&2

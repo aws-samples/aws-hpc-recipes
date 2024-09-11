@@ -46,7 +46,7 @@ download_verify_and_install_software() {
 
     # Unpack the EFA software and install
     tar zxf "aws-efa-installer-${EFA_INSTALLER_VERSION}.tar.gz" && cd "aws-efa-installer"
-    ./efa_installer.sh  -y
+    sudo ./efa_installer.sh  -y
 
     if [ $? -ne 0 ]; then
         echo "Error: Installation failed" >&2
@@ -67,11 +67,11 @@ download_verify_and_install_software() {
     # Check if the line already exists in the file
     if grep -q "^kernel.yama.ptrace_scope" "$PTRACE_FILE_PATH"; then
         # Replace the existing line with the new value
-        sed -i "/^kernel.yama.ptrace_scope/c\kernel.yama.ptrace_scope = 0" "$PTRACE_FILE_PATH"
+        sudo sed -i "/^kernel.yama.ptrace_scope/c\kernel.yama.ptrace_scope = 0" "$PTRACE_FILE_PATH"
         echo "Line 'kernel.yama.ptrace_scope' updated to '0' in $PTRACE_FILE_PATH"
     else
         # Append the line to the file
-        echo "kernel.yama.ptrace_scope = 0" | sudo tee -a "$PTRACE_FILE_PATH" > /dev/null
+        sudo echo "kernel.yama.ptrace_scope = 0" | sudo tee -a "$PTRACE_FILE_PATH" > /dev/null
         echo "Line 'kernel.yama.ptrace_scope = 0' added to $PTRACE_FILE_PATH"
     fi
 
