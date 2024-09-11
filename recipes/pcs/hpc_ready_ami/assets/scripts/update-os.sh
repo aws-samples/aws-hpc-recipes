@@ -25,25 +25,25 @@ fi
 
 handle_ubuntu_22.04() {
     logger "Updating Ubuntu 22.04" "INFO"
-    apt-get update && apt-get upgrade -y && apt-get autoremove -y && apt-get autoclean
+    sudo apt-get update && sudo apt-get upgrade -y && sudo apt-get autoremove -y && sudo apt-get autoclean
 }
 
 handle_rhel_9() { 
     logger "Updating RHEL 9" "INFO"
     # Do not upgrade kernel or risk breaking EFA and/or Lustre support
-    dnf update --exclude=kernel* -y && dnf clean all
+    sudo dnf update --exclude=kernel* -y && sudo dnf clean all
 }
 
 handle_rocky_9() {
     logger "Updating Rocky Linux 9" "INFO"
     # Do not upgrade kernel or risk breaking EFA and/or Lustre support
     # Passing --exclude=kernel* does not work on Rocky-9-EC2-Base-9.4
-    dnf update --security -y && dnf clean all
+    sudo dnf update --security -y && sudo dnf clean all
 }
 
 handle_amzn_2() {
     logger "Updating Amazon Linux 2" "INFO"
-    yum update -y && yum clean all
+    sudo yum update -y && sudo yum clean all
 }
 
 # Main function

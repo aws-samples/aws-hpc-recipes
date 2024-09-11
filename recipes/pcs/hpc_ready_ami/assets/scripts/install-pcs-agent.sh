@@ -42,7 +42,7 @@ download_and_verify_pubkey() {
 
     # Import and validate public key
     curl -fsSL "https://aws-pcs-repo-public-keys-${AWS_REGION}.s3.amazonaws.com/aws-pcs-public-key.pub" -o aws-pcs-public-key.pub && \
-        gpg --import aws-pcs-public-key.pub
+        sudo gpg --import aws-pcs-public-key.pub
 
     # # Get the actual fingerprint
     # local ACTUAL_FINGERPRINT=$(gpg --fingerprint "$PUBKEY_ID" | grep -i "Key fingerprint" | awk -F'=' '{print $2}' | tr -d '[:space:]')
@@ -86,7 +86,7 @@ download_verify_and_install_software() {
 
     # Unpack the agent and install
     tar zxf aws-pcs-agent.tar.gz && cd aws-pcs-agent
-    ./installer.sh -y
+    sudo ./installer.sh -y
 
     if [ $? -ne 0 ]; then
         echo "Error: Installation failed" >&2
