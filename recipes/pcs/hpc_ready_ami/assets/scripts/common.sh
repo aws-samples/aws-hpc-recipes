@@ -64,7 +64,7 @@ detect_os_version() {
     case "$OS" in
         ubuntu)
             if [ "$VERSION" == "22.04" ]; then
-                logger "Detected Ubuntu 22.04"
+                logger "Detected OS: $OS, Version: $VERSION, Architecture: $ARCHITECTURE" "INFO"
             else
                 logger "Unsupported Ubuntu version: $VERSION" "ERROR"
                 exit 1
@@ -72,8 +72,8 @@ detect_os_version() {
             ;;
         rhel)
             if [[ "$VERSION" =~ ^9\.* ]]; then
-                logger "Detected RHEL 9"
                 VERSION=9
+                logger "Detected OS: $OS, Version: $VERSION, Architecture: $ARCHITECTURE" "INFO"
             else
                 logger "Unsupported RHEL version: $VERSION" "ERROR" "ERROR"
                 exit 1
@@ -81,8 +81,8 @@ detect_os_version() {
             ;;
         rocky)
             if [[ "$VERSION" =~ ^9\.* ]]; then
-                logger "Detected Rocky Linux 9"
                 VERSION=9
+                logger "Detected OS: $OS, Version: $VERSION, Architecture: $ARCHITECTURE" "INFO"
             else
                 logger "Unsupported Rocky Linux version: $VERSION" "ERROR"
                 exit 1
@@ -90,7 +90,7 @@ detect_os_version() {
             ;;
         amzn)
             if [ "$VERSION" == "2" ]; then
-                logger "Detected Amazon Linux 2"
+                logger "Detected OS: $OS, Version: $VERSION, Architecture: $ARCHITECTURE" "INFO"
             else
                 logger "Unsupported Amazon Linux version: $VERSION" "ERROR"
                 exit 1
