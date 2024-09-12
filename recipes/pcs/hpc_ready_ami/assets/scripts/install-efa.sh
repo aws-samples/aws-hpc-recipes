@@ -61,7 +61,7 @@ download_verify_and_install_software() {
 
     # Create the file if it doesn't exist
     if [ ! -f "$PTRACE_FILE_PATH" ]; then
-        touch "$PTRACE_FILE_PATH"
+        sudo touch "$PTRACE_FILE_PATH"
     fi
 
     # Check if the line already exists in the file

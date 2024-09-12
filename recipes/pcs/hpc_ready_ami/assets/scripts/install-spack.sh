@@ -85,22 +85,22 @@ download_and_install_spack() {
 
 handle_ubuntu_22.04() {
     logger "Installing deps for Ubuntu 22.04" "INFO"
-    apt update && apt install -y git && apt clean
+    sudo apt update && sudo apt install -y git && sudo apt clean
 }
 
 handle_rhel_9() { 
     logger "Installing deps for RHEL 9" "INFO"
-    dnf install -y git && dnf clean all
+    sudo dnf install -y git && sudo dnf clean all
 }
 
 handle_rocky_9() {
     logger "Installing deps for Rocky Linux 9" "INFO"
-    dnf install -y git && dnf clean all
+    sudo dnf install -y git && sudo dnf clean all
 }
 
 handle_amzn_2() {
     logger "Installing deps for Amazon Linux 2" "INFO"
-    yum makecache && yum install -y git && yum clean all
+    sudo yum makecache && sudo yum install -y git && sudo yum clean all
 }
 
 install_dependencies() {
