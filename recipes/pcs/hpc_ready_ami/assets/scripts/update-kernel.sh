@@ -21,7 +21,11 @@ fi
 handle_rocky() {
     logger "Updating Kernel on Rocky Linux" "INFO"
     dnf update -y && dnf clean all
-    exit 194
+    # Reboot if newer kernel has been installed
+    if [ "$(dnf list --installed kernel | awk '/kernel/{print $2}' | sort | tail -n1).$(arch)" != "$(uname -r)" ]; then
+        exit 194
+    fi
+    exit 0
 }
 
 # Main function
