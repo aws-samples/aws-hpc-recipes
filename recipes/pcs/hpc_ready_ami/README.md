@@ -63,52 +63,67 @@ _Coming soon._
 
 ### HashiCorp Packer resources
 
-Logic for each ImageBuilder component is kept in standalone scripts. This adds a little complexity to the development process, but means we have a source of truth for AMI management actions that is agnostic to the build platform being used. To demonstrate this, we include a template that can be used with HashiCorp Packer. 
+Logic for each ImageBuilder component is kept in standalone scripts. This adds a little complexity to the development process, but means we have a source of truth for AMI management actions that is agnostic to the build system being used. We use this to implement Packer infrastructure that can build HPC-ready AMIs. 
 
-#### Use the Packer template to build an Amazon Linux 2 AMI
+#### Build an HPC-ready Amazon Linux 2 AMI
 
-The template is configured to support building an Amazon Linux 2 AMI. To use it:
+By default, the Packer template builds an Amazon Linux 2 AMI for Intel x86_64 instances in us-east-2.
 
-1. Identify a source Amazon Linux 2 AMI ID for the region where you will build your AMI
-2. Build an AMI using this command:
+To build an AMI, run this command:
 
 ```shell
 packer build \
-  -var "aws_region=us-east-2" \
   template.json
 ```
 
-Substitute in **us-east-2** for the region name where you will build your AMI. If you are using a pre-release version of HPC Recipes, set values for `hpc_recipes_s3_bucket` and `hpc_recipes_s3_branch`. 
+This result in an AMI named `hpc_ready_ami-amzn_2-x86_64-intel-TIMESTAMP`.
 
-#### Use the Packer template and a support script to build an alternative distro
+#### Building other distributions and architectures
 
-1. Download the [support script](assets/packer/set_variables.sh) and the [template](assets/packer/template.json) to the same directory. Make the support script executable (`chmod a+x set_variables.sh`).
-2. Select the correct distro identifier for your build environment. At present, your choices are:
+The template supports several parameters that control the distribution and architecture of your built AMI. You can either drive it directly by passing the relevant variables, create a variables file and use it, or use the `set_variables.sh` script. 
+
+Key variables include:
+
+* `aws_region` - AWS region where you will build an AMI
+* `source_ami` - Source AMI for your build. These are region-specific!
+* `distribution` - The OS distribution for your AMI. Your choices, at present, are:
     * `amzn_2`
     * `rhel_9`
     * `rocky_9`
     * `ubuntu_22_04`
-3. Identify a source Ubuntu 22.04 AMI ID for the region where you will build your AMI
-4. Build your AMI with command similar to this:
+* `architecture` - The processor architecture for your AMI. Your choices are:
+    * `x86_64`
+    * `arm64`
+* `vendor` - The vendor of the selected processor. It must be compatible with the architecture. Your choices are:
+  * `amd`
+  * `aws`
+  * `amd`
+* `ssh_username` - The default username for logging into the AMI over SSH
+* `instance_type` - The EC2 instance used to build the AMI. Must be compatible with `architecture` and `vendor`. 
+
+We also include a pair of variables for working with alternate releases of HPC Recipes. 
+
+* `hpc_recipes_s3_bucket` - defaults to **aws-hpc-recipes**
+* `hpc_recipes_branch` - defaults to **main**
+
+You can either drive all the variables manually, or use the helper script `set_variables` to set some of them automatically based on distro, architecture, and vendor. 
+
+Here's an example of building an Ubuntu 22 AMI, optimized for AMD processors. 
+
+First, identify a source Ubuntu 22.04 AMI. Then, run this command, substituting `SOURCE-AMI-ID` with your Ubuntu AMI ID. 
 
 ```shell
 packer build \
-  -var "aws_region=us-east-2" \
-  -var "source_ami=UBUNTU-SOURCE-AMI-ID" \
-  -var-file <(./set_variables.sh ubuntu_22_04) \
+  -var "source_ami=SOURCE-AMI-ID" \
+  -var-file <(./set_variables.sh ubuntu_22_04 x86_64 amd) \
   template.json
 ```
 
-The support script sets the correct SSH username and root device name for an Ubuntu-based operating system. It continues to assume you prefer to build an x86-based AMI. You might want to build for Graviton. To do so, provide an alternative instance type. Also, make sure your source AMI is Graviton-compatible. 
+To change region, pass the `aws_region` variable and send an Ubuntu `source_ami` from your chosen region.
 
-```shell
-packer build \
-  -var "aws_region=us-east-2" \
-  -var "source_ami=ARM64-UBUNTU-SOURCE-AMI-ID" \
-  -var-file <(./set_variables.sh ubuntu_22_04) \
-  -var "instance_type=c7g.8xlarge" \
-  template.json
-```
+#### Using the Build Matrix script
+
+We include a sample script that can kick off multiple, parallel Packer builds. See [`buildall.sh`](assets/packer/buildall.sh) to see how it works. 
 
 #### Use pre-release versions of HPC Recipes
 
@@ -121,6 +136,51 @@ packer % packer build \
   -var-file <(./set_variables.sh amzn_2) \
   template.json
 ```
+
+### Finding Source AMIs
+
+Here are some example AMIs (in `us-east-2`) we have used as build sources.
+
+| Distro | x86_64 | arm64 |
+| ------ | ------ | ------|
+| Amazon Linux 2 | `ami-0453ce6279422709a` | `ami-0e3eb8e1e59049093` |
+| RHEL 9 | `ami-0aa8fc2422063977a` | `ami-08f9f3bb075432791` |
+| Rocky Linux 9 | `ami-01bd836275f79352c` | `ami-018925a289077b035` |
+| Ubuntu 22.04 | `ami-003932de22c285676` | `ami-03772d93fb1879bbe` |
+
+Presently, installers with a dependency on a specific kernel version, such as the Lustre installer, require a kernel version of `5.14.0-427`. And, the `Update OS` script will not upgrade kernels, to avoid breaking compatibility with these installers. Therefore, any source AMI you select must be running kernel `5.14.0-427`, or you must upgrade it before using any of the installers in this repository. 
+
+#### Amazon Linux 2
+
+#### Redhat Enterprise Linux 9
+
+#### Rocky Linux 9
+
+Our build instructions are durrently only confirmed to work with Rocky Linux 9.4.
+
+#### Ubuntu 22.04 LTS
+
+For Image Builder, you can find an AMI using the EC2 console, take a dependency on Image Builder AMI ARNs, or use an AMI that you have been made aware of.  
+
+To find an Ubuntu 22 AMI in the EC2 console:
+
+1. Navigate to the [AMI Catalog](https://console.aws.amazon.com/ec2/home#AMICatalog)
+2. Search under Quick Start AMIs for Ubuntu
+3. Find Ubuntu 22.04 LTS in the list of AMIs. 
+4. Choose either 64-bit (x86) or 64-bit (Arm)
+5. Note the values for AMI ID (`ami-*`) for your selection
+
+To find an Ubuntu 22 AMI in Image Builder:
+
+1. Navigate to [Image Recipes](https://console.aws.amazon.com/imagebuilder/home#/imageRecipes)
+2. Choose **Create image recipe**
+3. Under Base image, choose **Ubuntu**
+4. Under Image name, choose the relevant x86_64 or arm64 Ubuntu Server 22 LTS
+5. Continue creating the image recipe. 
+
+Note that these curated image names correspond to an ARN. For example, the x86_64 Ubuntu 22 base AMI maps to `arn:aws:imagebuilder:REGION:aws:image/ubuntu-server-22-lts-x86/x.x.x` where REGION is the current AWS region.
+
+#### Deep Learning AMI (DLAMI)
 
 ### HPC Recipes public URLs
 
