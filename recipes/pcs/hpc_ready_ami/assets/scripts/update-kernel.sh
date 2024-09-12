@@ -20,7 +20,8 @@ fi
 
 handle_rocky() {
     logger "Updating Kernel on Rocky Linux" "INFO"
-    sudo dnf update -y && sudo dnf clean all
+    dnf update -y && dnf clean all
+    reboot
 }
 
 # Main function

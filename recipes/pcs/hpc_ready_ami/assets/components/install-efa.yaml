@@ -57,10 +57,6 @@ Resources:
                   commands:
                     - 'chmod +x update-kernel.sh'
                     - './update-kernel.sh'
-              - name: RebootAfterUpdate
-                action: Reboot
-                inputs:
-                  delaySeconds: 60
               - name: DownloadScript
                 action: ExecuteBash
                 inputs:
