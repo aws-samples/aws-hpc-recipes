@@ -30,7 +30,7 @@ Resources:
   LustreInstallerComponent:
     Type: AWS::ImageBuilder::Component
     Properties:
-      Name: LustreInstaller
+      Name: !Sub 'LustreInstaller-${AWS::StackName}'
       Description: Install Lustre support on PCS-compatible AMI base images
       Version: '0.0.1'
       Platform: Linux
