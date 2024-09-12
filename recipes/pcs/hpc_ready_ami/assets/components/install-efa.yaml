@@ -43,9 +43,9 @@ Resources:
               description: 'EFA version to install'
               default: 'latest'
         phases:
-          # TODO: Add same logic for packer
-          - name: UpdateKernel
+          - name: build
             steps:
+              # TODO: Add same logic for packer
               - name: DownloadScript
                 action: ExecuteBash
                 inputs:
@@ -61,9 +61,6 @@ Resources:
                 action: Reboot
                 inputs:
                   delaySeconds: 60
-
-          - name: build
-            steps:
               - name: DownloadScript
                 action: ExecuteBash
                 inputs:
