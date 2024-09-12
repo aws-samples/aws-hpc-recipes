@@ -53,13 +53,32 @@ The ImageBuilder components are available as individual templates that deploy a 
 5. Finish creating the stack. When its status reaches `CREATE_COMPLETE`, navigate to the [EC2 Image Builder console](https://console.aws.amazon.com/imagebuilder/home#/components).
     * On the **Components** page, choose **Onwed by me**. Your new ImageBuilder component should be avilable there. 
 
-#### Build an AMI using your ImageBuilder components
-
-_Coming soon._
-
 #### Use the example all-in-one ImageBuilder template
 
-_Coming soon._
+Check out the HPC recipes repo or download the [CloudFormation template](assets/create-pcs-image.yaml). Set the HPC Recipes path variables in the shell, then run the following command. 
+
+```shell
+HpcRecipesS3Bucket="aws-hpc-recipes-dev"
+HpcRecipesBranch="pcs-ib"
+
+stack_id=$(aws cloudformation create-stack \
+               --region us-east-2 \
+               --capabilities "CAPABILITY_NAMED_IAM" "CAPABILITY_AUTO_EXPAND" \
+               --parameters \
+               ParameterKey=Distro,ParameterValue=amzn-2 \
+               ParameterKey=Architecture,ParameterValue=arm64 \
+               ParameterKey=Vendor,ParameterValue=aws \
+               ParameterKey=ComponentStackURL,ParameterValue="${ComponentStackURL}" \
+               ParameterKey=SemanticVersion,ParameterValue=$(date +%Y.%m.%d) \
+               ParameterKey=HpcRecipesS3Bucket,ParameterValue="${HpcRecipesS3Bucket}" \
+               ParameterKey=HpcRecipesBranch,ParameterValue="${HpcRecipesBranch}" \
+               --output text \
+               --query "StackId" \
+               --stack-name "buildPCSImages" \
+               --template-body file://$PWD/create-pcs-image.yaml)
+```
+
+The example template is restricted to `us-east-2` because the AMI IDs are hard-coded. This isn't mandatory, but you'll have to look them up and change them to use it in other regions. 
 
 ### HashiCorp Packer resources
 
@@ -145,18 +164,21 @@ Here are some example AMIs (in `us-east-2`) we have used as build sources.
 | ------ | ------ | ------|
 | Amazon Linux 2 | `ami-0453ce6279422709a` | `ami-0e3eb8e1e59049093` |
 | RHEL 9 | `ami-0aa8fc2422063977a` | `ami-08f9f3bb075432791` |
-| Rocky Linux 9 | `ami-01bd836275f79352c` | `ami-018925a289077b035` |
-| Ubuntu 22.04 | `ami-003932de22c285676` | `ami-03772d93fb1879bbe` |
-
-Presently, installers with a dependency on a specific kernel version, such as the Lustre installer, require a kernel version of `5.14.0-427`. And, the `Update OS` script will not upgrade kernels, to avoid breaking compatibility with these installers. Therefore, any source AMI you select must be running kernel `5.14.0-427`, or you must upgrade it before using any of the installers in this repository. 
+| Rocky Linux 9 | `ami-067daee80a6d36ac0` | `ami-018925a289077b035` |
+| Ubuntu 22.04 | `ami-003932de22c285676` | `ami-034ee457b85b2fb4f` |
+| DLAMI (Ubuntu 22) | `ami-0c8cb6d6f6dc127c9` | `ami-030b3e579315b7e71` |
 
 #### Amazon Linux 2
 
+_Coming soon_
+
 #### Redhat Enterprise Linux 9
+
+_Coming soon_
 
 #### Rocky Linux 9
 
-Our build instructions are durrently only confirmed to work with Rocky Linux 9.4.
+Build instructions are currently confirmed to work with Rocky Linux 9.3 and 9.4
 
 #### Ubuntu 22.04 LTS
 
@@ -181,6 +203,8 @@ To find an Ubuntu 22 AMI in Image Builder:
 Note that these curated image names correspond to an ARN. For example, the x86_64 Ubuntu 22 base AMI maps to `arn:aws:imagebuilder:REGION:aws:image/ubuntu-server-22-lts-x86/x.x.x` where REGION is the current AWS region.
 
 #### Deep Learning AMI (DLAMI)
+
+_Coming soon_
 
 ### HPC Recipes public URLs
 
