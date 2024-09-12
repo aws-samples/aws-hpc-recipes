@@ -46,7 +46,7 @@ Resources:
           - name: build
             steps:
               # TODO: Add same logic for packer
-              - name: DownloadScript
+              - name: DownloadKernelUpdateScript
                 action: ExecuteBash
                 inputs:
                   commands:
