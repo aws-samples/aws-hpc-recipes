@@ -43,6 +43,25 @@ Resources:
               description: 'EFA version to install'
               default: 'latest'
         phases:
+          # TODO: Add same logic for packer
+          - name: UpdateKernel
+            steps:
+              - name: DownloadScript
+                action: ExecuteBash
+                inputs:
+                  commands:
+                    - 'curl -OfsSL https://${HpcRecipesS3Bucket}.s3.us-east-1.amazonaws.com/${HpcRecipesBranch}/recipes/pcs/hpc_ready_ami/assets/scripts/update-kernel.sh'
+              - name: UpdateKernel
+                action: ExecuteBash
+                inputs:
+                  commands:
+                    - 'chmod +x update-kernel.sh'
+                    - './update-kernel.sh'
+              - name: RebootAfterUpdate
+                action: Reboot
+                inputs:
+                  delaySeconds: 60
+
           - name: build
             steps:
               - name: DownloadScript

@@ -79,6 +79,10 @@ download_verify_and_install_software() {
     rm -rf "$temp_dir"
 }
 
+# This is where we could potentially find the correct kernel headers (search through rpm.pbone.net):
+# sudo dnf install -y ftp://ftp.icm.edu.pl/packages/linux-pbone/rockylinux/9.4/devel/x86_64/kickstart/Packages/k/kernel-headers-$(uname -r).rpm
+# sudo dnf install -y ftp://ftp.icm.edu.pl/packages/linux-pbone/rockylinux/9.4/devel/x86_64/kickstart/Packages/k/kernel-devel-$(uname -r).rpm
+
 # Main function
 main() {
     parse_args "$@"
