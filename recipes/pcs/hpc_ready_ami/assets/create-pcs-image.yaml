@@ -1,0 +1,159 @@
+AWSTemplateFormatVersion: '2010-09-09'
+Description: Build a PCS-compatible AMI
+
+Mappings:
+  # AMI IDs are region-specific. These are for us-east-2.
+  DistroConfigs:
+    amzn-2:
+      name: Amazon Linux 2
+      deviceName: /dev/xvda
+      size: 64
+      x86ami: ami-0453ce6279422709a
+      arm64ami: ami-0e3eb8e1e59049093
+    rocky-9:
+      name: Rocky Linux 9
+      deviceName: /dev/sda1
+      size: 64
+      x86: ami-067daee80a6d36ac0
+      arm64: ami-034ee457b85b2fb4f
+    rhel-9:
+      name: RHEL 9
+      deviceName: /dev/sda1
+      size: 64
+      # Rocky Linux 9.3 community edition AMIs
+      x86: ami-0aa8fc2422063977a
+      arm64: ami-08f9f3bb075432791
+    ubuntu-22-04:
+      name: Ubuntu 22.04
+      deviceName: /dev/sda1
+      size: 64
+      x86: ami-003932de22c285676
+      arm64: ami-03772d93fb1879bbe
+  InstanceConfigs:
+    x86:
+      intel: 
+        - c6i.8xlarge
+        - m6i.8xlarge
+      amd: 
+        - c6a.8xlarge
+        - m6a.8xlarge
+    arm64:
+      aws: 
+        - c7g.8xlarge
+        - m7g.8xlarge
+
+Parameters:
+
+  Distro:
+    Type: String
+    AllowedValues:
+      - amzn-2
+      - rocky-9
+      - rhel-9
+      - ubuntu-22-04
+    Default: amzn-2
+  Architecture:
+    Type: String
+    AllowedValues:
+      - x86
+      - arm64
+    Default: arm64
+  Vendor:
+    Type: String
+    AllowedValues:
+      - intel
+      - amd
+      - aws
+    Default: aws
+
+  SemanticVersion:
+    Type: String
+    Default: '0.0.1'
+    Description: ImageBuilder needs date as version string
+
+  # Substack Parameters
+  HpcRecipesS3Bucket:
+    Type: String
+    Default: aws-hpc-recipes
+    Description: HPC Recipes for AWS S3 bucket
+    AllowedValues:
+         - aws-hpc-recipes
+         - aws-hpc-recipes-dev
+  HpcRecipesBranch:
+    Type: String
+    Default: main
+    Description: HPC Recipes for AWS release branch
+    AllowedPattern: '^(?!.*/\.git$)(?!.*/\.)(?!.*\\.\.)[a-zA-Z0-9-_\.]+$'
+  # /Substack Parameters
+
+Resources:
+  ImageBuilderComponentsStack:
+    Type: AWS::CloudFormation::Stack
+    DeletionPolicy: Delete
+    UpdateReplacePolicy: Delete
+    Properties:
+      Parameters:
+        HpcRecipesS3Bucket: !Ref HpcRecipesS3Bucket
+        HpcRecipesBranch: !Ref HpcRecipesBranch
+      TemplateURL: !Sub 'https://${HpcRecipesS3Bucket}.s3.us-east-1.amazonaws.com/${HpcRecipesBranch}/recipes/pcs/hpc_ready_ami/assets/nested-imagebuilder-components.yaml'
+
+  PCSImageRecipe:
+    Type: AWS::ImageBuilder::ImageRecipe
+    Properties:
+      # Ordering is important here
+      Components:
+        - ComponentArn: !GetAtt [ImageBuilderComponentsStack, Outputs.UpdateOsComponent]
+        - ComponentArn: !Sub 'arn:aws:imagebuilder:${AWS::Region}:aws:component/reboot-linux/1.0.1/1'
+        - ComponentArn: !GetAtt [ImageBuilderComponentsStack, Outputs.OptimizePerformanceComponent]
+        - ComponentArn: !GetAtt [ImageBuilderComponentsStack, Outputs.CloudwatchAgentComponent]
+        - ComponentArn: !GetAtt [ImageBuilderComponentsStack, Outputs.SsmAgentComponent]
+        - ComponentArn: !GetAtt [ImageBuilderComponentsStack, Outputs.EfaInstallerComponent]
+        - ComponentArn: !GetAtt [ImageBuilderComponentsStack, Outputs.LustreInstallerComponent]
+        - ComponentArn: !GetAtt [ImageBuilderComponentsStack, Outputs.EfsUtilsInstallerComponent]
+        - ComponentArn: !GetAtt [ImageBuilderComponentsStack, Outputs.PcsAgentInstallerComponent]
+        - ComponentArn: !GetAtt [ImageBuilderComponentsStack, Outputs.PcsSlurmInstallerComponent]
+        - ComponentArn: !GetAtt [ImageBuilderComponentsStack, Outputs.SpackInstallerComponent]
+      Description: Install PCS Agent, SLURM, and other components
+      Name: !Sub 'PCS AMI ${Distro}|${Architecture}|${Vendor}'
+      ParentImage: !FindInMap [DistroConfigs, !Ref Distro, !Ref Architecture]
+      Version: !Ref SemanticVersion
+      BlockDeviceMappings:
+        - DeviceName: !FindInMap [DistroConfigs, !Ref Distro, deviceName]
+          Ebs:
+            DeleteOnTermination: true
+            VolumeSize: !FindInMap [DistroConfigs, !Ref Distro, size]
+
+  PCSInfrastructureConfiguration:
+    Type: AWS::ImageBuilder::InfrastructureConfiguration
+    Properties:
+      Description: !Sub '${Architecture} ${Vendor} infrastructure'
+      InstanceProfileName: EC2InstanceProfileForImageBuilder
+      InstanceTypes: !FindInMap [InstanceConfigs, !Ref Architecture, !Ref Vendor]
+      Name: !Sub '${Architecture}-${Vendor}-Configuration'
+
+  PCSDistributionConfiguration:
+    Type: AWS::ImageBuilder::DistributionConfiguration
+    Properties:
+      Name: PCS image distributor
+      Description: PCS image distributor
+      Distributions:
+        - Region: !Ref "AWS::Region"
+          AmiDistributionConfiguration:
+            Name: PCS AMI - {{ imagebuilder:buildDate }}
+            Description: 'Distribute a copy of the AMI to specific accounts in the destination Region.'
+            # Uncomment and provide AWS account IDs to share AMI once built
+            # LaunchPermissionConfiguration:
+            #   UserIds:
+            #     - '000000000000'
+            #     - '111111111111'
+
+  PCSImage:
+    Type: AWS::ImageBuilder::Image
+    Properties:
+      DistributionConfigurationArn: !GetAtt PCSDistributionConfiguration.Arn
+      ImageRecipeArn: !GetAtt PCSImageRecipe.Arn
+      InfrastructureConfigurationArn: !GetAtt PCSInfrastructureConfiguration.Arn
+
+Outputs:
+  Image:
+    Value: !Ref PCSImage
