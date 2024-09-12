@@ -63,6 +63,9 @@ rocky_9,arm64,aws,ami-018925a289077b035,Rocky 9.4 - Community
 rocky_9,x86_64,intel,ami-04094b9ec180520b6,Rocky 9.3 - Community
 rocky_9,x86_64,amd,ami-04094b9ec180520b6,Rocky 9.3 - Community
 rocky_9,arm64,aws,ami-0568a37c1c9a5c84a,Rocky 9.3 - Community
+rocky_9,x86_64,intel,ami-067daee80a6d36ac0,Rocky 9.3 - Community
+rocky_9,x86_64,amd,ami-067daee80a6d36ac0,Rocky 9.3 - Community
+rocky_9,arm64,aws,ami-034ee457b85b2fb4f,Rocky 9.3 - Community
 ubuntu_22_04,x86_64,intel,ami-003932de22c285676,Ubuntu Server 22.04 LTS - Marketplace
 ubuntu_22_04,x86_64,amd,ami-003932de22c285676,Ubuntu Server 22.04 LTS - Marketplace
 ubuntu_22_04,arm64,aws,ami-03772d93fb1879bbe,Ubuntu Server 22.04 LTS - Marketplace
