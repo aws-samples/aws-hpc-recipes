@@ -141,30 +141,50 @@ Outputs:
   CloudwatchAgentComponent:
     Description: CloudwatchAgentComponent
     Value: !GetAtt [ CloudwatchAgentComponent, Outputs.ImageBuilderComponent ]
+    Export:
+      Name: !Sub "${AWS::StackName}-CloudwatchAgentComponent"
   EfaInstallerComponent:
     Description: EfaInstallerComponent
     Value: !GetAtt [ EfaInstallerComponent, Outputs.ImageBuilderComponent ]
+    Export:
+      Name: !Sub "${AWS::StackName}-EfaInstallerComponent"
   EfsUtilsInstallerComponent:
     Description: EfsUtilsInstallerComponent
     Value: !GetAtt [ EfsUtilsInstallerComponent, Outputs.ImageBuilderComponent ]
+    Export:
+      Name: !Sub "${AWS::StackName}-EfsUtilsInstallerComponent"
   LustreInstallerComponent:
     Description: LustreInstallerComponent
     Value: !GetAtt [ LustreInstallerComponent, Outputs.ImageBuilderComponent ]
+    Export:
+      Name: !Sub "${AWS::StackName}-LustreInstallerComponent"
   PcsAgentInstallerComponent:
     Description: PcsAgentInstallerComponent
     Value: !GetAtt [ PcsAgentInstallerComponent, Outputs.ImageBuilderComponent ]
+    Export:
+      Name: !Sub "${AWS::StackName}-PcsAgentInstallerComponent"
   PcsSlurmInstallerComponent:
     Description: PcsSlurmInstallerComponent
     Value: !GetAtt [ PcsSlurmInstallerComponent, Outputs.ImageBuilderComponent ]
+    Export:
+      Name: !Sub "${AWS::StackName}-PcsSlurmInstallerComponent"
   SpackInstallerComponent:
     Description: SpackInstallerComponent
     Value: !GetAtt [ SpackInstallerComponent, Outputs.ImageBuilderComponent ]
+    Export:
+      Name: !Sub "${AWS::StackName}-SpackInstallerComponent"
   SsmAgentComponent:
     Description: SsmAgentComponent
     Value: !GetAtt [ SsmAgentComponent, Outputs.ImageBuilderComponent ]
+    Export:
+      Name: !Sub "${AWS::StackName}-SsmAgentComponent"
   OptimizePerformanceComponent:
     Description: OptimizePerformanceComponent
-    Value: !GetAtt [ OptimizePerformanceComponent, Outputs.ImageBuilderComponent ]  
+    Value: !GetAtt [ OptimizePerformanceComponent, Outputs.ImageBuilderComponent ]
+    Export:
+      Name: !Sub "${AWS::StackName}-OptimizePerformanceComponent"  
   UpdateOsComponent:
     Description: UpdateOsComponent
     Value: !GetAtt [ UpdateOsComponent, Outputs.ImageBuilderComponent ]
+    Export:
+      Name: !Sub "${AWS::StackName}-UpdateOsComponent"
