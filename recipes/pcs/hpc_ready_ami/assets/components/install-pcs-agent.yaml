@@ -30,7 +30,7 @@ Resources:
   PcsAgentInstallerComponent:
     Type: AWS::ImageBuilder::Component
     Properties:
-      Name: PcsAgentInstaller
+      Name: !Sub 'PcsAgentInstaller-${AWS::StackName}'
       Description: Download and install the AWS PCS agent
       Version: '0.0.1'
       Platform: Linux

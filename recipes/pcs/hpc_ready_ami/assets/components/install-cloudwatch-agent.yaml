@@ -29,7 +29,7 @@ Resources:
   CloudwatchAgentComponent:
     Type: AWS::ImageBuilder::Component
     Properties:
-      Name: CloudWatchAgentInstaller
+      Name: !Sub 'CloudWatchAgentInstaller-${AWS::StackName}'
       Description: Install CloudWatch Agent on PCS-compatible AMI base images
       Version: '0.0.1'
       Platform: Linux
