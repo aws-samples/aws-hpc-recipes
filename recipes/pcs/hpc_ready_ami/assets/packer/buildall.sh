@@ -16,7 +16,7 @@ TEMPLATE_FILE=template.json
 # Change the prefix for EC2 'AMI name'
 AMI_PREFIX=hpc_ready_ami
 # Change the AMI volume size
-VOLUME_SIZE=64
+VOLUME_SIZE=100
 
 # Function to slugify a string
 slugify() {
@@ -51,19 +51,23 @@ while IFS=',' read -r line; do
     -var "hpc_recipes_branch=${HPC_RECIPES_BRANCH}" \
     ${TEMPLATE_FILE} >> ${log_file} 2>&1 &
 done << EOF
-# amzn_2,x86_64,intel,ami-0453ce6279422709a,AL2 Kernel 5.x
-# amzn_2,x86_64,amd,ami-0453ce6279422709a,AL2 Kernel 5.x
-# amzn_2,arm64,aws,ami-0e3eb8e1e59049093,AL2 Kernel 5.x
-# rhel_9,x86_64,intel,ami-0aa8fc2422063977a,RHEL 9 - Marketplace
-# rhel_9,x86_64,amd,ami-0aa8fc2422063977a,RHEL 9 - Marketplace
-# rhel_9,arm64,aws,ami-08f9f3bb075432791,RHEL 9 - Marketplace
-# rocky_9,x86_64,intel,ami-01bd836275f79352c,Rocky 9.4 - Community
-# rocky_9,x86_64,amd,ami-01bd836275f79352c,Rocky 9.4 - Community
-# rocky_9,arm64,aws,ami-018925a289077b035,Rocky 9.4 - Community
-# rocky_9,x86_64,intel,ami-04094b9ec180520b6,Rocky 9.3 - Community
-# rocky_9,x86_64,amd,ami-04094b9ec180520b6,Rocky 9.3 - Community
+amzn_2,x86_64,intel,ami-0453ce6279422709a,AL2 Kernel 5.x
+amzn_2,x86_64,amd,ami-0453ce6279422709a,AL2 Kernel 5.x
+amzn_2,arm64,aws,ami-0e3eb8e1e59049093,AL2 Kernel 5.x
+rhel_9,x86_64,intel,ami-0aa8fc2422063977a,RHEL 9 - Marketplace
+rhel_9,x86_64,amd,ami-0aa8fc2422063977a,RHEL 9 - Marketplace
+rhel_9,arm64,aws,ami-08f9f3bb075432791,RHEL 9 - Marketplace
+rocky_9,x86_64,intel,ami-01bd836275f79352c,Rocky 9.4 - Community
+rocky_9,x86_64,amd,ami-01bd836275f79352c,Rocky 9.4 - Community
+rocky_9,arm64,aws,ami-018925a289077b035,Rocky 9.4 - Community
+rocky_9,x86_64,intel,ami-04094b9ec180520b6,Rocky 9.3 - Community
+rocky_9,x86_64,amd,ami-04094b9ec180520b6,Rocky 9.3 - Community
 rocky_9,arm64,aws,ami-0568a37c1c9a5c84a,Rocky 9.3 - Community
-# ubuntu_22_04,x86_64,intel,ami-003932de22c285676,Ubuntu Server 22.04 LTS - Marketplace
-# ubuntu_22_04,x86_64,amd,ami-003932de22c285676,Ubuntu Server 22.04 LTS - Marketplace
-# ubuntu_22_04,arm64,aws,ami-03772d93fb1879bbe,Ubuntu Server 22.04 LTS - Marketplace
+ubuntu_22_04,x86_64,intel,ami-003932de22c285676,Ubuntu Server 22.04 LTS - Marketplace
+ubuntu_22_04,x86_64,amd,ami-003932de22c285676,Ubuntu Server 22.04 LTS - Marketplace
+ubuntu_22_04,arm64,aws,ami-03772d93fb1879bbe,Ubuntu Server 22.04 LTS - Marketplace
+amzn_2,x86_64,intel,ami-0451026559127703a,Deep Learning Base OSS Nvidia Driver AMI (Amazon Linux 2)
+ubuntu_22_04,x86_64,intel,ami-0c8cb6d6f6dc127c9,Deep Learning Base OSS Nvidia Driver GPU AMI (Ubuntu 22.04)
+amzn_2,arm64,aws,ami-01629d9393241a241,Deep Learning ARM64 Base OSS Nvidia Driver GPU AMI (Amazon Linux 2)
+ubuntu_22_04,arm64,aws,ami-030b3e579315b7e71,Deep Learning ARM64 Base OSS Nvidia Driver GPU AMI (Ubuntu 22.04)
 EOF
