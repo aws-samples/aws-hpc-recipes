@@ -60,9 +60,6 @@ rhel_9,arm64,aws,ami-08f9f3bb075432791,RHEL 9 - Marketplace
 rocky_9,x86_64,intel,ami-01bd836275f79352c,Rocky 9.4 - Community
 rocky_9,x86_64,amd,ami-01bd836275f79352c,Rocky 9.4 - Community
 rocky_9,arm64,aws,ami-018925a289077b035,Rocky 9.4 - Community
-rocky_9,x86_64,intel,ami-04094b9ec180520b6,Rocky 9.3 - Community
-rocky_9,x86_64,amd,ami-04094b9ec180520b6,Rocky 9.3 - Community
-rocky_9,arm64,aws,ami-0568a37c1c9a5c84a,Rocky 9.3 - Community
 rocky_9,x86_64,intel,ami-067daee80a6d36ac0,Rocky 9.3 - Community
 rocky_9,x86_64,amd,ami-067daee80a6d36ac0,Rocky 9.3 - Community
 rocky_9,arm64,aws,ami-034ee457b85b2fb4f,Rocky 9.3 - Community
