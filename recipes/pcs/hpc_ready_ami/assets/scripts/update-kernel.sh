@@ -21,7 +21,7 @@ fi
 handle_rocky() {
     logger "Updating Kernel on Rocky Linux" "INFO"
     dnf update -y && dnf clean all
-    reboot
+    exit 194
 }
 
 # Main function
