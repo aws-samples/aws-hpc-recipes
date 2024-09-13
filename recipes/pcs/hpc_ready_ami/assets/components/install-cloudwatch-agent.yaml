@@ -26,16 +26,10 @@ Parameters:
     AllowedPattern: '^(?!.*/\.git$)(?!.*/\.)(?!.*\\.\.)[a-zA-Z0-9-_\.]+$'
 
 Resources:
-  CloudwatchAgentComponent:
+  CloudwatchAgent:
     Type: AWS::ImageBuilder::Component
     Properties:
-      Name: !Sub
-        - 'CloudWatchAgentInstaller-${ID}'
-        - ID: !Select 
-          - 6
-          - !Split 
-            - '-'
-            - !Ref 'AWS::StackId'
+      Name: !Sub 'CloudWatchAgentInstaller-${AWS::StackName}'
       Description: Install CloudWatch Agent on PCS-compatible AMI base images
       Version: '0.0.1'
       Platform: Linux
@@ -61,4 +55,4 @@ Resources:
 
 Outputs:
   ImageBuilderComponent:
-    Value: !Ref CloudwatchAgentComponent
+    Value: !Ref CloudwatchAgent

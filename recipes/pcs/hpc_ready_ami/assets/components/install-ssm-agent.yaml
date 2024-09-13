@@ -26,16 +26,10 @@ Parameters:
     AllowedPattern: '^(?!.*/\.git$)(?!.*/\.)(?!.*\\.\.)[a-zA-Z0-9-_\.]+$'
 
 Resources:
-  SsmAgentComponent:
+  SsmAgent:
     Type: AWS::ImageBuilder::Component
     Properties:
-      Name: !Sub
-        - 'SsmAgentInstaller-${ID}'
-        - ID: !Select 
-          - 6
-          - !Split 
-            - '-'
-            - !Ref 'AWS::StackId'
+      Name: !Sub 'SsmAgentInstaller-${AWS::StackName}'
       Description: Install SSM Agent on PCS-compatible AMI base images
       Version: '0.0.1'
       Platform: Linux
@@ -59,4 +53,4 @@ Resources:
                     - './install-ssm-agent.sh'
 Outputs:
   ImageBuilderComponent:
-    Value: !Ref SsmAgentComponent
+    Value: !Ref SsmAgent

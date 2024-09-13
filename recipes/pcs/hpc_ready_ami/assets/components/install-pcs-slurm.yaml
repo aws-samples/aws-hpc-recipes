@@ -27,16 +27,10 @@ Parameters:
     AllowedPattern: '^(?!.*/\.git$)(?!.*/\.)(?!.*\\.\.)[a-zA-Z0-9-_\.]+$'
 
 Resources:
-  PcsSlurmInstallerComponent:
+  PcsSlurmInstaller:
     Type: AWS::ImageBuilder::Component
     Properties:
-      Name: !Sub
-        - 'PcsSlurmInstaller-${ID}'
-        - ID: !Select 
-          - 6
-          - !Split 
-            - '-'
-            - !Ref 'AWS::StackId'
+      Name: !Sub 'PcsSlurmInstaller-${AWS::StackName}'
       Description: Download and install Slurm for AWS PCS
       Version: '0.0.1'
       Platform: Linux
@@ -69,4 +63,4 @@ Resources:
 
 Outputs:
   ImageBuilderComponent:
-    Value: !Ref PcsSlurmInstallerComponent
+    Value: !Ref PcsSlurmInstaller
