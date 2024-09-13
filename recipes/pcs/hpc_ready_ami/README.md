@@ -68,7 +68,6 @@ stack_id=$(aws cloudformation create-stack \
                ParameterKey=Distro,ParameterValue=amzn-2 \
                ParameterKey=Architecture,ParameterValue=arm64 \
                ParameterKey=Vendor,ParameterValue=aws \
-               ParameterKey=ComponentStackURL,ParameterValue="${ComponentStackURL}" \
                ParameterKey=SemanticVersion,ParameterValue=$(date +%Y.%m.%d) \
                ParameterKey=HpcRecipesS3Bucket,ParameterValue="${HpcRecipesS3Bucket}" \
                ParameterKey=HpcRecipesBranch,ParameterValue="${HpcRecipesBranch}" \
