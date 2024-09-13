@@ -26,16 +26,10 @@ Parameters:
     AllowedPattern: '^(?!.*/\.git$)(?!.*/\.)(?!.*\\.\.)[a-zA-Z0-9-_\.]+$'
 
 Resources:
-  OptimizePerformanceComponent:
+  OptimizePerformance:
     Type: AWS::ImageBuilder::Component
     Properties:
-      Name: !Sub
-        - 'OptimizePerformance-${ID}'
-        - ID: !Select 
-          - 6
-          - !Split 
-            - '-'
-            - !Ref 'AWS::StackId'
+      Name: !Sub 'OptimizePerformance-${AWS::StackName}'
       Description: Optimize HPC application peformance on PCS-compatible AMI
       Version: '0.0.1'
       Platform: Linux
@@ -60,4 +54,4 @@ Resources:
 
 Outputs:
   ImageBuilderComponent:
-    Value: !Ref OptimizePerformanceComponent
+    Value: !Ref OptimizePerformance

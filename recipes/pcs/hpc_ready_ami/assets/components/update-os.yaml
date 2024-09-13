@@ -26,16 +26,10 @@ Parameters:
     AllowedPattern: '^(?!.*/\.git$)(?!.*/\.)(?!.*\\.\.)[a-zA-Z0-9-_\.]+$'
 
 Resources:
-  UpdateOsComponent:
+  UpdateOs:
     Type: AWS::ImageBuilder::Component
     Properties:
-      Name: !Sub
-        - 'UpdateOs-${ID}'
-        - ID: !Select 
-          - 6
-          - !Split 
-            - '-'
-            - !Ref 'AWS::StackId'
+      Name: !Sub 'UpdateOs-${AWS::StackName}'
       Description: Update the OS on PCS-compatible AMI base images
       Version: '0.0.1'
       Platform: Linux
@@ -60,4 +54,4 @@ Resources:
 
 Outputs:
   ImageBuilderComponent:
-    Value: !Ref UpdateOsComponent
+    Value: !Ref UpdateOs

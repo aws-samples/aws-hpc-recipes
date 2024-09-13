@@ -27,16 +27,10 @@ Parameters:
     AllowedPattern: '^(?!.*/\.git$)(?!.*/\.)(?!.*\\.\.)[a-zA-Z0-9-_\.]+$'
 
 Resources:
-  EfaInstallerComponent:
+  EfaInstaller:
     Type: AWS::ImageBuilder::Component
     Properties:
-      Name: !Sub
-        - 'EfaInstaller-${ID}'
-        - ID: !Select 
-          - 6
-          - !Split 
-            - '-'
-            - !Ref 'AWS::StackId'
+      Name: !Sub 'EfaInstaller-${AWS::StackName}'
       Description: Download and install EFA software
       Version: '0.0.1'
       Platform: Linux
@@ -66,5 +60,5 @@ Resources:
 
 Outputs:
   ImageBuilderComponent:
-    Value: !Ref EfaInstallerComponent
+    Value: !Ref EfaInstaller
 

@@ -27,16 +27,10 @@ Parameters:
     AllowedPattern: '^(?!.*/\.git$)(?!.*/\.)(?!.*\\.\.)[a-zA-Z0-9-_\.]+$'
 
 Resources:
-  SpackInstallerComponent:
+  SpackInstaller:
     Type: AWS::ImageBuilder::Component
     Properties:
-      Name: !Sub
-        - 'SpackInstaller-${ID}'
-        - ID: !Select 
-          - 6
-          - !Split 
-            - '-'
-            - !Ref 'AWS::StackId'      
+      Name: !Sub 'SpackInstaller-${AWS::StackName}'
       Description: Install Spack and optimized configurations
       Version: '0.0.1'
       Platform: Linux
@@ -66,4 +60,4 @@ Resources:
 
 Outputs:
   ImageBuilderComponent:
-    Value: !Ref SpackInstallerComponent
+    Value: !Ref SpackInstaller

@@ -26,16 +26,10 @@ Parameters:
     AllowedPattern: '^(?!.*/\.git$)(?!.*/\.)(?!.*\\.\.)[a-zA-Z0-9-_\.]+$'
 
 Resources:
-  EfsUtilsComponent:
+  EfsUtils:
     Type: AWS::ImageBuilder::Component
     Properties:
-      Name: !Sub
-        - 'EfsUtilsInstaller-${ID}'
-        - ID: !Select 
-          - 6
-          - !Split 
-            - '-'
-            - !Ref 'AWS::StackId'
+      Name: !Sub 'EfsUtilsInstaller-${AWS::StackName}'
       Description: Install EFS utils on PCS-compatible AMI base images
       Version: '0.0.1'
       Platform: Linux
@@ -61,5 +55,5 @@ Resources:
 
 Outputs:
   ImageBuilderComponent:
-    Value: !Ref EfsUtilsComponent
+    Value: !Ref EfsUtils
 
