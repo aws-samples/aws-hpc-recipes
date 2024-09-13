@@ -1,5 +1,16 @@
 # HPC-ready AMIs
 
+```
+################################################################################
+While this recipe is in development, its assets are downloadable at:
+
+HpcRecipesS3Bucket: aws-hpc-recipes-dev
+HpcRecipesS3Branch: pcsami
+
+Example: https://aws-hpc-recipes-dev.s3.us-east-1.amazonaws.com/pcsami/recipes/pcs/hpc_ready_ami/assets/scripts/update-os.sh
+################################################################################
+```
+
 ## Info
 
 This recipe is designed to support you building your own AMIs to use with AWS PCS. 
