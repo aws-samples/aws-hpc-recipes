@@ -29,7 +29,13 @@ Resources:
   EfsUtilsComponent:
     Type: AWS::ImageBuilder::Component
     Properties:
-      Name: !Sub 'EfsUtilsInstaller-${AWS::StackName}'
+      Name: !Sub
+        - 'EfsUtilsInstaller-${ID}'
+        - ID: !Select 
+          - 6
+          - !Split 
+            - '-'
+            - !Ref 'AWS::StackId'
       Description: Install EFS utils on PCS-compatible AMI base images
       Version: '0.0.1'
       Platform: Linux
@@ -56,5 +62,4 @@ Resources:
 Outputs:
   ImageBuilderComponent:
     Value: !Ref EfsUtilsComponent
-    Export:
-      Name: !Sub 'EfsUtilsComponent'
+
