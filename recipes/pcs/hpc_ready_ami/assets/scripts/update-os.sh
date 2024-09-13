@@ -30,8 +30,8 @@ handle_ubuntu_22.04() {
 
 handle_rhel_9() { 
     logger "Updating RHEL 9" "INFO"
-    # Do not upgrade kernel or risk breaking EFA and/or Lustre support
-    # sudo dnf update --exclude=kernel* -y && sudo dnf clean all
+    # As of 2024-09-13, upgrading kernel to 5.14.0-427.33.1.el9_4.x86_64
+    # and does not break EFA or Lustre support 
     sudo dnf update -y && sudo dnf clean all
 }
 
