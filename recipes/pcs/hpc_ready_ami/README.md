@@ -224,7 +224,43 @@ Note that these curated image names correspond to an ARN. For example, the x86_6
 
 #### Deep Learning AMI (DLAMI)
 
-_Coming soon_
+Find names at https://docs.aws.amazon.com/dlami/latest/devguide/appendix-ami-release-notes.html
+
+**x86_64**
+
+Search String: Deep Learning Base OSS Nvidia Driver AMI (Amazon Linux 2) Version ${XX.X}
+
+```shell
+aws ec2 describe-images --region us-east-2 --owners amazon \
+--filters 'Name=name,Values=Deep Learning Base OSS Nvidia Driver AMI (Amazon Linux 2) Version ????' 'Name=state,Values=available' \
+--query 'reverse(sort_by(Images, &CreationDate))[:1].ImageId' --output text
+```
+
+Search String: Deep Learning Base OSS Nvidia Driver GPU AMI (Ubuntu 22.04) ${YYYY-MM-DD}
+
+```shell
+aws ec2 describe-images --region us-east-2 --owners amazon \
+--filters 'Name=name,Values=Deep Learning Base OSS Nvidia Driver GPU AMI (Ubuntu 22.04) ??????????' 'Name=state,Values=available' \
+--query 'reverse(sort_by(Images, &CreationDate))[:1].ImageId' --output text
+```
+
+**arm64**
+
+Search String: Deep Learning ARM64 Base OSS Nvidia Driver GPU AMI (Amazon Linux 2) ${YYYY-MM-DD}
+
+```shell
+aws ec2 describe-images --region us-east-2 --owners amazon \
+--filters 'Name=name,Values=Deep Learning ARM64 Base OSS Nvidia Driver GPU AMI (Amazon Linux 2) ??????????' 'Name=state,Values=available' \
+--query 'reverse(sort_by(Images, &CreationDate))[:1].ImageId' --output text
+```
+
+Search String: Deep Learning ARM64 Base OSS Nvidia Driver GPU AMI (Ubuntu 22.04) ${YYYY-MM-DD}
+
+```shell
+aws ec2 describe-images --region us-east-2 --owners amazon \
+--filters 'Name=name,Values=Deep Learning ARM64 Base OSS Nvidia Driver GPU AMI (Ubuntu 22.04) ??????????' 'Name=state,Values=available' \
+--query 'reverse(sort_by(Images, &CreationDate))[:1].ImageId' --output text
+```
 
 ### HPC Recipes public URLs
 
