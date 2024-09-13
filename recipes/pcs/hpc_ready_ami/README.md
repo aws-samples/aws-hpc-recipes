@@ -77,7 +77,7 @@ stack_id=$(aws cloudformation create-stack \
                --template-body file://$PWD/create-pcs-image.yaml)
 ```
 
-This will create an [ImageBuilder image](https://console.aws.amazon.com/imagebuilder/home#/images) named **pcs_ami-rocky-9-arm64-aws**, which will in turn build an AMI named **pcs_ami-rocky-9-arm64-aws [TIMESTAMP]**. 
+This will create an [ImageBuilder image](https://console.aws.amazon.com/imagebuilder/home#/images) named **pcs_ami-rocky-9-arm64-aws**, which will in turn build an AMI named **pcs_ami-rocky-9-arm64-aws <TIMESTAMP>**. 
 
 **Notes:**
 1. The example template is restricted to `us-east-2` because the AMI IDs are hard-coded. This isn't mandatory, but you'll have to look them up and change them to use it in other regions. 
