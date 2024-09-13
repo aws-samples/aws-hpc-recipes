@@ -70,7 +70,7 @@ Check out the HPC recipes repo or download the [CloudFormation template](assets/
 
 ```shell
 HpcRecipesS3Bucket="aws-hpc-recipes-dev"
-HpcRecipesBranch="pcs-ib"
+HpcRecipesBranch="pcsami"
 
 stack_id=$(aws cloudformation create-stack \
                --region us-east-2 \
@@ -165,7 +165,7 @@ You can point the Packer template to alternative versions of HPC Recipes. To do 
 ```shell
 packer % packer build \
   -var "hpc_recipes_s3_bucket=aws-hpc-recipes-dev" \
-  -var "hpc_recipes_branch=testbranch" \
+  -var "hpc_recipes_branch=pcsami" \
   -var-file <(./set_variables.sh amzn_2) \
   template.json
 ```
@@ -296,9 +296,11 @@ Here are some near-future improvements we have planned:
 
 - [ ] Add checks for dependencies in the build scripts to enforce ordering
 - [ ] Actually implement the optimize-performance script rather than having it be a stub
-- [ ] Add support for installing NVIDIA drivers
-- [ ] Add support for installing CUDA
 - [ ] Add support for creating a custom Spack environment 
+- [ ] Add support for installing NVIDIA drivers
+  - [ ] Do not re-install NVIDIA drivers if present
+- [ ] Add support for installing CUDA
+  - [ ] Do not re-install CUDA if present
 - [ ] Add support for installing Pyxis and enroot
 - [ ] Add support for installing AppTainer
 
