@@ -114,7 +114,10 @@ Resources:
         - ComponentArn: !GetAtt [ImageBuilderComponentsStack, Outputs.PcsSlurmInstallerComponent]
         - ComponentArn: !GetAtt [ImageBuilderComponentsStack, Outputs.SpackInstallerComponent]
       Description: Install PCS Agent, SLURM, and other components
-      Name: !Sub 'pcs_ami-${Distro}-${Architecture}-${Vendor}'
+      # Name: !Sub 'pcs_ami-${Distro}-${Architecture}-${Vendor}'
+      # Appending StackName enables multiple Recipes with the same base name, 
+      # which is important for debugging.
+      Name: !Sub 'pcs_ami-${Distro}-${Architecture}-${Vendor}-${AWS::StackName}'
       ParentImage: !FindInMap [DistroConfigs, !Ref Distro, !Ref Architecture]
       Version: !Ref SemanticVersion
       BlockDeviceMappings:
@@ -129,17 +132,21 @@ Resources:
       Description: !Sub '${Architecture} ${Vendor} infrastructure'
       InstanceProfileName: EC2InstanceProfileForImageBuilder
       InstanceTypes: !FindInMap [InstanceConfigs, !Ref Architecture, !Ref Vendor]
-      Name: !Sub '${Architecture}-${Vendor}-Configuration'
+      # Appending StackName enables multiple Infra configs with the same base name, 
+      # which is important for debugging.
+      Name: !Sub 'pcs_ami-${Architecture}-${Vendor}-${AWS::StackName}'
 
   PCSDistributionConfiguration:
     Type: AWS::ImageBuilder::DistributionConfiguration
     Properties:
-      Name: PCS image distributor
+      # Appending StackName enables multiple Distribution configs with the same base name, 
+      # which is important for debugging.
+      Name: !Sub 'pcs_ami-${Distro}-${Architecture}-${Vendor}-${AWS::StackName}'
       Description: PCS image distributor
       Distributions:
         - Region: !Ref "AWS::Region"
           AmiDistributionConfiguration:
-            Name: !Sub 'pcs_ami-${Distro}-${Architecture}-${Vendor} {{ imagebuilder:buildDate }}'
+            Name: !Sub 'cfnpcs_ami-${Distro}-${Architecture}-${Vendor} {{ imagebuilder:buildDate }}'
             Description: 'Distribute a copy of the AMI to specific accounts in the destination Region.'
             # Uncomment and provide AWS account IDs to share AMI once built
             # LaunchPermissionConfiguration:

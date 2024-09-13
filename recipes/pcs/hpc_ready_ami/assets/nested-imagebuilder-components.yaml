@@ -27,7 +27,7 @@ Parameters:
 
 Resources:
 
-  CloudwatchAgentComponent:
+  CloudwatchAgentStack:
     Type: AWS::CloudFormation::Stack
     DeletionPolicy: Delete
     UpdateReplacePolicy: Delete
@@ -38,7 +38,7 @@ Resources:
       TemplateURL: !Sub 'https://${HpcRecipesS3Bucket}.s3.us-east-1.amazonaws.com/${HpcRecipesBranch}/recipes/pcs/hpc_ready_ami/assets/components/install-cloudwatch-agent.yaml'
       TimeoutInMinutes: 10
 
-  EfaInstallerComponent:
+  EfaInstallerStack:
     Type: AWS::CloudFormation::Stack
     DeletionPolicy: Delete
     UpdateReplacePolicy: Delete
@@ -49,7 +49,7 @@ Resources:
       TemplateURL: !Sub 'https://${HpcRecipesS3Bucket}.s3.us-east-1.amazonaws.com/${HpcRecipesBranch}/recipes/pcs/hpc_ready_ami/assets/components/install-efa.yaml'
       TimeoutInMinutes: 10
 
-  EfsUtilsInstallerComponent:
+  EfsUtilsInstallerStack:
     Type: AWS::CloudFormation::Stack
     DeletionPolicy: Delete
     UpdateReplacePolicy: Delete
@@ -60,7 +60,7 @@ Resources:
       TemplateURL: !Sub 'https://${HpcRecipesS3Bucket}.s3.us-east-1.amazonaws.com/${HpcRecipesBranch}/recipes/pcs/hpc_ready_ami/assets/components/install-efs-utils.yaml'
       TimeoutInMinutes: 10
 
-  LustreInstallerComponent:
+  LustreInstallerStack:
     Type: AWS::CloudFormation::Stack
     DeletionPolicy: Delete
     UpdateReplacePolicy: Delete
@@ -71,7 +71,7 @@ Resources:
       TemplateURL: !Sub 'https://${HpcRecipesS3Bucket}.s3.us-east-1.amazonaws.com/${HpcRecipesBranch}/recipes/pcs/hpc_ready_ami/assets/components/install-lustre.yaml'
       TimeoutInMinutes: 10
 
-  PcsAgentInstallerComponent:
+  PcsAgentInstallerStack:
     Type: AWS::CloudFormation::Stack
     DeletionPolicy: Delete
     UpdateReplacePolicy: Delete
@@ -82,7 +82,7 @@ Resources:
       TemplateURL: !Sub 'https://${HpcRecipesS3Bucket}.s3.us-east-1.amazonaws.com/${HpcRecipesBranch}/recipes/pcs/hpc_ready_ami/assets/components/install-pcs-agent.yaml'
       TimeoutInMinutes: 10
 
-  PcsSlurmInstallerComponent:
+  PcsSlurmInstallerStack:
     Type: AWS::CloudFormation::Stack
     DeletionPolicy: Delete
     UpdateReplacePolicy: Delete
@@ -93,7 +93,7 @@ Resources:
       TemplateURL: !Sub 'https://${HpcRecipesS3Bucket}.s3.us-east-1.amazonaws.com/${HpcRecipesBranch}/recipes/pcs/hpc_ready_ami/assets/components/install-pcs-slurm.yaml'
       TimeoutInMinutes: 10
 
-  SpackInstallerComponent:
+  SpackInstallerStack:
     Type: AWS::CloudFormation::Stack
     DeletionPolicy: Delete
     UpdateReplacePolicy: Delete
@@ -104,7 +104,7 @@ Resources:
       TemplateURL: !Sub 'https://${HpcRecipesS3Bucket}.s3.us-east-1.amazonaws.com/${HpcRecipesBranch}/recipes/pcs/hpc_ready_ami/assets/components/install-spack.yaml'
       TimeoutInMinutes: 10
 
-  SsmAgentComponent:
+  SsmAgentStack:
     Type: AWS::CloudFormation::Stack
     DeletionPolicy: Delete
     UpdateReplacePolicy: Delete
@@ -115,7 +115,7 @@ Resources:
       TemplateURL: !Sub 'https://${HpcRecipesS3Bucket}.s3.us-east-1.amazonaws.com/${HpcRecipesBranch}/recipes/pcs/hpc_ready_ami/assets/components/install-ssm-agent.yaml'
       TimeoutInMinutes: 10
 
-  OptimizePerformanceComponent:
+  OptimizePerformanceStack:
     Type: AWS::CloudFormation::Stack
     DeletionPolicy: Delete
     UpdateReplacePolicy: Delete
@@ -126,7 +126,7 @@ Resources:
       TemplateURL: !Sub 'https://${HpcRecipesS3Bucket}.s3.us-east-1.amazonaws.com/${HpcRecipesBranch}/recipes/pcs/hpc_ready_ami/assets/components/optimize-performance.yaml'
       TimeoutInMinutes: 10
 
-  UpdateOsComponent:
+  UpdateOsStack:
     Type: AWS::CloudFormation::Stack
     DeletionPolicy: Delete
     UpdateReplacePolicy: Delete
@@ -140,51 +140,51 @@ Resources:
 Outputs:
   CloudwatchAgentComponent:
     Description: CloudwatchAgentComponent
-    Value: !GetAtt [ CloudwatchAgentComponent, Outputs.ImageBuilderComponent ]
+    Value: !GetAtt [ CloudwatchAgentStack, Outputs.ImageBuilderComponent ]
     Export:
       Name: !Sub "${AWS::StackName}-CloudwatchAgentComponent"
   EfaInstallerComponent:
     Description: EfaInstallerComponent
-    Value: !GetAtt [ EfaInstallerComponent, Outputs.ImageBuilderComponent ]
+    Value: !GetAtt [ EfaInstallerStack, Outputs.ImageBuilderComponent ]
     Export:
       Name: !Sub "${AWS::StackName}-EfaInstallerComponent"
   EfsUtilsInstallerComponent:
     Description: EfsUtilsInstallerComponent
-    Value: !GetAtt [ EfsUtilsInstallerComponent, Outputs.ImageBuilderComponent ]
+    Value: !GetAtt [ EfsUtilsInstallerStack, Outputs.ImageBuilderComponent ]
     Export:
       Name: !Sub "${AWS::StackName}-EfsUtilsInstallerComponent"
   LustreInstallerComponent:
     Description: LustreInstallerComponent
-    Value: !GetAtt [ LustreInstallerComponent, Outputs.ImageBuilderComponent ]
+    Value: !GetAtt [ LustreInstallerStack, Outputs.ImageBuilderComponent ]
     Export:
       Name: !Sub "${AWS::StackName}-LustreInstallerComponent"
   PcsAgentInstallerComponent:
     Description: PcsAgentInstallerComponent
-    Value: !GetAtt [ PcsAgentInstallerComponent, Outputs.ImageBuilderComponent ]
+    Value: !GetAtt [ PcsAgentInstallerStack, Outputs.ImageBuilderComponent ]
     Export:
       Name: !Sub "${AWS::StackName}-PcsAgentInstallerComponent"
   PcsSlurmInstallerComponent:
     Description: PcsSlurmInstallerComponent
-    Value: !GetAtt [ PcsSlurmInstallerComponent, Outputs.ImageBuilderComponent ]
+    Value: !GetAtt [ PcsSlurmInstallerStack, Outputs.ImageBuilderComponent ]
     Export:
       Name: !Sub "${AWS::StackName}-PcsSlurmInstallerComponent"
   SpackInstallerComponent:
     Description: SpackInstallerComponent
-    Value: !GetAtt [ SpackInstallerComponent, Outputs.ImageBuilderComponent ]
+    Value: !GetAtt [ SpackInstallerStack, Outputs.ImageBuilderComponent ]
     Export:
       Name: !Sub "${AWS::StackName}-SpackInstallerComponent"
   SsmAgentComponent:
     Description: SsmAgentComponent
-    Value: !GetAtt [ SsmAgentComponent, Outputs.ImageBuilderComponent ]
+    Value: !GetAtt [ SsmAgentStack, Outputs.ImageBuilderComponent ]
     Export:
       Name: !Sub "${AWS::StackName}-SsmAgentComponent"
   OptimizePerformanceComponent:
     Description: OptimizePerformanceComponent
-    Value: !GetAtt [ OptimizePerformanceComponent, Outputs.ImageBuilderComponent ]
+    Value: !GetAtt [ OptimizePerformanceStack, Outputs.ImageBuilderComponent ]
     Export:
       Name: !Sub "${AWS::StackName}-OptimizePerformanceComponent"  
   UpdateOsComponent:
     Description: UpdateOsComponent
-    Value: !GetAtt [ UpdateOsComponent, Outputs.ImageBuilderComponent ]
+    Value: !GetAtt [ UpdateOsStack, Outputs.ImageBuilderComponent ]
     Export:
       Name: !Sub "${AWS::StackName}-UpdateOsComponent"
