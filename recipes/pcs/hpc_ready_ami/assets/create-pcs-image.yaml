@@ -120,6 +120,9 @@ Resources:
       Name: !Sub 'pcs_ami-${Distro}-${Architecture}-${Vendor}-${AWS::StackName}'
       ParentImage: !FindInMap [DistroConfigs, !Ref Distro, !Ref Architecture]
       Version: !Ref SemanticVersion
+      AdditionalInstanceConfiguration:
+        SystemsManagerAgent:
+          UninstallAfterBuild: false
       BlockDeviceMappings:
         - DeviceName: !FindInMap [DistroConfigs, !Ref Distro, deviceName]
           Ebs:
