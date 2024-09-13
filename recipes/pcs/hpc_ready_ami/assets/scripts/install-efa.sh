@@ -71,7 +71,7 @@ download_verify_and_install_software() {
         echo "Line 'kernel.yama.ptrace_scope' updated to '0' in $PTRACE_FILE_PATH"
     else
         # Append the line to the file
-        sudo echo "kernel.yama.ptrace_scope = 0" | sudo tee -a "$PTRACE_FILE_PATH" > /dev/null
+        echo "kernel.yama.ptrace_scope = 0" | sudo tee -a "$PTRACE_FILE_PATH" > /dev/null
         echo "Line 'kernel.yama.ptrace_scope = 0' added to $PTRACE_FILE_PATH"
     fi
 
