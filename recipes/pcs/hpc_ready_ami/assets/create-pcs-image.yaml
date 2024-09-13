@@ -8,8 +8,8 @@ Mappings:
       name: Amazon Linux 2
       deviceName: /dev/xvda
       size: 64
-      x86ami: ami-0453ce6279422709a
-      arm64ami: ami-0e3eb8e1e59049093
+      x86: ami-0453ce6279422709a
+      arm64: ami-0e3eb8e1e59049093
     rocky-9:
       name: Rocky Linux 9
       deviceName: /dev/sda1
