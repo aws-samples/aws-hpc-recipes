@@ -43,7 +43,7 @@ Resources:
                 action: ExecuteBash
                 inputs:
                   commands:
-                    - sudo rm -rf /tmp/imagebuilder_service/ssm_installedOutputs:
+                    - sudo rm -rf /tmp/imagebuilder_service/ssm_installedOutputs
   ImageBuilderComponent:
     Value: !Ref SsmAgentComponent
     Export:
