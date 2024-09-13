@@ -198,7 +198,7 @@ Build instructions are currently confirmed to work with Rocky Linux 9.3 and 9.4.
 
 Find Rocky AMIs under Community AMIs
 
-![Image](docs/subscribe-rhel9-marketplace.png)
+![Image](docs/find-rocky-community.png)
 
 #### Ubuntu 22.04 LTS
 
