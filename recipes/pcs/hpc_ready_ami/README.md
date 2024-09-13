@@ -65,7 +65,7 @@ stack_id=$(aws cloudformation create-stack \
                --region us-east-2 \
                --capabilities "CAPABILITY_NAMED_IAM" "CAPABILITY_AUTO_EXPAND" \
                --parameters \
-               ParameterKey=Distro,ParameterValue=amzn-2 \
+               ParameterKey=Distro,ParameterValue=rocky-9 \
                ParameterKey=Architecture,ParameterValue=arm64 \
                ParameterKey=Vendor,ParameterValue=aws \
                ParameterKey=SemanticVersion,ParameterValue=$(date +%Y.%m.%d) \
