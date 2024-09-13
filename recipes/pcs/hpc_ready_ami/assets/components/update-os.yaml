@@ -29,7 +29,13 @@ Resources:
   UpdateOsComponent:
     Type: AWS::ImageBuilder::Component
     Properties:
-      Name: !Sub 'UpdateOs-${AWS::StackName}'
+      Name: !Sub
+        - 'UpdateOs-${ID}'
+        - ID: !Select 
+          - 6
+          - !Split 
+            - '-'
+            - !Ref 'AWS::StackId'
       Description: Update the OS on PCS-compatible AMI base images
       Version: '0.0.1'
       Platform: Linux
@@ -55,5 +61,3 @@ Resources:
 Outputs:
   ImageBuilderComponent:
     Value: !Ref UpdateOsComponent
-    Export:
-      Name: !Sub 'UpdateOsComponent'

@@ -29,7 +29,13 @@ Resources:
   OptimizePerformanceComponent:
     Type: AWS::ImageBuilder::Component
     Properties:
-      Name: !Sub 'OptimizePerformance-${AWS::StackName}'
+      Name: !Sub
+        - 'OptimizePerformance-${ID}'
+        - ID: !Select 
+          - 6
+          - !Split 
+            - '-'
+            - !Ref 'AWS::StackId'
       Description: Optimize HPC application peformance on PCS-compatible AMI
       Version: '0.0.1'
       Platform: Linux
@@ -55,5 +61,3 @@ Resources:
 Outputs:
   ImageBuilderComponent:
     Value: !Ref OptimizePerformanceComponent
-    Export:
-      Name: !Sub 'OptimizePerformanceComponent'

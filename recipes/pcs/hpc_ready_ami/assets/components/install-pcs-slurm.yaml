@@ -30,7 +30,13 @@ Resources:
   PcsSlurmInstallerComponent:
     Type: AWS::ImageBuilder::Component
     Properties:
-      Name: !Sub 'PcsSlurmInstaller-${AWS::StackName}'
+      Name: !Sub
+        - 'PcsSlurmInstaller-${ID}'
+        - ID: !Select 
+          - 6
+          - !Split 
+            - '-'
+            - !Ref 'AWS::StackId'
       Description: Download and install Slurm for AWS PCS
       Version: '0.0.1'
       Platform: Linux
@@ -64,5 +70,3 @@ Resources:
 Outputs:
   ImageBuilderComponent:
     Value: !Ref PcsSlurmInstallerComponent
-    Export:
-      Name: !Sub 'PcsSlurmInstallerComponent'

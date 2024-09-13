@@ -30,7 +30,13 @@ Resources:
   SpackInstallerComponent:
     Type: AWS::ImageBuilder::Component
     Properties:
-      Name: !Sub 'SpackInstaller-${AWS::StackName}'
+      Name: !Sub
+        - 'SpackInstaller-${ID}'
+        - ID: !Select 
+          - 6
+          - !Split 
+            - '-'
+            - !Ref 'AWS::StackId'      
       Description: Install Spack and optimized configurations
       Version: '0.0.1'
       Platform: Linux
@@ -61,5 +67,3 @@ Resources:
 Outputs:
   ImageBuilderComponent:
     Value: !Ref SpackInstallerComponent
-    Export:
-      Name: !Sub 'SpackInstallerComponent'

@@ -29,7 +29,13 @@ Resources:
   SsmAgentComponent:
     Type: AWS::ImageBuilder::Component
     Properties:
-      Name: !Sub 'SsmAgentInstaller-${AWS::StackName}'
+      Name: !Sub
+        - 'SsmAgentInstaller-${ID}'
+        - ID: !Select 
+          - 6
+          - !Split 
+            - '-'
+            - !Ref 'AWS::StackId'
       Description: Install SSM Agent on PCS-compatible AMI base images
       Version: '0.0.1'
       Platform: Linux
@@ -54,5 +60,3 @@ Resources:
 Outputs:
   ImageBuilderComponent:
     Value: !Ref SsmAgentComponent
-    Export:
-      Name: !Sub 'SsmAgentComponent'
