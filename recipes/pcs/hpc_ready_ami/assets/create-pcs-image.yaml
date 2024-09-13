@@ -139,7 +139,7 @@ Resources:
       Distributions:
         - Region: !Ref "AWS::Region"
           AmiDistributionConfiguration:
-            Name: !Sub 'pcs_ami-${Distro}-${Architecture}-${Vendor} [{{ imagebuilder:buildDate }}]'
+            Name: !Sub 'pcs_ami-${Distro}-${Architecture}-${Vendor} {{ imagebuilder:buildDate }}'
             Description: 'Distribute a copy of the AMI to specific accounts in the destination Region.'
             # Uncomment and provide AWS account IDs to share AMI once built
             # LaunchPermissionConfiguration:
