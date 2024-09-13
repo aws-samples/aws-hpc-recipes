@@ -242,11 +242,13 @@ Note that while the `aws-hpc-recipes-dev` is a stable resource, any directories 
 
 Here are some near-future improvements we have planned:
 
-1. Add support for installing NVIDIA drivers
-2. Add support for installing CUDA
-3. Add support for creating a custom Spack environment 
-5. Add support for installing Pyxis and enroot
-6. Add support for installing AppTainer
+[ ] Add checks for dependencies in the build scripts to enforce ordering
+[ ] Actually implement the optimize-performance script rather than having it be a stub
+[ ] Add support for installing NVIDIA drivers
+[ ] Add support for installing CUDA
+[ ] Add support for creating a custom Spack environment 
+[ ] Add support for installing Pyxis and enroot
+[ ] Add support for installing AppTainer
 
 A little further in the future, this recipe will (probably) become a standalone repository, with a different release cadence from HPC Recipes for AWS. 
 
