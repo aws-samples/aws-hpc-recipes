@@ -177,11 +177,17 @@ _Coming soon_
 
 #### Redhat Enterprise Linux 9
 
-_Coming soon_
+You must subscribe to RHEL 9 in AWS Marketplace AMIs in order to build from Redhat official AMIs.
+
+![Image](docs/subscribe-rhel9-marketplace.png)
 
 #### Rocky Linux 9
 
-Build instructions are currently confirmed to work with Rocky Linux 9.3 and 9.4
+Build instructions are currently confirmed to work with Rocky Linux 9.3 and 9.4.
+
+Find Rocky AMIs under Community AMIs
+
+![Image](docs/subscribe-rhel9-marketplace.png)
 
 #### Ubuntu 22.04 LTS
 
