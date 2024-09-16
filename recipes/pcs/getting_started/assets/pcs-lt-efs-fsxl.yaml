@@ -82,6 +82,7 @@ Resources:
             - rsync -a /home/ /tmp/home
             - echo "${EfsFilesystemId}:/ /home efs tls,_netdev" >> /etc/fstab
             - mount -a -t efs defaults
+            - if [ "enabled" == "$(sestatus | awk '/^SELinux status:/{print $3}')" ]; then setsebool -P use_nfs_home_dirs 1; fi
             - rsync -a --ignore-existing /tmp/home/ /home
             - rm -rf /tmp/home/
             # If provided, mount FSxL filesystem as /shared
@@ -125,6 +126,7 @@ Resources:
             - rsync -a /home/ /tmp/home
             - echo "${EfsFilesystemId}:/ /home efs tls,_netdev" >> /etc/fstab
             - mount -a -t efs defaults
+            - if [ "enabled" == "$(sestatus | awk '/^SELinux status:/{print $3}')" ]; then setsebool -P use_nfs_home_dirs 1; fi
             - rsync -a --ignore-existing /tmp/home/ /home
             - rm -rf /tmp/home/
             # If provided, mount FSxL filesystem as /shared
