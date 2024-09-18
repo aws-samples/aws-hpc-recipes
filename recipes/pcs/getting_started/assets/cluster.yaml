@@ -119,10 +119,11 @@ Resources:
     Type: AWS::CloudFormation::Stack
     Properties:
       Parameters:
-        SecurityGroupIds:
-          - !GetAtt [ PCSSecurityGroup, Outputs.ClusterSecurityGroupId ]
-          - !GetAtt [ PCSSecurityGroup, Outputs.InboundSshSecurityGroupId ]
-          - !GetAtt [ Networking, Outputs.SecurityGroup ]
+        VpcDefaultSecurityGroupId: !GetAtt [ Networking, Outputs.SecurityGroup ]
+        ClusterSecurityGroupId: !GetAtt [ PCSSecurityGroup, Outputs.ClusterSecurityGroupId ]
+        SshSecurityGroupId: !GetAtt [ PCSSecurityGroup, Outputs.InboundSshSecurityGroupId ]
+        EfsFilesystemSecurityGroupId: !GetAtt [ EfsStorage, Outputs.SecurityGroupId ]
+        FSxLustreFilesystemSecurityGroupId: !GetAtt [ FSxLStorage, Outputs.FSxLustreSecurityGroupId ]
         SshKeyName: !Ref KeyName
         EfsFilesystemId: !GetAtt [ EfsStorage, Outputs.EFSFilesystemId ]
         FSxLustreFilesystemId: !GetAtt [ FSxLStorage, Outputs.FSxLustreFilesystemId ]
@@ -148,15 +149,6 @@ Resources:
       amiId: !Ref AmiId
       instanceConfigs:
         - instanceType: c6i.xlarge
-
-  PCSQueueLogin:
-    Type: Custom::Resource
-    Properties:
-      ServiceToken: !GetAtt [ PCSCfnProvider, Outputs.ServiceToken ]
-      clusterIdentifier: !GetAtt [ PCSCluster, id ]
-      queueName: login
-      computeNodeGroupConfigurations:
-        - computeNodeGroupId: !GetAtt [ PCSNodeGroupLogin, id ]
 
   # Compute Node groups - Compute Nodes
   PCSNodeGroupCompute:
