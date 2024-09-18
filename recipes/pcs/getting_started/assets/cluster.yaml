@@ -2,6 +2,22 @@ AWSTemplateFormatVersion: '2010-09-09'
 Transform: AWS::Serverless-2016-10-31
 Description: AWS Parallel Computing Service Cluster creation
 
+### Stack metadata
+Metadata:
+  AWS::CloudFormation::Interface:
+    ParameterGroups:
+      - Label:
+          default: PCS cluster configuration
+        Parameters:
+          - KeyName
+          - AmiId
+          - ClientIpCidr
+      - Label:
+          default: HPC Recipes configuration
+        Parameters:
+          - HpcRecipesS3Bucket
+          - HpcRecipesBranch
+
 Parameters:
 
   KeyName:
@@ -21,19 +37,32 @@ Parameters:
     AllowedPattern: (\d{1,3})\.(\d{1,3})\.(\d{1,3})\.(\d{1,3})/(\d{1,2})
     ConstraintDescription: Value must be a valid IP or network range of the form x.x.x.x/x.
 
+  HpcRecipesS3Bucket:
+    Type: String
+    Default: aws-hpc-recipes
+    Description: HPC Recipes for AWS S3 bucket
+    AllowedValues:
+         - aws-hpc-recipes
+         - aws-hpc-recipes-dev
+  HpcRecipesBranch:
+    Type: String
+    Default: main
+    Description: HPC Recipes for AWS release branch
+    AllowedPattern: '^(?!.*/\.git$)(?!.*/\.)(?!.*\\.\.)[a-zA-Z0-9-_\.]+$'
+
 Resources:
 
   PCSCfnProvider:
     Type: AWS::CloudFormation::Stack
     Properties:
-      TemplateURL: !Sub https://aws-hpc-recipes.s3.amazonaws.com/main/recipes/pcs/getting_started/assets/pcs-cfn.yaml
+      TemplateURL: !Sub 'https://${HpcRecipesS3Bucket}.s3.amazonaws.com/${HpcRecipesBranch}/recipes/pcs/getting_started/assets/pcs-cfn.yaml'
 
   Networking:
     Type: AWS::CloudFormation::Stack
     Properties:
       Parameters:
         ProvisionSubnetsC: "False"
-      TemplateURL: https://aws-hpc-recipes.s3.us-east-1.amazonaws.com/main/recipes/net/hpc_large_scale/assets/main.yaml
+      TemplateURL: !Sub 'https://${HpcRecipesS3Bucket}.s3.amazonaws.com/${HpcRecipesBranch}/recipes/net/hpc_large_scale/assets/main.yaml'
 
   EfsStorage:
     Type: AWS::CloudFormation::Stack
@@ -42,7 +71,7 @@ Resources:
         SubnetIds: !GetAtt [ Networking, Outputs.DefaultPrivateSubnet ]
         SubnetCount: 1
         VpcId: !GetAtt [ Networking, Outputs.VPC ]
-      TemplateURL: https://aws-hpc-recipes.s3.us-east-1.amazonaws.com/main/recipes/storage/efs_simple/assets/main.yaml
+      TemplateURL: !Sub 'https://${HpcRecipesS3Bucket}.s3.amazonaws.com/${HpcRecipesBranch}/recipes/storage/efs_simple/assets/main.yaml'
 
   FSxLStorage:
     Type: AWS::CloudFormation::Stack
@@ -51,7 +80,7 @@ Resources:
         PerUnitStorageThroughput: 125
         SubnetId: !GetAtt [ Networking, Outputs.DefaultPrivateSubnet ]
         VpcId: !GetAtt [ Networking, Outputs.VPC ]
-      TemplateURL: https://aws-hpc-recipes.s3.us-east-1.amazonaws.com/main/recipes/storage/fsx_lustre/assets/persistent.yaml
+      TemplateURL: !Sub 'https://${HpcRecipesS3Bucket}.s3.amazonaws.com/${HpcRecipesBranch}/recipes/storage/fsx_lustre/assets/persistent.yaml'
 
   PCSSecurityGroup:
     Type: AWS::CloudFormation::Stack
@@ -59,7 +88,7 @@ Resources:
       Parameters:
         ClientIpCidr: !Ref ClientIpCidr
         VpcId: !GetAtt [ Networking, Outputs.VPC ]
-      TemplateURL: https://aws-hpc-recipes.s3.amazonaws.com/main/recipes/pcs/getting_started/assets/pcs-cluster-sg.yaml
+      TemplateURL: !Sub 'https://${HpcRecipesS3Bucket}.s3.amazonaws.com/${HpcRecipesBranch}/recipes/pcs/getting_started/assets/pcs-cluster-sg.yaml'
 
   # Cluster
 
@@ -84,20 +113,21 @@ Resources:
     Properties:
       Parameters:
         RoleName: !Sub 'instance-role-${AWS::StackName}'
-      TemplateURL: https://aws-hpc-recipes.s3.us-east-1.amazonaws.com/main/recipes/pcs/getting_started/assets/pcs-iip-minimal.yaml
+      TemplateURL: !Sub 'https://${HpcRecipesS3Bucket}.s3.amazonaws.com/${HpcRecipesBranch}/recipes/pcs/getting_started/assets/pcs-iip-minimal.yaml'
 
   PCSLaunchTemplate:
     Type: AWS::CloudFormation::Stack
     Properties:
       Parameters:
-        VpcDefaultSecurityGroupId: !GetAtt [ Networking, Outputs.SecurityGroup ]
-        ClusterSecurityGroupId: !GetAtt [ PCSSecurityGroup, Outputs.ClusterSecurityGroupId ]
-        SshSecurityGroupId: !GetAtt [ PCSSecurityGroup, Outputs.InboundSshSecurityGroupId ]
+        SecurityGroupIds:
+          - !GetAtt [ PCSSecurityGroup, Outputs.ClusterSecurityGroupId ]
+          - !GetAtt [ PCSSecurityGroup, Outputs.InboundSshSecurityGroupId ]
+          - !GetAtt [ Networking, Outputs.SecurityGroup ]
         SshKeyName: !Ref KeyName
         EfsFilesystemId: !GetAtt [ EfsStorage, Outputs.EFSFilesystemId ]
         FSxLustreFilesystemId: !GetAtt [ FSxLStorage, Outputs.FSxLustreFilesystemId ]
         FSxLustreFilesystemMountName: !Sub 'pcs-mount-${AWS::StackName}'
-      TemplateURL: https://aws-hpc-recipes.s3.us-east-1.amazonaws.com/main/recipes/pcs/getting_started/assets/pcs-lt-efs-fsxl.yaml
+      TemplateURL: !Sub 'https://${HpcRecipesS3Bucket}.s3.amazonaws.com/${HpcRecipesBranch}/recipes/pcs/getting_started/assets/cfn-pcs-lt-efs-fsxl.yaml'
 
   # Compute Node groups - Login Nodes
   PCSNodeGroupLogin:
