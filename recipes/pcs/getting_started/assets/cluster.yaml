@@ -156,7 +156,7 @@ Resources:
     Properties:
       ServiceToken: !GetAtt [ PCSCfnProvider, Outputs.ServiceToken ]
       clusterIdentifier: !GetAtt [ PCSCluster, id ]
-      computeNodeGroupName: compute
+      computeNodeGroupName: compute-1
       scalingConfiguration:
         minInstanceCount: 0
         maxInstanceCount: 4
@@ -175,7 +175,7 @@ Resources:
     Properties:
       ServiceToken: !GetAtt [ PCSCfnProvider, Outputs.ServiceToken ]
       clusterIdentifier: !GetAtt [ PCSCluster, id ]
-      queueName: compute
+      queueName: demo
       computeNodeGroupConfigurations:
         - computeNodeGroupId: !GetAtt [ PCSNodeGroupCompute, id ]
 
