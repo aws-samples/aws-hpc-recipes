@@ -43,11 +43,11 @@ To create a demonstration PCS cluster:
     * Under **Capabilities and transforms**
         * Check all three boxes
     * Choose **Create stack**
-4. Monitor the status of the stack named **get-started-cfn**. When its status is `CREATE_COMPLETE`, you can interact with the PCS cluster. 
+4. Monitor the status of your stack (e.g. **get-started-cfn**). When its status is `CREATE_COMPLETE`, you can interact with the PCS cluster. 
 
 ### Interact with the PCS cluster
 
-You can administer your cluster using the AWS PCS console, or you can connect to one of its login nodes to run jobs and manage data. The **get-started-cfn** CloudFormation stack can help you with this. In the [AWS CloudFormation console](https://console.amazonaws.com/cloudformation/home), choose the stack named **get-started-cfn**. Then, navigate to the **Outputs** tab. 
+You can administer your cluster using the AWS PCS console, or you can connect to one of its login nodes to run jobs and manage data. Your new CloudFormation stack can help you with this. In the [AWS CloudFormation console](https://console.amazonaws.com/cloudformation/home), choose the stack you have created. Then, navigate to the **Outputs** tab. 
 
 You should see two URLs:
 * **PcsConsoleUrl** This is a link to the cluster you created, in the PCS console. Go here to explore the cluster, node group, and queue configuration. 
@@ -57,7 +57,6 @@ Once you have connected to a login instance, follow along with the **Getting Sta
 
 ### Cleaning Up
 
-When you are done using your PCS cluster, you can delete it and all its associated resources by navigating to the AWS CloudFormation console and deleting the **get-started-cfn** stack. 
+When you are done using your PCS cluster, you can delete it and all its associated resources by navigating to the AWS CloudFormation console and deleting the stack you created.
 
-**Note** If you have created additional compute node groups or queues in your cluster, beyond the `login` and `compute-1` groups created by the CloudFormation stack, you will need to delete those resources in the PCS console before deleting the **get-started-cfn** stack. 
-
+**Note** If you have created additional compute node groups or queues in your cluster, beyond the `login` and `compute-1` groups created by the CloudFormation stack, you will need to delete those resources in the PCS console before deleting the CloudFormation stack. 
