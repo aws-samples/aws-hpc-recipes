@@ -183,3 +183,21 @@ Outputs:
   ClusterId:
     Description: The ID of the PCS cluster
     Value: !GetAtt [ PCSCluster, id ]
+  PcsConsoleUrl:
+    Description: URL to access the cluster in the PCS console
+    Value: !Sub
+      - https://${ConsoleDomain}/pcs/home?region=${AWS::Region}#/clusters/${ClusterId}
+      - { ConsoleDomain: !Sub '${AWS::Region}.console.aws.amazon.com',
+          ClusterId: !GetAtt [ PCSCluster, id ] 
+        }
+    Export:
+      Name: !Sub ${AWS::StackName}-PcsConsoleUrl
+  Ec2ConsoleUrl:
+    Description: URL to access instance(s) in the login node group
+    Value: !Sub
+      - https://${ConsoleDomain}/ec2/home?region=${AWS::Region}#Instances:instanceState=running;tag:aws:pcs:compute-node-group-id=${NodeGroupLoginId}
+      - { ConsoleDomain: !Sub '${AWS::Region}.console.aws.amazon.com',
+          NodeGroupLoginId: !GetAtt [ PCSNodeGroupLogin, id ] 
+        }
+    Export:
+      Name: !Sub ${AWS::StackName}-Ec2ConsoleUrl
