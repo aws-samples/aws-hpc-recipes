@@ -23,8 +23,8 @@ You can launch a complete AWS PCS cluster with the same design and capabilities 
 ### Create a PCS cluster
 
 To create a demonstration PCS cluster:
-1. Ensure you have an Amazon EC2 [SSH key created](https://docs.aws.amazon.com/AWSEC2/latest/UserGuide/create-key-pairs.html#having-ec2-create-your-key-pair) in the Region where you will try PCS.
-2. Choose the quick-create link that corresponds to the region where you will try PCS. 
+1. Ensure you have an Amazon EC2 [SSH key created](https://docs.aws.amazon.com/AWSEC2/latest/UserGuide/create-key-pairs.html#having-ec2-create-your-key-pair) in the region where you will work with PCS.
+2. Choose the quick-create link that corresponds to the region where you will work with PCS. 
     * `us-east-1` (Virginia, United States) [![Launch](../../../docs/media/launch-stack.svg)](https://console.aws.amazon.com/cloudformation/home?region=us-east-1#/stacks/create/review?stackName=get-started-cfn&templateURL=https://aws-hpc-recipes-dev.s3.us-east-1.amazonaws.com/cfn/recipes/pcs/getting_started/assets/cluster.yaml&param_HpcRecipesS3Bucket=aws-hpc-recipes-dev&param_HpcRecipesBranch=cfn&param_ClientIpCidr=0.0.0.0%2F0)
     * `us-east-2` (Ohio, United States) [![Launch](../../../docs/media/launch-stack.svg)](https://console.aws.amazon.com/cloudformation/home?region=us-east-2#/stacks/create/review?stackName=get-started-cfn&templateURL=https://aws-hpc-recipes-dev.s3.us-east-1.amazonaws.com/cfn/recipes/pcs/getting_started/assets/cluster.yaml&param_HpcRecipesS3Bucket=aws-hpc-recipes-dev&param_HpcRecipesBranch=cfn&param_ClientIpCidr=0.0.0.0%2F0)
     * `us-west-2` (Oregon, United States) [![Launch](../../../docs/media/launch-stack.svg)](https://console.aws.amazon.com/cloudformation/home?region=us-west-2#/stacks/create/review?stackName=get-started-cfn&templateURL=https://aws-hpc-recipes-dev.s3.us-east-1.amazonaws.com/cfn/recipes/pcs/getting_started/assets/cluster.yaml&param_HpcRecipesS3Bucket=aws-hpc-recipes-dev&param_HpcRecipesBranch=cfn&param_ClientIpCidr=0.0.0.0%2F0)
@@ -34,7 +34,8 @@ To create a demonstration PCS cluster:
     * `ap-northeast-1` (Tokyo, Japan) [![Launch](../../../docs/media/launch-stack.svg)](https://console.aws.amazon.com/cloudformation/home?region=us-west-2#/stacks/create/review?stackName=get-started-cfn&templateURL=https://aws-hpc-recipes-dev.s3.us-east-1.amazonaws.com/cfn/recipes/pcs/getting_started/assets/cluster.yaml&param_HpcRecipesS3Bucket=aws-hpc-recipes-dev&param_HpcRecipesBranch=cfn&param_ClientIpCidr=0.0.0.0%2F0)
     * `ap-southeast-1` (Singapore) [![Launch](../../../docs/media/launch-stack.svg)](https://console.aws.amazon.com/cloudformation/home?region=us-west-2#/stacks/create/review?stackName=get-started-cfn&templateURL=https://aws-hpc-recipes-dev.s3.us-east-1.amazonaws.com/cfn/recipes/pcs/getting_started/assets/cluster.yaml&param_HpcRecipesS3Bucket=aws-hpc-recipes-dev&param_HpcRecipesBranch=cfn&param_ClientIpCidr=0.0.0.0%2F0)
     * `ap-southeast-2` (Sydney, Australia) [![Launch](../../../docs/media/launch-stack.svg)](https://console.aws.amazon.com/cloudformation/home?region=us-west-2#/stacks/create/review?stackName=get-started-cfn&templateURL=https://aws-hpc-recipes-dev.s3.us-east-1.amazonaws.com/cfn/recipes/pcs/getting_started/assets/cluster.yaml&param_HpcRecipesS3Bucket=aws-hpc-recipes-dev&param_HpcRecipesBranch=cfn&param_ClientIpCidr=0.0.0.0%2F0)
-3. Follow the instructions in the AWS CloudFormation console. 
+3. Follow the instructions in the AWS CloudFormation console:
+    * (Optional) Customize the stack name.
     * Under **Parameters**
         * For **KeyName** choose an SSH key for connecting to the login nodes
         * Leave **AmiId** empty
@@ -47,9 +48,9 @@ To create a demonstration PCS cluster:
 
 ### Interact with the PCS cluster
 
-You can administer your cluster using the AWS PCS console, or you can connect to one of its login nodes to run jobs and manage data. Your new CloudFormation stack can help you with this. In the [AWS CloudFormation console](https://console.amazonaws.com/cloudformation/home), choose the stack you have created. Then, navigate to the **Outputs** tab. 
+You can administer your new cluster using the AWS PCS console, or you can connect to one of its login nodes to run jobs and manage data. Your new CloudFormation stack can help you with this. In the [AWS CloudFormation console](https://console.amazonaws.com/cloudformation/home), choose the stack you have created. Then, navigate to the **Outputs** tab. 
 
-You should see two URLs:
+There will be two URLs:
 * **PcsConsoleUrl** This is a link to the cluster you created, in the PCS console. Go here to explore the cluster, node group, and queue configuration. 
 * **Ec2ConsoleUrl** This link takes you to a filtered view of the EC2 console that shows the instance(s) managed by the `login` node group. Select an instance and choose **Connect**. The instance should be configured to support inbound SSH and Amazon SSM connections in the web browser. 
 
