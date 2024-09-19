@@ -234,22 +234,6 @@ Resources:
         - Ref: VpcId
     Type: AWS::EC2::VPCGatewayAttachment
 
-  SecurityGroup:
-    Type: AWS::EC2::SecurityGroup
-    Properties:
-        GroupDescription: Allow all traffic from resources in VPC
-        VpcId:
-          Fn::If:
-            - CreateVpc
-            - Ref: Vpc
-            - Ref: VpcId
-        SecurityGroupIngress:
-        - IpProtocol: -1
-          CidrIp: !Ref VpcCIDR
-        SecurityGroupEgress:
-        - IpProtocol: -1
-          CidrIp: !Ref VpcCIDR
-
 Outputs:
   VPC:
     Value:
@@ -279,8 +263,3 @@ Outputs:
         - Ref: InternetGatewayId
     Export:
       Name: !Sub "${AWS::StackName}-InternetGateway"
-  SecurityGroup:
-    Description: The ID of the local security group
-    Value: !Ref SecurityGroup
-    Export:
-      Name: !Sub "${AWS::StackName}-SecurityGroup"

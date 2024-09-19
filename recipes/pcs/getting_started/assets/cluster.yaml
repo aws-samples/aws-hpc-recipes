@@ -62,9 +62,9 @@ Resources:
   Networking:
     Type: AWS::CloudFormation::Stack
     Properties:
-      # Parameters:
-      #   ProvisionSubnetsC: "False"
-      TemplateURL: !Sub 'https://${HpcRecipesS3Bucket}.s3.amazonaws.com/${HpcRecipesBranch}/recipes/net/hpc_basic/assets/public-private.yaml'
+      Parameters:
+        ProvisionSubnetsC: "False"
+      TemplateURL: !Sub 'https://${HpcRecipesS3Bucket}.s3.amazonaws.com/${HpcRecipesBranch}/recipes/net/hpc_large_scale/assets/main.yaml'
 
   EfsStorage:
     Type: AWS::CloudFormation::Stack
