@@ -114,7 +114,9 @@ Resources:
     Type: AWS::CloudFormation::Stack
     Properties:
       Parameters:
-        RoleName: !Sub 'instance-role-${AWS::StackName}'
+        # We have to regionalize this in case CX use the template in more than one region. Otherwise,
+        # the create action will fail since instance-role-${AWS::StackName} already exists!
+        RoleName: !Sub '${AWS::StackName}-${AWS::Region}'
       TemplateURL: !Sub 'https://${HpcRecipesS3Bucket}.s3.amazonaws.com/${HpcRecipesBranch}/recipes/pcs/getting_started/assets/pcs-iip-minimal.yaml'
 
   PCSLaunchTemplate:
