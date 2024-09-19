@@ -51,7 +51,7 @@ Parameters:
     AllowedValues:
       - "2.15"
       - "2.12"
-    Default: "2.12"
+    Default: "2.15"
 
 Resources:
 
@@ -167,6 +167,9 @@ Resources:
         DataCompressionType: !Ref Compression
         DeploymentType: PERSISTENT_2
         PerUnitStorageThroughput: !Ref PerUnitStorageThroughput
+      Tags:
+        - Key: HPCRecipes
+          Value: "true"
 
 Outputs:
   FSxLustreFilesystemId:
@@ -174,8 +177,13 @@ Outputs:
     Value: !Ref FSxLFilesystem
     Export:
       Name: !Sub ${AWS::StackName}-FSxLustreFilesystemId
+  FSxLustreMountName:
+    Description: The mount name of the FSxL filesystem that has been created
+    Value: !GetAtt FSxLFilesystem.LustreMountName
+    Export:
+      Name: !Sub ${AWS::StackName}-FSxLustreMountName
   FSxLustreSecurityGroupId:
-    Description: The ID of the security group allowing access to FSxL filesystem
+    Description: Clients join this group for access to the FSx for Lustre filesystem
     Value: !Ref LustreClientsSG
     Export:
       Name: !Sub ${AWS::StackName}-FSxLustreSecurityGroupId
