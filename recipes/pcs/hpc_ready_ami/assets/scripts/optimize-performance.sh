@@ -56,7 +56,7 @@ disable_deeper_cstates() {
             GRUB_SUB='s/^GRUB_CMDLINE_LINUX=".*"/GRUB_CMDLINE_LINUX="intel_idle.max_cstate=0 processor.max_cstate=1"/'
         fi
 
-        sudo sed -i ${GRUB_SUB} /etc/default/grub
+        sudo sed -i "${GRUB_SUB}" /etc/default/grub
         sudo ${GRUB_COMMAND}
 
     else
