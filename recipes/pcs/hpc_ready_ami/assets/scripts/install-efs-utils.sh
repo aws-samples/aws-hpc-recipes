@@ -53,7 +53,7 @@ increase_watchdog_poll_interval() {
 # Ref: https://github.com/aws/aws-parallelcluster-cookbook/pull/2357
 
     if [ -f "/etc/amazon/efs/efs-utils.conf" ]; then
-        sed -i 's/^poll_interval_sec = 1$/poll_interval_sec = 10/' /etc/amazon/efs/efs-utils.conf
+        sudo sed -i 's/^poll_interval_sec = 1$/poll_interval_sec = 10/' /etc/amazon/efs/efs-utils.conf
     fi
 }
 
