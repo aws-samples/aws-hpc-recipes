@@ -29,12 +29,12 @@ disable_select_cron_tasks() {
 
     if [ -d "/etc/cron.daily" ]; then
         for task in man-db man-db.cron mlocate; do
-            grep -qxF "$task" "/etc/cron.daily/jobs.deny" || echo "$task" >> "/etc/cron.daily/jobs.deny"
+            grep -qxF "$task" "/etc/cron.daily/jobs.deny" || sudo echo "$task" | sudo tee -a "/etc/cron.daily/jobs.deny" > /dev/null
         done
     fi
     if [ -d "/etc/cron.weekly" ]; then
         for task in man-db; do
-            grep -qxF "$task" "/etc/cron.daily/jobs.weekly" || echo "$task" >> "/etc/cron.daily/jobs.deny"
+            grep -qxF "$task" "/etc/cron.daily/jobs.weekly" || sudo echo "$task" | sudo tee -a "/etc/cron.daily/jobs.weekly" > /dev/null
         done
     fi
 }
@@ -48,14 +48,16 @@ disable_deeper_cstates() {
 
         logger "Disabling deeper C-States" "INFO"
 
-        GRUB_COMMAND="sudo grub2-mkconfig -o /boot/grub2/grub.cfg"
+        GRUB_COMMAND="grub2-mkconfig -o /boot/grub2/grub.cfg"
         GRUB_SUB='s/^GRUB_CMDLINE_LINUX_DEFAULT=".*"/GRUB_CMDLINE_LINUX_DEFAULT="intel_idle.max_cstate=0 processor.max_cstate=1"/'
 
         if [ "${OS}" == "ubuntu" ]; then
-            GRUB_COMMAND="sudo /usr/sbin/update-grub"
+            GRUB_COMMAND="/usr/sbin/update-grub"
             GRUB_SUB='s/^GRUB_CMDLINE_LINUX=".*"/GRUB_CMDLINE_LINUX="intel_idle.max_cstate=0 processor.max_cstate=1"/'
         fi
 
+        sudo sed -i ${GRUB_SUB} /etc/default/grub
+        sudo ${GRUB_COMMAND}
 
     else
         logger "Non x64 architecture detected, skipping C-States optimization" "INFO"
