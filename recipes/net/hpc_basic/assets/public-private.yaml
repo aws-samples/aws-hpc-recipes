@@ -21,8 +21,9 @@ Metadata:
 
 Parameters:
   AvailabilityZone:
-    Description: "(Optional) Availability Zone in which you want to create your subnet(s). Required if you opt to create a VPC."
+    Description: "(Optional) Availability Zone in which you want to create subnet(s)."
     Type: String
+    Default: ''
   InternetGatewayId:
     Description: "(Optional) The id of the Internet Gateway. Required if using an existing VPC."
     Type: String
@@ -59,6 +60,11 @@ Conditions:
     Fn::Not:
     - Fn::Equals:
       - Ref: InternetGatewayId
+      - ''
+  ProvidedAz:
+    Fn::Not:
+    - Fn::Equals:
+      - Ref: AvailabilityZone
       - ''
 
 Resources:
@@ -139,13 +145,28 @@ Resources:
   Private:
     Properties:
       AvailabilityZone:
-        Ref: AvailabilityZone
+        Fn::If:
+        - ProvidedAz
+        - Ref: AvailabilityZone
+        - Fn::Select:
+          - 0
+          - Fn::GetAZs: 
+              Ref: AWS::Region
       CidrBlock:
         Ref: PrivateCIDR
       MapPublicIpOnLaunch: false
       Tags:
       - Key: Name
-        Value: !Sub '${AWS::StackName}:PrivateSubnetA-${AvailabilityZone}'
+        Value: !Sub
+          - '${AWS::StackName}:PrivateSubnetA-${AZ}'
+          - AZ:
+              Fn::If:
+              - ProvidedAz
+              - Ref: AvailabilityZone
+              - Fn::Select:
+                - 0
+                - Fn::GetAZs: 
+                    Ref: AWS::Region
       - Key: Stack
         Value:
           Ref: AWS::StackId
@@ -159,13 +180,28 @@ Resources:
   Public:
     Properties:
       AvailabilityZone:
-        Ref: AvailabilityZone
+        Fn::If:
+        - ProvidedAz
+        - Ref: AvailabilityZone
+        - Fn::Select:
+          - 0
+          - Fn::GetAZs: 
+              Ref: AWS::Region
       CidrBlock:
         Ref: PublicCIDR
       MapPublicIpOnLaunch: true
       Tags:
       - Key: Name
-        Value: !Sub '${AWS::StackName}:PublicSubnetA-${AvailabilityZone}'
+        Value: !Sub
+          - '${AWS::StackName}:PublicSubnetA-${AZ}'
+          - AZ:
+              Fn::If:
+              - ProvidedAz
+              - Ref: AvailabilityZone
+              - Fn::Select:
+                - 0
+                - Fn::GetAZs: 
+                    Ref: AWS::Region
       - Key: Stack
         Value:
           Ref: AWS::StackId
@@ -234,6 +270,20 @@ Resources:
         - Ref: VpcId
     Type: AWS::EC2::VPCGatewayAttachment
 
+  SecurityGroup:
+    Condition: CreateVpc
+    Type: AWS::EC2::SecurityGroup
+    Properties:
+        GroupDescription: Allow all traffic from resources in VPC
+        VpcId:
+          Ref: Vpc
+        SecurityGroupIngress:
+        - IpProtocol: -1
+          CidrIp: !Ref VpcCIDR
+        SecurityGroupEgress:
+        - IpProtocol: -1
+          CidrIp: !Ref VpcCIDR
+
 Outputs:
   VPC:
     Value:
@@ -263,3 +313,11 @@ Outputs:
         - Ref: InternetGatewayId
     Export:
       Name: !Sub "${AWS::StackName}-InternetGateway"
+  SecurityGroup:
+    Description: The ID of the within-VPC security group
+    Value: !If
+        - CreateVpc
+        - Ref: SecurityGroup
+        - AWS::NoValue
+    Export:
+      Name: !Sub "${AWS::StackName}-SecurityGroup"
