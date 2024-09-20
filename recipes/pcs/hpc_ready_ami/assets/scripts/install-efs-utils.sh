@@ -47,24 +47,38 @@ build_and_install_deb() {
     rm -rf "$temp_dir"
 }
 
+increase_watchdog_poll_interval() {
+
+# Increase EFS-utils watchdog poll interval to 10 seconds
+# Ref: https://github.com/aws/aws-parallelcluster-cookbook/pull/2357
+
+    if [ -f "/etc/amazon/efs/efs-utils.conf" ]; then
+        sed -i 's/^poll_interval_sec = 1$/poll_interval_sec = 10/' /etc/amazon/efs/efs-utils.conf
+    fi
+}
+
 handle_ubuntu_22.04() {
     logger "Installing on Ubuntu 22.04" "INFO"
     build_and_install_deb
+    increase_watchdog_poll_interval
 }
 
 handle_rhel_9() { 
     logger "Installing on RHEL 9" "INFO"
     build_and_install_rpm
+    increase_watchdog_poll_interval
 }
 
 handle_rocky_9() {
     logger "Installing on Rocky Linux 9" "INFO"
     build_and_install_rpm
+    increase_watchdog_poll_interval
 }
 
 handle_amzn_2() {
     logger "Installing on Amazon Linux 2" "INFO"
     sudo yum -y install amazon-efs-utils
+    increase_watchdog_poll_interval
 }
 
 # Main function
