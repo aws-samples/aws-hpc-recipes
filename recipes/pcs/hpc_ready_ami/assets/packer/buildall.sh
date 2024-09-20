@@ -10,7 +10,7 @@
 REGION=us-east-2
 # To change HPC recipes source, update HPC_RECIPES_S3_BUCKET and HPC_RECIPES_BRANCH
 HPC_RECIPES_S3_BUCKET=aws-hpc-recipes-dev
-HPC_RECIPES_BRANCH=pcs-ib
+HPC_RECIPES_BRANCH=pcsami
 # To use an alternative template, change TEMPLATE_FILE
 TEMPLATE_FILE=template.json
 # Change the prefix for EC2 'AMI name'
