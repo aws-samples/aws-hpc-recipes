@@ -295,7 +295,7 @@ Note that while the `aws-hpc-recipes-dev` is a stable resource, any directories 
 Here are some near-future improvements we have planned:
 
 - [ ] Add checks for dependencies in the build scripts to enforce ordering
-- [ ] Actually implement the optimize-performance script rather than having it be a stub
+- [x] Actually implement the optimize-performance script rather than having it be a stub
 - [ ] Add support for creating a custom Spack environment 
 - [ ] Add support for installing NVIDIA drivers
   - [ ] Do not re-install NVIDIA drivers if present
