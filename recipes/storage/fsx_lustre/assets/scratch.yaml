@@ -41,7 +41,7 @@ Parameters:
     AllowedValues:
       - "2.15"
       - "2.12"
-    Default: "2.12"
+    Default: "2.15"
 
 Resources:
 
@@ -156,6 +156,9 @@ Resources:
       LustreConfiguration:
         DataCompressionType: !Ref Compression
         DeploymentType: SCRATCH_2
+      Tags:
+        - Key: HPCRecipes
+          Value: "true"
 
 Outputs:
   FSxLustreFilesystemId:
@@ -163,8 +166,13 @@ Outputs:
     Value: !Ref FSxLFilesystem
     Export:
       Name: !Sub ${AWS::StackName}-FSxLustreFilesystemId
+  FSxLustreMountName:
+    Description: The mount name of the FSxL filesystem that has been created
+    Value: !GetAtt FSxLFilesystem.LustreMountName
+    Export:
+      Name: !Sub ${AWS::StackName}-FSxLustreMountName
   FSxLustreSecurityGroupId:
-    Description: Clients join this grouo for access to the FSx for Lustre filesystem
+    Description: Clients join this group for access to the FSx for Lustre filesystem
     Value: !Ref LustreClientsSG
     Export:
       Name: !Sub ${AWS::StackName}-FSxLustreSecurityGroupId
