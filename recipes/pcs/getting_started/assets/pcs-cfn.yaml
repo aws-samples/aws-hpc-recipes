@@ -1,0 +1,263 @@
+AWSTemplateFormatVersion: '2010-09-09'
+Transform: AWS::Serverless-2016-10-31
+Description: AWS Parallel Computing CFN helper
+
+Resources:
+
+  PCSAdministratorManagedPolicy:
+    Type: 'AWS::IAM::ManagedPolicy'
+    Properties:
+      PolicyDocument:
+        Version: '2012-10-17'
+        Statement:
+        - Sid: PCSAccess
+          Effect: Allow
+          Action:
+          - pcs:*
+          Resource: "*"
+        - Sid: EC2Access
+          Effect: Allow
+          Action:
+          - ec2:CreateNetworkInterface
+          - ec2:DescribeImages
+          - ec2:GetSecurityGroupsForVpc
+          - ec2:DescribeSubnets
+          - ec2:DescribeSecurityGroups
+          - ec2:DescribeVpcs
+          - ec2:DescribeLaunchTemplates
+          - ec2:DescribeLaunchTemplateVersions
+          - ec2:DescribeInstanceTypes
+          - ec2:RunInstances
+          - ec2:CreateFleet
+          - ec2:CreateTags
+          Resource: "*"
+        - Sid: IamInstanceProfile
+          Effect: Allow
+          Action:
+          - iam:GetInstanceProfile
+          Resource: "*"
+        - Sid: IamPassRole
+          Effect: Allow
+          Action:
+          - iam:PassRole
+          Resource:
+          - arn:aws:iam::*:role/*/AWSPCS*
+          - arn:aws:iam::*:role/AWSPCS*
+          - arn:aws:iam::*:role/aws-pcs/*
+          - arn:aws:iam::*:role/*/aws-pcs/*
+          Condition:
+            StringEquals:
+              iam:PassedToService:
+              - ec2.amazonaws.com
+        - Sid: SLRAccess
+          Effect: Allow
+          Action:
+          - iam:CreateServiceLinkedRole
+          Resource:
+          - arn:aws:iam::*:role/aws-service-role/pcs.amazonaws.com/AWSServiceRoleFor*
+          - arn:aws:iam::*:role/aws-service-role/spot.amazonaws.com/AWSServiceRoleFor*
+          Condition:
+            StringLike:
+              iam:AWSServiceName:
+              - pcs.amazonaws.com
+              - spot.amazonaws.com
+        - Sid: AccessKMSKey
+          Effect: Allow
+          Action:
+          - kms:Decrypt
+          - kms:Encrypt
+          - kms:GenerateDataKey
+          - kms:CreateGrant
+          - kms:DescribeKey
+          Resource: "*"
+        - Sid: SecretManagementAccess
+          Effect: Allow
+          Action:
+          - secretsmanager:CreateSecret
+          - secretsmanager:TagResource
+          - secretsmanager:UpdateSecret
+          Resource: "*"
+        - Sid: ServiceLogsDelivery
+          Effect: Allow
+          Action:
+          - pcs:AllowVendedLogDeliveryForResource
+          - logs:PutDeliverySource
+          - logs:PutDeliveryDestination
+          - logs:CreateDelivery
+          Resource: "*"
+
+  PCSClusterLambdaExecutionRole:
+    Type: AWS::IAM::Role
+    Properties:
+      AssumeRolePolicyDocument:
+        Version: '2012-10-17'
+        Statement:
+          - Effect: Allow
+            Principal:
+              Service: lambda.amazonaws.com
+            Action: sts:AssumeRole
+      ManagedPolicyArns:
+        # - arn:aws:iam::aws:policy/AdministratorAccess
+        - arn:aws:iam::aws:policy/service-role/AWSLambdaBasicExecutionRole
+        - !Ref PCSAdministratorManagedPolicy
+
+  PCSFunctionLogGroup:
+    Type: AWS::Logs::LogGroup
+    DeletionPolicy: Retain
+    Properties:
+      RetentionInDays: 90
+      LogGroupName: !Sub /aws/lambda/${PCSFunction}
+
+  PCSBotoLayer:
+    Type: AWS::Lambda::LayerVersion
+    Properties:
+      LayerName: !Sub
+        - PCSLayer-${StackIdSuffix}
+        - { StackIdSuffix: !Select [2, !Split ['/', !Ref 'AWS::StackId']] }
+      Description: Library which contains recent version of Boto3 with PCS in it
+      Content:
+        S3Bucket: !Sub pcluster-cfn-${AWS::Region}
+        S3Key: boto-1.35.9.zip
+      CompatibleRuntimes:
+        - python3.11
+
+  #NOTE: needs `aws iam create-service-linked-role --aws-service-name pcs.amazonaws.com` to be run first
+  PCSFunction:
+    Type: AWS::Lambda::Function
+    Properties:
+      FunctionName: !Sub
+        - pcs-${StackIdSuffix}
+        - { StackIdSuffix: !Select [2, !Split ['/', !Ref 'AWS::StackId']] }
+      TracingConfig:
+        Mode: Active
+      MemorySize: 2048
+      Timeout: 900
+      Layers:
+        - !Ref PCSBotoLayer
+      Code:
+        ZipFile: |
+          import boto3
+          import botocore
+          from botocore.exceptions import WaiterError
+          import cfnresponse
+          import json
+          import time
+          print(f"Boto3 version: {boto3.__version__}")
+
+          def drop_keys(_dict, keys):
+            return {k: v for k, v in _dict.items() if k not in keys}
+
+          def camel_case(snake_case):
+            """Convert the given snake case word into a PascalCase one."""
+            parts = iter(snake_case.split("_"))
+            pascal = "".join(word.title() for word in parts)
+            camel = pascal[0].lower() + pascal[1:]
+            return camel
+
+          def flatten(obj, ret={}, path=""):
+            """Flatten a nested map using dot-notation for keys."""
+            if isinstance(obj, list):  # convert lists to dicts for flattening
+              return flatten({str(i): v for i, v in enumerate(obj)}, ret, path)
+            for k, v in obj.items():  # recurse on complex objects, otherwise add with prefix
+              if isinstance(v, (dict, list)):
+                flatten(v, ret, f"{path}{k}.")
+              else:
+                ret[path + str(k)] = v
+            return ret
+
+          def get_latest_ami(ami_name_prefix):
+            ec2_client = boto3.client('ec2')
+            filters = [{'Name': 'name','Values': [f'{ami_name_prefix}*']}]
+            response = ec2_client.describe_images(Filters=filters)
+            ami_list = response['Images']
+
+            sorted_ami_list = sorted(ami_list, key=lambda x: x['CreationDate'], reverse=True)
+            return sorted_ami_list[0]['ImageId'] if sorted_ami_list else None
+
+          def lifecycle_handler(event, context, resource_name, wait_args):
+            properties = drop_keys(event["ResourceProperties"], {"ServiceToken"})
+            pcs = boto3.client('pcs')
+            create, get, delete = getattr(pcs, f"create_{resource_name}"), getattr(pcs, f"get_{resource_name}"), getattr(pcs, f"delete_{resource_name}")
+            if event['RequestType'] == 'Create':
+              response = create(**properties)
+              print(response)
+
+              waiter = pcs.get_waiter(f"{resource_name}_active")
+              waiter.config.delay = 5
+              waiter.config.max_attempts = 240 # 20m with 5s retries
+              try:
+                waiter.wait(**wait_args)
+              except WaiterError as err:
+                print(get(**wait_args))
+                raise err
+
+              resource = get(**wait_args)[camel_case(resource_name)]
+              response_data = flatten(json.loads(json.dumps(resource, default=str)))
+              cfnresponse.send(event, context, cfnresponse.SUCCESS, response_data, physicalResourceId=resource["id"])
+            elif event['RequestType'] == 'Update':
+              print(f"Update not supported on {resource}")
+              cfnresponse.send(event, context, cfnresponse.FAILED, {})
+            elif event['RequestType'] == 'Delete':
+              try:
+                response = delete(**wait_args)
+                print(response)
+
+                waiter = pcs.get_waiter(f"{resource_name}_not_exists")
+                waiter.config.delay = 5
+                waiter.config.max_attempts = 240 # 20m with 5s retries
+                try:
+                  waiter.wait(**wait_args)
+                except WaiterError as err:
+                  print(get(**wait_args))
+                  raise err
+
+              except botocore.exceptions.ClientError as err:
+                if err.response['Error']['Code'] in {"Validationexception", "ResourceNotfoundException"}:
+                  print(f"Tried to delete an invalid {resource}.")
+                else:
+                  raise err
+              cfnresponse.send(event, context, cfnresponse.SUCCESS, {})
+
+          def cluster_lifecycle(event, context):
+            properties = drop_keys(event["ResourceProperties"], {"ServiceToken"})
+            return lifecycle_handler(event, context, "cluster", {"clusterIdentifier": properties["clusterName"]})
+
+          def compute_node_group_lifecycle(event, context):
+            properties = drop_keys(event["ResourceProperties"], {"ServiceToken"})
+            properties['scalingConfiguration']['minInstanceCount'] = int(properties['scalingConfiguration']['minInstanceCount'])
+            properties['scalingConfiguration']['maxInstanceCount'] = int(properties['scalingConfiguration']['maxInstanceCount'])
+            if properties.get('amiId') in {'', None}:
+              properties['amiId'] = get_latest_ami('aws-pcs-sample_ami-amzn2-x86_64-slurm-23.11')
+            cluster_id = properties["clusterIdentifier"]
+            args = {"clusterIdentifier": cluster_id, "computeNodeGroupIdentifier": properties["computeNodeGroupName"]}
+            return lifecycle_handler({**event, "ResourceProperties": properties}, context, "compute_node_group", args)
+
+          def queue_lifecycle(event, context):
+            properties = drop_keys(event["ResourceProperties"], {"ServiceToken"})
+            cluster_id = properties["clusterIdentifier"]
+            args = {"clusterIdentifier": cluster_id, "queueIdentifier": properties["queueName"]}
+            return lifecycle_handler(event, context, "queue", args)
+
+          def lambda_handler(event, context):
+            properties = event["ResourceProperties"]
+            try:
+              if "clusterName" in properties:
+                return cluster_lifecycle(event, context)
+              elif "computeNodeGroupName" in properties:
+                return compute_node_group_lifecycle(event, context)
+              elif "queueName" in properties:
+                return queue_lifecycle(event, context)
+              else:
+                cfnresponse.send(event, context, cfnresponse.FAILED, {}, reason="Unknown PCS resource.")
+            except Exception as e:
+              print(e)
+              cfnresponse.send(event, context, cfnresponse.FAILED, {}, reason=str(e))
+
+      Handler: index.lambda_handler
+      Role: !GetAtt PCSClusterLambdaExecutionRole.Arn
+      Runtime: python3.11
+
+Outputs:
+  ServiceToken:
+    Description: Lambda for managing PCS Resources
+    Value: !GetAtt PCSFunction.Arn

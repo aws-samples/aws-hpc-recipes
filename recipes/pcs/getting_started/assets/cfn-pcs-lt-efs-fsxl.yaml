@@ -1,0 +1,158 @@
+AWSTemplateFormatVersion: 2010-09-09
+Description: Launch templates for AWS PCS login and compute node groups, supporting shared EFS and FSx for Lustre file systems
+
+Metadata:
+  AWS::CloudFormation::Interface:
+    ParameterGroups:
+      - Label:
+          default: Security
+        Parameters:
+          - VpcDefaultSecurityGroupId
+          - ClusterSecurityGroupId
+          - SshSecurityGroupId
+          - SshKeyName
+      - Label:
+          default: File systems
+        Parameters:
+          - EfsFilesystemId
+          - EfsFilesystemSecurityGroupId
+          - FSxLustreFilesystemId
+          - FSxLustreFilesystemSecurityGroupId
+          - FSxLustreFilesystemMountName
+
+Parameters:
+
+  VpcDefaultSecurityGroupId:
+    Type: AWS::EC2::SecurityGroup::Id
+    Description: Cluster VPC 'default' security group. Make sure you choose the one from your cluster VPC!
+  ClusterSecurityGroupId:
+    Type: AWS::EC2::SecurityGroup::Id
+    Description: Security group for PCS cluster controller and nodes.
+  SshSecurityGroupId:
+    Type: AWS::EC2::SecurityGroup::Id
+    Description: Security group for SSH into login nodes
+  SshKeyName:
+    Type: AWS::EC2::KeyPair::KeyName
+    Description: SSH key name for access to login nodes
+  EfsFilesystemId:
+    Type: String
+    Description: Amazon EFS file system Id
+  EfsFilesystemSecurityGroupId:
+    Type: String
+    Description: Security group for EFS filesystem. Choose VPC default if filesysten was created using EFS console quick-start defaults.
+  FSxLustreFilesystemId:
+    Type: String
+    Description: Amazon FSx for Lustre file system Id
+  FSxLustreFilesystemSecurityGroupId:
+    Type: String
+    Description: Security group for Amazon FSx for Lustre filesystem. Choose VPC default if filesysten was created using FSx console quick-start defaults.
+  FSxLustreFilesystemMountName:
+    Type: String
+    Description: Amazon FSx for Lustre mount name
+
+Resources:
+
+  LoginLaunchTemplate:
+    Type: AWS::EC2::LaunchTemplate
+    Properties:
+      LaunchTemplateName: !Sub 'login-${AWS::StackName}'
+      LaunchTemplateData:
+        TagSpecifications:
+          - ResourceType: instance
+            Tags:
+              - Key: HPCRecipes
+                Value: "true"
+        MetadataOptions:
+          HttpEndpoint: enabled
+          HttpPutResponseHopLimit: 4
+          HttpTokens: required
+        KeyName: !Ref SshKeyName
+        SecurityGroupIds: 
+          - !Ref VpcDefaultSecurityGroupId
+          - !Ref ClusterSecurityGroupId
+          - !Ref SshSecurityGroupId
+          - !Ref EfsFilesystemSecurityGroupId
+          - !Ref FSxLustreFilesystemSecurityGroupId
+        UserData:
+          Fn::Base64: !Sub |
+            MIME-Version: 1.0
+            Content-Type: multipart/mixed; boundary="==MYBOUNDARY=="
+
+            --==MYBOUNDARY==
+            Content-Type: text/cloud-config; charset="us-ascii"
+            MIME-Version: 1.0
+
+            packages:
+            - amazon-efs-utils
+            
+            runcmd:
+            # Mount EFS filesystem as /home
+            - mkdir -p /tmp/home
+            - rsync -a /home/ /tmp/home
+            - echo "${EfsFilesystemId}:/ /home efs tls,_netdev" >> /etc/fstab
+            - mount -a -t efs defaults
+            - rsync -a --ignore-existing /tmp/home/ /home
+            - rm -rf /tmp/home/
+            # If provided, mount FSxL filesystem as /shared
+            - if [ ! -z "${FSxLustreFilesystemId}" ]; then amazon-linux-extras install -y lustre=latest; mkdir -p /shared; chmod a+rwx /shared; mount -t lustre ${FSxLustreFilesystemId}.fsx.${AWS::Region}.amazonaws.com@tcp:/${FSxLustreFilesystemMountName} /shared; chmod 777 /shared; fi
+
+            --==MYBOUNDARY==
+
+  ComputeLaunchTemplate:
+    Type: AWS::EC2::LaunchTemplate
+    Properties:
+      LaunchTemplateName: !Sub 'compute-${AWS::StackName}'
+      LaunchTemplateData:
+        TagSpecifications:
+          - ResourceType: instance
+            Tags:
+              - Key: HPCRecipes
+                Value: "true"
+        MetadataOptions:
+          HttpEndpoint: enabled
+          HttpPutResponseHopLimit: 4
+          HttpTokens: required
+        SecurityGroupIds: 
+          - !Ref VpcDefaultSecurityGroupId
+          - !Ref ClusterSecurityGroupId
+          - !Ref EfsFilesystemSecurityGroupId
+          - !Ref FSxLustreFilesystemSecurityGroupId
+        KeyName: !Ref SshKeyName
+        UserData:
+          Fn::Base64: !Sub |
+            MIME-Version: 1.0
+            Content-Type: multipart/mixed; boundary="==MYBOUNDARY=="
+
+            --==MYBOUNDARY==
+            Content-Type: text/cloud-config; charset="us-ascii"
+            MIME-Version: 1.0
+
+            packages:
+            - amazon-efs-utils
+            
+            runcmd:
+            # Mount EFS filesystem as /home
+            - mkdir -p /tmp/home
+            - rsync -a /home/ /tmp/home
+            - echo "${EfsFilesystemId}:/ /home efs tls,_netdev" >> /etc/fstab
+            - mount -a -t efs defaults
+            - rsync -a --ignore-existing /tmp/home/ /home
+            - rm -rf /tmp/home/
+            # If provided, mount FSxL filesystem as /shared
+            - if [ ! -z "${FSxLustreFilesystemId}" ]; then amazon-linux-extras install -y lustre=latest; mkdir -p /shared; chmod a+rwx /shared; mount -t lustre ${FSxLustreFilesystemId}.fsx.${AWS::Region}.amazonaws.com@tcp:/${FSxLustreFilesystemMountName} /shared; fi
+
+            --==MYBOUNDARY==
+
+Outputs:
+  LoginLaunchTemplateId:
+    Description: "Login nodes template ID"
+    Value: !Ref LoginLaunchTemplate
+  LoginLaunchTemplateName:
+    Description: "Login nodes template name"
+    Value: !Sub 'login-${AWS::StackName}'
+  ComputeLaunchTemplateId:
+    Description: "Compute nodes template ID"
+    Value: !Ref ComputeLaunchTemplate
+  ComputeLaunchTemplateName:
+    Description: "Compute nodes template name"
+    Value: !Sub 'compute-${AWS::StackName}'
