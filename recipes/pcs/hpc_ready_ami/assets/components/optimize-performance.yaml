@@ -1,0 +1,57 @@
+AWSTemplateFormatVersion: '2010-09-09'
+Description: ImageBuilder Component to optimize HPC instance performance
+
+### Stack metadata
+Metadata:
+  AWS::CloudFormation::Interface:
+    ParameterGroups:
+      - Label:
+          default: HPC Recipes Configuration
+        Parameters:
+          - HpcRecipesS3Bucket
+          - HpcRecipesBranch
+
+Parameters:
+  HpcRecipesS3Bucket:
+    Type: String
+    Default: aws-hpc-recipes
+    Description: HPC Recipes for AWS S3 bucket
+    AllowedValues:
+         - aws-hpc-recipes
+         - aws-hpc-recipes-dev
+  HpcRecipesBranch:
+    Type: String
+    Default: main
+    Description: HPC Recipes for AWS release branch
+    AllowedPattern: '^(?!.*/\.git$)(?!.*/\.)(?!.*\\.\.)[a-zA-Z0-9-_\.]+$'
+
+Resources:
+  OptimizePerformance:
+    Type: AWS::ImageBuilder::Component
+    Properties:
+      Name: !Sub 'OptimizePerformance-${AWS::StackName}'
+      Description: Optimize HPC application peformance on PCS-compatible AMI
+      Version: '0.0.1'
+      Platform: Linux
+      Data: !Sub |
+        name: 'Optimize HPC application performance'
+        schemaVersion: 1.0
+        phases:
+          - name: build
+            steps:
+              - name: DownloadScript
+                action: ExecuteBash
+                inputs:
+                  commands:
+                    - 'curl -fsSL https://${HpcRecipesS3Bucket}.s3.us-east-1.amazonaws.com/${HpcRecipesBranch}/recipes/pcs/hpc_ready_ami/assets/scripts/common.sh -o common.sh'
+                    - 'curl -fsSL https://${HpcRecipesS3Bucket}.s3.us-east-1.amazonaws.com/${HpcRecipesBranch}/recipes/pcs/hpc_ready_ami/assets/scripts/optimize-performance.sh -o optimize-performance.sh'
+              - name: InstallAgent
+                action: ExecuteBash
+                inputs:
+                  commands:
+                    - 'chmod +x optimize-performance.sh'
+                    - './optimize-performance.sh'
+
+Outputs:
+  ImageBuilderComponent:
+    Value: !Ref OptimizePerformance

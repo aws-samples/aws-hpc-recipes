@@ -1,0 +1,92 @@
+AWSTemplateFormatVersion: '2010-09-09'
+Description: Infrastructure Configurations for building AWS PCS-ready AMIs
+
+### Stack metadata
+Metadata:
+  AWS::CloudFormation::Interface:
+    ParameterGroups:
+      - Label:
+          default: HPC Recipes Configuration
+        Parameters:
+          - HpcRecipesS3Bucket
+          - HpcRecipesBranch
+
+Parameters:
+  HpcRecipesS3Bucket:
+    Type: String
+    Default: aws-hpc-recipes
+    Description: HPC Recipes for AWS S3 bucket
+    AllowedValues:
+         - aws-hpc-recipes
+         - aws-hpc-recipes-dev
+  HpcRecipesBranch:
+    Type: String
+    Default: main
+    Description: HPC Recipes for AWS release branch
+    AllowedPattern: '^(?!.*/\.git$)(?!.*/\.)(?!.*\\.\.)[a-zA-Z0-9-_\.]+$'
+
+Resources:
+
+ IntelConfiguration:
+    Type: 'AWS::ImageBuilder::InfrastructureConfiguration'
+    Properties:
+      Name: 'intel'
+      InstanceProfileName: 'PersonalEc2ImageBuilderRole'
+      Description: 'Intel instances'
+      InstanceTypes:
+        - 'c6i.8xlarge'
+        - 'm6i.8xlarge'
+        - 'c6i.12xlarge'
+        - 'm6i.12xlarge'
+      ResourceTags:
+        HPCRecipes: 'true'
+
+ AmdConfiguration:
+    Type: 'AWS::ImageBuilder::InfrastructureConfiguration'
+    Properties:
+      Name: 'amd'
+      InstanceProfileName: 'PersonalEc2ImageBuilderRole'
+      Description: 'AMD instances'
+      InstanceTypes:
+        - 'm6a.8xlarge'
+        - 'm6a.8xlarge'
+        - 'c6a.12xlarge'
+        - 'm6a.12xlarge'
+      ResourceTags:
+        HPCRecipes: 'true'
+
+ GravitonConfiguration:
+    Type: 'AWS::ImageBuilder::InfrastructureConfiguration'
+    Properties:
+      Name: 'graviton'
+      InstanceProfileName: 'PersonalEc2ImageBuilderRole'
+      Description: 'AMD instances'
+      InstanceTypes:
+        - 'c7g.8xlarge'
+        - 'm7g.8xlarge'
+        - 'c7g.12xlarge'
+        - 'm7g.12xlarge'
+      ResourceTags:
+        HPCRecipes: 'true'
+
+  ImageBuilderInstanceIamRole:
+    Type: AWS::IAM::Role
+    Properties:
+      AssumeRolePolicyDocument:
+        Statement:
+          - Action: sts:AssumeRole
+            Effect: Allow
+            Principal:
+              Service: ec2.amazonaws.com
+        Version: "2012-10-17"
+      ManagedPolicyArns:
+        - "arn:aws:iam::aws:policy/AmazonSSMManagedInstanceCore"
+        - "arn:aws:iam::aws:policy/EC2InstanceProfileForImageBuilder"
+        - "arn:aws:iam::aws:policy/EC2InstanceProfileForImageBuilderECRContainerBuilds"
+
+  ImageBuilderInstanceProfile:
+    Type: AWS::IAM::InstanceProfile
+    Properties:
+      Roles:
+        - !Ref ImageBuilderInstanceIamRole
+      InstanceProfileName: !Sub "ImageBuilderProfile-${AWS::StackName}"

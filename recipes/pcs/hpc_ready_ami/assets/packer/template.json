@@ -1,0 +1,91 @@
+{
+  "variables": {
+    "ami_name_prefix": "hpc_ready_ami",
+    "ami_description": "AWS PCS-compatible AMI, built with Packer",
+    "aws_region": "us-east-2",
+    "source_ami": "ami-04b090c8b701a4844",
+    "instance_type": "c6i.4xlarge",
+    "ssh_username": "ec2-user",
+    "volume_size": "64",
+    "volume_type": "gp2",
+    "distribution": "amzn_2",
+    "architecture": "x86_64",
+    "vendor": "intel",
+    "hpc_recipes_s3_bucket": "aws-hpc-recipes",
+    "hpc_recipes_branch": "main"
+  },
+  "builders": [
+    {
+      "type": "amazon-ebs",
+      "region": "{{user `aws_region`}}",
+      "source_ami": "{{user `source_ami`}}",
+      "instance_type": "{{user `instance_type`}}",
+      "ssh_username": "{{user `ssh_username`}}",
+      "ami_name": "{{user `ami_name_prefix`}}-{{user `distribution`}}-{{user `architecture`}}-{{user `vendor`}}-{{timestamp}}",
+      "ami_description": "{{user `ami_description`}}",
+      "associate_public_ip_address": true,
+      "launch_block_device_mappings": [
+          {
+            "device_name": "{{user `root_device_name`}}",
+            "volume_size": "{{user `volume_size`}}",
+            "volume_type": "{{user `volume_type`}}",
+            "delete_on_termination": true
+          }
+      ]
+    }
+  ],
+  "provisioners": [
+      {
+          "type": "shell",
+          "inline": [
+            "sudo mkdir -p /opt/packer/scripts && sudo chmod a+rw /opt/packer/scripts",
+            "curl -o /opt/packer/scripts/common.sh https://{{user `hpc_recipes_s3_bucket`}}.s3.us-east-1.amazonaws.com/{{user `hpc_recipes_branch`}}/recipes/pcs/hpc_ready_ami/assets/scripts/common.sh",
+            "curl -o /opt/packer/scripts/install-cloudwatch-agent.sh https://{{user `hpc_recipes_s3_bucket`}}.s3.us-east-1.amazonaws.com/{{user `hpc_recipes_branch`}}/recipes/pcs/hpc_ready_ami/assets/scripts/install-cloudwatch-agent.sh",
+            "curl -o /opt/packer/scripts/install-efa.sh https://{{user `hpc_recipes_s3_bucket`}}.s3.us-east-1.amazonaws.com/{{user `hpc_recipes_branch`}}/recipes/pcs/hpc_ready_ami/assets/scripts/install-efa.sh",
+            "curl -o /opt/packer/scripts/install-efs-utils.sh https://{{user `hpc_recipes_s3_bucket`}}.s3.us-east-1.amazonaws.com/{{user `hpc_recipes_branch`}}/recipes/pcs/hpc_ready_ami/assets/scripts/install-efs-utils.sh",
+            "curl -o /opt/packer/scripts/install-lustre.sh https://{{user `hpc_recipes_s3_bucket`}}.s3.us-east-1.amazonaws.com/{{user `hpc_recipes_branch`}}/recipes/pcs/hpc_ready_ami/assets/scripts/install-lustre.sh",
+            "curl -o /opt/packer/scripts/install-pcs-agent.sh https://{{user `hpc_recipes_s3_bucket`}}.s3.us-east-1.amazonaws.com/{{user `hpc_recipes_branch`}}/recipes/pcs/hpc_ready_ami/assets/scripts/install-pcs-agent.sh",
+            "curl -o /opt/packer/scripts/install-pcs-slurm.sh https://{{user `hpc_recipes_s3_bucket`}}.s3.us-east-1.amazonaws.com/{{user `hpc_recipes_branch`}}/recipes/pcs/hpc_ready_ami/assets/scripts/install-pcs-slurm.sh",
+            "curl -o /opt/packer/scripts/install-spack.sh https://{{user `hpc_recipes_s3_bucket`}}.s3.us-east-1.amazonaws.com/{{user `hpc_recipes_branch`}}/recipes/pcs/hpc_ready_ami/assets/scripts/install-spack.sh",
+            "curl -o /opt/packer/scripts/install-ssm-agent.sh https://{{user `hpc_recipes_s3_bucket`}}.s3.us-east-1.amazonaws.com/{{user `hpc_recipes_branch`}}/recipes/pcs/hpc_ready_ami/assets/scripts/install-ssm-agent.sh",
+            "curl -o /opt/packer/scripts/optimize-performance.sh https://{{user `hpc_recipes_s3_bucket`}}.s3.us-east-1.amazonaws.com/{{user `hpc_recipes_branch`}}/recipes/pcs/hpc_ready_ami/assets/scripts/optimize-performance.sh",
+            "curl -o /opt/packer/scripts/update-os.sh https://{{user `hpc_recipes_s3_bucket`}}.s3.us-east-1.amazonaws.com/{{user `hpc_recipes_branch`}}/recipes/pcs/hpc_ready_ami/assets/scripts/update-os.sh",
+            "chmod +x /opt/packer/scripts/*.sh"
+          ]
+      },
+      {
+          "type": "shell",
+          "inline": [
+              "bash /opt/packer/scripts/update-os.sh"
+          ]
+      },
+      {
+        "type": "shell",
+        "inline": [
+            "sudo shutdown -r now"
+        ],
+        "expect_disconnect": true
+    },
+    {
+          "type": "shell",
+          "pause_before": "120s",
+          "inline": [
+              "bash /opt/packer/scripts/optimize-performance.sh",
+              "bash /opt/packer/scripts/install-cloudwatch-agent.sh",
+              "bash /opt/packer/scripts/install-ssm-agent.sh",
+              "bash /opt/packer/scripts/install-efa.sh",
+              "bash /opt/packer/scripts/install-lustre.sh",
+              "bash /opt/packer/scripts/install-efs-utils.sh",
+              "bash /opt/packer/scripts/install-pcs-agent.sh",
+              "bash /opt/packer/scripts/install-pcs-slurm.sh",
+              "bash /opt/packer/scripts/install-spack.sh"
+          ]
+      },
+      {
+        "type": "shell",
+        "inline": [
+            "sudo rm -rf /opt/packer/scripts"
+        ]
+    }
+    ]
+}

@@ -1,0 +1,63 @@
+AWSTemplateFormatVersion: '2010-09-09'
+Description: ImageBuilder Component to install Spack on an AMI
+
+### Stack metadata
+Metadata:
+  AWS::CloudFormation::Interface:
+    ParameterGroups:
+      - Label:
+          default: HPC Recipes Configuration
+        Parameters:
+          - HpcRecipesS3Bucket
+          - HpcRecipesBranch
+
+# TODO - parameterize Prefix
+Parameters:
+  HpcRecipesS3Bucket:
+    Type: String
+    Default: aws-hpc-recipes
+    Description: HPC Recipes for AWS S3 bucket
+    AllowedValues:
+         - aws-hpc-recipes
+         - aws-hpc-recipes-dev
+  HpcRecipesBranch:
+    Type: String
+    Default: main
+    Description: HPC Recipes for AWS release branch
+    AllowedPattern: '^(?!.*/\.git$)(?!.*/\.)(?!.*\\.\.)[a-zA-Z0-9-_\.]+$'
+
+Resources:
+  SpackInstaller:
+    Type: AWS::ImageBuilder::Component
+    Properties:
+      Name: !Sub 'SpackInstaller-${AWS::StackName}'
+      Description: Install Spack and optimized configurations
+      Version: '0.0.1'
+      Platform: Linux
+      Data: !Sub |
+        name: 'Spack installer'
+        schemaVersion: 1.0
+        parameters:
+          - Prefix:
+              type: string
+              description: 'Spack installation prefix'
+              default: '/opt'
+        phases:
+          - name: build
+            steps:
+              - name: DownloadScript
+                action: ExecuteBash
+                inputs:
+                  commands:
+                    - 'curl -fsSL https://${HpcRecipesS3Bucket}.s3.us-east-1.amazonaws.com/${HpcRecipesBranch}/recipes/pcs/hpc_ready_ami/assets/scripts/common.sh -o common.sh'
+                    - 'curl -fsSL https://${HpcRecipesS3Bucket}.s3.us-east-1.amazonaws.com/${HpcRecipesBranch}/recipes/pcs/hpc_ready_ami/assets/scripts/install-spack.sh -o install-spack.sh'
+              - name: InstallAgent
+                action: ExecuteBash
+                inputs:
+                  commands:
+                    - 'chmod +x install-spack.sh'
+                    - './install-spack.sh --prefix={{ Prefix }}'
+
+Outputs:
+  ImageBuilderComponent:
+    Value: !Ref SpackInstaller
