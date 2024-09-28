@@ -6,6 +6,8 @@ The format is based on [Keep a Changelog](http://keepachangelog.com/)
 ## [Unreleased]
 
 ### Added
+* Added all-in-one CloudFormation launch template to pcs/getting_started
+* New recipe - pcs/hpc_ready_ami (ImageBuilder and Packer resources for PCS AMIs)
 
 ### Fixed
 
