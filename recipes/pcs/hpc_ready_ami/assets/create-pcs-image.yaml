@@ -114,7 +114,6 @@ Resources:
         - ComponentArn: !GetAtt [ImageBuilderComponentsStack, Outputs.PcsSlurmInstallerComponent]
         - ComponentArn: !GetAtt [ImageBuilderComponentsStack, Outputs.SpackInstallerComponent]
       Description: Install PCS Agent, SLURM, and other components
-      # Name: !Sub 'pcs_ami-${Distro}-${Architecture}-${Vendor}'
       # Appending StackName enables multiple Recipes with the same base name, 
       # which is important for debugging.
       Name: !Sub 'pcs_ami-${Distro}-${Architecture}-${Vendor}-${AWS::StackName}'
