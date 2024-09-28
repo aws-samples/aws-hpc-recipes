@@ -9,6 +9,14 @@ It contains three types of resource:
 2. [EC2 ImageBuilder](https://docs.aws.amazon.com/imagebuilder/latest/userguide/what-is-image-builder.html) assets
 3. [HashiCorp Packer](https://www.packer.io/) resources
 
+They are designed to:
+* Update the host operating system and installed packages
+* Apply OS optimizations and settings to support HPC workloads
+* Install the AWS PCS Agent and Slurm software
+* Install EFA, Lustre, and EFS software
+* Install CloudWatch and SSM agents
+* Install Spack to support complex userland software installations
+
 ## Usage
 
 You can use these resources as-is, fork the repository and adapt them to your own needs, or [contibute your own knowledge and AMI management code](../../../CONTRIBUTING.md) back to HPC recipes. You can also, of course, just read them over to learn how other people are building AMIs for PCS.
