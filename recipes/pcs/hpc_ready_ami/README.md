@@ -1,19 +1,8 @@
 # HPC-ready AMIs
 
-```
-################################################################################
-While this recipe is in development, its assets are downloadable at:
-
-HpcRecipesS3Bucket: aws-hpc-recipes-dev
-HpcRecipesS3Branch: pcsami
-
-Example: https://aws-hpc-recipes-dev.s3.us-east-1.amazonaws.com/pcsami/recipes/pcs/hpc_ready_ami/assets/scripts/update-os.sh
-################################################################################
-```
-
 ## Info
 
-This recipe is designed to support you building your own AMIs to use with AWS PCS. 
+This recipe helps you get started building your own AMIs for use with AWS PCS. 
 
 It contains three types of resource:
 1. Scripts 
@@ -22,13 +11,13 @@ It contains three types of resource:
 
 ## Usage
 
-You can use these resources as-is, fork the repository and adapt them to your own needs, or contibute your own knowledge and AMI management code back to HPC recipes. You can also, of course, just read them over to learn how other people are building AMIs for PCS.
+You can use these resources as-is, fork the repository and adapt them to your own needs, or [contibute your own knowledge and AMI management code](../../../CONTRIBUTING.md) back to HPC recipes. You can also, of course, just read them over to learn how other people are building AMIs for PCS.
 
 ### Scripts
 
 In the [scripts](assets/scripts/) directory, you will find a growing number of scripts that can be used to install and/or configure software on an AMI. The scripts are designed to support the same operating system distributions and versions as AWS PCS (currently: Amazon Linux 2, RHEL 9, Rocky Linux 9, and Ubuntu 22.04). 
 
-They're organized around using a shared Bash [script](assets/scripts/common.sh) to detect the operating system distribution, version, and architecture. This makes them extensible in the future, and straightforward to reason about and debug.
+They're organized around using a shared Bash [script](assets/scripts/common.sh) to detect the operating system distribution, version, and architecture. This makes them extensible in the future, and straightforward to reason about and debug. A copy of the `common.sh` script must always be in the same directory as the installer script you are running. 
 
 Some scripts accept parameters that control their installation or configuration behavior. For example, [`install-spack.sh`](assets/scripts/install-spack.sh) allows you to specify the destination where Spack will be installed. 
 
@@ -66,54 +55,49 @@ The ImageBuilder components are available as individual templates that deploy a 
 
 #### Use the example all-in-one ImageBuilder template
 
-Check out the HPC recipes repo or download the [CloudFormation template](assets/create-pcs-image.yaml). Set the HPC Recipes path variables in the shell, then run the following command. 
+Check out the HPC recipes repo or download the [CloudFormation template](assets/create-pcs-image.yaml), then run the following command. 
 
 ```shell
-HpcRecipesS3Bucket="aws-hpc-recipes-dev"
-HpcRecipesBranch="pcsami"
-
 stack_id=$(aws cloudformation create-stack \
                --region us-east-2 \
                --capabilities "CAPABILITY_NAMED_IAM" "CAPABILITY_AUTO_EXPAND" \
                --parameters \
-               ParameterKey=Distro,ParameterValue=rocky-9 \
+               ParameterKey=Distro,ParameterValue=ubuntu-22-04 \
                ParameterKey=Architecture,ParameterValue=arm64 \
                ParameterKey=Vendor,ParameterValue=aws \
                ParameterKey=SemanticVersion,ParameterValue=$(date +%Y.%m.%d) \
-               ParameterKey=HpcRecipesS3Bucket,ParameterValue="${HpcRecipesS3Bucket}" \
-               ParameterKey=HpcRecipesBranch,ParameterValue="${HpcRecipesBranch}" \
                --output text \
                --query "StackId" \
                --stack-name "buildPCSImages" \
                --template-body file://$PWD/create-pcs-image.yaml)
 ```
 
-This will create an [ImageBuilder image](https://console.aws.amazon.com/imagebuilder/home#/images) named **pcs_ami-rocky-9-arm64-aws**, which will in turn build an AMI named **pcs_ami-rocky-9-arm64-aws <TIMESTAMP>**. 
+This will create an [ImageBuilder image](https://console.aws.amazon.com/imagebuilder/home#/images) named **pcs_ami-ubuntu-22-04-arm64-aws**, which will in turn build an AMI named **pcs_ami-ubuntu-22-04-arm64-aws <TIMESTAMP>**. 
 
 **Notes:**
-1. The example template is restricted to `us-east-2` because the AMI IDs are hard-coded. To change regions, look them up and change them as needed in the template.
-2. Uncomment and add AWS IDs to `LaunchPermissionConfiguration` in the template to share the AMI with additional accounts once it is built.
+1. The example template is restricted to `us-east-2` because the AMI IDs for each distro are hard-coded. To change regions, look alternate AMI IDs and change them as needed in the CloudFormation template.
+2. If you choose **rhel-9** as your source Linux distribution, you must subscribe to RHEL 9 in the AMI marketplace before building an image from it. 
+3. Uncomment and add AWS IDs to `LaunchPermissionConfiguration` in the template to share the AMI with additional accounts once it is built.
 
 ### HashiCorp Packer resources
 
-Logic for each ImageBuilder component is kept in standalone scripts. This adds a little complexity to the development process, but means we have a source of truth for AMI management actions that is agnostic to the build system being used. We use this to implement Packer infrastructure that can build HPC-ready AMIs. 
+Shell logic for each ImageBuilder component is maintained in standalone scripts, rather than being included inline in the component. This adds a little complexity, but lets us keep a source of truth for AMI management actions that is separate from the build system we are using. This lets us implement [Packer infrastructure](assets/packer/) that can build HPC-ready AMIs. 
 
 #### Build an HPC-ready Amazon Linux 2 AMI
 
-By default, the Packer template builds an Amazon Linux 2 AMI for Intel x86_64 instances in us-east-2.
+By default, the Packer template ([`template.json`](assets/packer/template.json)) builds an Amazon Linux 2 AMI for Intel x86_64 instances in `us-east-2`.
 
 To build an AMI, run this command:
 
 ```shell
-packer build \
-  template.json
+packer build template.json
 ```
 
-This result in an AMI named `hpc_ready_ami-amzn_2-x86_64-intel-TIMESTAMP`.
+This should result in an AMI named `hpc_ready_ami-amzn_2-x86_64-intel-TIMESTAMP`.
 
 #### Building other distributions and architectures
 
-The template supports several parameters that control the distribution and architecture of your built AMI. You can either drive it directly by passing the relevant variables, create a variables file and use it, or use the `set_variables.sh` script. 
+The template supports several parameters that control the distribution and architecture of your built AMI. You can either drive it directly by passing the relevant variables, create a Packer variables file and use it, or use the `set_variables.sh` script. 
 
 Key variables include:
 
@@ -152,13 +136,13 @@ packer build \
   template.json
 ```
 
-To change region, pass the `aws_region` variable and send an Ubuntu `source_ami` from your chosen region.
+To change region, pass the `aws_region` variable and specify an Ubuntu `source_ami` for the preferred region.
 
 #### Using the Build Matrix script
 
-We include a sample script that can kick off multiple, parallel Packer builds. See [`buildall.sh`](assets/packer/buildall.sh) to see how it works. 
+We include a sample script that can kick off multiple, parallel Packer builds. See [`buildall.sh`](assets/packer/buildall.sh) to see how it works. All builds run in parallel. Monitor the log files, which are named after the combination of distro, architecture, and vendor (e.g. `packer-rocky_9-arm64-aws-rocky-9-4-community-1727089263.log`), to follow build progression. 
 
-#### Use pre-release versions of HPC Recipes
+#### Use pre-release versions of HPC Recipes with Packer
 
 You can point the Packer template to alternative versions of HPC Recipes. To do so, pass the relevant bucket name and release branch, as demonstrated here. For more information on this topic, see _HPC Recipes public URLs_ below. 
 
@@ -182,13 +166,15 @@ Here are some example AMIs (in `us-east-2`) we have used as build sources.
 | Ubuntu 22.04 | `ami-003932de22c285676` | `ami-034ee457b85b2fb4f` |
 | DLAMI (Ubuntu 22) | `ami-0c8cb6d6f6dc127c9` | `ami-030b3e579315b7e71` |
 
+Find alternates or IDs for your preferred region as described in the following sections.
+
 #### Amazon Linux 2
 
 _Coming soon_
 
 #### Redhat Enterprise Linux 9
 
-You must subscribe to RHEL 9 in AWS Marketplace AMIs in order to build from Redhat official AMIs.
+You must subscribe to RHEL 9 in AWS Marketplace AMIs in order to build from Redhat official AMIs. Find the AMI ID in the information panel for RHEL 9 after you have subcribed. 
 
 ![Image](docs/subscribe-rhel9-marketplace.png)
 
@@ -224,7 +210,7 @@ Note that these curated image names correspond to an ARN. For example, the x86_6
 
 #### Deep Learning AMI (DLAMI)
 
-Find names at https://docs.aws.amazon.com/dlami/latest/devguide/appendix-ami-release-notes.html
+Find names at https://docs.aws.amazon.com/dlami/latest/devguide/appendix-ami-release-notes.html. Use these to search for AMI ids. 
 
 **x86_64**
 
@@ -288,7 +274,7 @@ The Packer templates accept similar parameters:
 * **hpc_recipes_s3_bucket** - either `aws-hpc-recipes` or `aws-hpc-recipes-dev`
 * **hpc_recipes_branch** - either `main` or whatever branch name you or your collaborators are working on
 
-Note that while the `aws-hpc-recipes-dev` is a stable resource, any directories within it may be deleted or changed at any time. It is strictly for testing out pre-release recipe assets. 
+Note that while the `aws-hpc-recipes-dev` bucket itself is a stable resource, any directories within it may be deleted or changed at any time. It is strictly for testing out pre-release recipe assets. Do not rely on its contents. 
 
 ## Road Map
 
@@ -308,4 +294,4 @@ A little further in the future, this recipe will (probably) become a standalone 
 
 ## Contributing
 
-_Coming soon._
+See [`CONTRIBUTING.md`](../../../CONTRIBUTING.md)
