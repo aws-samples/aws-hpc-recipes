@@ -179,10 +179,15 @@ You can use an HPC Recipe for AWS in several ways:
 * **About**: Use EFA with AWS PCS compute node groups
 * **Usage**: [README.md](pcs/enable_efa/README.md)
 
-#### getting_started ![tag](https://img.shields.io/badge/-core-%23146EB4) ![tag](https://img.shields.io/badge/-ec2-%23FF9900) ![tag](https://img.shields.io/badge/-efs-%237DCEA0) ![tag](https://img.shields.io/badge/-fsx-%237DCEA0) ![tag](https://img.shields.io/badge/-iam-%23AAB7B8) ![tag](https://img.shields.io/badge/-pcs-%23FF9900) 
+#### getting_started ![tag](https://img.shields.io/badge/-cloudformation-%237DCEA0) ![tag](https://img.shields.io/badge/-core-%23146EB4) ![tag](https://img.shields.io/badge/-ec2-%23FF9900) ![tag](https://img.shields.io/badge/-efs-%237DCEA0) ![tag](https://img.shields.io/badge/-fsx-%237DCEA0) ![tag](https://img.shields.io/badge/-iam-%23AAB7B8) ![tag](https://img.shields.io/badge/-pcs-%23FF9900) 
 
 * **About**: Supports "Getting Started with AWS PCS" in AWS PCS user guide.
 * **Usage**: [README.md](pcs/getting_started/README.md)
+
+#### hpc_ready_ami ![tag](https://img.shields.io/badge/-beta-%23800080) ![tag](https://img.shields.io/badge/-ec2-%23FF9900) ![tag](https://img.shields.io/badge/-efa-%23AAB7B8) ![tag](https://img.shields.io/badge/-imagebuilder-%23AAB7B8) ![tag](https://img.shields.io/badge/-lustre-%23AAB7B8) ![tag](https://img.shields.io/badge/-packer-%23AAB7B8) ![tag](https://img.shields.io/badge/-pcs-%23FF9900) 
+
+* **About**: EC2 ImageBuilder and HashiCorp Packer assets to produce HPC-ready AMIs
+* **Usage**: [README.md](pcs/hpc_ready_ami/README.md)
 
 #### multiuser_demo ![tag](https://img.shields.io/badge/-beta-%23800080) ![tag](https://img.shields.io/badge/-pcs-%23FF9900) 
 
