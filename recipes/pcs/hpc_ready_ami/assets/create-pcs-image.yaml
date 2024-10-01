@@ -2,8 +2,8 @@ AWSTemplateFormatVersion: '2010-09-09'
 Description: Build a PCS-compatible AMI
 
 Mappings:
-  # AMI IDs are region-specific, we use SSM to lookup across regions.
-  # See line 121. 
+  # AMI IDs are region-specific. These are for us-east-2. 
+  # We use SSM to lookup AMIs across regions. See line 121. 
   DistroConfigs:
     amzn-2:
       name: Amazon Linux 2
@@ -131,8 +131,8 @@ Resources:
         - DistroImageStartsWithAmi
         - !FindInMap [DistroConfigs, !Ref Distro, !Ref Architecture]
         - !Sub 
-          - '{{resolve:ssm:${SSMAMILookup}}}'
-          - SSMAMILookup: !FindInMap [DistroConfigs, !Ref Distro, !Ref Architecture]
+          - '{{resolve:ssm:${AMILookup}}}'
+          - AMILookup: !FindInMap [DistroConfigs, !Ref Distro, !Ref Architecture]
       Version: !Ref SemanticVersion
       AdditionalInstanceConfiguration:
         SystemsManagerAgent:
