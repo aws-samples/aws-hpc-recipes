@@ -90,7 +90,7 @@ Parameters:
 Conditions: 
   DistroImageStartsWithAmi: !Equals 
     - !Select
-      - 1
+      - 0
       - !Split 
         - "-"
         - !FindInMap [ DistroConfigs, !Ref Distro, !Ref Architecture]
