@@ -31,16 +31,19 @@ Mappings:
       arm64: ami-03772d93fb1879bbe
   InstanceConfigs:
     x86:
-      intel: 
+      default: 
         - c6i.8xlarge
         - m6i.8xlarge
-      amd: 
+      alternate: 
         - c6a.8xlarge
         - m6a.8xlarge
     arm64:
-      aws: 
+      default: 
         - c7g.8xlarge
         - m7g.8xlarge
+      alternate: 
+        - c6g.8xlarge
+        - m6g.8xlarge
 
 Parameters:
 
@@ -58,13 +61,6 @@ Parameters:
       - x86
       - arm64
     Default: arm64
-  Vendor:
-    Type: String
-    AllowedValues:
-      - intel
-      - amd
-      - aws
-    Default: aws
 
   SemanticVersion:
     Type: String
@@ -116,7 +112,7 @@ Resources:
       Description: Install PCS Agent, SLURM, and other components
       # Appending StackName enables multiple Recipes with the same base name, 
       # which is important for debugging.
-      Name: !Sub 'pcs_ami-${Distro}-${Architecture}-${Vendor}-${AWS::StackName}'
+      Name: !Sub 'pcs_ami-${Distro}-${Architecture}-${AWS::StackName}'
       ParentImage: !FindInMap [DistroConfigs, !Ref Distro, !Ref Architecture]
       Version: !Ref SemanticVersion
       AdditionalInstanceConfiguration:
@@ -131,24 +127,24 @@ Resources:
   PCSInfrastructureConfiguration:
     Type: AWS::ImageBuilder::InfrastructureConfiguration
     Properties:
-      Description: !Sub '${Architecture} ${Vendor} infrastructure'
+      Description: !Sub '${Architecture} infrastructure'
       InstanceProfileName: EC2InstanceProfileForImageBuilder
-      InstanceTypes: !FindInMap [InstanceConfigs, !Ref Architecture, !Ref Vendor]
+      InstanceTypes: !FindInMap [InstanceConfigs, !Ref Architecture, 'default']
       # Appending StackName enables multiple Infra configs with the same base name, 
       # which is important for debugging.
-      Name: !Sub 'pcs_ami-${Architecture}-${Vendor}-${AWS::StackName}'
+      Name: !Sub 'pcs_ami-${Architecture}-${AWS::StackName}'
 
   PCSDistributionConfiguration:
     Type: AWS::ImageBuilder::DistributionConfiguration
     Properties:
       # Appending StackName enables multiple Distribution configs with the same base name, 
       # which is important for debugging.
-      Name: !Sub 'pcs_ami-${Distro}-${Architecture}-${Vendor}-${AWS::StackName}'
+      Name: !Sub 'pcs_ami-${Distro}-${Architecture}-${AWS::StackName}'
       Description: PCS image distributor
       Distributions:
         - Region: !Ref "AWS::Region"
           AmiDistributionConfiguration:
-            Name: !Sub 'cfnpcs_ami-${Distro}-${Architecture}-${Vendor} {{ imagebuilder:buildDate }}'
+            Name: !Sub 'cfnpcs_ami-${Distro}-${Architecture} {{ imagebuilder:buildDate }}'
             Description: 'Distribute a copy of the AMI to specific accounts in the destination Region.'
             # Uncomment and provide AWS account IDs to share AMI once built
             # LaunchPermissionConfiguration:
