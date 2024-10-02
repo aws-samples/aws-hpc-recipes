@@ -3,7 +3,7 @@ Description: Build a PCS-compatible AMI
 
 Mappings:
   # AMI IDs are region-specific. These are for us-east-2. 
-  # We use SSM to lookup AMIs across regions. See line 121. 
+  # We use SSM to lookup AMIs across regions. See line 130. 
   DistroConfigs:
     amzn-2:
       name: Amazon Linux 2
@@ -108,21 +108,26 @@ Resources:
     Properties:
       # Ordering is important here
       Components:
-        - ComponentArn: !GetAtt [ImageBuilderComponentsStack, Outputs.UpdateOsComponent]
-        - ComponentArn: !Sub 'arn:aws:imagebuilder:${AWS::Region}:aws:component/reboot-linux/1.0.1/1'
-        - ComponentArn: !GetAtt [ImageBuilderComponentsStack, Outputs.OptimizePerformanceComponent]
-        - ComponentArn: !GetAtt [ImageBuilderComponentsStack, Outputs.CloudwatchAgentComponent]
-        - ComponentArn: !GetAtt [ImageBuilderComponentsStack, Outputs.SsmAgentComponent]
+        #- ComponentArn: !GetAtt [ImageBuilderComponentsStack, Outputs.UpdateOsComponent]
+        # x.x.x gets latest available version from imagebuilder components 
+        - ComponentArn: !Sub 'arn:${AWS::Partition}:imagebuilder:${AWS::Region}:aws:component/update-linux/x.x.x'
+        - ComponentArn: !Sub 'arn:${AWS::Partition}:imagebuilder:${AWS::Region}:aws:component/reboot-linux/x.x.x'
+        - ComponentArn: !Sub 'arn:${AWS::Partition}:imagebuilder:${AWS::Region}:aws:component/amazon-cloudwatch-agent-linux/x.x.x'
+        - ComponentArn: !Sub 'arn:${AWS::Partition}:imagebuilder:${AWS::Region}:aws:component/aws-cli-version-2-linux/x.x.x'
+      #  - ComponentArn: !GetAtt [ImageBuilderComponentsStack, Outputs.OptimizePerformanceComponent]
+      #  - ComponentArn: !GetAtt [ImageBuilderComponentsStack, Outputs.CloudwatchAgentComponent]
+      #  - ComponentArn: !GetAtt [ImageBuilderComponentsStack, Outputs.SsmAgentComponent]
         - ComponentArn: !GetAtt [ImageBuilderComponentsStack, Outputs.EfaInstallerComponent]
         - ComponentArn: !GetAtt [ImageBuilderComponentsStack, Outputs.LustreInstallerComponent]
         - ComponentArn: !GetAtt [ImageBuilderComponentsStack, Outputs.EfsUtilsInstallerComponent]
         - ComponentArn: !GetAtt [ImageBuilderComponentsStack, Outputs.PcsAgentInstallerComponent]
         - ComponentArn: !GetAtt [ImageBuilderComponentsStack, Outputs.PcsSlurmInstallerComponent]
         - ComponentArn: !GetAtt [ImageBuilderComponentsStack, Outputs.SpackInstallerComponent]
+        - ComponentArn: !Sub 'arn:${AWS::Partition}:imagebuilder:${AWS::Region}:aws:component/reboot-test-linux/x.x.x'
       Description: Install PCS Agent, SLURM, and other components
       # Appending StackName enables multiple Recipes with the same base name, 
       # which is important for debugging.
-      Name: !Sub 'pcs_ami-${Distro}-${Architecture}-${AWS::StackName}'
+      Name: !Sub 'pcs-ami-${Distro}-${Architecture}-${AWS::StackName}'
       ParentImage: !If 
         - DistroImageStartsWithAmi
         - !FindInMap [DistroConfigs, !Ref Distro, !Ref Architecture]
@@ -151,14 +156,14 @@ Resources:
         HttpTokens: required
       # Appending StackName enables multiple Infra configs with the same base name, 
       # which is important for debugging.
-      Name: !Sub 'pcs_ami-${Architecture}-${AWS::StackName}'
+      Name: !GetAtt PCSImageRecipe.Name
 
   PCSDistributionConfiguration:
     Type: AWS::ImageBuilder::DistributionConfiguration
     Properties:
       # Appending StackName enables multiple Distribution configs with the same base name, 
       # which is important for debugging.
-      Name: !Sub 'pcs_ami-${Distro}-${Architecture}-${AWS::StackName}'
+      Name: !GetAtt PCSImageRecipe.Name
       Description: PCS image distributor
       Distributions:
         - Region: !Ref "AWS::Region"
@@ -170,14 +175,132 @@ Resources:
             #   UserIds:
             #     - '000000000000'
             #     - '111111111111'
-
-  PCSImage:
-    Type: AWS::ImageBuilder::Image
+ 
+  PCSImageBuilderLifecycleRole:
+    Type: AWS::IAM::Role
     Properties:
-      DistributionConfigurationArn: !GetAtt PCSDistributionConfiguration.Arn
+      AssumeRolePolicyDocument:
+        Version: '2012-10-17'
+        Statement:
+          - Effect: Allow
+            Principal:
+              Service: imagebuilder.amazonaws.com
+            Action: 'sts:AssumeRole'
+      ManagedPolicyArns:
+        - !Sub 'arn:${AWS::Partition}:iam::aws:policy/service-role/EC2ImageBuilderLifecycleExecutionPolicy'
+
+  PCSImageLifecyclePolicy:
+    Type: AWS::ImageBuilder::LifecyclePolicy
+    Properties:
+      Name: !Sub 'Lifecycle-${PCSImageRecipe.Name}'
+      Description: !Sub 'Lifecycle policy for PCS AMI, ${PCSImageRecipe.Name}'
+      ExecutionRole: !GetAtt PCSImageBuilderLifecycleRole.Arn
+      ResourceType: AMI_IMAGE
+      PolicyDetails:
+        - Action: 
+            Type: DELETE
+            IncludeResources: 
+              Amis: true
+              Snapshots: true
+          Filter:
+            Type: AGE
+            Value: 30
+            Unit: DAYS
+            RetainAtLeast: 3
+      ResourceSelection:
+        Recipes:
+          - Name: !GetAtt PCSImageRecipe.Name
+            SemanticVersion: !Ref SemanticVersion
+
+  PCSImagePipeline:
+    Type: AWS::ImageBuilder::ImagePipeline
+    Properties:
+      Status: ENABLED
+      Description: 'PCS AMI Pipeline'
+      Name: !GetAtt PCSImageRecipe.Name
+      EnhancedImageMetadataEnabled: true
       ImageRecipeArn: !GetAtt PCSImageRecipe.Arn
+      ImageTestsConfiguration: 
+        ImageTestsEnabled: True
+        TimeoutMinutes: 60
+
+      # Requires Inspector to be enabled on the account:
+      #ImageScanningConfiguration: 
+      #  ImageScanningEnabled: true
       InfrastructureConfigurationArn: !GetAtt PCSInfrastructureConfiguration.Arn
+      DistributionConfigurationArn: !GetAtt PCSDistributionConfiguration.Arn
+      Schedule:
+        ScheduleExpression: 'cron(30 8 ? * 1 *)'
+        PipelineExecutionStartCondition: EXPRESSION_MATCH_AND_DEPENDENCY_UPDATES_AVAILABLE
+
+  ExecutePipelineFunction:
+    Type: AWS::Lambda::Function
+    Properties:
+      Handler: index.handler
+      Role: !GetAtt LambdaExecutionRole.Arn
+      Runtime: python3.8
+      Timeout: 300
+      Code:
+        ZipFile: |
+          import boto3
+          import cfnresponse
+
+          def handler(event, context):
+            if event['RequestType'] in ['Create', 'Update']:
+              try:
+                client = boto3.client('imagebuilder')
+                pipeline_arn = event['ResourceProperties']['PipelineArn']
+                
+                response = client.start_image_pipeline_execution(
+                  imagePipelineArn=pipeline_arn
+                )
+                
+                execution_id = response['imageBuildVersionArn']
+                cfnresponse.send(event, context, cfnresponse.SUCCESS, {'ExecutionId': execution_id})
+              except Exception as e:
+                print(str(e))
+                cfnresponse.send(event, context, cfnresponse.FAILED, {'Error': str(e)})
+            else:
+              cfnresponse.send(event, context, cfnresponse.SUCCESS, {})
+
+  LambdaExecutionRole:
+    Type: AWS::IAM::Role
+    Properties:
+      AssumeRolePolicyDocument:
+        Version: '2012-10-17'
+        Statement:
+          - Effect: Allow
+            Principal:
+              Service: lambda.amazonaws.com
+            Action: sts:AssumeRole
+      Policies:
+        - PolicyName: ImageBuilderAccess
+          PolicyDocument:
+            Version: '2012-10-17'
+            Statement:
+              - Effect: Allow
+                Action:
+                  - imagebuilder:StartImagePipelineExecution
+                Resource: '*'
+        - PolicyName: CloudWatchLogsAccess
+          PolicyDocument:
+            Version: '2012-10-17'
+            Statement:
+              - Effect: Allow
+                Action:
+                  - logs:CreateLogGroup
+                  - logs:CreateLogStream
+                  - logs:PutLogEvents
+                Resource: !Sub 'arn:${AWS::Partition}:logs:*:*:*'
+
+  ExecutePipeline:
+    Type: Custom::ExecutePipeline
+    Properties:
+      ServiceToken: !GetAtt ExecutePipelineFunction.Arn
+      PipelineArn: !Ref PCSImagePipeline
 
 Outputs:
-  Image:
-    Value: !Ref PCSImage
+  ImagePipeline:
+    Value: !Ref PCSImagePipeline
+  ImageName:
+    Value: !GetAtt PCSImagePipeline.Name
