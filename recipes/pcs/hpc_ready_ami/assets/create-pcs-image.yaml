@@ -2,33 +2,34 @@ AWSTemplateFormatVersion: '2010-09-09'
 Description: Build a PCS-compatible AMI
 
 Mappings:
-  # AMI IDs are region-specific. These are for us-east-2.
+  # AMI IDs are region-specific. These are for us-east-2. 
+  # We use SSM to lookup AMIs across regions. See line 121. 
   DistroConfigs:
     amzn-2:
       name: Amazon Linux 2
       deviceName: /dev/xvda
       size: 64
-      x86: ami-0453ce6279422709a
-      arm64: ami-0e3eb8e1e59049093
+      x86: /aws/service/ami-amazon-linux-latest/amzn2-ami-hvm-x86_64-gp2
+      arm64: /aws/service/ami-amazon-linux-latest/amzn2-ami-hvm-arm64-gp2
     rocky-9:
       name: Rocky Linux 9
       deviceName: /dev/sda1
       size: 64
+      # Rocky Linux 9.3 community edition AMIs
       x86: ami-067daee80a6d36ac0
       arm64: ami-034ee457b85b2fb4f
     rhel-9:
       name: RHEL 9
       deviceName: /dev/sda1
       size: 64
-      # Rocky Linux 9.3 community edition AMIs
       x86: ami-0aa8fc2422063977a
       arm64: ami-08f9f3bb075432791
     ubuntu-22-04:
       name: Ubuntu 22.04
       deviceName: /dev/sda1
       size: 64
-      x86: ami-003932de22c285676
-      arm64: ami-03772d93fb1879bbe
+      x86: /aws/service/canonical/ubuntu/server/22.04/stable/current/amd64/hvm/ebs-gp2/ami-id
+      arm64: /aws/service/canonical/ubuntu/server/22.04/stable/current/arm64/hvm/ebs-gp2/ami-id
   InstanceConfigs:
     x86:
       intel: 
@@ -86,6 +87,15 @@ Parameters:
     AllowedPattern: '^(?!.*/\.git$)(?!.*/\.)(?!.*\\.\.)[a-zA-Z0-9-_\.]+$'
   # /Substack Parameters
 
+Conditions: 
+  DistroImageStartsWithAmi: !Equals 
+    - !Select
+      - 0
+      - !Split 
+        - "-"
+        - !FindInMap [ DistroConfigs, !Ref Distro, !Ref Architecture]
+    - "ami"
+
 Resources:
   ImageBuilderComponentsStack:
     Type: AWS::CloudFormation::Stack
@@ -117,7 +127,12 @@ Resources:
       # Appending StackName enables multiple Recipes with the same base name, 
       # which is important for debugging.
       Name: !Sub 'pcs_ami-${Distro}-${Architecture}-${Vendor}-${AWS::StackName}'
-      ParentImage: !FindInMap [DistroConfigs, !Ref Distro, !Ref Architecture]
+      ParentImage: !If 
+        - DistroImageStartsWithAmi
+        - !FindInMap [DistroConfigs, !Ref Distro, !Ref Architecture]
+        - !Sub 
+          - '{{resolve:ssm:${AMILookup}}}'
+          - AMILookup: !FindInMap [DistroConfigs, !Ref Distro, !Ref Architecture]
       Version: !Ref SemanticVersion
       AdditionalInstanceConfiguration:
         SystemsManagerAgent:
