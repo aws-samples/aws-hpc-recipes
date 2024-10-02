@@ -17,6 +17,8 @@ They are designed to:
 * Install CloudWatch and SSM agents
 * Install Spack to support complex userland software installations
 
+They support the Amazon Linux 2, RHEL9, Rocky Linux 9, and Ubuntu 22.04 operating system distributions on x86_64 and arm64 processors.
+
 ## Usage
 
 You can use these resources as-is, fork the repository and adapt them to your own needs, or [contibute your own knowledge and AMI management code](../../../CONTRIBUTING.md) back to HPC recipes. You can also, of course, just read them over to learn how other people are building AMIs for PCS.
@@ -63,7 +65,7 @@ The ImageBuilder components are available as individual templates that deploy a 
 
 #### Use the example all-in-one ImageBuilder template
 
-Check out the HPC recipes repo or download the [CloudFormation template](assets/create-pcs-image.yaml), then run the following command. 
+Check out the HPC recipes repo or download the [CloudFormation template](assets/create-pcs-image.yaml), then run a command resembling this one:
 
 ```shell
 stack_id=$(aws cloudformation create-stack \
@@ -72,7 +74,6 @@ stack_id=$(aws cloudformation create-stack \
                --parameters \
                ParameterKey=Distro,ParameterValue=ubuntu-22-04 \
                ParameterKey=Architecture,ParameterValue=arm64 \
-               ParameterKey=Vendor,ParameterValue=aws \
                ParameterKey=SemanticVersion,ParameterValue=$(date +%Y.%m.%d) \
                --output text \
                --query "StackId" \
@@ -80,10 +81,10 @@ stack_id=$(aws cloudformation create-stack \
                --template-body file://$PWD/create-pcs-image.yaml)
 ```
 
-This will create an [ImageBuilder image](https://console.aws.amazon.com/imagebuilder/home#/images) named **pcs_ami-ubuntu-22-04-arm64-aws**, which will in turn build an AMI named **pcs_ami-ubuntu-22-04-arm64-aws <TIMESTAMP>**. 
+This will create an [ImageBuilder image](https://console.aws.amazon.com/imagebuilder/home#/images) named **pcs_ami-ubuntu-22-04-arm64**, which will in turn build an AMI named **pcs_ami-ubuntu-22-04-arm64 <TIMESTAMP>**. 
 
 **Notes:**
-1. The example template is restricted to `us-east-2` because the AMI IDs for each distro are hard-coded. To change regions, look alternate AMI IDs and change them as needed in the CloudFormation template.
+1. If you are building AMIs based on RHEL9 or Rocky Linux 9 in a region that is not `us-east-2`, you will need to change the AMI IDs in the CloudFormation template. The ones in the template are specific to `us-east-2`. For Amazon Linux 2 and Ubuntu 22, SSM parameters are used to resolve the AMI ID in all AWS regions.
 2. If you choose **rhel-9** as your source Linux distribution, you must subscribe to RHEL 9 in the AMI marketplace before building an image from it. 
 3. Uncomment and add AWS IDs to `LaunchPermissionConfiguration` in the template to share the AMI with additional accounts once it is built.
 
@@ -101,7 +102,7 @@ To build an AMI, run this command:
 packer build template.json
 ```
 
-This should result in an AMI named `hpc_ready_ami-amzn_2-x86_64-intel-TIMESTAMP`.
+This should result in an AMI named `hpc_ready_ami-amzn_2-x86_64-TIMESTAMP`.
 
 #### Building other distributions and architectures
 
@@ -119,10 +120,6 @@ Key variables include:
 * `architecture` - The processor architecture for your AMI. Your choices are:
     * `x86_64`
     * `arm64`
-* `vendor` - The vendor of the selected processor. It must be compatible with the architecture. Your choices are:
-  * `amd`
-  * `aws`
-  * `amd`
 * `ssh_username` - The default username for logging into the AMI over SSH
 * `instance_type` - The EC2 instance used to build the AMI. Must be compatible with `architecture` and `vendor`. 
 
@@ -131,16 +128,16 @@ We also include a pair of variables for working with alternate releases of HPC R
 * `hpc_recipes_s3_bucket` - defaults to **aws-hpc-recipes**
 * `hpc_recipes_branch` - defaults to **main**
 
-You can either drive all the variables manually, or use the helper script `set_variables` to set some of them automatically based on distro, architecture, and vendor. 
+You can either drive all the variables manually, or use the helper script `set_variables` to set some of them automatically based on distro and architecture. 
 
-Here's an example of building an Ubuntu 22 AMI, optimized for AMD processors. 
+Here's an example of building an Ubuntu 22 AMI on x86.
 
 First, identify a source Ubuntu 22.04 AMI. Then, run this command, substituting `SOURCE-AMI-ID` with your Ubuntu AMI ID. 
 
 ```shell
 packer build \
   -var "source_ami=SOURCE-AMI-ID" \
-  -var-file <(./set_variables.sh ubuntu_22_04 x86_64 amd) \
+  -var-file <(./set_variables.sh ubuntu_22_04 x86_64) \
   template.json
 ```
 
@@ -148,7 +145,7 @@ To change region, pass the `aws_region` variable and specify an Ubuntu `source_a
 
 #### Using the Build Matrix script
 
-We include a sample script that can kick off multiple, parallel Packer builds. See [`buildall.sh`](assets/packer/buildall.sh) to see how it works. All builds run in parallel. Monitor the log files, which are named after the combination of distro, architecture, and vendor (e.g. `packer-rocky_9-arm64-aws-rocky-9-4-community-1727089263.log`), to follow build progression. 
+We include a sample script that can kick off multiple, parallel Packer builds. See [`buildall.sh`](assets/packer/buildall.sh) to see how it works. All builds run in parallel. Monitor the log files, which are named after the combination of distro, architecture, and source comment (e.g. `packer-rocky_9-arm64-rocky-9-4-community-1727089263.log`), to follow build progression. 
 
 #### Use pre-release versions of HPC Recipes with Packer
 
@@ -178,7 +175,7 @@ Find alternates or IDs for your preferred region as described in the following s
 
 #### Amazon Linux 2
 
-_Coming soon_
+For Image Builder, you can find an AMI using the EC2 console, take a dependency on Image Builder AMI ARNs, or use an AMI that you have been made aware of. 
 
 #### Redhat Enterprise Linux 9
 
