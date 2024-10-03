@@ -31,8 +31,8 @@ EXECUTION_ID=$(aws ssm start-automation-execution \
 
 echo "$(date +%Y%m%d-%H:%M:%S) [-] Automation execution started with ID: $EXECUTION_ID"
 
-# Timeout after 15 minutes
-TIMEOUT=900
+# Timeout after 30 minutes
+TIMEOUT=1800
 
 # Set the initial start time
 START_TIME=$(date +%s)
@@ -52,7 +52,7 @@ while [[ $ELAPSED_TIME -le $TIMEOUT ]]; do
     fi
 
     echo "$(date +%Y%m%d-%H:%M:%S) [-] Waiting for automation execution to complete... Retrying in 30s"
-    sleep 30
+    sleep 60
     CURRENT_TIME=$(date +%s)
     ELAPSED_TIME=$((CURRENT_TIME - START_TIME))
 done

@@ -162,7 +162,7 @@ Resources:
               Filters:
                 - Values:
                     - LoginNode
-                  Name: tag:Name
+                  Name: tag:parallelcluster:node-type
                 - Values:
                     - '{{pclusterStackName}}'
                   Name: tag:parallelcluster:cluster-name
@@ -292,7 +292,8 @@ Resources:
                     commands:
                       - |
                         sed -i '/\([0-9]\{1,3\}\.\)\{3\}[0-9]\{1,3\}:\/home/ s/^/#/' /etc/fstab
-                        iptables -F PARALLELCLUSTER_IMDS && iptables -F OUTPUT
+                        systemctl stop parallelcluster-iptables.service
+                        systemctl disable parallelcluster-iptables.service 
 
 # Add outputs
 Outputs:
