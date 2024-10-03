@@ -162,7 +162,7 @@ Resources:
               Filters:
                 - Values:
                     - LoginNode
-                  Name: tag:Name
+                  Name: tag:parallelcluster:node-type
                 - Values:
                     - '{{pclusterStackName}}'
                   Name: tag:parallelcluster:cluster-name
