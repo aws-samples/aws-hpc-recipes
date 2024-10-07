@@ -33,7 +33,7 @@ This template exports several variables, namedspaced by stack name. This lets yo
 * PublicSubnets - comma-delimited list of public subnet IDs
 * PrivateSubnets - comma-delimited list of private subnet IDs
 * InternetGatewayId - the internet gateway for the VPC
-* SecurityGroup - a security group allowing inbound and outbound communications from the VPC
+* SecurityGroup - a security group allowing inbound and outbound communications from IPs in the VPC
 
 There are two additional exports that provide compatibility with recipes that rely on the Simple HPC Networking stack. Values for these default to one of the public and/or private subnets defined by the template. The subnets will be in the same Availability Zone.
 

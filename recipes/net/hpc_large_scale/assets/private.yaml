@@ -1,5 +1,5 @@
 AWSTemplateFormatVersion: '2010-09-09'
-Description: Create public and private subnets in two or three AZs. Default CIDR blocks allow 4096 IPs in each subnet. 
+Description: Create private subnets in two or three AZs. Specified CIDR blocks allow 4096 IPs each. 
 
 Metadata:
   AWS::CloudFormation::Interface:
@@ -24,32 +24,12 @@ Metadata:
           - ProvisionSubnetsC
           - CidrPublicSubnetC
           - CidrPrivateSubnetC
-      - Label:
-          default: VPC Endpoints
-        Parameters:
-          - CreateS3Endpoint 
-          - CreateDynamoDBEndpoint
 
 Parameters:
   CidrBlock:
     AllowedPattern: '((\d{1,3})\.){3}\d{1,3}/\d{1,2}'
     Default: 10.3.0.0/16
     Description: VPC CIDR Block (eg 10.3.0.0/16)
-    Type: String
-  CidrPublicSubnetA:
-    AllowedPattern: '((\d{1,3})\.){3}\d{1,3}/\d{1,2}'
-    Default: 10.3.0.0/20
-    Description: VPC CIDR Block for the Public Subnet A
-    Type: String
-  CidrPublicSubnetB:
-    AllowedPattern: '((\d{1,3})\.){3}\d{1,3}/\d{1,2}'
-    Default: 10.3.16.0/20
-    Description: VPC CIDR Block for the Public Subnet B
-    Type: String
-  CidrPublicSubnetC:
-    AllowedPattern: '((\d{1,3})\.){3}\d{1,3}/\d{1,2}'
-    Default: 10.3.32.0/20
-    Description: VPC CIDR Block for the Public Subnet C
     Type: String
   CidrPrivateSubnetA:
     AllowedPattern: '((\d{1,3})\.){3}\d{1,3}/\d{1,2}'
@@ -73,56 +53,128 @@ Parameters:
     AllowedValues:
          - "True"
          - "False"
-  CreateS3Endpoint:
-    AllowedValues:
-      - 'True'
-      - 'False'
-    Default: 'True'
-    Description:
-      Set to True to create an S3 endpoint in your VPC.
-    Type: String
-  CreateDynamoDBEndpoint:
-    AllowedValues:
-      - 'True'
-      - 'False'
-    Default: 'True'
-    Description:
-      Set to True to create a DynamoDB endpoint in your VPC.
-    Type: String
+
+Mappings: 
+  RegionMap: 
+    us-east-1:
+      ZoneId1: use1-az6
+      ZoneId2: use1-az4
+      ZoneId3: use1-az5
+    us-east-2:
+      ZoneId1: use2-az2
+      ZoneId2: use2-az3
+      ZoneId3: use2-az1
+    us-west-1:
+      ZoneId1: usw1-az1
+      ZoneId2: usw1-az3
+      ZoneId3: usw1-az2
+    us-west-2:
+      ZoneId1: usw2-az1
+      ZoneId2: usw2-az2
+      ZoneId3: usw2-az3
+    eu-central-1:
+      ZoneId1: euc1-az3
+      ZoneId2: euc1-az2
+      ZoneId3: euc1-az1
+    eu-west-1:
+      ZoneId1: euw1-az1
+      ZoneId2: euw1-az2
+      ZoneId3: euw1-az3
+    eu-west-2:
+      ZoneId1: euw2-az2
+      ZoneId2: euw2-az3
+      ZoneId3: euw2-az1
+    eu-west-3:
+      ZoneId1: euw3-az1
+      ZoneId2: euw3-az2
+      ZoneId3: euw3-az3
+    eu-north-1:
+      ZoneId1: eun1-az2
+      ZoneId2: eun1-az1
+      ZoneId3: eun1-az3
+    ca-central-1:
+      ZoneId1: cac1-az2
+      ZoneId2: cac1-az1
+      ZoneId3: cac1-az3
+    eu-south-1:
+      ZoneId1: eus1-az2
+      ZoneId2: eus1-az1
+      ZoneId3: eus1-az3
+    ap-east-1:
+      ZoneId1: ape1-az3
+      ZoneId2: ape1-az2
+      ZoneId3: ape1-az1
+    ap-northeast-1:
+      ZoneId1: apne1-az4
+      ZoneId2: apne1-az1
+      ZoneId3: apne1-az2
+    ap-northeast-2:
+      ZoneId1: apne2-az1
+      ZoneId2: apne2-az3
+      ZoneId3: apne2-az2
+    ap-south-1:
+      ZoneId1: aps1-az2
+      ZoneId2: aps1-az3
+      ZoneId3: aps1-az1
+    ap-southeast-1:
+      ZoneId1: apse1-az1
+      ZoneId2: apse1-az2
+      ZoneId3: apse1-az3
+    ap-southeast-2:
+      ZoneId1: apse2-az3
+      ZoneId2: apse2-az1
+      ZoneId3: apse2-az2
+    us-gov-west-1:
+      ZoneId1: usgw1-az1
+      ZoneId2: usgw1-az2
+      ZoneId3: usgw1-az3
+    ap-northeast-3:
+      ZoneId1: apne3-az3
+      ZoneId2: apne3-az2
+      ZoneId3: apne3-az1
+    sa-east-1:
+      ZoneId1: sae1-az3
+      ZoneId2: sae1-az2
+      ZoneId3: sae1-az1
+    af-south-1:
+      ZoneId1: afs1-az3
+      ZoneId2: afs1-az2
+      ZoneId3: afs1-az1
+    ap-south-2:
+      ZoneId1: aps2-az3
+      ZoneId2: aps2-az2
+      ZoneId3: aps2-az1
+    ap-southeast-3:
+      ZoneId1: apse3-az3
+      ZoneId2: apse3-az2
+      ZoneId3: apse3-az1
+    ap-southeast-4:
+      ZoneId1: apse4-az3
+      ZoneId2: apse4-az2
+      ZoneId3: apse4-az1
+    ca-west-1:
+      ZoneId1: caw1-az3
+      ZoneId2: caw1-az2
+      ZoneId3: caw1-az1
+    eu-central-2:
+      ZoneId1: euc2-az3
+      ZoneId2: euc2-az2
+      ZoneId3: euc2-az1
+    eu-south-2:
+      ZoneId1: eus2-az3
+      ZoneId2: eus2-az2
+      ZoneId3: eus2-az1
+    il-central-1:
+      ZoneId1: ilc1-az3
+      ZoneId2: ilc1-az2
+      ZoneId3: ilc1-az1
+    me-central-1:
+      ZoneId1: mec1-az3
+      ZoneId2: mec1-az2
+      ZoneId3: mec1-az1
 
 Conditions:
-  S3EndpointCondition: !Equals [!Ref 'CreateS3Endpoint', 'True']
-  DynamoDBEndpointCondition: !Equals [!Ref 'CreateDynamoDBEndpoint', 'True']
-  
-  DoProvisionSubnetsC: 
-    Fn::And:
-      - !Equals [!Ref ProvisionSubnetsC, "True"]
-      - Condition: HasMoreThan2Azs
-
-  Has2Azs:
-    Fn::Or:
-      - Fn::Equals:
-        - {Ref: 'AWS::Region'}
-        - ap-south-1
-      - Fn::Equals:
-        - {Ref: 'AWS::Region'}
-        - ap-northeast-2
-      - Fn::Equals:
-        - {Ref: 'AWS::Region'}
-        - ca-central-1
-      - Fn::Equals:
-        - {Ref: 'AWS::Region'}
-        - cn-north-1
-      - Fn::Equals:
-        - {Ref: 'AWS::Region'}
-        - sa-east-1
-      - Fn::Equals:
-        - {Ref: 'AWS::Region'}
-        - us-west-1
-
-  HasMoreThan2Azs:
-    Fn::Not:
-      - Condition: Has2Azs
+     DoProvisionSubnetsC: !Equals [!Ref ProvisionSubnetsC, "True"]
 
 Resources:
 
@@ -135,111 +187,6 @@ Resources:
       Tags:
         - Key: "Name"
           Value: !Sub '${AWS::StackName}:Large-Scale-HPC'
-  
-  VPCFlowLog:
-    Type: AWS::EC2::FlowLog
-    Properties:
-      ResourceId: !Ref VPC
-      ResourceType: VPC
-      TrafficType: ALL
-      LogDestinationType: cloud-watch-logs
-      LogGroupName: !Sub '${AWS::StackName}-VPCFlowLogs'
-      DeliverLogsPermissionArn: !GetAtt FlowLogRole.Arn
-
-  FlowLogRole:
-    Type: AWS::IAM::Role
-    Properties:
-      AssumeRolePolicyDocument:
-        Version: "2012-10-17"
-        Statement:
-          - Effect: Allow
-            Principal:
-              Service:
-                - vpc-flow-logs.amazonaws.com
-            Action:
-              - "sts:AssumeRole"
-      ManagedPolicyArns:
-        - !Ref AWS::NoValue
-      Policies:
-        - PolicyName: FlowLogPolicy
-          PolicyDocument:
-            Version: "2012-10-17"
-            Statement:
-              - Effect: Allow
-                Action:
-                  - "logs:CreateLogGroup"
-                  - "logs:CreateLogStream"
-                  - "logs:PutLogEvents"
-                  - "logs:DescribeLogGroups"
-                  - "logs:DescribeLogStreams"
-                Resource: !Sub "arn:${AWS::Partition}:logs:${AWS::Region}:${AWS::AccountId}:log-group:${AWS::StackName}-VPCFlowLogs:*"
-
-  PublicSubnetA:
-    Type: AWS::EC2::Subnet
-    Properties:
-      VpcId: !Ref VPC
-      CidrBlock: !Ref CidrPublicSubnetA
-      AvailabilityZone:
-        Fn::Select:
-        - '0'
-        - Fn::GetAZs:
-            Ref: AWS::Region
-      MapPublicIpOnLaunch: true
-      Tags:
-      - Key: Name
-        Value: !Sub
-          - '${StackName}:PublicSubnetA-${AvailabilityZone}'
-          - StackName: !Ref AWS::StackName
-            AvailabilityZone: 
-              Fn::Select:
-              - '0'
-              - Fn::GetAZs:
-                  Ref: AWS::Region
-
-  PublicSubnetB:
-    Type: AWS::EC2::Subnet
-    Properties:
-      VpcId: !Ref VPC
-      CidrBlock: !Ref CidrPublicSubnetB
-      AvailabilityZone: 
-        Fn::Select:
-        - '1'
-        - Fn::GetAZs:
-            Ref: AWS::Region
-      MapPublicIpOnLaunch: true
-      Tags:
-      - Key: Name
-        Value: !Sub
-          - '${StackName}:PublicSubnetB-${AvailabilityZone}'
-          - StackName: !Ref AWS::StackName
-            AvailabilityZone: 
-              Fn::Select:
-              - '1'
-              - Fn::GetAZs:
-                  Ref: AWS::Region
-
-  PublicSubnetC:
-    Type: AWS::EC2::Subnet
-    Condition: DoProvisionSubnetsC
-    Properties:
-      VpcId: !Ref VPC
-      CidrBlock: !Ref CidrPublicSubnetC
-      AvailabilityZone: 
-        Fn::Select:
-        - '2'
-        - Fn::GetAZs:
-            Ref: AWS::Region
-      MapPublicIpOnLaunch: true
-      Tags:
-      - Key: Name
-        Value: !Sub
-          - '${StackName}:PublicSubnetC-${AvailabilityZone}'
-          - StackName: !Ref AWS::StackName
-            AvailabilityZone: 
-              Fn::Select:
-              - '2'
-              - Fn::GetAZs:
-                  Ref: AWS::Region
 
   InternetGateway:
     Type: AWS::EC2::InternetGateway
@@ -264,34 +211,11 @@ Resources:
       DestinationCidrBlock: 0.0.0.0/0
       GatewayId: !Ref InternetGateway
   
-  PublicSubnetARouteTableAssociation:
-    Type: AWS::EC2::SubnetRouteTableAssociation
-    Properties:
-      SubnetId: !Ref PublicSubnetA
-      RouteTableId: !Ref PublicRouteTable
-
-  PublicSubnetBRouteTableAssociation:
-    Type: AWS::EC2::SubnetRouteTableAssociation
-    Properties:
-      SubnetId: !Ref PublicSubnetB
-      RouteTableId: !Ref PublicRouteTable
-
-  PublicSubnetCRouteTableAssociation:
-    Condition: DoProvisionSubnetsC
-    Type: AWS::EC2::SubnetRouteTableAssociation
-    Properties:
-      SubnetId: !Ref PublicSubnetC
-      RouteTableId: !Ref PublicRouteTable
-
   PrivateSubnetA:
     Type: AWS::EC2::Subnet
     Properties:
       VpcId: !Ref VPC
-      AvailabilityZone:
-        Fn::Select:
-        - '0'
-        - Fn::GetAZs:
-            Ref: AWS::Region
+      AvailabilityZone: !GetAtt AvailabiltyZone1.ZoneName
       CidrBlock: !Ref CidrPrivateSubnetA
       MapPublicIpOnLaunch: false
       Tags:
@@ -299,21 +223,13 @@ Resources:
         Value: !Sub
           - '${StackName}:PrivateSubnetA-${AvailabilityZone}'
           - StackName: !Ref AWS::StackName
-            AvailabilityZone: 
-              Fn::Select:
-              - '0'
-              - Fn::GetAZs:
-                  Ref: AWS::Region
+            AvailabilityZone: !GetAtt AvailabiltyZone1.ZoneName
   
   PrivateSubnetB:
     Type: AWS::EC2::Subnet
     Properties:
       VpcId: !Ref VPC
-      AvailabilityZone: 
-        Fn::Select:
-        - '1'
-        - Fn::GetAZs:
-            Ref: AWS::Region
+      AvailabilityZone: !GetAtt AvailabiltyZone2.ZoneName
       CidrBlock: !Ref CidrPrivateSubnetB
       MapPublicIpOnLaunch: false
       Tags:
@@ -321,22 +237,14 @@ Resources:
         Value: !Sub
           - '${StackName}:PrivateSubnetB-${AvailabilityZone}'
           - StackName: !Ref AWS::StackName
-            AvailabilityZone: 
-              Fn::Select:
-              - '1'
-              - Fn::GetAZs:
-                  Ref: AWS::Region
+            AvailabilityZone: !GetAtt AvailabiltyZone2.ZoneName
 
   PrivateSubnetC:
     Type: AWS::EC2::Subnet
     Condition: DoProvisionSubnetsC
     Properties:
       VpcId: !Ref VPC
-      AvailabilityZone: 
-        Fn::Select:
-        - '2'
-        - Fn::GetAZs:
-            Ref: AWS::Region
+      AvailabilityZone: !GetAtt AvailabiltyZone3.ZoneName
       CidrBlock: !Ref CidrPrivateSubnetC
       MapPublicIpOnLaunch: false
       Tags:
@@ -344,11 +252,7 @@ Resources:
         Value: !Sub
           - '${StackName}:PrivateSubnetC-${AvailabilityZone}'
           - StackName: !Ref AWS::StackName
-            AvailabilityZone: 
-              Fn::Select:
-              - '2'
-              - Fn::GetAZs:
-                  Ref: AWS::Region
+            AvailabilityZone: !GetAtt AvailabiltyZone3.ZoneName
 
   NatGatewayAEIP:
     Type: AWS::EC2::EIP
@@ -454,58 +358,116 @@ Resources:
       RouteTableId: !Ref PrivateRouteTableC
       SubnetId: !Ref PrivateSubnetC
 
-  # S3 endpoint
+  AvailabiltyZone1:
+    Type: Custom::AvailabiltyZone
+    DependsOn: LogGroupGetAZLambdaFunction
+    Properties:
+      ServiceToken: !GetAtt GetAZLambdaFunction.Arn
+      ZoneId: !FindInMap [RegionMap, !Ref "AWS::Region", ZoneId1]
+
+  AvailabiltyZone2:
+    Type: Custom::AvailabiltyZone
+    DependsOn: LogGroupGetAZLambdaFunction
+    Properties:
+      ServiceToken: !GetAtt GetAZLambdaFunction.Arn
+      ZoneId: !FindInMap [RegionMap, !Ref "AWS::Region", ZoneId2]
+
+  AvailabiltyZone3:
+    Type: Custom::AvailabiltyZone
+    Condition: DoProvisionSubnetsC
+    DependsOn: LogGroupGetAZLambdaFunction
+    Properties:
+      ServiceToken: !GetAtt GetAZLambdaFunction.Arn
+      ZoneId: !FindInMap [RegionMap, !Ref "AWS::Region", ZoneId3]
+
+  LogGroupGetAZLambdaFunction:
+    Type: AWS::Logs::LogGroup
+    DeletionPolicy: Delete
+    UpdateReplacePolicy: Delete
+    Properties:
+      LogGroupName: !Sub /aws/lambda/${GetAZLambdaFunction}
+      RetentionInDays: 7
+
+  GetAZLambdaFunction:
+    Type: AWS::Lambda::Function
+    Properties:
+      Description: GetAZLambdaFunction
+      Timeout: 60
+      Runtime: python3.9
+      Handler: index.handler
+      Role: !GetAtt GetAZLambdaRole.Arn
+      Code:
+        ZipFile: |
+          import cfnresponse
+          from json import dumps
+          from boto3 import client
+          EC2 = client('ec2')
+          def handler(event, context):
+              if event['RequestType'] in ('Create', 'Update'):
+                  print(dumps(event, default=str))
+                  data = {}
+                  try:
+                      response = EC2.describe_availability_zones(
+                          Filters=[{'Name': 'zone-id', 'Values': [event['ResourceProperties']['ZoneId']]}]
+                      )
+                      print(dumps(response, default=str))
+                      data['ZoneName'] = response['AvailabilityZones'][0]['ZoneName']
+                  except Exception as error:
+                      cfnresponse.send(event, context, cfnresponse.FAILED, {}, reason=error)
+                  finally:
+                      cfnresponse.send(event, context, cfnresponse.SUCCESS, data)
+              else:
+                  cfnresponse.send(event, context, cfnresponse.SUCCESS, {})
+      Tags:
+        - Key: Name
+          Value: !Sub ${AWS::StackName}GetAZLambdaFunction
+
+  GetAZLambdaRole:
+    Type: AWS::IAM::Role
+    Properties:
+      Path: /
+      Description: GetAZLambdaFunction
+      AssumeRolePolicyDocument:
+        Version: '2012-10-17'
+        Statement:
+          - Effect: Allow
+            Action:
+              - sts:AssumeRole
+            Principal:
+              Service:
+                - !Sub 'lambda.${AWS::URLSuffix}'
+      ManagedPolicyArns:
+        - !Sub 'arn:${AWS::Partition}:iam::aws:policy/service-role/AWSLambdaBasicExecutionRole'
+      Policies:
+        - PolicyName: GetAZLambdaFunction
+          PolicyDocument:
+            Version: '2012-10-17'
+            Statement:
+              - Sid: ec2
+                Effect: Allow
+                Action:
+                  - ec2:DescribeAvailabilityZones
+                Resource:
+                  - '*'
+      Tags:
+        - Key: Name
+          Value: !Sub ${AWS::StackName}-GetAZLambdaFunction
+
   S3Endpoint:
     Type: 'AWS::EC2::VPCEndpoint'
-    Condition: S3EndpointCondition
     Properties:
-      PolicyDocument:
-        Version: 2012-10-17
-        Statement:
-            - Effect: Allow
-              Principal: '*'
-              Action:
-                - '*'
-              Resource:
-                - '*'
-      VpcEndpointType: Gateway
+      VpcEndpointType: 'Gateway'
       ServiceName: !Sub 'com.amazonaws.${AWS::Region}.s3'
       RouteTableIds:
         - !Ref PublicRouteTable
         - !Ref PrivateRouteTableA
         - !Ref PrivateRouteTableB
-        - !If [DoProvisionSubnetsC, !Ref PrivateRouteTableC, !Ref AWS::NoValue]
       VpcId: !Ref VPC
 
-  # DynamoDB endpoint
-  DynamoDBEndpoint:
-    Condition: DynamoDBEndpointCondition
-    Type: AWS::EC2::VPCEndpoint
-    Properties:
-      PolicyDocument:
-        Version: 2012-10-17
-        Statement:
-            - Effect: Allow
-              Principal: '*'
-              Action:
-                - '*'
-              Resource:
-                - '*'
-      VpcEndpointType: Gateway
-      ServiceName: !Sub 'com.amazonaws.${AWS::Region}.dynamodb'
-      RouteTableIds:
-        - !Ref PublicRouteTable
-        - !Ref PrivateRouteTableA
-        - !Ref PrivateRouteTableB
-        - !If [DoProvisionSubnetsC, !Ref PrivateRouteTableC, !Ref AWS::NoValue]
-      VpcId: !Ref VPC
-
-  # Within-VPC security group
-  VpcSecurityGroup:
+  SecurityGroup:
     Type: AWS::EC2::SecurityGroup
     Properties:
-        GroupDescription: Allow all traffic between IPs in VPC
-        GroupName: !Sub '${AWS::StackName}-vpc-security-group'
+        GroupDescription: Allow all traffic from resources in VPC
         VpcId:
           Ref: VPC
         SecurityGroupIngress:
@@ -514,7 +476,6 @@ Resources:
         SecurityGroupEgress:
         - IpProtocol: -1
           CidrIp: !Ref CidrBlock
-
 
 Outputs:
   VPC:
@@ -563,6 +524,6 @@ Outputs:
       Name: !Sub "${AWS::StackName}-InternetGateway"
   SecurityGroup:
     Description: The ID of the local security group
-    Value: !Ref VpcSecurityGroup
+    Value: !Ref SecurityGroup
     Export:
       Name: !Sub "${AWS::StackName}-SecurityGroup"

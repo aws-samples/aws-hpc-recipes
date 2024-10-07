@@ -4,15 +4,23 @@
 
 This recipe demonstrates a basic cloud networking setup for HPC on AWS. Several other recipes can consume the VPC and subnets configured by this recipe. 
 
-It is most useful when your HPC cluster meets these criteria:
-1. You only launch instances in one Availability Zone (this is fairly standard)
-2. You don't need that many instances - the default configuration provided by this template creates subnets with 250 available IP addresses. 
+It is most useful when you will only launch HPC instances and associated resources in one Availability Zone. If you need to support additional AZs, consider using the [HPC Scale Networking](../hpc_large_scale/) recipe.
 
 ## Usage
 
-This template creates one public and one private subnet in the same Availability Zone. 
+This template creates one public and one private subnet in a single Availability Zone. 
 
-* Create [Public and Private subnets](https://console.aws.amazon.com/cloudformation/home?region=us-east-2#/stacks/create/review?stackName=basic-networking&templateURL=https://aws-hpc-recipes.s3.us-east-1.amazonaws.com/main/recipes/net/hpc_basic/assets/public-private.yaml). The only required parameter is **Availabilty Zone** if you want to create a new VPC. 
+* Create [Public and Private subnets](https://console.aws.amazon.com/cloudformation/home?region=us-east-2#/stacks/create/review?stackName=basic-networking&templateURL=https://aws-hpc-recipes.s3.us-east-1.amazonaws.com/main/recipes/net/hpc_basic/assets/public-private.yaml). 
+
+To create a new VPC and subnets:
+* Leave **VpcId** and **InternetGatewayId** empty.
+* (Optional) Provide a value for **AvailabilityZone**. If you do not specify an Availability Zone, one will be selected for you.
+* (Optional) Set your own CIDR blocks for **VpcCIDR**, **PublicCIDR**, and **PrivateCIDR**.
+
+If you create subnets in an existing VPC:
+* Provide values for **VpcId** and **InternetGatewayId**.
+* Make sure the values for **PublicCIDR** and **PrivateCIDR** fall within the range of available IPs in the existing VPC.
+* (Optional) Provide a value for **AvailabilityZone**. If you do not specify an Availability Zone, one will be selected for you.
 
 If you don't wish to use the quick-create links, you can also download the [assets/public-private.yaml](assets/public-private.yaml) file and uploading it to the [AWS CloudFormation console](https://console.aws.amazon.com/cloudformation).
 
@@ -23,9 +31,12 @@ Once your networking stack has been created, you may wish to [activate terminati
 The template exports several variables, namedspaced by stack name. This lets you import them into other stacks.
 
 * VPC - the pre-existing or provisioned VPC
+* PublicSubnets - comma-delimited list of public subnet IDs
+* PrivateSubnets - comma-delimited list of private subnet IDs
 * DefaultPublicSubnet - the public subnet in the VPC
 * DefaultPrivateSubnet - the private subnet in the VPC
 * InternetGatewayId - the pre-existing or provisioned internet gateway for the VPC
+* SecurityGroup - a security group allowing inbound and outbound communications from IPs in the VPC
 
 ## Cost Estimate
 
