@@ -35,7 +35,7 @@ handle_rhel_9() {
     elif [ "${ARCHITECTURE}" == "x86_64" ]; then
         TARGET="linux_amd64"
     fi
-    sudo dnf install -y https://s3.amazonaws.com/ec2-downloads-windows/SSMAgent/latest/${TARGET}/amazon-ssm-agent.rpm
+    dnf list installed amazon-ssm-agent || sudo dnf install -y https://s3.amazonaws.com/ec2-downloads-windows/SSMAgent/latest/${TARGET}/amazon-ssm-agent.rpm
 }
 
 handle_rocky_9() {
@@ -47,7 +47,7 @@ handle_rocky_9() {
     elif [ "${ARCHITECTURE}" == "x86_64" ]; then
         TARGET="linux_amd64"
     fi
-    sudo dnf install -y https://s3.amazonaws.com/ec2-downloads-windows/SSMAgent/latest/${TARGET}/amazon-ssm-agent.rpm
+    dnf list installed amazon-ssm-agent || sudo dnf install -y https://s3.amazonaws.com/ec2-downloads-windows/SSMAgent/latest/${TARGET}/amazon-ssm-agent.rpm
 }
 
 handle_amzn_2() {
@@ -59,7 +59,7 @@ handle_amzn_2() {
     elif [ "${ARCHITECTURE}" == "x86_64" ]; then
         TARGET="linux_amd64"
     fi
-    sudo yum install -y https://s3.amazonaws.com/ec2-downloads-windows/SSMAgent/latest/${TARGET}/amazon-ssm-agent.rpm
+    yum list installed amazon-ssm-agent || sudo yum install -y https://s3.amazonaws.com/ec2-downloads-windows/SSMAgent/latest/${TARGET}/amazon-ssm-agent.rpm
 }
 
 # Main function
