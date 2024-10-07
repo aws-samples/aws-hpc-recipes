@@ -51,7 +51,7 @@ while [[ $ELAPSED_TIME -le $TIMEOUT ]]; do
         break
     fi
 
-    echo "$(date +%Y%m%d-%H:%M:%S) [-] Waiting for automation execution to complete... Retrying in 30s"
+    echo "$(date +%Y%m%d-%H:%M:%S) [-] Waiting for automation execution to complete... Retrying in 60s"
     sleep 60
     CURRENT_TIME=$(date +%s)
     ELAPSED_TIME=$((CURRENT_TIME - START_TIME))
