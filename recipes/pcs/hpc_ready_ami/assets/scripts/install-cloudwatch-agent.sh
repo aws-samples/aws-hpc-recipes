@@ -38,7 +38,7 @@ handle_rhel_9() {
     elif [ "${ARCHITECTURE}" == "x86_64" ]; then
         TARGET="amd64"
     fi
-    sudo dnf install -y "https://amazoncloudwatch-agent.s3.amazonaws.com/redhat/${TARGET}/latest/amazon-cloudwatch-agent.rpm"
+    dnf list installed amazon-cloudwatch-agent || sudo dnf install -y "https://amazoncloudwatch-agent.s3.amazonaws.com/redhat/${TARGET}/latest/amazon-cloudwatch-agent.rpm"
 }
 
 handle_rocky_9() {
@@ -48,7 +48,7 @@ handle_rocky_9() {
     elif [ "${ARCHITECTURE}" == "x86_64" ]; then
         TARGET="amd64"
     fi
-    sudo dnf install -y "https://amazoncloudwatch-agent.s3.amazonaws.com/redhat/${TARGET}/latest/amazon-cloudwatch-agent.rpm"
+    dnf list installed amazon-cloudwatch-agent || sudo dnf install -y "https://amazoncloudwatch-agent.s3.amazonaws.com/redhat/${TARGET}/latest/amazon-cloudwatch-agent.rpm"
 }
 
 handle_amzn_2() {
