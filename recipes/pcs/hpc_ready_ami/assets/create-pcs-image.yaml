@@ -68,6 +68,11 @@ Parameters:
     Default: '0.0.1'
     Description: ImageBuilder needs date as version string
 
+  Accounts:
+    Type: CommaDelimitedList
+    Default: !Ref AWS::AccountId
+    Description: List of accounts the Images should be shared with
+
   # Substack Parameters
   HpcRecipesS3Bucket:
     Type: String
@@ -161,11 +166,8 @@ Resources:
           AmiDistributionConfiguration:
             Name: !Sub 'cfnpcs_ami-${Distro}-${Architecture} {{ imagebuilder:buildDate }}'
             Description: 'Distribute a copy of the AMI to specific accounts in the destination Region.'
-            # Uncomment and provide AWS account IDs to share AMI once built
-            # LaunchPermissionConfiguration:
-            #   UserIds:
-            #     - '000000000000'
-            #     - '111111111111'
+            LaunchPermissionConfiguration:
+              UserIds: !Ref Accounts
 
   PCSImage:
     Type: AWS::ImageBuilder::Image
