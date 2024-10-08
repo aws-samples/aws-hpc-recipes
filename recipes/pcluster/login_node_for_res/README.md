@@ -65,6 +65,8 @@ When [Preparing the EC2 Image Builder Recipe](https://docs.aws.amazon.com/res/la
 
 2/ Add the `res-pc-login-node` component to the **Build components** list to configure the AMI to be compatible with a RES VDI
 
+**Note:** The `res-pc-login-node` component MUST be after the `research-and-engineering-studio-vdi-linux` component
+
 ![recipe_components](docs/recipe_components.png)
 
 3/ Add the appropriate KMS key under **Storage** section.
