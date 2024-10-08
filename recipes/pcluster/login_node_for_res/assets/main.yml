@@ -178,27 +178,14 @@ Resources:
           - description: Adds ingress rules to ParallelCluster HeadNode SG
             name: UpdateHeadNodeSG
             action: aws:invokeLambdaFunction
-            nextStep: allowDcv
+            nextStep: createAMI
             isEnd: false
             inputs:
               FunctionName: !Ref UpdateHeadNodeSGLambda
               Payload: '{"pclusterStackName": "{{pclusterStackName}}" }'
-          - name: allowDcv
-            action: aws:runCommand
-            nextStep: createAMI
-            isEnd: false
-            onFailure: Abort
-            inputs:
-              Parameters:
-                commands:
-                  - sudo /opt/parallelcluster/scripts/imds/imds-access.sh --allow dcv
-              InstanceIds:
-                - '{{getInstanceId.InstanceId}}'
-              DocumentName: AWS-RunShellScript
           - name: createAMI
             action: aws:createImage
-            nextStep: unsetDcv
-            isEnd: false
+            isEnd: true
             inputs:
               ImageName: LoginNode_{{getInstanceId.InstanceId}}_{{global:DATE_TIME}}
               InstanceId: '{{getInstanceId.InstanceId}}'
@@ -206,16 +193,6 @@ Resources:
               - Type: String
                 Name: AMIImageId
                 Selector: $.ImageId
-          - name: unsetDcv
-            action: aws:runCommand
-            isEnd: true
-            inputs:
-              Parameters:
-                commands:
-                  - sudo /opt/parallelcluster/scripts/imds/imds-access.sh --unset dcv
-              InstanceIds:
-                - '{{getInstanceId.InstanceId}}'
-              DocumentName: AWS-RunShellScript
         outputs:
           - createAMI.AMIImageId
 
@@ -292,8 +269,9 @@ Resources:
                     commands:
                       - |
                         sed -i '/\([0-9]\{1,3\}\.\)\{3\}[0-9]\{1,3\}:\/home/ s/^/#/' /etc/fstab
-                        systemctl stop parallelcluster-iptables.service
-                        systemctl disable parallelcluster-iptables.service 
+                        /opt/parallelcluster/scripts/imds/imds-access.sh --allow dcv
+                        /opt/parallelcluster/scripts/imds/imds-access.sh --allow dcvextauth
+                        /usr/local/sbin/save_tables.sh
 
 # Add outputs
 Outputs:
