@@ -29,12 +29,16 @@ disable_select_cron_tasks() {
 
     if [ -d "/etc/cron.daily" ]; then
         for task in man-db man-db.cron mlocate; do
-            grep -qxF "$task" "/etc/cron.daily/jobs.deny" || sudo echo "$task" | sudo tee -a "/etc/cron.daily/jobs.deny" > /dev/null
+            if [ ! -f "/etc/cron.daily/jobs.deny" ] || ! grep -qxF "$task" "/etc/cron.daily/jobs.deny"; then
+               echo "$task" | sudo tee -a "/etc/cron.daily/jobs.deny" > /dev/null
+            fi
         done
     fi
     if [ -d "/etc/cron.weekly" ]; then
         for task in man-db; do
-            grep -qxF "$task" "/etc/cron.daily/jobs.weekly" || sudo echo "$task" | sudo tee -a "/etc/cron.daily/jobs.weekly" > /dev/null
+            if [ ! -f "/etc/cron.daily/jobs.weekly" ] || ! grep -qxF "$task" "/etc/cron.daily/jobs.weekly"; then
+                echo "$task" | sudo tee -a "/etc/cron.daily/jobs.weekly" > /dev/null
+            fi
         done
     fi
 }
