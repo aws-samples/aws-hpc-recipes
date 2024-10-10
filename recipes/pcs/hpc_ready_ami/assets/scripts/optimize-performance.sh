@@ -54,7 +54,7 @@ disable_deeper_cstates() {
 
         # See https://github.com/aws/aws-parallelcluster-cookbook/commit/1f5911817d10b9ca00a706c94d50ef5e756b81e7
         case "${OS}-${VERSION}" in
-            r*-9 )
+            r*-9\.* )
                 sudo grubby --update-kernel=ALL --args="intel_idle.max_cstate=1 processor.max_cstate=1"
                 ;;
             ubuntu* )
