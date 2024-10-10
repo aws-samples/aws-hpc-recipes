@@ -49,11 +49,10 @@ disable_deeper_cstates() {
         logger "Disabling deeper C-States" "INFO"
 
         GRUB_COMMAND="grub2-mkconfig -o /boot/grub2/grub.cfg"
-        GRUB_SUB='s/^GRUB_CMDLINE_LINUX_DEFAULT=".*"/GRUB_CMDLINE_LINUX_DEFAULT="intel_idle.max_cstate=0 processor.max_cstate=1"/'
-
+        GRUB_SUB='/^GRUB_CMDLINE_LINUX_DEFAULT=".*"$/s/"$/ intel_idle.max_cstate=0 processor.max_cstate=1"/'
         if [ "${OS}" == "ubuntu" ]; then
             GRUB_COMMAND="/usr/sbin/update-grub"
-            GRUB_SUB='s/^GRUB_CMDLINE_LINUX=".*"/GRUB_CMDLINE_LINUX="intel_idle.max_cstate=0 processor.max_cstate=1"/'
+            GRUB_SUB='/^GRUB_CMDLINE_LINUX=".*"$/s/"$/ intel_idle.max_cstate=0 processor.max_cstate=1"/'
         fi
 
         sudo sed -i "${GRUB_SUB}" /etc/default/grub
