@@ -43,12 +43,14 @@ Resources:
                 action: ExecuteBash
                 inputs:
                   commands:
+                    - set -e
                     - 'curl -fsSL https://${HpcRecipesS3Bucket}.s3.us-east-1.amazonaws.com/${HpcRecipesBranch}/recipes/pcs/hpc_ready_ami/assets/scripts/common.sh -o common.sh'
                     - 'curl -fsSL https://${HpcRecipesS3Bucket}.s3.us-east-1.amazonaws.com/${HpcRecipesBranch}/recipes/pcs/hpc_ready_ami/assets/scripts/update-os.sh -o update-os.sh'
               - name: InstallAgent
                 action: ExecuteBash
                 inputs:
                   commands:
+                    - set -e
                     - 'chmod +x update-os.sh'
                     - './update-os.sh'
 

@@ -53,11 +53,13 @@ Resources:
                 action: ExecuteBash
                 inputs:
                   commands:
+                    - set -e
                     - 'curl -fsSL https://${HpcRecipesS3Bucket}.s3.us-east-1.amazonaws.com/${HpcRecipesBranch}/recipes/pcs/hpc_ready_ami/assets/scripts/install-pcs-slurm.sh -o install-pcs-slurm.sh'
               - name: InstallAgent
                 action: ExecuteBash
                 inputs:
                   commands:
+                    - set -e
                     - 'chmod +x install-pcs-slurm.sh'
                     - './install-pcs-slurm.sh --aws-region=${AWS::Region} --pcs-slurm-version={{ PcsSlurmVersion }} --pcs-slurm-installer-version={{ PcsSlurmInstallerVersion }}'
 
