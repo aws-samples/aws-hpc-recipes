@@ -39,12 +39,12 @@ We provide CloudFormation templates that let you create EC2 ImageBuilder compone
 
 For example, the file [install-ssm-agent.yaml](assets/components/install-ssm-agent.yaml) can create an Image Builder component named `SsmAgentInstaller` that uses the [install-ssm-agent.sh](assets/scripts/install-ssm-agent.sh) to install [SSM Agent](https://docs.aws.amazon.com/systems-manager/latest/userguide/ssm-agent.html) on the AMI. 
 
-The ImageBuilder components are available as individual templates that deploy a CloudFormation stack. There is also a [meta-template](assets/imagebuilder-components.yaml) that will create all available ImageBuilder components at once, using nested CloudFormation stacks. 
+The ImageBuilder components are available as individual templates that deploy a CloudFormation stack. There is also a [meta-template](assets/nested-imagebuilder-components.yaml) that will create all available ImageBuilder components at once, using nested CloudFormation stacks. 
 
 #### Deploy all ImageBuilder components [recommended]
 
 1. Navigate to the [AWS CloudFormation console](https://console.aws.amazon.com/cloudformation)
-2. Choose **Create stack**, then upload [imagebuilder-components.yaml](assets/imagebuilder-components.yaml) as the template. 
+2. Choose **Create stack**, then upload [nested-imagebuilder-components.yaml](assets/nested-imagebuilder-components.yaml) as the template. 
 3. In Parameters:
     * For **HpcRecipesS3Bucket** choose the HPC Recipes bucket where the component is hosted. Unless you are working with a pre-release version of HPC Recipes for AWS, this will be `aws-hpc-recipes`.
     * For **HpcRecipesBranch**, enter the release branch for the HPC Recipes bucket. Unless you are working with a pre-release version of HPC Recipes for AWS, this will be `main`.
