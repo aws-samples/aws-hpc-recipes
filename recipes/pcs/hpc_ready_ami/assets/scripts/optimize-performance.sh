@@ -36,8 +36,8 @@ disable_select_cron_tasks() {
     fi
     if [ -d "/etc/cron.weekly" ]; then
         for task in man-db; do
-            if [ ! -f "/etc/cron.daily/jobs.weekly" ] || ! grep -qxF "$task" "/etc/cron.daily/jobs.weekly"; then
-                echo "$task" | sudo tee -a "/etc/cron.daily/jobs.weekly" > /dev/null
+            if [ ! -f "/etc/cron.weekly/jobs.deny" ] || ! grep -qxF "$task" "/etc/cron.weekly/jobs.deny"; then
+                echo "$task" | sudo tee -a "/etc/cron.weekly/jobs.deny" > /dev/null
             fi
         done
     fi
