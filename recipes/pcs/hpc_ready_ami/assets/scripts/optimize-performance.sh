@@ -27,20 +27,18 @@ disable_select_cron_tasks() {
 
     logger "Disabling select cron tasks" "INFO"
 
-    if [ -d "/etc/cron.daily" ]; then
-        for task in man-db man-db.cron mlocate; do
-            if [ ! -f "/etc/cron.daily/jobs.deny" ] || ! grep -qxF "$task" "/etc/cron.daily/jobs.deny"; then
-               echo "$task" | sudo tee -a "/etc/cron.daily/jobs.deny" > /dev/null
-            fi
-        done
-    fi
-    if [ -d "/etc/cron.weekly" ]; then
-        for task in man-db; do
-            if [ ! -f "/etc/cron.weekly/jobs.deny" ] || ! grep -qxF "$task" "/etc/cron.weekly/jobs.deny"; then
-                echo "$task" | sudo tee -a "/etc/cron.weekly/jobs.deny" > /dev/null
-            fi
-        done
-    fi
+    [ -d "/etc/cron.daily" ] || sudo mkdir -m 755 "/etc/cron.daily"
+    for task in man-db man-db.cron mlocate; do
+        if [ ! -f "/etc/cron.daily/jobs.deny" ] || ! grep -qxF "$task" "/etc/cron.daily/jobs.deny"; then
+            echo "$task" | sudo tee -a "/etc/cron.daily/jobs.deny" > /dev/null
+        fi
+    done
+    [ -d "/etc/cron.weekly" ] || sudo mkdir -m 755 "/etc/cron.weekly"
+    for task in man-db; do
+        if [ ! -f "/etc/cron.weekly/jobs.deny" ] || ! grep -qxF "$task" "/etc/cron.weekly/jobs.deny"; then
+            echo "$task" | sudo tee -a "/etc/cron.weekly/jobs.deny" > /dev/null
+        fi
+    done
 }
 
 disable_deeper_cstates() {
@@ -69,7 +67,6 @@ disable_deeper_cstates() {
     else
         logger "Non x86 architecture detected, skipping C-States optimization" "INFO"
     fi
-
 }
 
 custom_sysctl_settings() {
@@ -100,7 +97,6 @@ custom_sysctl_settings() {
 
     # Apply the changes
     sudo sysctl -p "$CONFIG_FILE"
-
 }
 
 handle_ubuntu_22.04() {
