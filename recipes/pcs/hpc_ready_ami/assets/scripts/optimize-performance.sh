@@ -29,12 +29,16 @@ disable_select_cron_tasks() {
 
     if [ -d "/etc/cron.daily" ]; then
         for task in man-db man-db.cron mlocate; do
-            grep -qxF "$task" "/etc/cron.daily/jobs.deny" || sudo echo "$task" | sudo tee -a "/etc/cron.daily/jobs.deny" > /dev/null
+            if [ ! -f "/etc/cron.daily/jobs.deny" ] || ! grep -qxF "$task" "/etc/cron.daily/jobs.deny"; then
+               echo "$task" | sudo tee -a "/etc/cron.daily/jobs.deny" > /dev/null
+            fi
         done
     fi
     if [ -d "/etc/cron.weekly" ]; then
         for task in man-db; do
-            grep -qxF "$task" "/etc/cron.daily/jobs.weekly" || sudo echo "$task" | sudo tee -a "/etc/cron.daily/jobs.weekly" > /dev/null
+            if [ ! -f "/etc/cron.daily/jobs.weekly" ] || ! grep -qxF "$task" "/etc/cron.daily/jobs.weekly"; then
+                echo "$task" | sudo tee -a "/etc/cron.daily/jobs.weekly" > /dev/null
+            fi
         done
     fi
 }
@@ -48,19 +52,22 @@ disable_deeper_cstates() {
 
         logger "Disabling deeper C-States" "INFO"
 
-        GRUB_COMMAND="grub2-mkconfig -o /boot/grub2/grub.cfg"
-        GRUB_SUB='s/^GRUB_CMDLINE_LINUX_DEFAULT=".*"/GRUB_CMDLINE_LINUX_DEFAULT="intel_idle.max_cstate=0 processor.max_cstate=1"/'
-
-        if [ "${OS}" == "ubuntu" ]; then
-            GRUB_COMMAND="/usr/sbin/update-grub"
-            GRUB_SUB='s/^GRUB_CMDLINE_LINUX=".*"/GRUB_CMDLINE_LINUX="intel_idle.max_cstate=0 processor.max_cstate=1"/'
-        fi
-
-        sudo sed -i "${GRUB_SUB}" /etc/default/grub
-        sudo ${GRUB_COMMAND}
-
+        # See https://github.com/aws/aws-parallelcluster-cookbook/commit/1f5911817d10b9ca00a706c94d50ef5e756b81e7
+        case "${OS}-${VERSION}" in
+            r*-9 )
+                sudo grubby --update-kernel=ALL --args="intel_idle.max_cstate=1 processor.max_cstate=1"
+                ;;
+            ubuntu* )
+                sudo sed -i '/^GRUB_CMDLINE_LINUX=".*"$/s/"$/ intel_idle.max_cstate=0 processor.max_cstate=1"/' /etc/default/grub
+                sudo /usr/sbin/update-grub
+                ;;
+            *)
+                sudo sed -i '/^GRUB_CMDLINE_LINUX_DEFAULT=".*"$/s/"$/ intel_idle.max_cstate=0 processor.max_cstate=1"/' /etc/default/grub
+                sudo /usr/sbin/grub2-mkconfig -o /boot/grub2/grub.cfg
+                ;;
+        esac
     else
-        logger "Non x64 architecture detected, skipping C-States optimization" "INFO"
+        logger "Non x86 architecture detected, skipping C-States optimization" "INFO"
     fi
 
 }
