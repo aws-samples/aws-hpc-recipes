@@ -39,13 +39,16 @@ Resources:
         phases:
           - name: build
             steps:
-              - name: DownloadScript
-                action: ExecuteBash
+              - name: DownloadCommon
+                action: WebDownload
                 inputs:
-                  commands:
-                    - set -e
-                    - 'curl -fsSL https://${HpcRecipesS3Bucket}.s3.us-east-1.amazonaws.com/${HpcRecipesBranch}/recipes/pcs/hpc_ready_ami/assets/scripts/common.sh -o common.sh'
-                    - 'curl -fsSL https://${HpcRecipesS3Bucket}.s3.us-east-1.amazonaws.com/${HpcRecipesBranch}/recipes/pcs/hpc_ready_ami/assets/scripts/install-efs-utils.sh -o install-efs-utils.sh'
+                  - source: https://${HpcRecipesS3Bucket}.s3.us-east-1.amazonaws.com/${HpcRecipesBranch}/recipes/pcs/hpc_ready_ami/assets/scripts/common.sh
+                    destination: common.sh
+              - name: DownloadInstaller
+                action: WebDownload
+                inputs:
+                  - source: https://${HpcRecipesS3Bucket}.s3.us-east-1.amazonaws.com/${HpcRecipesBranch}/recipes/pcs/hpc_ready_ami/assets/scripts/install-efs-utils.sh
+                    destination: install-efs-utils.sh
               - name: InstallAgent
                 action: ExecuteBash
                 inputs:
