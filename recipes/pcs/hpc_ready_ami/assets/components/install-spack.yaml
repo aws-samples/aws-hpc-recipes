@@ -50,12 +50,12 @@ Resources:
                 inputs:
                   - source: https://${HpcRecipesS3Bucket}.s3.us-east-1.amazonaws.com/${HpcRecipesBranch}/recipes/pcs/hpc_ready_ami/assets/scripts/common.sh
                     destination: common.sh
-              - name: DownloadAgent
+              - name: DownloadInstaller
                 action: WebDownload
                 inputs:
                   - source: https://${HpcRecipesS3Bucket}.s3.us-east-1.amazonaws.com/${HpcRecipesBranch}/recipes/pcs/hpc_ready_ami/assets/scripts/install-spack.sh
                     destination: install-spack.sh
-              - name: InstallAgent
+              - name: InstallSpack
                 action: ExecuteBash
                 inputs:
                   commands:

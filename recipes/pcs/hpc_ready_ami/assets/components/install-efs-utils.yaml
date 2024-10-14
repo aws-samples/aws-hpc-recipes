@@ -49,7 +49,7 @@ Resources:
                 inputs:
                   - source: https://${HpcRecipesS3Bucket}.s3.us-east-1.amazonaws.com/${HpcRecipesBranch}/recipes/pcs/hpc_ready_ami/assets/scripts/install-efs-utils.sh
                     destination: install-efs-utils.sh
-              - name: InstallAgent
+              - name: InstallEfsUtils
                 action: ExecuteBash
                 inputs:
                   commands:

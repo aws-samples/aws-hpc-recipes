@@ -44,12 +44,12 @@ Resources:
                 inputs:
                   - source: https://${HpcRecipesS3Bucket}.s3.us-east-1.amazonaws.com/${HpcRecipesBranch}/recipes/pcs/hpc_ready_ami/assets/scripts/common.sh
                     destination: common.sh
-              - name: DownloadAgent
+              - name: DownloadUpdateScript
                 action: WebDownload
                 inputs:
                   - source: https://${HpcRecipesS3Bucket}.s3.us-east-1.amazonaws.com/${HpcRecipesBranch}/recipes/pcs/hpc_ready_ami/assets/scripts/update-os.sh
                     destination: update-os.sh
-              - name: InstallAgent
+              - name: ExecuteUpdateScript
                 action: ExecuteBash
                 inputs:
                   commands:

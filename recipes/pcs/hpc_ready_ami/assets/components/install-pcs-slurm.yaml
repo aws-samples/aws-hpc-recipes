@@ -49,12 +49,12 @@ Resources:
         phases:
           - name: build
             steps:
-              - name: DownloadAgent
+              - name: DownloadInstaller
                 action: WebDownload
                 inputs:
                   - source: https://${HpcRecipesS3Bucket}.s3.us-east-1.amazonaws.com/${HpcRecipesBranch}/recipes/pcs/hpc_ready_ami/assets/scripts/install-pcs-slurm.sh
                     destination: install-pcs-slurm.sh
-              - name: InstallAgent
+              - name: InstallSlurm
                 action: ExecuteBash
                 inputs:
                   commands:
