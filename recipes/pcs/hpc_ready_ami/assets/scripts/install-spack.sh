@@ -37,11 +37,9 @@ parse_args() {
                 ;;
             --no-arm-compiler )
                 NO_ARM_COMPILER="--no-arm-compiler"
-                shift
                 ;;
             --no-intel-compiler )
                 NO_INTEL_COMPILER="--no-intel-compiler"
-                shift
                 ;;
             *)
                 echo "Invalid option: $1" >&2
@@ -83,32 +81,22 @@ download_and_install_spack() {
 
 handle_ubuntu_22.04() {
     logger "Installing deps for Ubuntu 22.04" "INFO"
-    sudo apt update && sudo apt install -y git && sudo apt clean
+    sudo apt update && sudo apt install -y git python3-pip && sudo apt clean
 }
 
 handle_rhel_9() { 
     logger "Installing deps for RHEL 9" "INFO"
-    sudo dnf install -y git && sudo dnf clean all
+    sudo dnf install -y git python3-pip && sudo dnf clean all
 }
 
 handle_rocky_9() {
     logger "Installing deps for Rocky Linux 9" "INFO"
-    sudo dnf install -y git && sudo dnf clean all
+    sudo dnf install -y git python3-pip && sudo dnf clean all
 }
 
 handle_amzn_2() {
     logger "Installing deps for Amazon Linux 2" "INFO"
-    sudo yum makecache && sudo yum install -y git && sudo yum clean all
-}
-
-install_dependencies() {
-    # The Spack installer requires presence of git to check out the spack-configs repository
-
-    # Common library that helps implement OS-specific code paths
-    if [ -f "common.sh" ]; then . common.sh; fi
-    detect_os_version
-    handle_${OS}_${VERSION}
-
+    sudo yum makecache && sudo yum install -y git python3-pip && sudo yum clean all
 }
 
 # Main function
