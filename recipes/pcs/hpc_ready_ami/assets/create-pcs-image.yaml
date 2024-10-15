@@ -145,6 +145,10 @@ Resources:
       Description: !Sub '${Architecture} infrastructure'
       InstanceProfileName: EC2InstanceProfileForImageBuilder
       InstanceTypes: !FindInMap [InstanceConfigs, !Ref Architecture, 'default']
+      InstanceMetadataOptions:
+        # NOTE: Set this to 3 (or higher) if containers that need EC2 metadata are being built.
+        HttpPutResponseHopLimit: 1
+        HttpTokens: required
       # Appending StackName enables multiple Infra configs with the same base name, 
       # which is important for debugging.
       Name: !Sub 'pcs_ami-${Architecture}-${AWS::StackName}'
