@@ -173,14 +173,157 @@ Resources:
             #   UserIds:
             #     - '000000000000'
             #     - '111111111111'
+ 
+  PCSImageBuilderLifecycleRole:
+    Type: AWS::IAM::Role
+    Properties:
+      AssumeRolePolicyDocument:
+        Version: '2012-10-17'
+        Statement:
+          - Effect: Allow
+            Principal:
+              Service: imagebuilder.amazonaws.com
+            Action: 'sts:AssumeRole'
+      ManagedPolicyArns:
+        - !Sub 'arn:${AWS::Partition}:iam::aws:policy/service-role/EC2ImageBuilderLifecycleExecutionPolicy'
 
+  PCSImageLifecyclePolicy:
+    Type: AWS::ImageBuilder::LifecyclePolicy
+    Properties:
+      Name: !Sub 'Lifecycle-${PCSImageRecipe.Name}'
+      Description: !Sub 'Lifecycle policy for PCS AMI, ${PCSImageRecipe.Name}'
+      ExecutionRole: !GetAtt PCSImageBuilderLifecycleRole.Arn
+      ResourceType: AMI_IMAGE
+      PolicyDetails:
+        - Action: 
+            Type: DELETE
+            IncludeResources: 
+              Amis: true
+              Snapshots: true
+          Filter:
+            Type: AGE
+            Value: 30
+            Unit: DAYS
+            RetainAtLeast: 3
+      ResourceSelection:
+        Recipes:
+          - Name: !GetAtt PCSImageRecipe.Name
+            SemanticVersion: !Ref SemanticVersion
+
+  PCSImagePipeline:
+    Type: AWS::ImageBuilder::ImagePipeline
+    Properties:
+      Status: ENABLED
+      Description: 'PCS AMI Pipeline'
+      Name: !GetAtt PCSImageRecipe.Name
+      EnhancedImageMetadataEnabled: true
+      ImageRecipeArn: !GetAtt PCSImageRecipe.Arn
+      ImageTestsConfiguration: 
+        ImageTestsEnabled: True
+        TimeoutMinutes: 60
+      # Scanning requires Inspector to be enabled on the account. Disabled by default for compatibility
+      #ImageScanningConfiguration: 
+      #  ImageScanningEnabled: true
+      InfrastructureConfigurationArn: !GetAtt PCSInfrastructureConfiguration.Arn
+      DistributionConfigurationArn: !GetAtt PCSDistributionConfiguration.Arn
+      Schedule:
+        # Rebuilds weekly at 8:30 UTC on Sundays (1)
+        ScheduleExpression: 'cron(30 8 ? * 1 *)'
+        # If you use EXPRESSION_MATCH_AND_DEPENDENCY_UPDATES_AVAILABLE option, you must use semantic versioning (x.x.x) for your components, 
+        # and always use latest for the base image. ImageBuilder tracks Base Image updates and Component updates and rebuilds selectively. 
+        # When set to EXPRESSION_MATCH_ONLY it will build a new image on every cron. 
+        PipelineExecutionStartCondition: EXPRESSION_MATCH_ONLY
+
+  # Build the image synchronously with Cloudformation stack deployment
+  # This image has consistent naming and semantic versioning with ImagePipeline. 
+  # It builds imageName/x.x.x/1 while the ImagePipeline will build /{2..N}. 
+  # Build times can be long, so consider commenting out this block (to ENDI)
+  # and leverage ImagePipeline to execute build for all with the
+  # ExecutePipeline block below.
   PCSImage:
+    DependsOn: PCSImagePipeline
     Type: AWS::ImageBuilder::Image
     Properties:
+      Name: !GetAtt PCSImageRecipe.Name
       DistributionConfigurationArn: !GetAtt PCSDistributionConfiguration.Arn
       ImageRecipeArn: !GetAtt PCSImageRecipe.Arn
       InfrastructureConfigurationArn: !GetAtt PCSInfrastructureConfiguration.Arn
+  # ENDI
+
+#### Optional: a lambda custom resource could trigger ImagePipeline execution to build 
+#### an AMI without holding the Cloudformation stack to wait on PCSImage.
+#### Uncomment the code block below (to ENDCR) to trigger pipeline execute on create
+# 
+#  ExecutePipelineFunction:
+#    Type: AWS::Lambda::Function
+#    Properties:
+#      Handler: index.handler
+#      Role: !GetAtt LambdaExecutionRole.Arn
+#      Runtime: python3.8
+#      Timeout: 300
+#      Code:
+#        ZipFile: |
+#          import boto3
+#          import cfnresponse
+#
+#          def handler(event, context):
+#            if event['RequestType'] in ['Create', 'Update']:
+#              try:
+#                client = boto3.client('imagebuilder')
+#                pipeline_arn = event['ResourceProperties']['PipelineArn']
+#                
+#                response = client.start_image_pipeline_execution(
+#                  imagePipelineArn=pipeline_arn
+#                )
+#                
+#                execution_id = response['imageBuildVersionArn']
+#                cfnresponse.send(event, context, cfnresponse.SUCCESS, {'ExecutionId': execution_id})
+#              except Exception as e:
+#                print(str(e))
+#                cfnresponse.send(event, context, cfnresponse.FAILED, {'Error': str(e)})
+#            else:
+#              cfnresponse.send(event, context, cfnresponse.SUCCESS, {})
+#
+#  LambdaExecutionRole:
+#    Type: AWS::IAM::Role
+#    Properties:
+#      AssumeRolePolicyDocument:
+#        Version: '2012-10-17'
+#        Statement:
+#          - Effect: Allow
+#            Principal:
+#              Service: lambda.amazonaws.com
+#            Action: sts:AssumeRole
+#      Policies:
+#        - PolicyName: ImageBuilderAccess
+#          PolicyDocument:
+#            Version: '2012-10-17'
+#            Statement:
+#              - Effect: Allow
+#                Action:
+#                  - imagebuilder:StartImagePipelineExecution
+#                Resource: '*'
+#        - PolicyName: CloudWatchLogsAccess
+#          PolicyDocument:
+#            Version: '2012-10-17'
+#            Statement:
+#              - Effect: Allow
+#                Action:
+#                  - logs:CreateLogGroup
+#                  - logs:CreateLogStream
+#                  - logs:PutLogEvents
+#                Resource: !Sub 'arn:${AWS::Partition}:logs:*:*:*'
+#
+#  ExecutePipeline:
+#    Type: Custom::ExecutePipeline
+#    Properties:
+#      ServiceToken: !GetAtt ExecutePipelineFunction.Arn
+#      PipelineArn: !Ref PCSImagePipeline
+#
+##### ENDCR
 
 Outputs:
-  Image:
-    Value: !Ref PCSImage
+  ImagePipeline:
+    Value: !Ref PCSImagePipeline
+  ImageName:
+    Value: !GetAtt PCSImagePipeline.Name
