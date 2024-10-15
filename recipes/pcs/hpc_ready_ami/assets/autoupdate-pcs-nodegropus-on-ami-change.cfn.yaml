@@ -4,7 +4,7 @@ Description: EventBridge rule to trigger Lambda function on EC2 Image Builder co
 Parameters:
   ClusterIdentifier:
     Type: String
-    Description: Identifier of the ParallelCluster cluster
+    Description: Identifier of the Parallel Computing Service (PCS) cluster
   ComputeNodeGroupIdentifiers:
     Type: CommaDelimitedList
     Description: Comma-Delimited List of Compute Node Group Identifiers to update when a new AMI is built
@@ -46,14 +46,8 @@ Resources:
                 Action:
                   - imagebuilder:GetImage
                 Resource: '*'
+        # Documented here: https://docs.aws.amazon.com/pcs/latest/userguide/security-min-permissions.html
         - PolicyName: PCSUpdatePolicy
-          PolicyDocument:
-            Version: '2012-10-17'
-            Statement:
-              - Effect: Allow
-                Action: pcs:UpdateComputeNodeGroup
-                Resource: '*'
-        - PolicyName: PCSMinimumUpdatePolicy
           PolicyDocument:
             Version: '2012-10-17'
             Statement:
@@ -210,6 +204,7 @@ Resources:
                   - lambda:PublishLayerVersion
                 Resource: '*'
 
+  # This function builds the Boto3Layer
   LayerBuilderFunction:
     Type: AWS::Lambda::Function
     Properties:
@@ -260,6 +255,8 @@ Resources:
                   print(f"Error: {str(e)}")
                   cfnresponse.send(event, context, cfnresponse.FAILED, {})
 
+  # Note: the Boto3Layer is a stopgap. Lambda tracks an older stable version of AWS SDK that 
+  # is not aware of the new PCS service. Once Lambda is updated this layer can be removed. 
   Boto3Layer:
     Type: Custom::Boto3Layer
     Properties:
