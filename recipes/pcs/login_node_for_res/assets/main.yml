@@ -237,7 +237,7 @@ Resources:
 
                         #strip the double-quote 
                         slurm_ip=$(echo $slurm_ip | tr -d '"')
-                        slrum_port=$(echo $slurm_port | tr -d '"')
+                        slurm_port=$(echo $slurm_port | tr -d '"')
                         slurm_key_arn=$(echo $slurm_key_arn | tr -d '"')
 
                         mkdir -p /etc/slurm
