@@ -1,0 +1,325 @@
+AWSTemplateFormatVersion: '2010-09-09'
+Description: >
+  Demonstrates how to enable Research and Engineering Studio (RES) to integrate with AWS Parallel Computing Service.
+
+Metadata:
+  AWS::CloudFormation::Interface:
+    ParameterGroups:
+      - Label:
+          default: RES and PCS Details
+        Parameters:
+          - PCSClusterId
+          - RESEnvironment
+      - Label:
+          default: Networking
+        Parameters:
+          - PCSClusterSG
+          - ImageBuilderInfrastructureSubnet
+
+Parameters:
+  PCSClusterId:
+    Type: String
+    Description: PCS Cluster ID
+    AllowedPattern: "^pcs_[0-9a-z]*$"
+  RESEnvironment:
+    Type: String
+    Description: Name of the Research and Engineering Studio (RES) environment
+    AllowedPattern: ^res-[A-Za-z\-\_0-9]{0,7}$
+    ConstraintDescription: EnvironmentName must start with "res-" and should be less than or equal to 11 characters.
+  PCSClusterSG:
+    Type: List<AWS::EC2::SecurityGroup::Id>
+    Description: Choose the security group associated to PCS Cluster
+    # AllowedPattern: ^sg-[0-9a-f]{17}
+  ImageBuilderInfrastructureSubnet:
+    Type: AWS::EC2::Subnet::Id
+    Description: Choose a subnet for ec2 Image Builder Infrastructure
+
+Resources:
+
+  RESEnvironmentImageBuilderRole:
+    Type: AWS::IAM::Role
+    Properties:
+      AssumeRolePolicyDocument:
+        Version: "2012-10-17"
+        Statement:
+        - Effect: Allow
+          Principal:
+            Service: ec2.amazonaws.com
+          Action: "sts:AssumeRole"
+      # Add AmazonSSMManagedInstanceCore and EC2InstanceProfileForImageBuilder managed policies
+      ManagedPolicyArns: 
+        - arn:aws:iam::aws:policy/AmazonSSMManagedInstanceCore
+        - arn:aws:iam::aws:policy/EC2InstanceProfileForImageBuilder
+        - !Ref RESPCSPolicy
+      Policies:
+        - PolicyName: !Sub ${AWS::StackName}-RES-EnvironmentPolicy
+          PolicyDocument:
+            Version: "2012-10-17"
+            Statement:
+            - Sid: RESDynamoDBAccess
+              Effect: Allow
+              Action: "dynamodb:GetItem"
+              Resource: !Sub "arn:aws:dynamodb:${AWS::Region}:${AWS::AccountId}:table/${RESEnvironment}.cluster-settings"
+              Condition:
+                ForAllValues:StringLike:
+                  "dynamodb:LeadingKeys":
+                  - "global-settings.gpu_settings.*"
+                  - "global-settings.package_config.*"
+            - Sid: RESS3Access
+              Effect: Allow
+              Action: "s3:GetObject"
+              Resource: !Sub "arn:aws:s3:::${RESEnvironment}-cluster-${AWS::Region}-${AWS::AccountId}/idea/vdc/res-ready-install-script-packages/*"
+      RoleName: !Sub "${AWS::StackName}-RES-PCS-Ec2ImageBuilderRole"
+
+  RESEnvironmentImageBuilderIAMInstanceProfile:
+    Type: AWS::IAM::InstanceProfile
+    Properties:
+      Roles:
+        - !Ref RESEnvironmentImageBuilderRole
+
+  RESPCSPolicy:
+    Type: AWS::IAM::ManagedPolicy
+    Properties:
+      PolicyDocument:
+        Version: "2012-10-17"
+        Statement:
+          - Effect: Allow
+            Action:
+              - pcs:getCluster
+            Resource: !Sub "arn:${AWS::Partition}:pcs:${AWS::Region}:${AWS::AccountId}:cluster/${PCSClusterId}"
+          - Effect: Allow
+            Action:
+              - secretsmanager:getSecretValue
+            Resource: !Sub "arn:${AWS::Partition}:secretsmanager:${AWS::Region}:${AWS::AccountId}:secret:pcs!*"
+
+  ResourceTaggerRole:
+    Type: AWS::IAM::Role
+    Properties:
+      AssumeRolePolicyDocument:
+        Version: '2012-10-17'
+        Statement:
+          - Effect: Allow
+            Principal:
+              Service: lambda.amazonaws.com
+            Action: sts:AssumeRole
+      Policies:
+        - PolicyName: ResourceTaggerPolicy
+          PolicyDocument:
+            Version: '2012-10-17'
+            Statement:
+              - Effect: Allow
+                Action:
+                  - logs:CreateLogGroup
+                  - logs:CreateLogStream
+                  - logs:PutLogEvents
+                Resource: arn:aws:logs:*:*:*
+              - Effect: Allow
+                Action:
+                  - iam:TagPolicy
+                  - ec2:CreateTags
+                Resource: '*'
+
+  ResourceTaggerFunction:
+    Type: AWS::Lambda::Function
+    Properties:
+      FunctionName: !Sub ResourceTagger-${AWS::Region}-${AWS::StackName}
+      Handler: index.lambda_handler
+      Role: !GetAtt ResourceTaggerRole.Arn
+      Runtime: python3.11
+      Timeout: 10
+      Code:
+        ZipFile: |
+          import boto3
+          import logging
+          import json
+          import cfnresponse
+
+          logger = logging.getLogger()
+          logger.setLevel(logging.INFO)
+
+          # Initialize clients
+          iam = boto3.client('iam')
+          ec2 = boto3.client('ec2')
+
+          def lambda_handler(event, context):
+            logger.info(f"Received event: {json.dumps(event,indent=2)}")
+            
+            try:
+              if event['RequestType'] in ['Create', 'Update']:
+                policy_arn = event['ResourceProperties']['PolicyArn']
+                tag_key = 'res:Resource'
+                tag_value = 'vdi-host-policy'
+
+                # Add tag to the IAM policy
+                response = iam.tag_policy(
+                    PolicyArn=policy_arn,
+                    Tags=[
+                        {
+                            'Key': tag_key,
+                            'Value': tag_value
+                        },
+                    ]
+                )
+
+                pcs_cluster_sg = event['ResourceProperties']['PCSClusterSG']
+                pcs_cluster_sg_str = ', '.join(pcs_cluster_sg)
+                tag_key = 'res:Resource'
+                tag_value = 'vdi-security-group'
+
+                ec2.create_tags(
+                  Resources=[
+                    pcs_cluster_sg_str
+                  ],
+                  Tags = [
+                    {
+                      'Key': tag_key,
+                      'Value': tag_value
+                    }
+                  ]
+                )
+
+                cfnresponse.send(event, context, cfnresponse.SUCCESS, {'Message': f'\'Resource tags updated \''})
+              elif event['RequestType'] == 'Delete':
+                cfnresponse.send(event, context, cfnresponse.SUCCESS, {'Message': 'Delete request handled successfully'})
+            except Exception as e:
+              cfnresponse.send(event, context, cfnresponse.FAILED, {'Message': str(e)})
+
+  TagPolicyCustomResource:
+    Type: Custom::TagPolicy
+    Properties:
+      ServiceToken: !GetAtt ResourceTaggerFunction.Arn
+      ServiceTimeout: 600
+      PolicyArn: !Ref RESPCSPolicy
+      PCSClusterSG: !Ref PCSClusterSG
+
+  # Add an ImageBuilder::Component
+  RESPCSLoginNodeComponent:
+    Type: 'AWS::ImageBuilder::Component'
+    Properties:
+      Name: 'res-pcs-login-node'
+      Description: 'Component to enable RES integration with Parallel Computing Service'
+      Platform: Linux
+      Version: '1.0.0'
+      Data: |
+        name: res-pcs-login-node
+        description: A component to configure a Parallel Computing Service Login Node
+        schemaVersion: 1.0
+        parameters:
+          - Region:
+              type: string
+              description: AWS Region
+          - ClusterId:
+              type: string
+              description: PCS Cluster id (e.g. pcs-abc1234)
+          - SlurmVersion:
+              type: string
+              description: Slurm version (e.g. 23.11.9)
+              default: 23.11.9-1
+        phases:
+          - name: build
+            steps:
+              - name: Install
+                action: ExecuteBash
+                onFailure: Abort
+                maxAttempts: 3
+                inputs:
+                    commands:
+                      - |
+                        region='{{Region}}'
+                        cluster_id='{{ClusterId}}'
+                        slurm_version='{{SlurmVersion}}'
+                        slurm_major_minor=$(echo $slurm_version | cut -d. -f1,2)
+
+                        # Get cluster details
+                        slurm_ip=$(aws pcs get-cluster --region $region --cluster-identifier $cluster_id --query "cluster.endpoints[0].privateIpAddress")
+                        slurm_port=$(aws pcs get-cluster --region $region --cluster-identifier $cluster_id --query "cluster.endpoints[0].port")
+                        slurm_key_arn=$(aws pcs get-cluster --region $region --cluster-identifier $cluster_id --query "cluster.slurmConfiguration.authKey.secretArn")
+
+                        #strip the double-quote 
+                        slurm_ip=$(echo $slurm_ip | tr -d '"')
+                        slurm_port=$(echo $slurm_port | tr -d '"')
+                        slurm_key_arn=$(echo $slurm_key_arn | tr -d '"')
+
+                        mkdir -p /etc/slurm
+
+                        aws secretsmanager get-secret-value \
+                            --region $region \
+                            --secret-id $slurm_key_arn \
+                            --version-stage AWSCURRENT \
+                            --query 'SecretString' \
+                            --output text | base64 -d > /etc/slurm/slurm.key
+
+                        #install slurm
+                        curl https://aws-pcs-repo-${region}.s3.amazonaws.com/aws-pcs-slurm/aws-pcs-slurm-${slurm_major_minor}-installer-${slurm_version}.tar.gz \
+                            -o aws-pcs-slurm-${slurm_major_minor}-installer-${slurm_version}.tar.gz
+
+                        tar -xf aws-pcs-slurm-${slurm_major_minor}-installer-${slurm_version}.tar.gz && \
+                            rm aws-pcs-slurm-${slurm_major_minor}-installer-${slurm_version}.tar.gz && \
+                            cd aws-pcs-slurm-${slurm_major_minor}-installer
+
+                        ./installer.sh -y
+                        cd ..
+
+                        # run this after slurm is installed so "slurm" user exists. 
+                        chmod 0600 /etc/slurm/slurm.key
+                        chown slurm:slurm /etc/slurm/slurm.key
+
+                        #install pcs agent
+                        curl https://aws-pcs-repo-${region}.s3.amazonaws.com/aws-pcs-agent/aws-pcs-agent-v1.0.0-1.tar.gz -o aws-pcs-agent-v1.0.0-1.tar.gz
+
+                        tar -xf aws-pcs-agent-v1.0.0-1.tar.gz && \
+                            rm aws-pcs-agent-v1.0.0-1.tar.gz && \
+                            cd aws-pcs-agent
+
+                        ./installer.sh
+                        cd ..
+
+                        echo "SACKD_OPTIONS='--conf-server=${slurm_ip}:${slurm_port}'" > /etc/sysconfig/sackd
+
+                        sudo cat << EOF > /etc/systemd/system/sackd.service
+                        [Unit]
+                        Description=Slurm auth and cred kiosk daemon
+                        After=network-online.target remote-fs.target
+                        Wants=network-online.target
+                        ConditionPathExists=/etc/sysconfig/sackd
+
+                        [Service]
+                        Type=notify
+                        EnvironmentFile=/etc/sysconfig/sackd
+                        User=slurm
+                        Group=slurm
+                        RuntimeDirectory=slurm
+                        RuntimeDirectoryMode=0755
+                        ExecStart=/opt/aws/pcs/scheduler/slurm-${slurm_major_minor}/sbin/sackd --systemd \$SACKD_OPTIONS
+                        ExecReload=/bin/kill -HUP \$MAINPID
+                        KillMode=process
+                        LimitNOFILE=131072
+                        LimitMEMLOCK=infinity
+                        LimitSTACK=infinity
+
+                        [Install]
+                        WantedBy=multi-user.target
+                        EOF
+
+                        sudo chown root:root /etc/systemd/system/sackd.service && \
+                            sudo chmod 0644 /etc/systemd/system/sackd.service
+
+                        sudo systemctl daemon-reload && sudo systemctl enable sackd
+                        sudo systemctl start sackd
+
+                        echo "PATH=\$PATH:/opt/aws/pcs/scheduler/slurm-${slurm_major_minor}/bin/" >> /etc/bashrc
+
+# Create ec2 imagebuilder infrastructure configuration
+  RESInfrastructureConfig:
+    Type: AWS::ImageBuilder::InfrastructureConfiguration
+    Properties:
+      Name: !Sub "${AWS::StackName}-RES-PCS-Ec2ImageBuilder-InfrastructureConfig"
+      InstanceProfileName: !Ref RESEnvironmentImageBuilderIAMInstanceProfile
+      InstanceTypes: [t3.xlarge]
+      SecurityGroupIds: !Ref PCSClusterSG
+      SubnetId: !Ref ImageBuilderInfrastructureSubnet
+
+Outputs:
+  RESInfrastructureConfig:
+    Description: "ec2 Image Builder Infrastructure Configuration"
+    Value: !Ref RESInfrastructureConfig
