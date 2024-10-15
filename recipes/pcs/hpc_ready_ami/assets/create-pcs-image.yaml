@@ -103,59 +103,24 @@ Resources:
         HpcRecipesBranch: !Ref HpcRecipesBranch
       TemplateURL: !Sub 'https://${HpcRecipesS3Bucket}.s3.us-east-1.amazonaws.com/${HpcRecipesBranch}/recipes/pcs/hpc_ready_ami/assets/nested-imagebuilder-components.yaml'
 
-  OptimizePerformance:
-    Type: AWS::ImageBuilder::Component
-    Properties:
-      Name: !Sub 'OptimizePerformance-${AWS::StackName}'
-      Description: Optimize HPC application peformance on PCS-compatible AMI
-      Version: '0.0.1'
-      Platform: Linux
-      Data: !Sub |
-        name: 'Optimize HPC application performance'
-        schemaVersion: 1.0
-        phases:
-          - name: build
-            steps:
-              - name: DownloadScript
-                action: ExecuteBash
-                inputs:
-                  commands:
-                    - 'curl -fsSL https://${HpcRecipesS3Bucket}.s3.us-east-1.amazonaws.com/${HpcRecipesBranch}/recipes/pcs/hpc_ready_ami/assets/scripts/common.sh -o common.sh'
-                    - 'curl -fsSL https://gist.githubusercontent.com/bollig/1bfc7445c907b1aefb6ad57e44fff79c/raw/d31ca882b503224db8803b9e34f941a066defd81/optimize-performance.sh -o optimize-performance.sh'
-              - name: InstallAgent
-                action: ExecuteBash
-                inputs:
-                  commands:
-                    - 'chmod +x optimize-performance.sh'
-                    - './optimize-performance.sh'
-
-
   PCSImageRecipe:
     Type: AWS::ImageBuilder::ImageRecipe
     Properties:
       # Ordering is important here
       Components:
-        #- ComponentArn: !GetAtt [ImageBuilderComponentsStack, Outputs.UpdateOsComponent]
+        - ComponentArn: !GetAtt [ImageBuilderComponentsStack, Outputs.UpdateOsComponent]
         # x.x.x gets latest available version from imagebuilder components 
-#        - ComponentArn: !GetAtt [ImageBuilderComponentsStack, Outputs.UpdateOsComponent]
-#        - ComponentArn: !Sub 'arn:aws:imagebuilder:${AWS::Region}:aws:component/reboot-linux/1.0.1/1'
-#        - ComponentArn: !GetAtt [ImageBuilderComponentsStack, Outputs.OptimizePerformanceComponent]
-#        - ComponentArn: !GetAtt [ImageBuilderComponentsStack, Outputs.CloudwatchAgentComponent]
-#        - ComponentArn: !GetAtt [ImageBuilderComponentsStack, Outputs.SsmAgentComponent]
-        - ComponentArn: !Sub 'arn:${AWS::Partition}:imagebuilder:${AWS::Region}:aws:component/update-linux/x.x.x'
         - ComponentArn: !Sub 'arn:${AWS::Partition}:imagebuilder:${AWS::Region}:aws:component/reboot-linux/x.x.x'
-        - ComponentArn: !Sub 'arn:${AWS::Partition}:imagebuilder:${AWS::Region}:aws:component/amazon-cloudwatch-agent-linux/x.x.x'
-        - ComponentArn: !Sub 'arn:${AWS::Partition}:imagebuilder:${AWS::Region}:aws:component/aws-cli-version-2-linux/x.x.x'
-      #  - ComponentArn: !GetAtt [ImageBuilderComponentsStack, Outputs.OptimizePerformanceComponent]
-        - ComponentArn: !Ref OptimizePerformance
-      #  - ComponentArn: !GetAtt [ImageBuilderComponentsStack, Outputs.CloudwatchAgentComponent]
-      #  - ComponentArn: !GetAtt [ImageBuilderComponentsStack, Outputs.SsmAgentComponent]
+        - ComponentArn: !GetAtt [ImageBuilderComponentsStack, Outputs.OptimizePerformanceComponent]
+        - ComponentArn: !GetAtt [ImageBuilderComponentsStack, Outputs.CloudwatchAgentComponent]
+        - ComponentArn: !GetAtt [ImageBuilderComponentsStack, Outputs.SsmAgentComponent]
         - ComponentArn: !GetAtt [ImageBuilderComponentsStack, Outputs.EfaInstallerComponent]
         - ComponentArn: !GetAtt [ImageBuilderComponentsStack, Outputs.LustreInstallerComponent]
         - ComponentArn: !GetAtt [ImageBuilderComponentsStack, Outputs.EfsUtilsInstallerComponent]
         - ComponentArn: !GetAtt [ImageBuilderComponentsStack, Outputs.PcsAgentInstallerComponent]
         - ComponentArn: !GetAtt [ImageBuilderComponentsStack, Outputs.PcsSlurmInstallerComponent]
         - ComponentArn: !GetAtt [ImageBuilderComponentsStack, Outputs.SpackInstallerComponent]
+        # Tests to confirm that yielded image can successfully boot
         - ComponentArn: !Sub 'arn:${AWS::Partition}:imagebuilder:${AWS::Region}:aws:component/reboot-test-linux/x.x.x'
       Description: Install PCS Agent, SLURM, and other components
       # Appending StackName enables multiple Recipes with the same base name, 
