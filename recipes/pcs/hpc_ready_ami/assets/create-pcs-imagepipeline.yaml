@@ -1,0 +1,304 @@
+AWSTemplateFormatVersion: '2010-09-09'
+Description: Build a PCS-compatible AMI
+
+Mappings:
+  # AMI IDs are region-specific. These are for us-east-2. 
+  # We use SSM to lookup AMIs across regions. See line 130. 
+  DistroConfigs:
+    amzn-2:
+      name: Amazon Linux 2
+      deviceName: /dev/xvda
+      size: 64
+      x86: /aws/service/ami-amazon-linux-latest/amzn2-ami-hvm-x86_64-gp2
+      arm64: /aws/service/ami-amazon-linux-latest/amzn2-ami-hvm-arm64-gp2
+    rocky-9:
+      name: Rocky Linux 9
+      deviceName: /dev/sda1
+      size: 64
+      # Rocky Linux 9.3 community edition AMIs
+      x86: ami-067daee80a6d36ac0
+      arm64: ami-034ee457b85b2fb4f
+    rhel-9:
+      name: RHEL 9
+      deviceName: /dev/sda1
+      size: 64
+      x86: ami-0aa8fc2422063977a
+      arm64: ami-08f9f3bb075432791
+    ubuntu-22-04:
+      name: Ubuntu 22.04
+      deviceName: /dev/sda1
+      size: 64
+      x86: /aws/service/canonical/ubuntu/server/22.04/stable/current/amd64/hvm/ebs-gp2/ami-id
+      arm64: /aws/service/canonical/ubuntu/server/22.04/stable/current/arm64/hvm/ebs-gp2/ami-id
+  InstanceConfigs:
+    x86:
+      default: 
+        - c6i.8xlarge
+        - m6i.8xlarge
+      alternate: 
+        - c6a.8xlarge
+        - m6a.8xlarge
+    arm64:
+      default: 
+        - c7g.8xlarge
+        - m7g.8xlarge
+      alternate: 
+        - c6g.8xlarge
+        - m6g.8xlarge
+
+Parameters:
+
+  Distro:
+    Type: String
+    AllowedValues:
+      - amzn-2
+      - rocky-9
+      - rhel-9
+      - ubuntu-22-04
+    Default: amzn-2
+  Architecture:
+    Type: String
+    AllowedValues:
+      - x86
+      - arm64
+    Default: arm64
+
+  SemanticVersion:
+    Type: String
+    Default: '0.0.1'
+    Description: ImageBuilder needs date as version string
+
+  # Substack Parameters
+  HpcRecipesS3Bucket:
+    Type: String
+    Default: aws-hpc-recipes
+    Description: HPC Recipes for AWS S3 bucket
+    AllowedValues:
+         - aws-hpc-recipes
+         - aws-hpc-recipes-dev
+  HpcRecipesBranch:
+    Type: String
+    Default: main
+    Description: HPC Recipes for AWS release branch
+    AllowedPattern: '^(?!.*/\.git$)(?!.*/\.)(?!.*\\.\.)[a-zA-Z0-9-_\.]+$'
+  # /Substack Parameters
+
+Conditions: 
+  DistroImageStartsWithAmi: !Equals 
+    - !Select
+      - 0
+      - !Split 
+        - "-"
+        - !FindInMap [ DistroConfigs, !Ref Distro, !Ref Architecture]
+    - "ami"
+
+Resources:
+  ImageBuilderComponentsStack:
+    Type: AWS::CloudFormation::Stack
+    DeletionPolicy: Delete
+    UpdateReplacePolicy: Delete
+    Properties:
+      Parameters:
+        HpcRecipesS3Bucket: !Ref HpcRecipesS3Bucket
+        HpcRecipesBranch: !Ref HpcRecipesBranch
+      TemplateURL: !Sub 'https://${HpcRecipesS3Bucket}.s3.us-east-1.amazonaws.com/${HpcRecipesBranch}/recipes/pcs/hpc_ready_ami/assets/nested-imagebuilder-components.yaml'
+
+  PCSImageRecipe:
+    Type: AWS::ImageBuilder::ImageRecipe
+    Properties:
+      # Ordering is important here
+      Components:
+        - ComponentArn: !GetAtt [ImageBuilderComponentsStack, Outputs.UpdateOsComponent]
+        # x.x.x gets latest available version from imagebuilder components 
+        - ComponentArn: !Sub 'arn:${AWS::Partition}:imagebuilder:${AWS::Region}:aws:component/reboot-linux/x.x.x'
+        - ComponentArn: !GetAtt [ImageBuilderComponentsStack, Outputs.OptimizePerformanceComponent]
+        - ComponentArn: !GetAtt [ImageBuilderComponentsStack, Outputs.CloudwatchAgentComponent]
+        - ComponentArn: !GetAtt [ImageBuilderComponentsStack, Outputs.SsmAgentComponent]
+        - ComponentArn: !GetAtt [ImageBuilderComponentsStack, Outputs.EfaInstallerComponent]
+        - ComponentArn: !GetAtt [ImageBuilderComponentsStack, Outputs.LustreInstallerComponent]
+        - ComponentArn: !GetAtt [ImageBuilderComponentsStack, Outputs.EfsUtilsInstallerComponent]
+        - ComponentArn: !GetAtt [ImageBuilderComponentsStack, Outputs.PcsAgentInstallerComponent]
+        - ComponentArn: !GetAtt [ImageBuilderComponentsStack, Outputs.PcsSlurmInstallerComponent]
+        - ComponentArn: !GetAtt [ImageBuilderComponentsStack, Outputs.SpackInstallerComponent]
+        # Tests to confirm that yielded image can successfully boot
+        - ComponentArn: !Sub 'arn:${AWS::Partition}:imagebuilder:${AWS::Region}:aws:component/reboot-test-linux/x.x.x'
+      Description: Install PCS Agent, SLURM, and other components
+      # Appending StackName enables multiple Recipes with the same base name, 
+      # which is important for debugging.
+      Name: !Sub 'pcs-ami-${Distro}-${Architecture}-${AWS::StackName}'
+      ParentImage: !If 
+        - DistroImageStartsWithAmi
+        - !FindInMap [DistroConfigs, !Ref Distro, !Ref Architecture]
+        - !Sub 
+          - '{{resolve:ssm:${AMILookup}}}'
+          - AMILookup: !FindInMap [DistroConfigs, !Ref Distro, !Ref Architecture]
+      Version: !Ref SemanticVersion
+      AdditionalInstanceConfiguration:
+        SystemsManagerAgent:
+          UninstallAfterBuild: false
+      BlockDeviceMappings:
+        - DeviceName: !FindInMap [DistroConfigs, !Ref Distro, deviceName]
+          Ebs:
+            DeleteOnTermination: true
+            VolumeSize: !FindInMap [DistroConfigs, !Ref Distro, size]
+
+  PCSInfrastructureConfiguration:
+    Type: AWS::ImageBuilder::InfrastructureConfiguration
+    Properties:
+      Description: !Sub '${Architecture} infrastructure'
+      InstanceProfileName: EC2InstanceProfileForImageBuilder
+      InstanceTypes: !FindInMap [InstanceConfigs, !Ref Architecture, 'default']
+      InstanceMetadataOptions:
+        # NOTE: Set this to 3 (or higher) if containers that need EC2 metadata are being built.
+        HttpPutResponseHopLimit: 1
+        HttpTokens: required
+      # Appending StackName enables multiple Infra configs with the same base name, 
+      # which is important for debugging.
+      Name: !GetAtt PCSImageRecipe.Name
+
+  PCSDistributionConfiguration:
+    Type: AWS::ImageBuilder::DistributionConfiguration
+    Properties:
+      # Appending StackName enables multiple Distribution configs with the same base name, 
+      # which is important for debugging.
+      Name: !GetAtt PCSImageRecipe.Name
+      Description: PCS image distributor
+      Distributions:
+        - Region: !Ref "AWS::Region"
+          AmiDistributionConfiguration:
+            Name: !Sub 'cfnpcs_ami-${Distro}-${Architecture} {{ imagebuilder:buildDate }}'
+            Description: 'Distribute a copy of the AMI to specific accounts in the destination Region.'
+            # Uncomment and provide AWS account IDs to share AMI once built
+            # LaunchPermissionConfiguration:
+            #   UserIds:
+            #     - '000000000000'
+            #     - '111111111111'
+ 
+  PCSImageBuilderLifecycleRole:
+    Type: AWS::IAM::Role
+    Properties:
+      AssumeRolePolicyDocument:
+        Version: '2012-10-17'
+        Statement:
+          - Effect: Allow
+            Principal:
+              Service: imagebuilder.amazonaws.com
+            Action: 'sts:AssumeRole'
+      ManagedPolicyArns:
+        - !Sub 'arn:${AWS::Partition}:iam::aws:policy/service-role/EC2ImageBuilderLifecycleExecutionPolicy'
+
+  PCSImageLifecyclePolicy:
+    Type: AWS::ImageBuilder::LifecyclePolicy
+    Properties:
+      Name: !Sub 'Lifecycle-${PCSImageRecipe.Name}'
+      Description: !Sub 'Lifecycle policy for PCS AMI, ${PCSImageRecipe.Name}'
+      ExecutionRole: !GetAtt PCSImageBuilderLifecycleRole.Arn
+      ResourceType: AMI_IMAGE
+      PolicyDetails:
+        - Action: 
+            Type: DELETE
+            IncludeResources: 
+              Amis: true
+              Snapshots: true
+          Filter:
+            Type: AGE
+            Value: 30
+            Unit: DAYS
+            RetainAtLeast: 3
+      ResourceSelection:
+        Recipes:
+          - Name: !GetAtt PCSImageRecipe.Name
+            SemanticVersion: !Ref SemanticVersion
+
+  PCSImagePipeline:
+    Type: AWS::ImageBuilder::ImagePipeline
+    Properties:
+      Status: ENABLED
+      Description: 'PCS AMI Pipeline'
+      Name: !GetAtt PCSImageRecipe.Name
+      EnhancedImageMetadataEnabled: true
+      ImageRecipeArn: !GetAtt PCSImageRecipe.Arn
+      ImageTestsConfiguration: 
+        ImageTestsEnabled: True
+        TimeoutMinutes: 60
+
+      # Requires Inspector to be enabled on the account:
+      #ImageScanningConfiguration: 
+      #  ImageScanningEnabled: true
+      InfrastructureConfigurationArn: !GetAtt PCSInfrastructureConfiguration.Arn
+      DistributionConfigurationArn: !GetAtt PCSDistributionConfiguration.Arn
+      Schedule:
+        ScheduleExpression: 'cron(30 8 ? * 1 *)'
+        PipelineExecutionStartCondition: EXPRESSION_MATCH_AND_DEPENDENCY_UPDATES_AVAILABLE
+
+  ExecutePipelineFunction:
+    Type: AWS::Lambda::Function
+    Properties:
+      Handler: index.handler
+      Role: !GetAtt LambdaExecutionRole.Arn
+      Runtime: python3.8
+      Timeout: 300
+      Code:
+        ZipFile: |
+          import boto3
+          import cfnresponse
+
+          def handler(event, context):
+            if event['RequestType'] in ['Create', 'Update']:
+              try:
+                client = boto3.client('imagebuilder')
+                pipeline_arn = event['ResourceProperties']['PipelineArn']
+                
+                response = client.start_image_pipeline_execution(
+                  imagePipelineArn=pipeline_arn
+                )
+                
+                execution_id = response['imageBuildVersionArn']
+                cfnresponse.send(event, context, cfnresponse.SUCCESS, {'ExecutionId': execution_id})
+              except Exception as e:
+                print(str(e))
+                cfnresponse.send(event, context, cfnresponse.FAILED, {'Error': str(e)})
+            else:
+              cfnresponse.send(event, context, cfnresponse.SUCCESS, {})
+
+  LambdaExecutionRole:
+    Type: AWS::IAM::Role
+    Properties:
+      AssumeRolePolicyDocument:
+        Version: '2012-10-17'
+        Statement:
+          - Effect: Allow
+            Principal:
+              Service: lambda.amazonaws.com
+            Action: sts:AssumeRole
+      Policies:
+        - PolicyName: ImageBuilderAccess
+          PolicyDocument:
+            Version: '2012-10-17'
+            Statement:
+              - Effect: Allow
+                Action:
+                  - imagebuilder:StartImagePipelineExecution
+                Resource: '*'
+        - PolicyName: CloudWatchLogsAccess
+          PolicyDocument:
+            Version: '2012-10-17'
+            Statement:
+              - Effect: Allow
+                Action:
+                  - logs:CreateLogGroup
+                  - logs:CreateLogStream
+                  - logs:PutLogEvents
+                Resource: !Sub 'arn:${AWS::Partition}:logs:*:*:*'
+
+  ExecutePipeline:
+    Type: Custom::ExecutePipeline
+    Properties:
+      ServiceToken: !GetAtt ExecutePipelineFunction.Arn
+      PipelineArn: !Ref PCSImagePipeline
+
+Outputs:
+  ImagePipeline:
+    Value: !Ref PCSImagePipeline
+  ImageName:
+    Value: !GetAtt PCSImagePipeline.Name
