@@ -1,0 +1,109 @@
+AWSTemplateFormatVersion: '2010-09-09'
+Description: Image Builder Infrastructure Configuration for RES Environment
+
+Metadata:
+  AWS::CloudFormation::Interface:
+    ParameterGroups:
+      - Label:
+          default: RES Configuration
+        Parameters:
+          - EnvironmentName
+      - Label:
+          default: Networking
+        Parameters:
+          - VPC
+          - ImageBuilderInfrastructureSubnet
+
+Parameters:
+  EnvironmentName:
+    Type: String
+    Description: Provide name of the RES Environment. Must be unique for your account and AWS Region.
+    AllowedPattern: ^res-[A-Za-z\-\_0-9]{0,7}$
+    ConstraintDescription: EnvironmentName must start with "res-" and should be less than or equal to 11 characters.
+  VPC:
+    Description: VPC where RES is deployed
+    Type: 'AWS::EC2::VPC::Id'
+  ImageBuilderInfrastructureSubnet:
+    Type: AWS::EC2::Subnet::Id
+    Description: Choose a subnet for ec2 Image Builder Infrastructure
+
+
+Resources:
+  InfrastructureConfigSecurityGroup:
+    Type: 'AWS::EC2::SecurityGroup'
+    Properties:
+      GroupDescription: !Sub ${EnvironmentName} Image Builder Infrastructure Config SG
+      GroupName: !Sub ${EnvironmentName}-image-builder-infra-sg
+      VpcId: !Ref VPC
+      SecurityGroupEgress:
+        - IpProtocol: '-1'
+          CidrIp: 0.0.0.0/0
+
+  InfrastructureConfigSGInboundSelfRule:
+    Type: 'AWS::EC2::SecurityGroupIngress'
+    Properties:
+      IpProtocol: '-1'
+      GroupId: !Ref InfrastructureConfigSecurityGroup
+      Description: Allow outbound traffic to SG members
+      SourceSecurityGroupId: !Ref InfrastructureConfigSecurityGroup
+
+  RESEC2InstanceProfileRoleForImageBuilder:
+    Type: AWS::IAM::Role
+    Properties:
+      AssumeRolePolicyDocument:
+        Version: "2012-10-17"
+        Statement:
+        - Effect: Allow
+          Principal:
+            Service: ec2.amazonaws.com
+          Action: "sts:AssumeRole"
+      ManagedPolicyArns: 
+        - arn:aws:iam::aws:policy/AmazonSSMManagedInstanceCore
+        - arn:aws:iam::aws:policy/EC2InstanceProfileForImageBuilder
+      Policies:
+        - PolicyName: !Sub ${AWS::StackName}-RES-EnvironmentPolicy
+          PolicyDocument:
+            Version: "2012-10-17"
+            Statement:
+            - Sid: RESDynamoDBAccess
+              Effect: Allow
+              Action: "dynamodb:GetItem"
+              Resource: !Sub "arn:${AWS::Partition}:dynamodb:${AWS::Region}:${AWS::AccountId}:table/${EnvironmentName}.cluster-settings"
+              Condition:
+                ForAllValues:StringLike:
+                  "dynamodb:LeadingKeys":
+                  - "global-settings.gpu_settings.*"
+                  - "global-settings.package_config.*"
+            - Sid: RESS3Access
+              Effect: Allow
+              Action: "s3:GetObject"
+              Resource: !Sub "arn:${AWS::Partition}:s3:::${EnvironmentName}-cluster-${AWS::Region}-${AWS::AccountId}/idea/vdc/res-ready-install-script-packages/*"
+      RoleName: !Sub "${EnvironmentName}-EC2InstanceProfileForImageBuilder"
+
+  RESEC2InstanceProfileForImageBuilder:
+    Type: AWS::IAM::InstanceProfile
+    Properties:
+      Roles:
+        - !Ref RESEC2InstanceProfileRoleForImageBuilder
+
+
+  RESInfrastructureConfig:
+    Type: AWS::ImageBuilder::InfrastructureConfiguration
+    Properties:
+      Name: !Sub "${AWS::StackName}-RES-PCS-Ec2ImageBuilder-InfrastructureConfig"
+      InstanceProfileName: !Ref RESEC2InstanceProfileForImageBuilder
+      InstanceTypes: 
+        - m5.large
+        - m5.xlarge
+        - m5.2xlarge
+      SecurityGroupIds:
+        - !Ref InfrastructureConfigSecurityGroup
+      SubnetId: !Ref ImageBuilderInfrastructureSubnet
+
+Outputs:
+  RESEC2InstanceProfileForImageBuilderRole:
+    Description: RES EC2 Instance Profile for Image Builder
+    Value: !GetAtt RESEC2InstanceProfileForImageBuilder.Arn
+  RESInfrastructureConfig:
+    Description: RES Image Builder Infrastructure Configuration
+    Value: !Ref RESInfrastructureConfig
