@@ -29,7 +29,6 @@ mirror-to-github:
     - git config --global user.email "hpc-dr@amazon.com"
     - git config --global user.name "GitLab CI - HPC Developer Relations"
   script:
-    - echo "Token: ${GITHUB_ACCESS_TOKEN}"
     - git clone --mirror $CI_REPOSITORY_URL repo
     - cd repo
     - git push --mirror https://${GITHUB_ACCESS_TOKEN}@github.com/aws-samples/aws-hpc-recipes.git
