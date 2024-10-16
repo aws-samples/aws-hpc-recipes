@@ -26,12 +26,14 @@ The template exports several variables, namedspaced by stack name. This lets you
 * DefaultPublicSubnet - the public subnet in the VPC
 * DefaultPrivateSubnet - the private subnet in the VPC
 * InternetGatewayId - the pre-existing or provisioned internet gateway for the VPC
+* SecurityGroupId - either AWS::NoValue if using an existing VPC or the within-VPC security group if creating a new VPC
 
 ## Cost Estimate
 
 * VPC and Subnets - No Charge
 * Internet Gateway - No charge, but you pay a small amount for traffic passing out of the VPC.
 * NAT Gateway - There is a region-specific hourly cost for the NAT gatway, plus a charge for data sent through the gateway.
+* Elastic IP - There is a charge for the elastic IP assigned to the NAT gateway
 
 See [AWS VPC pricing](https://aws.amazon.com/vpc/pricing/) for details.
 
