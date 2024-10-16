@@ -1,13 +1,12 @@
 #!/bin/bash
 
-# Usage: set_variables.sh DISTRO ARCHITECTURE VENDOR
+# Usage: set_variables.sh DISTRO ARCHITECTURE
 #
-# Example: set_variables.sh ubuntu_22_04 x86_64 intel
+# Example: set_variables.sh ubuntu_22_04 x86_64
 
 # Set default values
 SSH_USERNAME="ec2-user"
 ROOT_DEVICE_NAME="/dev/sda1"
-VENDOR="amd"
 INSTANCE_TYPE="c6a.8xlarge"
 DISTRO="amzn_2"
 
@@ -36,11 +35,9 @@ DISTRO=$1
 case "$2" in
     x86_64*)
         INSTANCE_TYPE="c6a.8xlarge"
-        VENDOR="amd"
         ;;
     arm64*)
         INSTANCE_TYPE="c7g.8xlarge"
-        VENDOR="aws"
         ;;
     *)
         echo "Unknown architecture: $2" >&2
@@ -49,32 +46,11 @@ case "$2" in
 esac
 ARCHITECTURE=$2
 
-case "$3" in
-    intel*)
-        INSTANCE_TYPE="c6i.8xlarge"
-        ARCHITECTURE="x86_64"
-        ;;
-    amd*)
-        INSTANCE_TYPE="c6a.8xlarge"
-        ARCHITECTURE="x86_64"
-        ;;
-    aws*)
-        INSTANCE_TYPE="c7g.8xlarge"
-        ARCHITECTURE="arm64"
-        ;;
-    *)
-        echo "Unknown vendor: $3" >&2
-        exit 1
-        ;;
-esac
-VENDOR=$3
-
 # Output the values in a format Packer can use
 echo "{"
 echo "  \"ssh_username\": \"$SSH_USERNAME\","
 echo "  \"distribution\": \"$DISTRO\","
 echo "  \"architecture\": \"$ARCHITECTURE\","
-echo "  \"vendor\": \"$VENDOR\","
 echo "  \"instance_type\": \"$INSTANCE_TYPE\","
 echo "  \"root_device_name\": \"$ROOT_DEVICE_NAME\""
 echo "}"

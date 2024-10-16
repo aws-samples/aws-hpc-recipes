@@ -2,45 +2,49 @@ AWSTemplateFormatVersion: '2010-09-09'
 Description: Build a PCS-compatible AMI
 
 Mappings:
-  # AMI IDs are region-specific. These are for us-east-2.
+  # AMI IDs are region-specific. These are for us-east-2. 
+  # We use SSM to lookup AMIs across regions. See line 121. 
   DistroConfigs:
     amzn-2:
       name: Amazon Linux 2
       deviceName: /dev/xvda
       size: 64
-      x86: ami-0453ce6279422709a
-      arm64: ami-0e3eb8e1e59049093
+      x86: /aws/service/ami-amazon-linux-latest/amzn2-ami-hvm-x86_64-gp2
+      arm64: /aws/service/ami-amazon-linux-latest/amzn2-ami-hvm-arm64-gp2
     rocky-9:
       name: Rocky Linux 9
       deviceName: /dev/sda1
       size: 64
+      # Rocky Linux 9.3 community edition AMIs
       x86: ami-067daee80a6d36ac0
       arm64: ami-034ee457b85b2fb4f
     rhel-9:
       name: RHEL 9
       deviceName: /dev/sda1
       size: 64
-      # Rocky Linux 9.3 community edition AMIs
       x86: ami-0aa8fc2422063977a
       arm64: ami-08f9f3bb075432791
     ubuntu-22-04:
       name: Ubuntu 22.04
       deviceName: /dev/sda1
       size: 64
-      x86: ami-003932de22c285676
-      arm64: ami-03772d93fb1879bbe
+      x86: /aws/service/canonical/ubuntu/server/22.04/stable/current/amd64/hvm/ebs-gp2/ami-id
+      arm64: /aws/service/canonical/ubuntu/server/22.04/stable/current/arm64/hvm/ebs-gp2/ami-id
   InstanceConfigs:
     x86:
-      intel: 
+      default: 
         - c6i.8xlarge
         - m6i.8xlarge
-      amd: 
+      alternate: 
         - c6a.8xlarge
         - m6a.8xlarge
     arm64:
-      aws: 
+      default: 
         - c7g.8xlarge
         - m7g.8xlarge
+      alternate: 
+        - c6g.8xlarge
+        - m6g.8xlarge
 
 Parameters:
 
@@ -58,13 +62,6 @@ Parameters:
       - x86
       - arm64
     Default: arm64
-  Vendor:
-    Type: String
-    AllowedValues:
-      - intel
-      - amd
-      - aws
-    Default: aws
 
   SemanticVersion:
     Type: String
@@ -85,6 +82,15 @@ Parameters:
     Description: HPC Recipes for AWS release branch
     AllowedPattern: '^(?!.*/\.git$)(?!.*/\.)(?!.*\\.\.)[a-zA-Z0-9-_\.]+$'
   # /Substack Parameters
+
+Conditions: 
+  DistroImageStartsWithAmi: !Equals 
+    - !Select
+      - 0
+      - !Split 
+        - "-"
+        - !FindInMap [ DistroConfigs, !Ref Distro, !Ref Architecture]
+    - "ami"
 
 Resources:
   ImageBuilderComponentsStack:
@@ -116,8 +122,13 @@ Resources:
       Description: Install PCS Agent, SLURM, and other components
       # Appending StackName enables multiple Recipes with the same base name, 
       # which is important for debugging.
-      Name: !Sub 'pcs_ami-${Distro}-${Architecture}-${Vendor}-${AWS::StackName}'
-      ParentImage: !FindInMap [DistroConfigs, !Ref Distro, !Ref Architecture]
+      Name: !Sub 'pcs_ami-${Distro}-${Architecture}-${AWS::StackName}'
+      ParentImage: !If 
+        - DistroImageStartsWithAmi
+        - !FindInMap [DistroConfigs, !Ref Distro, !Ref Architecture]
+        - !Sub 
+          - '{{resolve:ssm:${AMILookup}}}'
+          - AMILookup: !FindInMap [DistroConfigs, !Ref Distro, !Ref Architecture]
       Version: !Ref SemanticVersion
       AdditionalInstanceConfiguration:
         SystemsManagerAgent:
@@ -131,24 +142,24 @@ Resources:
   PCSInfrastructureConfiguration:
     Type: AWS::ImageBuilder::InfrastructureConfiguration
     Properties:
-      Description: !Sub '${Architecture} ${Vendor} infrastructure'
+      Description: !Sub '${Architecture} infrastructure'
       InstanceProfileName: EC2InstanceProfileForImageBuilder
-      InstanceTypes: !FindInMap [InstanceConfigs, !Ref Architecture, !Ref Vendor]
+      InstanceTypes: !FindInMap [InstanceConfigs, !Ref Architecture, 'default']
       # Appending StackName enables multiple Infra configs with the same base name, 
       # which is important for debugging.
-      Name: !Sub 'pcs_ami-${Architecture}-${Vendor}-${AWS::StackName}'
+      Name: !Sub 'pcs_ami-${Architecture}-${AWS::StackName}'
 
   PCSDistributionConfiguration:
     Type: AWS::ImageBuilder::DistributionConfiguration
     Properties:
       # Appending StackName enables multiple Distribution configs with the same base name, 
       # which is important for debugging.
-      Name: !Sub 'pcs_ami-${Distro}-${Architecture}-${Vendor}-${AWS::StackName}'
+      Name: !Sub 'pcs_ami-${Distro}-${Architecture}-${AWS::StackName}'
       Description: PCS image distributor
       Distributions:
         - Region: !Ref "AWS::Region"
           AmiDistributionConfiguration:
-            Name: !Sub 'cfnpcs_ami-${Distro}-${Architecture}-${Vendor} {{ imagebuilder:buildDate }}'
+            Name: !Sub 'cfnpcs_ami-${Distro}-${Architecture} {{ imagebuilder:buildDate }}'
             Description: 'Distribute a copy of the AMI to specific accounts in the destination Region.'
             # Uncomment and provide AWS account IDs to share AMI once built
             # LaunchPermissionConfiguration:
