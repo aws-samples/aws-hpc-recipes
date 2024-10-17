@@ -11,6 +11,7 @@ workflow:
 stages:
   - deploy
   - mirror
+  - github-pull
 
 deploy-job:
   stage: deploy  
@@ -44,4 +45,32 @@ mirror-to-github:
   retry: 2
   after_script:
     - rm -f private_key.pem
-  
+
+pull-from-github:
+  stage: github-pull
+  image: alpine:latest
+  when: manual
+  rules:
+    - if: $CI_COMMIT_BRANCH == "main"
+  before_script:
+    - apk add --no-cache git openssh-client
+    - eval $(ssh-agent -s)
+    - echo "${GITHUB_SSH_PRIVATE_KEY}" | tr -d '\r' | sed -e 's/^[ \t]*//' | sed -e 's/[ \t]*$//' > private_key.pem
+    - chmod 600 private_key.pem
+    - ssh-keygen -p -f private_key.pem -m pem -P "" -N ""
+    - ssh-add private_key.pem
+    - mkdir -p ~/.ssh
+    - chmod 700 ~/.ssh
+    - ssh-keyscan github.com >> ~/.ssh/known_hosts
+    - chmod 644 ~/.ssh/known_hosts
+    - git config --global user.email "hpc-dr@amazon.com"
+    - git config --global user.name "GitLab CI - AWS HPC Developer Relations"
+  script:
+    - git clone --single-branch --branch main $CI_REPOSITORY_URL repo
+    - cd repo
+    - git remote add github git@github.com:aws-samples/aws-hpc-recipes.git
+    - git fetch github main
+    - git merge --no-ff github/main -m "Merge changes from GitHub mirror"
+    - git push origin main
+  after_script:
+    - rm -f private_key.pem
