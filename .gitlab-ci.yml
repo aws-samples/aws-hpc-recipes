@@ -1,3 +1,4 @@
+---
 variables:
   GITLAB_ENV: development
 
@@ -13,7 +14,7 @@ stages:
   - mirror
 
 deploy-job:
-  stage: deploy  
+  stage: deploy
   environment: $GITLAB_ENV
   image: registry.gitlab.com/gitlab-org/cloud-deploy/aws-base:latest
   script:
@@ -29,6 +30,7 @@ mirror-to-github:
     - git config --global user.email "hpc-dr@amazon.com"
     - git config --global user.name "GitLab CI - HPC Developer Relations"
   script:
+    - echo "Token prefix: ${GITHUB_ACCESS_TOKEN:0:4}..."
     - git clone --mirror $CI_REPOSITORY_URL repo
     - cd repo
     - git push --mirror https://oauth2:${GITHUB_ACCESS_TOKEN}@github.com/aws-samples/aws-hpc-recipes.git
