@@ -28,21 +28,20 @@ mirror-to-github:
     - apk add --no-cache git openssh-client
     - eval $(ssh-agent -s)
     - echo "${GITHUB_SSH_PRIVATE_KEY}" | tr -d '\r' | sed -e 's/^[ \t]*//' | sed -e 's/[ \t]*$//' > private_key.pem
-    - head private_key.pem
     - chmod 600 private_key.pem
     - ssh-keygen -p -f private_key.pem -m pem -P "" -N ""
-    - head private_key.pem
     - ssh-add private_key.pem
     - mkdir -p ~/.ssh
     - chmod 700 ~/.ssh
     - ssh-keyscan github.com >> ~/.ssh/known_hosts
     - chmod 644 ~/.ssh/known_hosts
-    - git config --global user.email "gitlab-ci@example.com"
-    - git config --global user.name "GitLab CI"
+    - git config --global user.email "hpc-dr@amazon.com"
+    - git config --global user.name "GitLab CI - AWS HPC Developer Relations"
   script:
-    - git clone --mirror $CI_REPOSITORY_URL repo
+    - git clone --single-branch --branch main $CI_REPOSITORY_URL repo
     - cd repo
-    - git push --mirror git@github.com:aws-samples/aws-hpc-recipes.git
+    - git push --force git@github.com:aws-samples/aws-hpc-recipes.git main:main
   retry: 2
   after_script:
     - rm -f private_key.pem
+  
