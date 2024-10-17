@@ -32,7 +32,8 @@ mirror-to-github:
   script:
     - git clone --mirror $CI_REPOSITORY_URL repo
     - cd repo
-    - git remote add github https://github.com/aws-samples/aws-hpc-recipes.git
-    - git config credential.helper store
-    - echo "https://${GITHUB_ACCESS_TOKEN}:x-oauth-basic@github.com" > ~/.git-credentials
-    - git push --mirror github
+    - git remote remove origin
+    - git remote add origin https://${GITHUB_ACCESS_TOKEN}@github.com/aws-samples/aws-hpc-recipes.git
+    - git push --mirror origin
+  after_script:
+    - rm -rf repo
