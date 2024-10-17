@@ -1,4 +1,3 @@
----
 variables:
   GITLAB_ENV: development
 
@@ -14,7 +13,7 @@ stages:
   - mirror
 
 deploy-job:
-  stage: deploy
+  stage: deploy  
   environment: $GITLAB_ENV
   image: registry.gitlab.com/gitlab-org/cloud-deploy/aws-base:latest
   script:
@@ -26,15 +25,17 @@ mirror-to-github:
   rules:
     - if: $CI_COMMIT_BRANCH == "main"
   before_script:
-    - apk add --no-cache git
+    - apk add --no-cache git openssh-client
+    - eval $(ssh-agent -s)
+    - echo "$GITHUB_SSH_PRIVATE_KEY" | tr -d '\r' | ssh-add -
+    - mkdir -p ~/.ssh
+    - chmod 700 ~/.ssh
+    - ssh-keyscan github.com >> ~/.ssh/known_hosts
+    - chmod 644 ~/.ssh/known_hosts
     - git config --global user.email "hpc-dr@amazon.com"
     - git config --global user.name "GitLab CI - AWS HPC Developer Relations"
   script:
     - git clone --mirror $CI_REPOSITORY_URL repo
     - cd repo
-    - git remote add github https://github.com/aws-samples/aws-hpc-recipes.git
-    - |
-      GIT_PUSH_OPTION="https.extraheader=AUTHORIZATION: basic $(echo -n x-access-token:$GITHUB_ACCESS_TOKEN | base64)"
-      git -c $GIT_PUSH_OPTION push --mirror github
-  after_script:
-    - rm -rf repo
+    - git push --mirror git@github.com:aws-samples/aws-hpc-recipes.git
+  retry: 2
