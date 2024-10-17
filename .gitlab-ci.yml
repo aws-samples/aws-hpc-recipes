@@ -28,9 +28,11 @@ mirror-to-github:
   before_script:
     - apk add --no-cache git
     - git config --global user.email "hpc-dr@amazon.com"
-    - git config --global user.name "GitLab CI - HPC Developer Relations"
+    - git config --global user.name "GitLab CI - AWS HPC Developer Relations"
   script:
-    - echo "Token prefix: ${GITHUB_ACCESS_TOKEN:0:4}..."
     - git clone --mirror $CI_REPOSITORY_URL repo
     - cd repo
-    - git push --mirror https://oauth2:${GITHUB_ACCESS_TOKEN}@github.com/aws-samples/aws-hpc-recipes.git
+    - git remote add github https://github.com/aws-samples/aws-hpc-recipes.git
+    - git config credential.helper store
+    - echo "https://${GITHUB_ACCESS_TOKEN}:x-oauth-basic@github.com" > ~/.git-credentials
+    - git push --mirror github
