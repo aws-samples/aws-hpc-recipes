@@ -184,7 +184,7 @@ You can use an HPC Recipe for AWS in several ways:
 * **About**: Supports "Getting Started with AWS PCS" in AWS PCS user guide.
 * **Usage**: [README.md](pcs/getting_started/README.md)
 
-#### hpc_ready_ami ![tag](https://img.shields.io/badge/-beta-%23800080) ![tag](https://img.shields.io/badge/-ec2-%23FF9900) ![tag](https://img.shields.io/badge/-efa-%23AAB7B8) ![tag](https://img.shields.io/badge/-imagebuilder-%23AAB7B8) ![tag](https://img.shields.io/badge/-lustre-%23AAB7B8) ![tag](https://img.shields.io/badge/-packer-%23AAB7B8) ![tag](https://img.shields.io/badge/-pcs-%23FF9900) 
+#### hpc_ready_ami ![tag](https://img.shields.io/badge/-alinux-%23AAB7B8) ![tag](https://img.shields.io/badge/-beta-%23800080) ![tag](https://img.shields.io/badge/-ec2-%23FF9900) ![tag](https://img.shields.io/badge/-efa-%23AAB7B8) ![tag](https://img.shields.io/badge/-imagebuilder-%23AAB7B8) ![tag](https://img.shields.io/badge/-lustre-%23AAB7B8) ![tag](https://img.shields.io/badge/-packer-%23AAB7B8) ![tag](https://img.shields.io/badge/-pcs-%23FF9900) ![tag](https://img.shields.io/badge/-rhel-%2317202A) ![tag](https://img.shields.io/badge/-rocky-%23AAB7B8) ![tag](https://img.shields.io/badge/-ubuntu-%2317202A) 
 
 * **About**: EC2 ImageBuilder and HashiCorp Packer assets to produce HPC-ready AMIs
 * **Usage**: [README.md](pcs/hpc_ready_ami/README.md)
