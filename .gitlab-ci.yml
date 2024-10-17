@@ -66,11 +66,11 @@ pull-from-github:
     - git config --global user.email "hpc-dr@amazon.com"
     - git config --global user.name "GitLab CI - AWS HPC Developer Relations"
   script:
-    - git clone --single-branch --branch main $CI_REPOSITORY_URL repo
+    - git clone --single-branch --branch main "https://oauth2:${CI_JOB_TOKEN}@${CI_SERVER_HOST}/${CI_PROJECT_PATH}.git" repo
     - cd repo
     - git remote add github git@github.com:aws-samples/aws-hpc-recipes.git
     - git fetch github main
     - git merge --no-ff github/main -m "Merge changes from GitHub mirror"
-    - git push origin main
+    - git push "https://oauth2:${CI_JOB_TOKEN}@${CI_SERVER_HOST}/${CI_PROJECT_PATH}.git" main
   after_script:
     - rm -f private_key.pem
