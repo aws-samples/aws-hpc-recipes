@@ -1,4 +1,5 @@
 #!/usr/bin/env bash
+# TODO: Why no set -e , pipefail, etc.?
 
 # Define default value(s)
 # EFA_INSTALLER_VERSION="1.34"
@@ -55,6 +56,7 @@ download_verify_and_install_software() {
         echo "Installation successful"
     fi
 
+    # TODO: According to aws-parallelcluster-cookbook/cookbooks/aws-parallelcluster-environment/spec/unit/resources/efa_spec.rb:186 this only happens on Compute nodes running Debian based OSs.
     # Disable ptrace protection
     # Set the file path
     PTRACE_FILE_PATH="/etc/sysctl.d/10-ptrace.conf"

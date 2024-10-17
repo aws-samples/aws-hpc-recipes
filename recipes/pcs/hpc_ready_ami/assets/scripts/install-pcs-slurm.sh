@@ -1,4 +1,5 @@
 #!/usr/bin/env bash
+# TODO: Why no set -e , pipefail, etc.?
 
 # Define default values
 AWS_REGION="us-east-1"
@@ -89,7 +90,8 @@ download_verify_and_install_software() {
     # fi
 
     # Unpack the agent and install
-    tar zxf "aws-pcs-slurm-${PCS_SLURM_VERSION}-installer-${PCS_SLURM_INSTALLER_VERSION}.tar.gz" && cd "aws-pcs-slurm-${PCS_SLURM_VERSION}-installer"
+    tar zxf "aws-pcs-slurm-${PCS_SLURM_VERSION}-installer-${PCS_SLURM_INSTALLER_VERSION}.tar.gz"
+    cd "aws-pcs-slurm-${PCS_SLURM_VERSION}-installer" || exit 1
     sudo ./installer.sh -y
 
     if [ $? -ne 0 ]; then
@@ -114,7 +116,6 @@ EOF
 
     # Add slurm libraries to /etc/ld.so.conf.d/
     echo "${SLURM_INSTALL_PATH}/lib" | sudo tee /etc/ld.so.conf.d/slurm.conf > /dev/null && sudo chmod 0644 /etc/ld.so.conf.d/slurm.conf && sudo ldconfig
-    
 }
 
 # Main function

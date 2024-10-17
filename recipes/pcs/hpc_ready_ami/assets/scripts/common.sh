@@ -72,6 +72,7 @@ detect_os_version() {
             ;;
         rhel)
             if [[ "$VERSION" =~ ^9\.* ]]; then
+                # TODO: Why do RHEL and rocky get single digit versions and not ubuntu?
                 VERSION=9
                 logger "Detected OS: $OS, Version: $VERSION, Architecture: $ARCHITECTURE" "INFO"
             else

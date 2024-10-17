@@ -1,6 +1,6 @@
 AWSTemplateFormatVersion: '2010-09-09'
 Description: Infrastructure Configurations for building AWS PCS-ready AMIs
-
+# TODO: This file is never mentioned
 ### Stack metadata
 Metadata:
   AWS::CloudFormation::Interface:

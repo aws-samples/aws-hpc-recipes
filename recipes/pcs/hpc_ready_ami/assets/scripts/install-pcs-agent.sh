@@ -1,4 +1,5 @@
 #!/usr/bin/env bash
+# TODO: Why no set -e , pipefail, etc.?
 
 # Define default values
 AWS_REGION="us-east-1"
@@ -85,7 +86,8 @@ download_verify_and_install_software() {
     # fi
 
     # Unpack the agent and install
-    tar zxf aws-pcs-agent.tar.gz && cd aws-pcs-agent
+    tar zxf aws-pcs-agent.tar.gz
+    cd aws-pcs-agent || exit 1
     sudo ./installer.sh -y
 
     if [ $? -ne 0 ]; then

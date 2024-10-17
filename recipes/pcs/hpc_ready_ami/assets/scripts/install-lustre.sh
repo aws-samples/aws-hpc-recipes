@@ -20,18 +20,22 @@ fi
 install_redhat9_or_rocky9() {
     # Ref: https://docs.aws.amazon.com/fsx/latest/LustreGuide/install-lustre-client.html
     # This only covers the happy path where kernel is 5.14.0-427*
-    curl https://fsx-lustre-client-repo-public-keys.s3.amazonaws.com/fsx-rpm-public-key.asc -o /tmp/fsx-rpm-public-key.asc
+    # TODO: uname -r | grep -q "^5.14.0-427" || exit 1
+    curl -fSsL "https://fsx-lustre-client-repo-public-keys.s3.amazonaws.com/fsx-rpm-public-key.asc" -o /tmp/fsx-rpm-public-key.asc
     sudo rpm --import /tmp/fsx-rpm-public-key.asc
-    sudo curl https://fsx-lustre-client-repo.s3.amazonaws.com/el/9/fsx-lustre-client.repo -o /etc/yum.repos.d/aws-fsx.repo
+    sudo curl -fSsL "https://fsx-lustre-client-repo.s3.amazonaws.com/el/9/fsx-lustre-client.repo" -o /etc/yum.repos.d/aws-fsx.repo
     sudo yum install -y kmod-lustre-client lustre-client
     sudo yum clean all
+    rm -f /tmp/fsx-rpm-public-key.asc
 }
 
 handle_ubuntu_22.04() {
     logger "Installing on Ubuntu 22.04" "INFO"
     # Ref: https://docs.aws.amazon.com/fsx/latest/LustreGuide/install-lustre-client.html
     # This only covers the happy path where kernel is 5.14.0-427*
-    wget -O - https://fsx-lustre-client-repo-public-keys.s3.amazonaws.com/fsx-ubuntu-public-key.asc | gpg --dearmor | sudo tee /usr/share/keyrings/fsx-ubuntu-public-key.gpg >/dev/null
+    # TODO: uname -r | grep -q "^5.14.0-427" || exit 1
+    wget -O - "https://fsx-lustre-client-repo-public-keys.s3.amazonaws.com/fsx-ubuntu-public-key.asc" | gpg --dearmor | sudo tee /usr/share/keyrings/fsx-ubuntu-public-key.gpg >/dev/null
+    # TODO: Why not 'echo ... | sudo tee' like everywhere else?
     sudo bash -c 'echo "deb [signed-by=/usr/share/keyrings/fsx-ubuntu-public-key.gpg] https://fsx-lustre-client-repo.s3.amazonaws.com/ubuntu jammy main" > /etc/apt/sources.list.d/fsxlustreclientrepo.list && apt-get update'
     sudo apt install -y lustre-client-modules-aws
     sudo apt clean

@@ -24,6 +24,7 @@ build_and_install_rpm() {
     # Create a temporary directory
     local temp_dir=$(mktemp -d)
     cd "$temp_dir" || exit 1
+    # TODO: we should not build from `master` branch
     git clone https://github.com/aws/efs-utils
     cd efs-utils
     make rpm
