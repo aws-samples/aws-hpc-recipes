@@ -121,11 +121,9 @@ Resources:
         LDAPBase: !GetAtt [ RESExternal, Outputs.LDAPBase ]
         LDAPConnectionURI: !GetAtt [ RESExternal, Outputs.LDAPConnectionURI ]
         SudoersGroupName: RESAdministrators
-        ServiceAccountUsername: !GetAtt [ RESExternal, Outputs.ServiceAccountUsername ]
-        ServiceAccountPasswordSecretArn: !GetAtt [ RESExternal, Outputs.ServiceAccountPasswordSecretArn ]
+        ServiceAccountCredentialsSecretArn: !GetAtt [ RESExternal, Outputs.ServiceAccountCredentialsSecretArn ]
         UsersOU: !GetAtt [ RESExternal, Outputs.UsersOU ]
         GroupsOU: !GetAtt [ RESExternal, Outputs.GroupsOU ]
-        SudoersOU: !GetAtt [ RESExternal, Outputs.SudoersOU ]
         ComputersOU: !GetAtt [ RESExternal, Outputs.ComputersOU ]
         SharedHomeFileSystemId: !GetAtt [ RESExternal, Outputs.SharedHomeFilesystemId ]
         InfrastructureHostAMI: ""
@@ -142,7 +140,7 @@ Resources:
       Parameters:
         EnvironmentName: !Ref EnvironmentName
         Keypair: !Ref Keypair
-        ServiceAccountPasswordSecretArn: !GetAtt [ RESExternal, Outputs.ServiceAccountPasswordSecretArn ]
+        ServiceAccountCredentialsSecretArn: !GetAtt [ RESExternal, Outputs.ServiceAccountCredentialsSecretArn ]
         VpcId: !GetAtt [ RESExternal, Outputs.VpcId ]
         PublicSubnet: !Select [0, !Split [",", !GetAtt RESExternal.Outputs.PublicSubnets]]
         ServiceAccountUserDN: !GetAtt [ RESExternal, Outputs.ServiceAccountUserDN ]
@@ -237,6 +235,125 @@ Resources:
     Type: Custom::DeleteSharedStorageSecurityGroup
     Properties:
       ServiceToken: !GetAtt InvokeDeleteSharedSecurityGroupHandlerFunction.Arn
+
+  RESPostDeploymentConfiguationFunctionRole:
+    Type: 'AWS::IAM::Role'
+    DependsOn: RES
+    Properties:
+      AssumeRolePolicyDocument:
+        Version: '2012-10-17'
+        Statement:
+          - Effect: Allow
+            Principal:
+              Service: lambda.amazonaws.com
+            Action: 'sts:AssumeRole'
+      Policies:
+        - PolicyName: LogOutput
+          PolicyDocument:
+            Version: '2012-10-17'
+            Statement:
+              - Effect: Allow
+                Action:
+                  - logs:CreateLogGroup
+                  - logs:CreateLogStream
+                  - logs:PutLogEvents
+                Resource: '*'
+        - PolicyName: DynamoDBReadWritePolicy
+          PolicyDocument:
+            Version: '2012-10-17'
+            Statement:
+              - Effect: Allow
+                Action:
+                  - dynamodb:GetItem
+                  - dynamodb:UpdateItem
+                Resource:
+                    - !Sub arn:${AWS::Partition}:dynamodb:${AWS::Region}:${AWS::AccountId}:table/${EnvironmentName}.cluster-settings
+                    - !Sub arn:${AWS::Partition}:dynamodb:${AWS::Region}:${AWS::AccountId}:table/${EnvironmentName}.cluster-settings/stream/*
+                Condition:
+                  ForAllValues:StringLike:
+                    dynamodb:LeadingKeys:
+                      - shared-storage.*
+
+  RESPostDeploymentConfiguationFunction:
+      Type: 'AWS::Lambda::Function'
+      DependsOn:
+      - RES
+      - RESPostDeploymentConfiguationFunctionRole
+      Properties:
+        Description: 'Post configuration of RES for demo purposes'
+        FunctionName: !Sub ${EnvironmentName}-RESPostDeploymentConfiguationFunction-${AWS::StackName}
+        Timeout: 60
+        Role: !GetAtt RESPostDeploymentConfiguationFunctionRole.Arn
+        Handler: index.handler
+        Runtime: python3.11
+        Code:
+          ZipFile: |
+            import boto3
+            import os
+            import logging
+            import cfnresponse
+
+            logger = logging.getLogger()
+            logger.setLevel(logging.INFO)              
+
+            def handler(event, context):
+              logger.info(f"Received event: {event}")
+              response = {}
+
+              if event["RequestType"] == "Create":
+                try:
+                  dynamodb = boto3.resource('dynamodb')
+                  cluster_settings_table = dynamodb.Table(f"{os.environ['ENVIRONMENT_NAME']}.cluster-settings")
+                    
+                  demo_config = {
+                    'shared-storage.enable_file_browser': True
+                  }
+                  
+                  for key, value in demo_config.items():
+                    item_response = cluster_settings_table.get_item(
+                        Key={
+                            'key': key
+                        }
+                    )
+              
+                    if 'Item' in item_response:
+                        logger.info(f"Item found: {item_response['Item']}")
+                    
+                        # Update the item
+                        update_response = cluster_settings_table.update_item(
+                            Key={
+                                'key': key
+                            },
+                            UpdateExpression="SET #val = :val",
+                            ExpressionAttributeNames={
+                                '#val': 'value'
+                            },
+                            ExpressionAttributeValues={
+                                ':val': value
+                            },
+                            ReturnValues="UPDATED_NEW"
+                        )
+                    
+                        logger.info(f"Item updated: {update_response['Attributes']}")
+                    else:
+                        logger.info(f"Item with key '{key}' not found")
+                  
+                  response['Output'] = 'RES demo environment has been pre-configured.'
+                  cfnresponse.send(event, context, cfnresponse.SUCCESS, response)
+                except Exception as e:
+                  logger.error(f"Error: Unable to pre-configure RES demo environment: {e}")
+                  response['Output'] = f"Error: Unable to pre-configure RES demo environment: {e}"
+                  cfnresponse.send(event, context, cfnresponse.FAILED, response)
+              else:
+                cfnresponse.send(event, context, cfnresponse.SUCCESS, response)
+        Environment:
+          Variables:
+            ENVIRONMENT_NAME: !Ref EnvironmentName
+
+  RESPostDeploymentConfiguation:
+    Type: Custom::RESPostDeploymentConfiguation
+    Properties:
+      ServiceToken: !GetAtt RESPostDeploymentConfiguationFunction.Arn
 
 Outputs:
   KeycloakUrl:
