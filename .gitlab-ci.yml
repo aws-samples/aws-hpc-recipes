@@ -31,4 +31,4 @@ mirror-to-github:
   script:
     - git clone --mirror $CI_REPOSITORY_URL repo
     - cd repo
-    - git push --mirror https://${GITHUB_ACCESS_TOKEN}@github.com/aws-samples/aws-hpc-recipes.git
+    - git push --mirror https://oauth2:${GITHUB_ACCESS_TOKEN}@github.com/aws-samples/aws-hpc-recipes.git
