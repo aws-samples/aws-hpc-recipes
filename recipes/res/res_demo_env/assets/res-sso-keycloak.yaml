@@ -8,7 +8,7 @@ Metadata:
         Parameters:
           - EnvironmentName
           - Keypair
-          - ServiceAccountCredentialsSecretArn
+          - ServiceAccountPasswordSecretArn
           - VpcId
           - PublicSubnet
           - ServiceAccountUserDN
@@ -28,10 +28,10 @@ Parameters:
     Description: EC2 Keypair to access management instance.
     Type: AWS::EC2::KeyPair::KeyName
 
-  ServiceAccountCredentialsSecretArn:
+  ServiceAccountPasswordSecretArn:
     Type: String
     AllowedPattern: ^(?:arn:(?:aws|aws-us-gov|aws-cn):secretsmanager:[a-z0-9-]{1,20}:[0-9]{12}:secret:[A-Za-z0-9-_+=,\.@]{1,128})?$
-    Description: Directory Service Service Account Credentials Secret ARN. The username and password for the Active Directory ServiceAccount user formatted as a username:password key/value pair.
+    Description: Directory Service Root (Service Account) Password Secret ARN
 
   VpcId:
     Type: AWS::EC2::VPC::Id
@@ -65,7 +65,7 @@ Resources:
     Properties:
       Parameters:
         Keypair: !Ref Keypair
-        ServiceAccountCredentialsSecretArn: !Ref ServiceAccountCredentialsSecretArn
+        ServiceAccountPasswordSecretArn: !Ref ServiceAccountPasswordSecretArn
         VpcId: !Ref VpcId
         PublicSubnet: !Ref PublicSubnet
         ServiceAccountUserDN: !Ref ServiceAccountUserDN

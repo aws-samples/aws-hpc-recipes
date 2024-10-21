@@ -7,7 +7,7 @@ Metadata:
           default: Keycloak Configuration
         Parameters:
           - Keypair
-          - ServiceAccountCredentialsSecretArn
+          - ServiceAccountPasswordSecretArn
           - VpcId
           - PublicSubnet
           - ServiceAccountUserDN
@@ -22,10 +22,10 @@ Parameters:
     Description: EC2 Keypair to access management instance.
     Type: AWS::EC2::KeyPair::KeyName
 
-  ServiceAccountCredentialsSecretArn:
+  ServiceAccountPasswordSecretArn:
     Type: String
     AllowedPattern: ^(?:arn:(?:aws|aws-us-gov|aws-cn):secretsmanager:[a-z0-9-]{1,20}:[0-9]{12}:secret:[A-Za-z0-9-_+=,\.@]{1,128})?$
-    Description: Directory Service Service Account Credentials Secret ARN. The username and password for the Active Directory ServiceAccount user formatted as a username:password key/value pair.
+    Description: Directory Service Root (Service Account) Password Secret ARN
 
   VpcId:
     Type: AWS::EC2::VPC::Id
@@ -108,7 +108,7 @@ Resources:
                 Action: secretsmanager:GetSecretValue
                 Resource: 
                   - !Ref KeycloakSecret
-                  - !Ref ServiceAccountCredentialsSecretArn
+                  - !Ref ServiceAccountPasswordSecretArn
               - Effect: Allow
                 Action:
                   - logs:CreateLogGroup
@@ -243,7 +243,7 @@ Resources:
               #Configure Keycloak
               #Get ServiceAccount passsword
               set +x
-              serviceAccountPassword=$(aws secretsmanager get-secret-value --secret-id ${ServiceAccountCredentialsSecretArn} --query SecretString --region ${AWS::Region} --output text | jq -r 'to_entries[] | .value')
+              serviceAccountPassword=$(aws secretsmanager get-secret-value --secret-id ${ServiceAccountPasswordSecretArn} --query SecretString --region ${AWS::Region} --output text)
 
               #Create storage component to sync from AD
               componentId=$(./bin/kcadm.sh create components -s name=ldap -s parentId=res -s providerId=ldap -s providerType=org.keycloak.storage.UserStorageProvider \
@@ -283,7 +283,7 @@ Resources:
               SERVER_URL=\"http://0.0.0.0:80\"
               set +x
               kc_admin_password=\$(aws secretsmanager get-secret-value --secret-id ${KeycloakSecret} --query SecretString --region ${AWS::Region} --output text)
-              serviceAccountPassword=\$(aws secretsmanager get-secret-value --secret-id ${ServiceAccountCredentialsSecretArn} --query SecretString --region ${AWS::Region} --output text | jq -r 'to_entries[] | .value')
+              serviceAccountPassword=\$(aws secretsmanager get-secret-value --secret-id ${ServiceAccountPasswordSecretArn} --query SecretString --region ${AWS::Region} --output text)
               ./bin/kcadm.sh config credentials --server \$SERVER_URL --realm master --user admin --password \$kc_admin_password
               ./bin/kcadm.sh update components/$componentId -s name=ldap -s parentId=res -s providerId=ldap -s providerType=org.keycloak.storage.UserStorageProvider \\
               -s 'config.authType=[\"simple\"]' -s \"config.bindCredential=[\\\"\$serviceAccountPassword\\\"]\" -s 'config.bindDn=[\"${ServiceAccountUserDN}\"]' \\
