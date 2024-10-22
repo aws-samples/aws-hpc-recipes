@@ -121,11 +121,9 @@ Resources:
         LDAPBase: !GetAtt [ RESExternal, Outputs.LDAPBase ]
         LDAPConnectionURI: !GetAtt [ RESExternal, Outputs.LDAPConnectionURI ]
         SudoersGroupName: RESAdministrators
-        ServiceAccountUsername: !GetAtt [ RESExternal, Outputs.ServiceAccountUsername ]
-        ServiceAccountPasswordSecretArn: !GetAtt [ RESExternal, Outputs.ServiceAccountPasswordSecretArn ]
+        ServiceAccountCredentialsSecretArn: !GetAtt [ RESExternal, Outputs.ServiceAccountCredentialsSecretArn ]
         UsersOU: !GetAtt [ RESExternal, Outputs.UsersOU ]
         GroupsOU: !GetAtt [ RESExternal, Outputs.GroupsOU ]
-        SudoersOU: !GetAtt [ RESExternal, Outputs.SudoersOU ]
         ComputersOU: !GetAtt [ RESExternal, Outputs.ComputersOU ]
         SharedHomeFileSystemId: !GetAtt [ RESExternal, Outputs.SharedHomeFilesystemId ]
         InfrastructureHostAMI: ""
@@ -142,7 +140,7 @@ Resources:
       Parameters:
         EnvironmentName: !Ref EnvironmentName
         Keypair: !Ref Keypair
-        ServiceAccountPasswordSecretArn: !GetAtt [ RESExternal, Outputs.ServiceAccountPasswordSecretArn ]
+        ServiceAccountCredentialsSecretArn: !GetAtt [ RESExternal, Outputs.ServiceAccountCredentialsSecretArn ]
         VpcId: !GetAtt [ RESExternal, Outputs.VpcId ]
         PublicSubnet: !Select [0, !Split [",", !GetAtt RESExternal.Outputs.PublicSubnets]]
         ServiceAccountUserDN: !GetAtt [ RESExternal, Outputs.ServiceAccountUserDN ]
