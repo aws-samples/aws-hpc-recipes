@@ -47,6 +47,11 @@ You can use an HPC Recipe for AWS in several ways:
 
 ### :arrow_right: env: User environment
 
+#### eessi ![tag](https://img.shields.io/badge/-beta-%23800080) 
+
+* **About**: Install EESSI software stack
+* **Usage**: [README.md](env/eessi/README.md)
+
 #### spack ![tag](https://img.shields.io/badge/-community-%2317202A) 
 
 * **About**: Install and configure Spack + Spack configs on shared storage
