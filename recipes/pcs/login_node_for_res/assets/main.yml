@@ -1,0 +1,211 @@
+AWSTemplateFormatVersion: '2010-09-09'
+Description: >
+  Demonstrates how to build a Research and Engineering Studio (RES) compatible AWS Parallel Computing Service login node
+
+Metadata:
+  AWS::CloudFormation::Interface:
+    ParameterGroups:
+      - Label:
+          default: RES and PCS Details
+        Parameters:
+          - PCSClusterId
+          - RESEnvironment
+      - Label:
+          default: Networking
+        Parameters:
+          - PCSClusterSG
+          - ImageBuilderInfrastructureSubnet
+
+Parameters:
+  PCSClusterId:
+    Type: String
+    Description: PCS Cluster ID
+    AllowedPattern: "^pcs_[0-9a-z]*$"
+  RESEnvironment:
+    Type: String
+    Description: Name of the Research and Engineering Studio (RES) environment
+    AllowedPattern: ^res-[A-Za-z\-\_0-9]{0,7}$
+    ConstraintDescription: EnvironmentName must start with "res-" and should be less than or equal to 11 characters.
+  PCSClusterSG:
+    Type: List<AWS::EC2::SecurityGroup::Id>
+    Description: Choose the security group associated to PCS Cluster
+    # AllowedPattern: ^sg-[0-9a-f]{17}
+  ImageBuilderInfrastructureSubnet:
+    Type: AWS::EC2::Subnet::Id
+    Description: Choose a subnet for ec2 Image Builder Infrastructure
+
+Resources:
+
+  RESEnvironmentImageBuilderRole:
+    Type: AWS::IAM::Role
+    Properties:
+      AssumeRolePolicyDocument:
+        Version: "2012-10-17"
+        Statement:
+        - Effect: Allow
+          Principal:
+            Service: ec2.amazonaws.com
+          Action: "sts:AssumeRole"
+      # Add AmazonSSMManagedInstanceCore and EC2InstanceProfileForImageBuilder managed policies
+      ManagedPolicyArns: 
+        - arn:aws:iam::aws:policy/AmazonSSMManagedInstanceCore
+        - arn:aws:iam::aws:policy/EC2InstanceProfileForImageBuilder
+        - !Ref RESPCSPolicy
+      Policies:
+        - PolicyName: !Sub ${AWS::StackName}-RES-EnvironmentPolicy
+          PolicyDocument:
+            Version: "2012-10-17"
+            Statement:
+            - Sid: RESDynamoDBAccess
+              Effect: Allow
+              Action: "dynamodb:GetItem"
+              Resource: !Sub "arn:aws:dynamodb:${AWS::Region}:${AWS::AccountId}:table/${RESEnvironment}.cluster-settings"
+              Condition:
+                ForAllValues:StringLike:
+                  "dynamodb:LeadingKeys":
+                  - "global-settings.gpu_settings.*"
+                  - "global-settings.package_config.*"
+            - Sid: RESS3Access
+              Effect: Allow
+              Action: "s3:GetObject"
+              Resource: !Sub "arn:aws:s3:::${RESEnvironment}-cluster-${AWS::Region}-${AWS::AccountId}/idea/vdc/res-ready-install-script-packages/*"
+      RoleName: !Sub "${AWS::StackName}-RES-PCS-Ec2ImageBuilderRole"
+
+  RESEnvironmentImageBuilderIAMInstanceProfile:
+    Type: AWS::IAM::InstanceProfile
+    Properties:
+      Roles:
+        - !Ref RESEnvironmentImageBuilderRole
+
+  RESPCSPolicy:
+    Type: AWS::IAM::ManagedPolicy
+    Properties:
+      PolicyDocument:
+        Version: "2012-10-17"
+        Statement:
+          - Effect: Allow
+            Action:
+              - pcs:getCluster
+            Resource: !Sub "arn:${AWS::Partition}:pcs:${AWS::Region}:${AWS::AccountId}:cluster/${PCSClusterId}"
+          - Effect: Allow
+            Action:
+              - secretsmanager:getSecretValue
+            Resource: !Sub "arn:${AWS::Partition}:secretsmanager:${AWS::Region}:${AWS::AccountId}:secret:pcs!*"
+
+  ResourceTaggerRole:
+    Type: AWS::IAM::Role
+    Properties:
+      AssumeRolePolicyDocument:
+        Version: '2012-10-17'
+        Statement:
+          - Effect: Allow
+            Principal:
+              Service: lambda.amazonaws.com
+            Action: sts:AssumeRole
+      Policies:
+        - PolicyName: ResourceTaggerPolicy
+          PolicyDocument:
+            Version: '2012-10-17'
+            Statement:
+              - Effect: Allow
+                Action:
+                  - logs:CreateLogGroup
+                  - logs:CreateLogStream
+                  - logs:PutLogEvents
+                Resource: arn:aws:logs:*:*:*
+              - Effect: Allow
+                Action:
+                  - iam:TagPolicy
+                  - ec2:CreateTags
+                Resource: '*'
+
+  ResourceTaggerFunction:
+    Type: AWS::Lambda::Function
+    Properties:
+      FunctionName: !Sub ResourceTagger-${AWS::Region}-${AWS::StackName}
+      Handler: index.lambda_handler
+      Role: !GetAtt ResourceTaggerRole.Arn
+      Runtime: python3.11
+      Timeout: 10
+      Code:
+        ZipFile: |
+          import boto3
+          import logging
+          import json
+          import cfnresponse
+
+          logger = logging.getLogger()
+          logger.setLevel(logging.INFO)
+
+          # Initialize clients
+          iam = boto3.client('iam')
+          ec2 = boto3.client('ec2')
+
+          def lambda_handler(event, context):
+            logger.info(f"Received event: {json.dumps(event,indent=2)}")
+            
+            try:
+              if event['RequestType'] in ['Create', 'Update']:
+                policy_arn = event['ResourceProperties']['PolicyArn']
+                tag_key = 'res:Resource'
+                tag_value = 'vdi-host-policy'
+
+                # Add tag to the IAM policy
+                response = iam.tag_policy(
+                    PolicyArn=policy_arn,
+                    Tags=[
+                        {
+                            'Key': tag_key,
+                            'Value': tag_value
+                        },
+                    ]
+                )
+
+                pcs_cluster_sg = event['ResourceProperties']['PCSClusterSG']
+                pcs_cluster_sg_str = ', '.join(pcs_cluster_sg)
+                tag_key = 'res:Resource'
+                tag_value = 'vdi-security-group'
+
+                ec2.create_tags(
+                  Resources=[
+                    pcs_cluster_sg_str
+                  ],
+                  Tags = [
+                    {
+                      'Key': tag_key,
+                      'Value': tag_value
+                    }
+                  ]
+                )
+
+                cfnresponse.send(event, context, cfnresponse.SUCCESS, {'Message': f'\'Resource tags updated \''})
+              elif event['RequestType'] == 'Delete':
+                cfnresponse.send(event, context, cfnresponse.SUCCESS, {'Message': 'Delete request handled successfully'})
+            except Exception as e:
+              cfnresponse.send(event, context, cfnresponse.FAILED, {'Message': str(e)})
+
+  TagPolicyCustomResource:
+    Type: Custom::TagPolicy
+    Properties:
+      ServiceToken: !GetAtt ResourceTaggerFunction.Arn
+      ServiceTimeout: 600
+      PolicyArn: !Ref RESPCSPolicy
+      PCSClusterSG: !Ref PCSClusterSG
+
+# Create ec2 imagebuilder infrastructure configuration
+  RESInfrastructureConfig:
+    Type: AWS::ImageBuilder::InfrastructureConfiguration
+    Properties:
+      Name: !Sub "${AWS::StackName}-RES-PCS-Ec2ImageBuilder-InfrastructureConfig"
+      InstanceProfileName: !Ref RESEnvironmentImageBuilderIAMInstanceProfile
+      InstanceTypes: [t3.xlarge]
+      SecurityGroupIds: !Ref PCSClusterSG
+      SubnetId: !Ref ImageBuilderInfrastructureSubnet
+
+Outputs:
+  RESInfrastructureConfig:
+    Description: "ec2 Image Builder Infrastructure Configuration"
+    Value: !Ref RESInfrastructureConfig
+  RESPCSPolicy:
+    Description: "RES PCS IAM Policy"
+    Value: !Ref RESPCSPolicy
