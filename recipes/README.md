@@ -189,6 +189,11 @@ You can use an HPC Recipe for AWS in several ways:
 * **About**: EC2 ImageBuilder and HashiCorp Packer assets to produce HPC-ready AMIs
 * **Usage**: [README.md](pcs/hpc_ready_ami/README.md)
 
+#### login_node_for_res ![tag](https://img.shields.io/badge/-beta-%23800080) ![tag](https://img.shields.io/badge/-ec2-%23FF9900) ![tag](https://img.shields.io/badge/-pcs-%23FF9900) ![tag](https://img.shields.io/badge/-res-%237DCEA0) 
+
+* **About**: PCS Login Node for Research and Engineering Studio
+* **Usage**: [README.md](pcs/login_node_for_res/README.md)
+
 #### multiuser_demo ![tag](https://img.shields.io/badge/-beta-%23800080) ![tag](https://img.shields.io/badge/-pcs-%23FF9900) 
 
 * **About**: Example for configuration for multi-user AWS PCS using LDAPS
@@ -211,6 +216,11 @@ You can use an HPC Recipe for AWS in several ways:
 
 * **About**: Research and Engineering Studio (RES) on AWS demo environment
 * **Usage**: [README.md](res/res_demo_env/README.md)
+
+#### res_ready_ami ![tag](https://img.shields.io/badge/-ec2-%23FF9900) ![tag](https://img.shields.io/badge/-res-%237DCEA0) 
+
+* **About**: RES-ready AMIs
+* **Usage**: [README.md](res/res_ready_ami/README.md)
 
 
 ### :arrow_right: security: Security configuration
