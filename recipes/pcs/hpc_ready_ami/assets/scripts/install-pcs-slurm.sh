@@ -107,8 +107,8 @@ configure_paths() {
     local SLURM_INSTALL_PATH="/opt/aws/pcs/scheduler/slurm-${PCS_SLURM_VERSION}"
 
 sudo tee /etc/profile.d/slurm.sh << EOF
-PATH=$PATH:${SLURM_INSTALL_PATH}/bin
-MANPATH=$MANPATH:${SLURM_INSTALL_PATH}/share/man
+PATH=\$PATH:${SLURM_INSTALL_PATH}/bin
+MANPATH=\$MANPATH:${SLURM_INSTALL_PATH}/share/man
 export PATH MANPATH
 EOF
 
