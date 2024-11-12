@@ -277,7 +277,7 @@ Resources:
   ComputeLaunchTemplate:
     Type: AWS::EC2::LaunchTemplate
     Properties:
-      LaunchTemplateName: !Sub 'login-${AWS::StackName}'
+      LaunchTemplateName: !Sub 'compute-${AWS::StackName}'
       LaunchTemplateData:
         TagSpecifications:
           - ResourceType: instance
