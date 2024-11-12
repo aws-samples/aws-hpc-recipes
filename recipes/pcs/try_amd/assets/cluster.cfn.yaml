@@ -296,7 +296,7 @@ Resources:
             DeviceIndex: 0
             InterfaceType: efa
             NetworkCardIndex: 0
-            SubnetId: GetAtt [ Network, Outputs.ComputeSubnetId ]
+            SubnetId: !GetAtt [ Networking, Outputs.ComputeSubnetId ]
             Groups:
               - !Ref EfaSecurityGroup
               - !GetAtt [ PCSSecurityGroup, Outputs.ClusterSecurityGroupId ]
@@ -307,7 +307,7 @@ Resources:
             DeviceIndex: 1
             InterfaceType: efa
             NetworkCardIndex: 1
-            SubnetId: GetAtt [ Network, Outputs.ComputeSubnetId ]
+            SubnetId: !GetAtt [ Networking, Outputs.ComputeSubnetId ]
             Groups:
               - !Ref EfaSecurityGroup
         # KeyName: !Ref SshKeyName
@@ -350,7 +350,7 @@ Resources:
     Type: AWS::CloudFormation::Stack
     Properties:
       Parameters:
-        CreateBackupSubnet: "False"
+        CreateBackupSubnets: "False"
       TemplateURL: !Sub 'https://${HpcRecipesS3Bucket}.s3.amazonaws.com/${HpcRecipesBranch}/recipes/pcs/try_amd/assets/network.cfn.yaml'
 
   EfsStorage:
