@@ -453,7 +453,7 @@ Resources:
       clusterIdentifier: !GetAtt [ PCSCluster, id ]
       queueName: c7a
       computeNodeGroupConfigurations:
-        - computeNodeGroupId: !GetAtt [ PCSNodeGroupCompute, id ]
+        - computeNodeGroupId: !GetAtt [ PCSNodeGroupCompute1, id ]
 
 Outputs:
   ClusterId:
