@@ -1,6 +1,6 @@
 AWSTemplateFormatVersion: '2010-09-09'
 Transform: AWS::Serverless-2016-10-31
-Description: AWS Parallel Computing Service "getting started" cluster
+Description: Get started with AWS PCS and Amazon EC2 instances with AMD processors
 
 ### Stack metadata
 Metadata:
@@ -20,7 +20,7 @@ Metadata:
 Parameters:
 
   AmiId:
-    Description: (Optional) ID of the AMI that the compute / login node groups run. Defaults to AL2/x86_64 PCS sample AMI.
+    Description: (Optional) ID of the AMI that the compute / login node groups run. Defaults to Amazon Linux 2/x86_64 PCS sample AMI.
     Type: String
     Default: ''
     AllowedValues:
@@ -48,6 +48,9 @@ Parameters:
 
 Resources:
 
+  ##################
+  # Create a keypair
+  ##################
   CreatedKeyPair:
     Type: 'AWS::EC2::KeyPair'
     Properties: 
@@ -273,6 +276,73 @@ Resources:
                 Region: !Ref AWS::Region
 
   # Launch template for compute node(s)
+  HpcComputeLaunchTemplate:
+    Type: AWS::EC2::LaunchTemplate
+    Properties:
+      LaunchTemplateName: !Sub 'hpc-compute-${AWS::StackName}'
+      LaunchTemplateData:
+        TagSpecifications:
+          - ResourceType: instance
+            Tags:
+              - Key: HPCRecipes
+                Value: "true"
+        MetadataOptions:
+          HttpEndpoint: enabled
+          HttpPutResponseHopLimit: 2
+          HttpTokens: required
+        Placement:
+          GroupName: !GetAtt PlacementGroup.PlacementGroupName
+        NetworkInterfaces:
+          # hpc7a have dual NICs
+          - Description: Primary network interface
+            DeviceIndex: 0
+            InterfaceType: efa
+            NetworkCardIndex: 0
+            SubnetId: !GetAtt [ Networking, Outputs.ComputeSubnetId ]
+            Groups:
+              - !Ref EfaSecurityGroup
+              - !GetAtt [ PCSSecurityGroup, Outputs.ClusterSecurityGroupId ]
+              - !GetAtt [ EfsStorage, Outputs.SecurityGroupId ]
+              - !GetAtt [ FSxLStorage, Outputs.FSxLustreSecurityGroupId ]
+          - Description: Secondary network interface
+            DeviceIndex: 1
+            InterfaceType: efa
+            NetworkCardIndex: 1
+            SubnetId: !GetAtt [ Networking, Outputs.ComputeSubnetId ]
+            Groups:
+              - !Ref EfaSecurityGroup
+        # KeyName: !Ref SshKeyName
+        UserData:
+          Fn::Base64:
+            Fn::Sub:
+              - |
+                MIME-Version: 1.0
+                Content-Type: multipart/mixed; boundary="==MYBOUNDARY=="
+
+                --==MYBOUNDARY==
+                Content-Type: text/cloud-config; charset="us-ascii"
+                MIME-Version: 1.0
+                
+                runcmd:
+                  # Mount EFS filesystem as /home
+                  - mkdir -p /tmp/home
+                  - rsync -a /home/ /tmp/home
+                  - sudo mount -t nfs4 -o nfsvers=4.1,rsize=1048576,wsize=1048576,hard,timeo=600,retrans=2,noresvport ${EfsFilesystem}.efs.${Region}.amazonaws.com:/ /home
+                  - mount -a -t efs defaults
+                  - if [ "enabled" == "$(sestatus | awk "/^SELinux status:/{print $3}")" ]; then setsebool -P use_nfs_home_dirs 1; fi
+                  - rsync -a --ignore-existing /tmp/home/ /home
+                  - rm -rf /tmp/home/
+                  # Mount FSxL filesystem as /fsx
+                  - mkdir -p /fsx 
+                  - mount -t lustre -o relatime,flock ${FSxLustreDns}@tcp:/${FSxLustreMountName} /fsx
+                  - chmod 777 /fsx
+                --==MYBOUNDARY==
+              - EfsFilesystem: !GetAtt [ EfsStorage, Outputs.EFSFilesystemId ]
+                FSxLustreDns: !GetAtt FSxLustreLookup.DNSName
+                FSxLustreMountName: !GetAtt FSxLustreLookup.MountName
+                Region: !Ref AWS::Region
+
+  # Launch template for compute node(s)
   ComputeLaunchTemplate:
     Type: AWS::EC2::LaunchTemplate
     Properties:
@@ -287,29 +357,11 @@ Resources:
           HttpEndpoint: enabled
           HttpPutResponseHopLimit: 2
           HttpTokens: required
-        Placement:
-          GroupName: !GetAtt PlacementGroup.PlacementGroupName
-        NetworkInterfaces:
-          # c7g/hpc7g instances have two NICs
-          - Description: Primary network interface
-            DeviceIndex: 0
-            InterfaceType: efa
-            NetworkCardIndex: 0
-            SubnetId: !GetAtt [ Networking, Outputs.ComputeSubnetId ]
-            Groups:
-              - !Ref EfaSecurityGroup
-              - !GetAtt [ PCSSecurityGroup, Outputs.ClusterSecurityGroupId ]
-              - !GetAtt [ PCSSecurityGroup, Outputs.InboundSshSecurityGroupId ]
-              - !GetAtt [ EfsStorage, Outputs.SecurityGroupId ]
-              - !GetAtt [ FSxLStorage, Outputs.FSxLustreSecurityGroupId ]
-          - Description: Secondary network interface
-            DeviceIndex: 1
-            InterfaceType: efa
-            NetworkCardIndex: 1
-            SubnetId: !GetAtt [ Networking, Outputs.ComputeSubnetId ]
-            Groups:
-              - !Ref EfaSecurityGroup
-        # KeyName: !Ref SshKeyName
+        SecurityGroupIds: 
+          - !GetAtt [ PCSSecurityGroup, Outputs.ClusterSecurityGroupId ]
+          - !GetAtt [ PCSSecurityGroup, Outputs.InboundSshSecurityGroupId ]
+          - !GetAtt [ EfsStorage, Outputs.SecurityGroupId ]
+          - !GetAtt [ FSxLStorage, Outputs.FSxLustreSecurityGroupId ]
         UserData:
           Fn::Base64:
             Fn::Sub:
@@ -437,8 +489,8 @@ Resources:
         maxInstanceCount: 4
       iamInstanceProfileArn: !GetAtt [ PCSInstanceProfile, Outputs.InstanceProfileArn ]
       customLaunchTemplate:
-        id: !Ref ComputeLaunchTemplate
-        version: !GetAtt [ ComputeLaunchTemplate, LatestVersionNumber ]
+        id: !Ref HpcComputeLaunchTemplate
+        version: !GetAtt [ HpcComputeLaunchTemplate, LatestVersionNumber ]
       subnetIds:
         - !GetAtt [ Networking, Outputs.ComputeSubnetId ]
       amiId: !Ref AmiId
