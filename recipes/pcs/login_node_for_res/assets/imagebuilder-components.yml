@@ -16,9 +16,9 @@ Parameters:
     Type: String
     Default: aws-hpc-recipes
     Description: HPC Recipes for AWS S3 bucket
-    # AllowedValues:
-    #      - aws-hpc-recipes
-    #      - aws-hpc-recipes-dev
+    AllowedValues:
+         - aws-hpc-recipes
+         - aws-hpc-recipes-dev
   HpcRecipesBranch:
     Type: String
     Default: main
@@ -54,9 +54,6 @@ Resources:
     DeletionPolicy: Delete
     UpdateReplacePolicy: Delete
     Properties:
-      Parameters:
-        HpcRecipesS3Bucket: !Ref HpcRecipesS3Bucket
-        HpcRecipesBranch: !Ref HpcRecipesBranch
       TemplateURL: !Sub 'https://${HpcRecipesS3Bucket}.s3.us-east-1.amazonaws.com/${HpcRecipesBranch}/recipes/res/res_ready_ami/assets/components/research-and-engineering-studio-vdi-linux.yaml'
       TimeoutInMinutes: 10
 

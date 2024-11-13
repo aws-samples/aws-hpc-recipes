@@ -78,6 +78,20 @@ Resources:
               Effect: Allow
               Action: "s3:GetObject"
               Resource: !Sub "arn:${AWS::Partition}:s3:::${EnvironmentName}-cluster-${AWS::Region}-${AWS::AccountId}/idea/vdc/res-ready-install-script-packages/*"
+            - Sid: GPUDriverAccess
+              Effect: Allow
+              Action: 
+                - s3:GetObject
+                - s3:ListBucket
+              Resource:
+                - "arn:aws:s3:::dcv-license.us-east-1/*"
+                - "arn:aws:s3:::ec2-linux-nvidia-drivers/*"
+                - "arn:aws:s3:::ec2-linux-nvidia-drivers"
+                - "arn:aws:s3:::nvidia-gaming/*"
+                - "arn:aws:s3:::nvidia-gaming-drivers"
+                - "arn:aws:s3:::nvidia-gaming-drivers/*"
+                - "arn:aws:s3:::ec2-amd-linux-drivers/*"
+                - "arn:aws:s3:::ec2-amd-linux-drivers"
       RoleName: !Sub "${EnvironmentName}-EC2InstanceProfileForImageBuilder"
 
   RESEC2InstanceProfileForImageBuilder:
