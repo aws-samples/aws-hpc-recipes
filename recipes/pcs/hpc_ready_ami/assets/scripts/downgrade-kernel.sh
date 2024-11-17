@@ -38,27 +38,8 @@ handle_ubuntu_22.04() {
     sudo sed -i 's/^GRUB_DEFAULT=.*$/GRUB_DEFAULT="Advanced options for Ubuntu>Ubuntu, with Linux '"${KERNEL_VERSION}"'"/' /etc/default/grub
     # Update GRUB
     sudo update-grub
-    # Remove 6.8x kernel packages - otherwise you will be hounded forever by the Ubuntu update notifier
-    # that there is a newer kernel available. This can disrupt automations. 
-    # sudo dpkg -l | grep linux | grep aws | grep "6.8" | awk '{print $2}' | xargs apt remove -y || true
-
     # Hold kernel packages to prevent updates
     sudo apt-mark hold linux-image-${KERNEL_VERSION} linux-headers-${KERNEL_VERSION}
-
-# # Create apt preferences to pin kernel version
-# sudo cat > /etc/apt/preferences.d/kernel-pin << EOF
-# Package: linux-image-*
-# Pin: version 6.5.0*
-# Pin-Priority: 1001
-
-# Package: linux-headers-*
-# Pin: version 6.5.0*
-# Pin-Priority: 1001
-
-# Package: linux-*aws*
-# Pin: version 6.5.0*
-# Pin-Priority: 1001
-# EOF
 
 }
 
