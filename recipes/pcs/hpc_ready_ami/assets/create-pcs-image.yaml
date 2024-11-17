@@ -119,7 +119,7 @@ Resources:
         - ComponentArn: !GetAtt [ImageBuilderComponentsStack, Outputs.EfsUtilsInstallerComponent]
         - ComponentArn: !GetAtt [ImageBuilderComponentsStack, Outputs.PcsAgentInstallerComponent]
         - ComponentArn: !GetAtt [ImageBuilderComponentsStack, Outputs.PcsSlurmInstallerComponent]
-        # - ComponentArn: !GetAtt [ImageBuilderComponentsStack, Outputs.SpackInstallerComponent]
+        - ComponentArn: !GetAtt [ImageBuilderComponentsStack, Outputs.SpackInstallerComponent]
       Description: Install PCS Agent, SLURM, and other components
       # Appending StackName enables multiple Recipes with the same base name, 
       # which is important for debugging.
