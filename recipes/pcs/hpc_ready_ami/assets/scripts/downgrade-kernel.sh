@@ -34,12 +34,28 @@ handle_ubuntu_22.04() {
     # Install specific kernel version
     sudo apt update
     sudo apt install -y linux-image-${KERNEL_VERSION} linux-headers-${KERNEL_VERSION}
-    # Hold kernel packages to prevent updates
-    sudo apt-mark hold linux-image-${KERNEL_VERSION} linux-headers-${KERNEL_VERSION}
     # Update GRUB default
     sudo sed -i 's/^GRUB_DEFAULT=.*$/GRUB_DEFAULT="Advanced options for Ubuntu>Ubuntu, with Linux '"${KERNEL_VERSION}"'"/' /etc/default/grub
     # Update GRUB
     sudo update-grub
+
+    # Hold kernel packages to prevent updates
+    sudo apt-mark hold linux-image-${KERNEL_VERSION} linux-headers-${KERNEL_VERSION}
+
+# Create apt preferences to pin kernel version
+sudo cat > /etc/apt/preferences.d/kernel-pin << EOF
+Package: linux-image-*
+Pin: version 6.5.0*
+Pin-Priority: 1001
+
+Package: linux-headers-*
+Pin: version 6.5.0*
+Pin-Priority: 1001
+
+Package: linux-*aws*
+Pin: version 6.5.0*
+Pin-Priority: 1001
+EOF
 
 }
 
