@@ -79,11 +79,11 @@ Resources:
             runcmd:
             # Mount EFS filesystem as /home
             - mkdir -p /tmp/home
-            - rsync -a /home/ /tmp/home
+            - rsync -aA /home/ /tmp/home
             - echo "${EfsFilesystemId}:/ /home efs tls,_netdev" >> /etc/fstab
             - mount -a -t efs defaults
             - if [ "enabled" == "$(sestatus | awk '/^SELinux status:/{print $3}')" ]; then setsebool -P use_nfs_home_dirs 1; fi
-            - rsync -a --ignore-existing /tmp/home/ /home
+            - rsync -aA --ignore-existing /tmp/home/ /home
             - rm -rf /tmp/home/
             # If provided, mount FSxL filesystem as /shared
             - if [ ! -z "${FSxLustreFilesystemId}" ]; then amazon-linux-extras install -y lustre=latest; mkdir -p /shared; chmod a+rwx /shared; mount -t lustre ${FSxLustreFilesystemId}.fsx.${AWS::Region}.amazonaws.com@tcp:/${FSxLustreFilesystemMountName} /shared; chmod 777 /shared; fi
@@ -123,11 +123,11 @@ Resources:
             runcmd:
             # Mount EFS filesystem as /home
             - mkdir -p /tmp/home
-            - rsync -a /home/ /tmp/home
+            - rsync -aA /home/ /tmp/home
             - echo "${EfsFilesystemId}:/ /home efs tls,_netdev" >> /etc/fstab
             - mount -a -t efs defaults
             - if [ "enabled" == "$(sestatus | awk '/^SELinux status:/{print $3}')" ]; then setsebool -P use_nfs_home_dirs 1; fi
-            - rsync -a --ignore-existing /tmp/home/ /home
+            - rsync -aA --ignore-existing /tmp/home/ /home
             - rm -rf /tmp/home/
             # If provided, mount FSxL filesystem as /shared
             - if [ ! -z "${FSxLustreFilesystemId}" ]; then amazon-linux-extras install -y lustre=latest; mkdir -p /shared; chmod a+rwx /shared; mount -t lustre ${FSxLustreFilesystemId}.fsx.${AWS::Region}.amazonaws.com@tcp:/${FSxLustreFilesystemMountName} /shared; fi

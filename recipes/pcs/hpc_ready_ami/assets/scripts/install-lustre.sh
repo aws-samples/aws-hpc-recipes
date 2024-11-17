@@ -33,7 +33,10 @@ handle_ubuntu_22.04() {
     # This only covers the happy path where kernel is 5.14.0-427*
     wget -O - https://fsx-lustre-client-repo-public-keys.s3.amazonaws.com/fsx-ubuntu-public-key.asc | gpg --dearmor | sudo tee /usr/share/keyrings/fsx-ubuntu-public-key.gpg >/dev/null
     sudo bash -c 'echo "deb [signed-by=/usr/share/keyrings/fsx-ubuntu-public-key.gpg] https://fsx-lustre-client-repo.s3.amazonaws.com/ubuntu jammy main" > /etc/apt/sources.list.d/fsxlustreclientrepo.list && apt-get update'
-    sudo apt install -y lustre-client-modules-aws
+    # This needs to map to the current kernel version of the instance
+    # If you have run the kernel downgrade, and there is a newer version of Lustre available
+    # you will need to update the version below
+    sudo apt install -y lustre-client-modules-aws=6.5.0.1024.24~22.04.1
     sudo apt clean
 }
 

@@ -137,6 +137,17 @@ Resources:
       TemplateURL: !Sub 'https://${HpcRecipesS3Bucket}.s3.us-east-1.amazonaws.com/${HpcRecipesBranch}/recipes/pcs/hpc_ready_ami/assets/components/update-os.yaml'
       TimeoutInMinutes: 10
 
+  DowngradeKernelStack:
+    Type: AWS::CloudFormation::Stack
+    DeletionPolicy: Delete
+    UpdateReplacePolicy: Delete
+    Properties:
+      Parameters:
+        HpcRecipesS3Bucket: !Ref HpcRecipesS3Bucket
+        HpcRecipesBranch: !Ref HpcRecipesBranch
+      TemplateURL: !Sub 'https://${HpcRecipesS3Bucket}.s3.us-east-1.amazonaws.com/${HpcRecipesBranch}/recipes/pcs/hpc_ready_ami/assets/components/downgrade-kernel.yaml'
+      TimeoutInMinutes: 10
+
 Outputs:
   CloudwatchAgentComponent:
     Description: CloudwatchAgentComponent
@@ -188,3 +199,8 @@ Outputs:
     Value: !GetAtt [ UpdateOsStack, Outputs.ImageBuilderComponent ]
     Export:
       Name: !Sub "${AWS::StackName}-UpdateOsComponent"
+  DowngradeKernelComponent:
+    Description: UpdateOsComponent
+    Value: !GetAtt [ DowngradeKernelStack, Outputs.ImageBuilderComponent ]
+    Export:
+      Name: !Sub "${AWS::StackName}-DowngradeKernelComponent"

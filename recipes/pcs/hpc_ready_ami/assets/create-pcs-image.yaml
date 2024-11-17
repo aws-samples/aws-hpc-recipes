@@ -109,6 +109,7 @@ Resources:
       # Ordering is important here
       Components:
         - ComponentArn: !GetAtt [ImageBuilderComponentsStack, Outputs.UpdateOsComponent]
+        - ComponentArn: !GetAtt [ImageBuilderComponentsStack, Outputs.DowngradeKernelComponent]
         - ComponentArn: !Sub 'arn:aws:imagebuilder:${AWS::Region}:aws:component/reboot-linux/1.0.1/1'
         - ComponentArn: !GetAtt [ImageBuilderComponentsStack, Outputs.OptimizePerformanceComponent]
         - ComponentArn: !GetAtt [ImageBuilderComponentsStack, Outputs.CloudwatchAgentComponent]
