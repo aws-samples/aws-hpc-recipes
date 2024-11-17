@@ -24,6 +24,29 @@ fi
 
 handle_ubuntu_22.04() {
     logger "Updating Ubuntu 22.04" "INFO"
+    # 6.5.0-1024-aws is latest suppported by Lustre as of 2024.11.01
+    # See https://docs.aws.amazon.com/fsx/latest/LustreGuide/lustre-client-matrix.html for details
+    KERNEL_VERSION="6.5.0-1024-aws"
+    # Remove the meta packages first
+    sudo apt remove -y linux-aws linux-image-aws linux-headers-aws || true
+    # Clean up any automatically installed packages no longer needed
+    sudo apt autoremove -y
+    # Install specific kernel version
+    sudo apt update
+    sudo apt install -y linux-image-${KERNEL_VERSION} linux-headers-${KERNEL_VERSION}
+    # Hold kernel packages to prevent updates
+    sudo apt-mark hold linux-image-${KERNEL_VERSION} linux-headers-${KERNEL_VERSION}
+    # Update GRUB default
+    sudo sed -i 's/^GRUB_DEFAULT=.*$/GRUB_DEFAULT="Advanced options for Ubuntu>Ubuntu, with Linux '"${KERNEL_VERSION}"'"/' /etc/default/grub
+    # Update GRUB
+    sudo update-grub
+
+}
+
+handle_ubuntu_22.04_broken() {
+    logger "Updating Ubuntu 22.04" "INFO"
+    # 6.5.0-1024-aws is latest suppported by Lustre as of 2024.11.01
+    # See https://docs.aws.amazon.com/fsx/latest/LustreGuide/lustre-client-matrix.html for details
     KERNEL_VERSION="6.5.0-1024-aws"
     # Install specific kernel version
     sudo apt update

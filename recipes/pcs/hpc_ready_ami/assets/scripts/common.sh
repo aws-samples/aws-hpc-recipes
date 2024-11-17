@@ -29,6 +29,8 @@ logger() {
 
 handle_ubuntu_22.04() {
     logger "Default for Ubuntu 22.04" "WARNING"
+    export DEBIAN_FRONTEND=noninteractive
+    export APT_LISTCHANGES_FRONTEND=none
 }
 
 handle_rhel_9() { 
