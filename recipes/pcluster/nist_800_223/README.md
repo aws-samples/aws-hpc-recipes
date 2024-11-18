@@ -192,7 +192,7 @@ Exports View
 
 * Open CloudFormation console and verify the status of the template with the name starting with each of the names above.
 
-<img src="https://github.com/aws-samples/aws-hpc-recipes/tree/main/recipes/pcluster/nist_800_223/docs/deployment_steps/0_validate.png" alt="Validate" width="200" height="325">
+<img src="https://github.com/aws-samples/aws-hpc-recipes/blob/main/recipes/pcluster/nist_800_223/docs/deployment_steps/0_validate.png" alt="Validate" width="325">
 
 * Make sure that all CloudFormation stacks have a status of "CREATE_COMPLETE"
 
