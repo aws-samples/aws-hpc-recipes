@@ -1,0 +1,123 @@
+AWSTemplateFormatVersion: '2010-09-09'
+Description: VPC with Private and Public Subnets, NAT Gateway, and VPC Flow Logs
+
+Parameters:
+  NISTNetworkStackName:
+    Type: String
+    Description: Name of the NIST Networking Stack.
+    Default: "nist-network"
+
+Resources:
+  LoginNodeSecurityGroup:
+    Type: AWS::EC2::SecurityGroup
+    Properties:
+      GroupDescription: Security group for Login Node
+      VpcId: 
+        Fn::ImportValue: !Sub '${NISTNetworkStackName}-VPC'
+  
+  HeadNodeSecurityGroup:
+    Type: AWS::EC2::SecurityGroup
+    Properties:
+      GroupDescription: Security group for Head Node
+      VpcId: 
+        Fn::ImportValue: !Sub '${NISTNetworkStackName}-VPC'
+  
+  ComputeNodeSecurityGroup:
+    Type: AWS::EC2::SecurityGroup
+    Properties:
+      GroupDescription: Security group for Compute Node
+      VpcId: 
+        Fn::ImportValue: !Sub '${NISTNetworkStackName}-VPC'
+
+  LoginNodeSecurityGroupIngress:
+    Type: AWS::EC2::SecurityGroupIngress
+    Properties:
+      Description: Allow inbound SSH from apprvoed CIDR to Login Node
+      IpProtocol: tcp
+      FromPort: 22
+      ToPort: 22
+      CidrIp: 
+        Fn::ImportValue: !Sub '${NISTNetworkStackName}-CidrAllowedAccess'
+      GroupId: !GetAtt LoginNodeSecurityGroup.GroupId
+  
+  LoginNodeSecurityGroupIngress1:
+    Type: AWS::EC2::SecurityGroupIngress
+    Properties:
+      Description: Allow inbound SSH from Managment Zone SG to Login Node
+      IpProtocol: tcp
+      FromPort: 22
+      ToPort: 22
+      SourceSecurityGroupId: 
+        Fn::ImportValue: !Sub '${NISTNetworkStackName}-ManagementZoneSecurityGroupID'
+      GroupId: !GetAtt LoginNodeSecurityGroup.GroupId
+
+  HeadNodeSecurityGroupIngress:
+    Type: AWS::EC2::SecurityGroupIngress
+    Properties:
+      Description: Allow inbound SSH from Login Node to Head Node
+      IpProtocol: tcp
+      FromPort: 22
+      ToPort: 22
+      SourceSecurityGroupId: !GetAtt LoginNodeSecurityGroup.GroupId
+      GroupId: !GetAtt HeadNodeSecurityGroup.GroupId
+  
+  HeadNodeSecurityGroupIngress1:
+    Type: AWS::EC2::SecurityGroupIngress
+    Properties:
+      Description: Allow inbound SSH from Managment Zone SG to Head Node
+      IpProtocol: tcp
+      FromPort: 22
+      ToPort: 22
+      SourceSecurityGroupId: 
+        Fn::ImportValue: !Sub '${NISTNetworkStackName}-ManagementZoneSecurityGroupID'
+      GroupId: !GetAtt HeadNodeSecurityGroup.GroupId
+  
+  HeadNodeSecurityGroupIngress2:
+    Type: AWS::EC2::SecurityGroupIngress
+    Properties:
+      Description: Allow inbound default slurm ports from Compute Nodes to Head Node
+      IpProtocol: tcp
+      FromPort: 6817
+      ToPort: 6830
+      SourceSecurityGroupId: !GetAtt ComputeNodeSecurityGroup.GroupId
+      GroupId: !GetAtt HeadNodeSecurityGroup.GroupId
+
+  ComputeNodeSecurityGroupIngress:
+    Type: AWS::EC2::SecurityGroupIngress
+    Properties:
+      Description: Allow inbound default slurm ports from Head Node to Compute Nodes 
+      IpProtocol: tcp
+      FromPort: 6817
+      ToPort: 6830
+      SourceSecurityGroupId: !GetAtt HeadNodeSecurityGroup.GroupId
+      GroupId: !GetAtt ComputeNodeSecurityGroup.GroupId
+  
+  ComputeNodeSecurityGroupIngress1:
+    Type: AWS::EC2::SecurityGroupIngress
+    Properties:
+      Description: Allow inbound SSH from Managment Zone to Compute Nodes for management
+      IpProtocol: tcp
+      FromPort: 22
+      ToPort: 22
+      SourceSecurityGroupId: 
+        Fn::ImportValue: !Sub '${NISTNetworkStackName}-ManagementZoneSecurityGroupID'
+      GroupId: !GetAtt ComputeNodeSecurityGroup.GroupId
+
+Outputs:
+  LoginNodeSecurityGroupID:
+    Description: Login Node Security Group ID
+    Value: !GetAtt LoginNodeSecurityGroup.GroupId
+    Export:
+      Name: !Sub '${AWS::StackName}-LoginNodeSecurityGroupID'
+
+  HeadNodeSecuritySecurityGroupID:
+    Description: Head Node Security Group ID
+    Value: !GetAtt HeadNodeSecurityGroup.GroupId
+    Export:
+      Name: !Sub '${AWS::StackName}-HeadNodeSecurityGroupID'
+
+  ComputeNodeSecurityGroupID:
+    Description: Compute Node Security Group ID
+    Value: !GetAtt ComputeNodeSecurityGroup.GroupId
+    Export:
+      Name: !Sub '${AWS::StackName}-ComputeNodeSecurityGroupID'
