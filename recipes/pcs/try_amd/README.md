@@ -18,8 +18,7 @@ This recipe helps you launch a Slurm cluster using AWS Parallel Computing Servic
 
 ## Create an AWS PCS cluster powered by AMD processors
 
-Launch the cluster using AWS CloudFormation:
-    * `us-east-2` (Ohio, United States) [![Launch](../../../docs/media/launch-stack.svg)](https://console.aws.amazon.com/cloudformation/home?region=us-east-2#/stacks/create/review?stackName=try-amd-cfn&templateURL=https://aws-hpc-recipes.s3.us-east-1.amazonaws.com/main/recipes/pcs/try_amd/assets/cluster.cfn.yaml)
+Launch the cluster using AWS CloudFormation in `us-east-2` (Ohio, United States) [![Launch](../../../docs/media/launch-stack.svg)](https://console.aws.amazon.com/cloudformation/home?region=us-east-2#/stacks/create/review?stackName=try-amd-cfn&templateURL=https://aws-hpc-recipes.s3.us-east-1.amazonaws.com/main/recipes/pcs/try_amd/assets/cluster.cfn.yaml)
 
 * Follow the instructions in the AWS CloudFormation console:
     * Under **Parameters**
@@ -111,3 +110,13 @@ We generated an SSH key as part of deploying the cluster. It is stored in [AWS S
 
 `ssh -i key-HEXADECIMAL-DATA.pem ec2-user@LOGIN-NODE-PUBLIC-IP`
 
+## Resources
+
+Here's some additional reading where you can learn more about HPC at AWS.
+
+* [High Performance Computing at AWS](https://aws.amazon.com/hpc/)
+* [AWS HPC Blog](https://aws.amazon.com/blogs/hpc/)
+* [Day1HPC](https://day1hpc.com/)
+* [HPC TechShorts](https://www.youtube.com/c/hpctechshorts)
+* [HPC Recipes for AWS](https://github.com/aws-samples/aws-hpc-recipes)
+* [AWS PCS user guide](https://docs.aws.amazon.com/pcs/)
