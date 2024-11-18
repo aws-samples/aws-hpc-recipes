@@ -1,0 +1,82 @@
+AWSTemplateFormatVersion: '2010-09-09'
+Description: VPC with Private and Public Subnets, NAT Gateway, and VPC Flow Logs
+ 
+Parameters:
+  NISTNetworkStackName:
+    Type: String
+    Description: Name of the NIST Networking Stack.
+    Default: "nist-network"
+
+  ActiveDirectoryDomainName:
+    Type: String
+    Default: nist.hpc.cloud
+    Description: Full domain name to use for Active Directory
+
+  RetainActiveDirectory:
+    Type: String
+    Default: 'Delete'
+    AllowedValues:
+      - 'Retain'
+      - 'Delete'
+    Description: Do you want to retain the Active Directory setup when this stack is updated/deleted?
+
+Resources:
+  ### User Directory ###
+  # AD Admin Password 
+  ActiveDirectoryAdminPasswordSecret:
+    Type: 'AWS::SecretsManager::Secret'
+    DeletionPolicy: !Ref RetainActiveDirectory
+    UpdateReplacePolicy: !Ref RetainActiveDirectory
+    Properties:
+      Description: "Dynamically generated password for AD Admin in Managed Active Directory"
+      GenerateSecretString:
+        PasswordLength: 30
+        ExcludeCharacters: '"@/\'
+      Tags:
+        - Key: environment
+          Value: !Sub ${AWS::StackName}
+  
+  # Amazon Managed Active Directory
+  ManagedActiveDirectory:
+    Type: AWS::DirectoryService::MicrosoftAD
+    DeletionPolicy: !Ref RetainActiveDirectory
+    UpdateReplacePolicy: !Ref RetainActiveDirectory
+    Properties:
+      Name: !Ref ActiveDirectoryDomainName
+      Password: !Sub "{{resolve:secretsmanager:${ActiveDirectoryAdminPasswordSecret}:SecretString}}"
+      VpcSettings:
+        SubnetIds: 
+          - Fn::Select: 
+            - 0
+            - Fn::Split:
+                - ','
+                - Fn::ImportValue: !Sub '${NISTNetworkStackName}-ManagementZoneSubnets'
+          - Fn::Select:
+              - 1
+              - Fn::Split:
+                  - ','
+                  - Fn::ImportValue: !Sub '${NISTNetworkStackName}-ManagementZoneSubnets'
+        VpcId: 
+          Fn::ImportValue: !Sub '${NISTNetworkStackName}-VPC'
+  
+Outputs:
+  ManagedActiveDirectoryDomain:
+    Value: !Ref ActiveDirectoryDomainName
+    Description: "Domain name for the Managed Active Directory"
+    Export:
+      Name: !Sub '${AWS::StackName}-Domain'
+
+  ManagedActiveDirectoryAdminPassword:
+    Value: !Ref ActiveDirectoryAdminPasswordSecret
+    Description: "ARN for AD Admin password in Secrets Manager"
+    Export:
+      Name: !Sub '${AWS::StackName}-Admin-Password-Secret-ARN'
+  
+  ManagedActiveDirectoryDnsIpAddresses:
+    Value: !Join
+      - ','
+      - - !Select ["0", !GetAtt ManagedActiveDirectory.DnsIpAddresses]
+        - !Select ["1", !GetAtt ManagedActiveDirectory.DnsIpAddresses]
+    Description: "DNS IP Addresses for the Managed Active Directory"
+    Export:
+      Name: !Sub '${AWS::StackName}-DnsIpAddresses'
