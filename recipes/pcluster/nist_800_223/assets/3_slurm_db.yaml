@@ -1,0 +1,141 @@
+AWSTemplateFormatVersion: '2010-09-09'
+Description: VPC with Private and Public Subnets, NAT Gateway, and VPC Flow Logs
+
+Parameters:
+  NISTNetworkStackName:
+    Type: String
+    Description: Name of the NIST Networking Stack.
+    Default: "nist-network"
+
+  NISTSecurityStackName:
+    Type: String
+    Description: Name of the NIST Networking Stack.
+    Default: "nist-security"
+
+  RDSDatabaseName:
+      Type: String
+      Default: slurmaccounting
+      Description: Name of the MySQL database for Slurm accounting
+
+  RDSDatabaseAdminUsername:
+    Type: String
+    Default: slurmaccounting_admin
+    Description: Username for the RDS MySQL database
+    
+  RetainRDS:
+    Type: String
+    Default: 'Delete'
+    AllowedValues:
+      - 'Retain'
+      - 'Delete'
+    Description: Do you want to retain the slurm accounting database when this stack is updated/deleted?
+
+Resources:
+  ### Security Groups ###
+  RDSSecurityGroup:
+    Type: AWS::EC2::SecurityGroup
+    Properties:
+      GroupDescription: Security group for RDS database
+      VpcId:  
+        Fn::ImportValue: !Sub '${NISTNetworkStackName}-VPC'
+  RDSSecurityGroupIngress:
+    Type: AWS::EC2::SecurityGroupIngress
+    Properties:
+      Description: Allow inbound MySQL from Head Node to Slurm Accounting DB
+      IpProtocol: tcp
+      FromPort: 3306
+      ToPort: 3306
+      SourceSecurityGroupId: 
+        Fn::ImportValue: !Sub '${NISTSecurityStackName}-HeadNodeSecurityGroupID'
+      GroupId: !GetAtt RDSSecurityGroup.GroupId
+  RDSSecurityGroupIngress1:
+    Type: AWS::EC2::SecurityGroupIngress
+    Properties:
+      Description: Allow inbound MySQL from Management Zone to Slurm Accounting DB
+      IpProtocol: tcp
+      FromPort: 3306
+      ToPort: 3306
+      SourceSecurityGroupId:
+        Fn::ImportValue: !Sub '${NISTNetworkStackName}-ManagementZoneSecurityGroupID'
+      GroupId: !GetAtt RDSSecurityGroup.GroupId
+
+  ### Slurm Accounting RDS DB###
+  # RDS Admin Password
+  RDSDatabaseAdminPasswordSecret:
+    Type: AWS::SecretsManager::Secret
+    DeletionPolicy: !Ref RetainRDS
+    UpdateReplacePolicy: !Ref RetainRDS
+    Properties:
+      Description: "Dynamically generated password for Slurm Accounting DB in RDS"
+      GenerateSecretString:
+          PasswordLength: 30
+          ExcludeCharacters: '"@/\'
+      Tags:
+        - Key: environment
+          Value: !Sub ${AWS::StackName}
+
+  DBSubnetGroup:
+    Type: AWS::RDS::DBSubnetGroup
+    DeletionPolicy: !Ref RetainRDS
+    UpdateReplacePolicy: !Ref RetainRDS
+    Properties:
+      DBSubnetGroupDescription: "Subnet group for RDS database"
+      SubnetIds:
+        Fn::Split:
+          - ','
+          - Fn::ImportValue: !Sub '${NISTNetworkStackName}-ManagementZoneSubnets'
+
+  # RDS MySQL database for Slurm accounting
+  RDSDatabase:
+    Type: AWS::RDS::DBInstance
+    DeletionPolicy: !Ref RetainRDS
+    UpdateReplacePolicy: !Ref RetainRDS
+    Properties:
+      DBName: !Ref RDSDatabaseName
+      Engine: mysql
+      MasterUsername: !Ref RDSDatabaseAdminUsername
+      MasterUserPassword: !Sub "{{resolve:secretsmanager:${RDSDatabaseAdminPasswordSecret}:SecretString}}"
+      DBSubnetGroupName: !Ref DBSubnetGroup
+      DBInstanceClass: db.t3.medium
+      AllocatedStorage: 20
+      AutoMinorVersionUpgrade: true
+      VPCSecurityGroups: 
+        - !Ref RDSSecurityGroup
+      StorageEncrypted: true
+      BackupRetentionPeriod: 7
+      EnableCloudwatchLogsExports:
+        - error
+        - general
+        - slowquery
+      EnableIAMDatabaseAuthentication: true
+      Tags:
+        - Key: environment
+          Value: !Sub ${AWS::StackName}
+
+Outputs:
+  RDSURI:
+    Description: Endpoint of the RDS MySQL database
+    Value: !Join
+      - ":"
+      - - !GetAtt RDSDatabase.Endpoint.Address
+        - '3306'
+    Export:
+      Name: !Sub '${AWS::StackName}-RDS-URI'
+
+  RDSDatabaseAdminUsername:
+    Description: Admin username for the RDS MySQL database
+    Value: !Ref RDSDatabaseAdminUsername
+    Export:
+      Name: !Sub '${AWS::StackName}-RDS-Admin-Username'
+
+  RDSDatabaseAdminPasswordSecret:
+    Description: Password secret for the RDS MySQL database
+    Value: !Ref RDSDatabaseAdminPasswordSecret
+    Export:
+      Name: !Sub '${AWS::StackName}-RDS-Admin-Secret-ARN'
+
+  RDSDatabaseName:
+    Description: Name of the RDS MySQL database
+    Value: !Ref RDSDatabaseName
+    Export:
+      Name: !Sub '${AWS::StackName}-RDS-DB-Name'

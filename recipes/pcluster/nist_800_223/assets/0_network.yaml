@@ -1,0 +1,1469 @@
+AWSTemplateFormatVersion: '2010-09-09'
+Description: Create a secure 4-security-zone HPC VPC spanning multiple AZs following https://csrc.nist.gov/pubs/sp/800/223/ipd. Each AZ is allocated separate Access, Management, Storage, and Compute subnets corresponding to the 4 security zones. This VPC has an InternetGateway attached to Access Zone and NATGateways for Management zones to pull outside data. Compute and Storage zones can pull from S3 and other API endpoints, but do not have route to Internet. VPC Endpoints are constructed for Autoscaling, Cloudformation, CloudWatch (Logs and Monitoring), DynamoDB (Gateway), EC2, EC2 Messages, ECR, ECR Docker, EBS, EFS, FSx, PCS, S3 (Gateway), SecretsManager, SSM, SSM Messages, and STS (https://aws.amazon.com/blogs/hpc/securing-hpc-on-aws-isolated-clusters/ for more details on purpose of Endpoints). 
+
+Mappings:
+  ServiceNamePrefixMap:
+    aws:
+      Name: com.amazonaws
+    aws-cn:
+      Name: cn.com.amazonaws
+    aws-us-gov:
+      Name: com.amazonaws
+  RegionMap: 
+    us-east-1:
+      ZoneId1: use1-az6
+      ZoneId2: use1-az2
+      ZoneId3: use1-az1
+      ZoneId4: use1-az4
+    us-east-2:
+      ZoneId1: use2-az2
+      ZoneId2: use2-az3
+      ZoneId3: use2-az1
+      ZoneId4: ''
+    us-west-1:
+      ZoneId1: usw1-az1
+      ZoneId2: usw1-az3
+      ZoneId3: usw1-az2
+      ZoneId4: ''
+    us-west-2:
+      ZoneId1: usw2-az1
+      ZoneId2: usw2-az2
+      ZoneId3: usw2-az3
+      ZoneId4: usw2-az4
+    eu-central-1:
+      ZoneId1: euc1-az3
+      ZoneId2: euc1-az2
+      ZoneId3: euc1-az1
+      ZoneId4: ''
+    eu-west-1:
+      ZoneId1: euw1-az1
+      ZoneId2: euw1-az2
+      ZoneId3: euw1-az3
+      ZoneId4: ''
+    eu-west-2:
+      ZoneId1: euw2-az2
+      ZoneId2: euw2-az3
+      ZoneId3: euw2-az1
+      ZoneId4: ''
+    eu-west-3:
+      ZoneId1: euw3-az1
+      ZoneId2: euw3-az2
+      ZoneId3: euw3-az3
+      ZoneId4: ''
+    eu-north-1:
+      ZoneId1: eun1-az2
+      ZoneId2: eun1-az1
+      ZoneId3: eun1-az3
+      ZoneId4: ''
+    ca-central-1:
+      ZoneId1: cac1-az2
+      ZoneId2: cac1-az1
+      ZoneId3: cac1-az3
+      ZoneId4: ''
+    ca-west-1:
+      ZoneId1: caw1-az2
+      ZoneId2: caw1-az1
+      ZoneId3: caw1-az3
+      ZoneId4: ''
+    eu-south-1:
+      ZoneId1: eus1-az2
+      ZoneId2: eus1-az1
+      ZoneId3: eus1-az3
+      ZoneId4: ''
+    ap-east-1:
+      ZoneId1: ape1-az3
+      ZoneId2: ape1-az2
+      ZoneId3: ape1-az1
+      ZoneId4: ''
+    ap-northeast-1:
+      ZoneId1: apne1-az4
+      ZoneId2: apne1-az1
+      ZoneId3: apne1-az2
+      ZoneId4: apne1-az3
+    ap-northeast-2:
+      ZoneId1: apne2-az1
+      ZoneId2: apne2-az3
+      ZoneId3: apne2-az2
+      ZoneId4: apne2-az4
+    ap-south-1:
+      ZoneId1: aps1-az2
+      ZoneId2: aps1-az3
+      ZoneId3: aps1-az1
+      ZoneId4: ''
+    ap-southeast-1:
+      ZoneId1: apse1-az1
+      ZoneId2: apse1-az2
+      ZoneId3: apse1-az3
+      ZoneId4: ''
+    ap-southeast-2:
+      ZoneId1: apse2-az3
+      ZoneId2: apse2-az1
+      ZoneId3: apse2-az2
+      ZoneId4: ''
+    us-gov-west-1:
+      ZoneId1: usgw1-az1
+      ZoneId2: usgw1-az2
+      ZoneId3: usgw1-az3
+      ZoneId4: ''
+    us-gov-east-1:
+      ZoneId1: usge1-az1
+      ZoneId2: usge1-az2
+      ZoneId3: usge1-az3
+      ZoneId4: ''
+
+
+Conditions:
+  Has2Azs:
+    #Fn::Or:
+    #  - Fn::Equals:
+    Fn::Equals:
+      - {Ref: 'AWS::Region'}
+      - us-west-1
+
+  HasMoreThan2Azs:
+    Fn::Not:
+      - Condition: Has2Azs
+
+  HasMoreThan3Azs:
+    Fn::Or:
+      - Fn::Equals:
+        - {Ref: 'AWS::Region'}
+        - us-west-2
+      - Fn::Equals:
+        - {Ref: 'AWS::Region'}
+        - us-east-1
+      - Fn::Equals:
+        - {Ref: 'AWS::Region'}
+        - ap-northeast-1
+      - Fn::Equals:
+        - {Ref: 'AWS::Region'}
+        - ap-northeast-2
+
+
+Metadata: 
+  AWS::CloudFormation::Interface: 
+    ParameterGroups: 
+      - 
+        Label: 
+          default: "CIDR ranges"
+        Parameters: 
+          - CidrAllowedAccess
+          - CidrBlock
+          - CidrAccessSubnetA
+          - CidrAccessSubnetB
+          - CidrAccessSubnetC
+          - CidrAccessSubnetD
+          - CidrManagementSubnetA
+          - CidrManagementSubnetB
+          - CidrManagementSubnetC
+          - CidrManagementSubnetD
+          - CidrComputeSubnetA
+          - CidrComputeSubnetB
+          - CidrComputeSubnetC
+          - CidrComputeSubnetD
+          - CidrStorageSubnetA
+          - CidrStorageSubnetB
+          - CidrStorageSubnetC
+          - CidrStorageSubnetD
+    ParameterLabels:
+      CidrAllowedAccess:
+        default: Allowed IPs into the Acccess Zone
+      CidrBlock:
+        default: VPC CIDR Block
+      CidrAccessSubnetA:
+        default: Access Zone A CIDR Block
+      CidrAccessSubnetB:
+        default: Access Zone B CIDR Block
+      CidrAccessSubnetC:
+        default: Access Zone C CIDR Block
+      CidrAccessSubnetD:
+        default: Access Zone D CIDR Block
+      CidrManagementSubnetA:
+        default: Management Zone A CIDR Block
+      CidrManagementSubnetB:
+        default: Management Zone B CIDR Block
+      CidrManagementSubnetC:
+        default: Management Zone C CIDR Block
+      CidrManagementSubnetD:
+        default: Management Zone D CIDR Block
+      CidrComputeSubnetA:
+        default: Compute Zone A CIDR Block
+      CidrComputeSubnetB:
+        default: Compute Zone B CIDR Block
+      CidrComputeSubnetC:
+        default: Compute Zone C CIDR Block
+      CidrComputeSubnetD:
+        default: Compute Zone D CIDR Block
+      CidrStorageSubnetA:
+        default: Data Zone A CIDR Block
+      CidrStorageSubnetB:
+        default: Data Zone B CIDR Block
+      CidrStorageSubnetC:
+        default: Data Zone C CIDR Block
+      CidrStorageSubnetD:
+        default: Data Zone D CIDR Block
+
+Parameters:
+  CidrAllowedAccess:
+    Type: String
+    Default: 0.0.0.0/0
+    Description: External CIDR block that is allowed to access the Access Zone
+    AllowedPattern: '((\d{1,3})\.){3}\d{1,3}/\d{1,2}'
+    ConstraintDescription: Must be a valid IP CIDR range of the form x.x.x.x/x.
+  
+  CidrBlock:
+    AllowedPattern: '((\d{1,3})\.){3}\d{1,3}/\d{1,2}'
+    Default: 10.0.0.0/16
+    Description: VPC CIDR Block (eg 10.0.0.0/16 or 10.28.224.0/19)
+    Type: String
+    ConstraintDescription: Must be a valid IP CIDR range of the form x.x.x.x/x.
+
+  CidrAccessSubnetA:
+    AllowedPattern: '((\d{1,3})\.){3}\d{1,3}/\d{1,2}'
+    Default: 10.0.8.0/21
+    Description: CIDR Block for the Access Subnet A
+    Type: String
+    ConstraintDescription: Must be a valid IP CIDR range of the form x.x.x.x/x.
+  
+  CidrAccessSubnetB:
+    AllowedPattern: '((\d{1,3})\.){3}\d{1,3}/\d{1,2}'
+    Default: 10.0.72.0/21
+    Description: CIDR Block for the Access Subnet B
+    Type: String
+    ConstraintDescription: Must be a valid IP CIDR range of the form x.x.x.x/x.
+  
+  CidrAccessSubnetC:
+    AllowedPattern: '((\d{1,3})\.){3}\d{1,3}/\d{1,2}'
+    Default: 10.0.136.0/21
+    Description: CIDR Block for the Access Subnet C (Disabled in us-west-1)
+    Type: String
+    ConstraintDescription: Must be a valid IP CIDR range of the form x.x.x.x/x.
+  
+  CidrAccessSubnetD:
+    AllowedPattern: '((\d{1,3})\.){3}\d{1,3}/\d{1,2}'
+    Default: 10.0.200.0/21
+    Description: CIDR Block for the Access Subnet D (Only enabled in us-east-1, us-west-2, ap-northeast-1 and ap-northeast-2)
+    Type: String
+  
+  CidrManagementSubnetA:
+    AllowedPattern: '((\d{1,3})\.){3}\d{1,3}/\d{1,2}'
+    Default: 10.0.0.0/21
+    Description: CIDR Block for the Management Subnet A
+    Type: String
+    ConstraintDescription: Must be a valid IP CIDR range of the form x.x.x.x/x.
+  
+  CidrManagementSubnetB:
+    AllowedPattern: '((\d{1,3})\.){3}\d{1,3}/\d{1,2}'
+    Default: 10.0.64.0/21
+    Description: CIDR Block for the Management Subnet B
+    Type: String
+    ConstraintDescription: Must be a valid IP CIDR range of the form x.x.x.x/x.
+  
+  CidrManagementSubnetC:
+    AllowedPattern: '((\d{1,3})\.){3}\d{1,3}/\d{1,2}'
+    Default: 10.0.128.0/21
+    Description: CIDR Block for the Management Subnet C (Disabled in us-west-1)
+    Type: String
+    ConstraintDescription: Must be a valid IP CIDR range of the form x.x.x.x/x.
+  
+  CidrManagementSubnetD:
+    AllowedPattern: '((\d{1,3})\.){3}\d{1,3}/\d{1,2}'
+    Default: 10.0.192.0/21
+    Description: CIDR Block for the Management Subnet D (Only enabled in us-east-1, us-west-2, ap-northeast-1 and ap-northeast-2)
+    Type: String
+    ConstraintDescription: Must be a valid IP CIDR range of the form x.x.x.x/x.
+  
+  CidrComputeSubnetA:
+    AllowedPattern: '((\d{1,3})\.){3}\d{1,3}/\d{1,2}'
+    Default: 10.0.32.0/19
+    Description: CIDR Block for the Compute Subnet A
+    Type: String
+    ConstraintDescription: Must be a valid IP CIDR range of the form x.x.x.x/x.
+  
+  CidrComputeSubnetB:
+    AllowedPattern: '((\d{1,3})\.){3}\d{1,3}/\d{1,2}'
+    Default: 10.0.96.0/19
+    Description: CIDR Block for the Compute Subnet B
+    Type: String
+    ConstraintDescription: Must be a valid IP CIDR range of the form x.x.x.x/x.
+  
+  CidrComputeSubnetC:
+    AllowedPattern: '((\d{1,3})\.){3}\d{1,3}/\d{1,2}'
+    Default: 10.0.160.0/19
+    Description: CIDR Block for the Compute Subnet C (Disabled in us-west-1)
+    Type: String
+    ConstraintDescription: Must be a valid IP CIDR range of the form x.x.x.x/x.
+  
+  CidrComputeSubnetD:
+    AllowedPattern: '((\d{1,3})\.){3}\d{1,3}/\d{1,2}'
+    Default: 10.0.224.0/19
+    Description: CIDR Block for the Compute Subnet D (Only enabled in us-east-1, us-west-2, ap-northeast-1 and ap-northeast-2)
+    Type: String
+    ConstraintDescription: Must be a valid IP CIDR range of the form x.x.x.x/x.
+  
+  CidrStorageSubnetA:
+    AllowedPattern: '((\d{1,3})\.){3}\d{1,3}/\d{1,2}'
+    Default: 10.0.16.0/20
+    Description: CIDR Block for the Storage Subnet A
+    Type: String
+    ConstraintDescription: Must be a valid IP CIDR range of the form x.x.x.x/x.
+  
+  CidrStorageSubnetB:
+    AllowedPattern: '((\d{1,3})\.){3}\d{1,3}/\d{1,2}'
+    Default: 10.0.80.0/20
+    Description: CIDR Block for the Storage Subnet B
+    Type: String
+    ConstraintDescription: Must be a valid IP CIDR range of the form x.x.x.x/x.
+  
+  CidrStorageSubnetC:
+    AllowedPattern: '((\d{1,3})\.){3}\d{1,3}/\d{1,2}'
+    Default: 10.0.144.0/20
+    Description: CIDR Block for the Storage Subnet C (Disabled in us-west-1)
+    Type: String
+    ConstraintDescription: Must be a valid IP CIDR range of the form x.x.x.x/x.
+  
+  CidrStorageSubnetD:
+    AllowedPattern: '((\d{1,3})\.){3}\d{1,3}/\d{1,2}'
+    Default: 10.0.208.0/20
+    Description: CIDR Block for the Storage Subnet D (Only enabled in us-east-1, us-west-2, ap-northeast-1 and ap-northeast-2)
+    Type: String
+    ConstraintDescription: Must be a valid IP CIDR range of the form x.x.x.x/x.
+ 
+Resources:
+  VPC:
+    Type: AWS::EC2::VPC
+    Properties:
+      CidrBlock:  !Ref CidrBlock
+      EnableDnsSupport: true
+      EnableDnsHostnames: true
+      Tags:
+      - Key: Name
+        Value: !Sub '${AWS::StackName}-VPC'
+
+  ### Allow internet inbound/outbound ###
+  InternetGateway:
+    Type: AWS::EC2::InternetGateway
+
+  AttachGateway:
+    Type: AWS::EC2::VPCGatewayAttachment
+    Properties:
+      VpcId: !Ref VPC
+      InternetGatewayId: !Ref InternetGateway
+
+  NatGatewayAEIP:
+    Type: AWS::EC2::EIP
+    DependsOn: AttachGateway
+    Properties:
+      Domain: vpc
+      
+  NatGatewayBEIP:
+    Type: AWS::EC2::EIP
+    DependsOn: AttachGateway
+    Properties:
+      Domain: vpc
+
+  NatGatewayAC:
+    Type: AWS::EC2::NatGateway
+    Properties:
+      AllocationId: !GetAtt NatGatewayAEIP.AllocationId
+      SubnetId: !Ref AccessSubnetA
+      Tags:
+        - Key: Name
+          Value: !Sub '${AWS::StackName}:NATGatewayAC'
+
+  NatGatewayBD:
+    Type: AWS::EC2::NatGateway
+    Properties:
+      AllocationId: !GetAtt NatGatewayBEIP.AllocationId
+      SubnetId: !Ref AccessSubnetB
+      Tags:
+        - Key: Name
+          Value: !Sub '${AWS::StackName}:NATGatewayBD'
+
+
+  ### Access Zone ###
+  AccessSubnetA:
+    Type: AWS::EC2::Subnet
+    Properties:
+      VpcId: !Ref VPC
+      AvailabilityZoneId: !FindInMap [RegionMap, !Ref "AWS::Region", ZoneId1]
+      CidrBlock: !Ref CidrAccessSubnetA
+      MapPublicIpOnLaunch: true
+      Tags:
+      - Key: Name
+        Value: !Sub
+          - '${StackName}:AccessSubnetA-${ZoneId}'
+          - { StackName: !Ref AWS::StackName, ZoneId: !FindInMap [RegionMap, !Ref "AWS::Region", ZoneId1] }
+  
+  AccessSubnetB:
+    Type: AWS::EC2::Subnet
+    Properties:
+      VpcId: !Ref VPC
+      AvailabilityZoneId: !FindInMap [RegionMap, !Ref "AWS::Region", ZoneId2]
+      CidrBlock: !Ref CidrAccessSubnetB
+      MapPublicIpOnLaunch: true
+      Tags:
+      - Key: Name
+        Value: !Sub
+          - '${StackName}:AccessSubnetB-${ZoneId}'
+          - { StackName: !Ref AWS::StackName, ZoneId: !FindInMap [RegionMap, !Ref "AWS::Region", ZoneId2] }
+
+  AccessSubnetC:
+    Condition: HasMoreThan2Azs
+    Type: AWS::EC2::Subnet
+    Properties:
+      VpcId: !Ref VPC
+      AvailabilityZoneId: !FindInMap [RegionMap, !Ref "AWS::Region", ZoneId3]
+      CidrBlock: !Ref CidrAccessSubnetC
+      MapPublicIpOnLaunch: true
+      Tags:
+      - Key: Name
+        Value: !Sub
+          - '${StackName}:AccessSubnetC-${ZoneId}'
+          - { StackName: !Ref AWS::StackName, ZoneId: !FindInMap [RegionMap, !Ref "AWS::Region", ZoneId3] }
+
+  AccessSubnetD:
+    Condition: HasMoreThan3Azs
+    Type: AWS::EC2::Subnet
+    Properties:
+      VpcId: !Ref VPC
+      AvailabilityZoneId: !FindInMap [RegionMap, !Ref "AWS::Region", ZoneId4]
+      CidrBlock: !Ref CidrAccessSubnetD
+      MapPublicIpOnLaunch: true
+      Tags:
+      - Key: Name
+        Value: !Sub
+          - '${StackName}:AccessSubnetD-${ZoneId}'
+          - { StackName: !Ref AWS::StackName, ZoneId: !FindInMap [RegionMap, !Ref "AWS::Region", ZoneId4] }
+
+  AccessRouteTable:
+    Type: AWS::EC2::RouteTable
+    Properties:
+      VpcId: !Ref VPC
+      Tags:
+      - Key: Name
+        Value: !Sub '${AWS::StackName}:AccessRoute'
+
+  AccessRoute1:
+    Type: AWS::EC2::Route
+    Properties:
+      RouteTableId: !Ref AccessRouteTable
+      DestinationCidrBlock: 0.0.0.0/0
+      GatewayId: !Ref InternetGateway
+  
+  AccessSubnetARouteTableAssociation:
+    Type: AWS::EC2::SubnetRouteTableAssociation
+    Properties:
+      SubnetId: !Ref AccessSubnetA
+      RouteTableId: !Ref AccessRouteTable
+
+  AccessSubnetBRouteTableAssociation:
+    Type: AWS::EC2::SubnetRouteTableAssociation
+    Properties:
+      SubnetId: !Ref AccessSubnetB
+      RouteTableId: !Ref AccessRouteTable
+
+  AccessSubnetCRouteTableAssociation:
+    Condition: HasMoreThan2Azs
+    Type: AWS::EC2::SubnetRouteTableAssociation
+    Properties:
+      SubnetId: !Ref AccessSubnetC
+      RouteTableId: !Ref AccessRouteTable
+
+  AccessSubnetDRouteTableAssociation:
+    Condition: HasMoreThan3Azs
+    Type: AWS::EC2::SubnetRouteTableAssociation
+    Properties:
+      SubnetId: !Ref AccessSubnetD
+      RouteTableId: !Ref AccessRouteTable
+
+
+  ### Management Zone ###
+  ManagementSubnetA:
+    Type: AWS::EC2::Subnet
+    Properties:
+      VpcId: !Ref VPC
+      CidrBlock: !Ref CidrManagementSubnetA
+      AvailabilityZoneId: !FindInMap [RegionMap, !Ref "AWS::Region", ZoneId1]
+      MapPublicIpOnLaunch: false
+      Tags:
+      - Key: Name
+        Value: !Sub
+          - '${StackName}:ManagementSubnetA-${ZoneId}'
+          - { StackName: !Ref AWS::StackName, ZoneId: !FindInMap [RegionMap, !Ref "AWS::Region", ZoneId1] }
+
+  ManagementSubnetB:
+    Type: AWS::EC2::Subnet
+    Properties:
+      VpcId: !Ref VPC
+      CidrBlock: !Ref CidrManagementSubnetB
+      AvailabilityZoneId: !FindInMap [RegionMap, !Ref "AWS::Region", ZoneId2]
+      MapPublicIpOnLaunch: false
+      Tags:
+      - Key: Name
+        Value: !Sub
+          - '${StackName}:ManagementSubnetB-${ZoneId}'
+          - { StackName: !Ref AWS::StackName, ZoneId: !FindInMap [RegionMap, !Ref "AWS::Region", ZoneId2] }
+
+  ManagementSubnetC:
+    Type: AWS::EC2::Subnet
+    Condition: HasMoreThan2Azs
+    Properties:
+      VpcId: !Ref VPC
+      CidrBlock: !Ref CidrManagementSubnetC
+      AvailabilityZoneId: !FindInMap [RegionMap, !Ref "AWS::Region", ZoneId3]
+      MapPublicIpOnLaunch: false
+      Tags:
+      - Key: Name
+        Value: !Sub
+          - '${StackName}:ManagementSubnetC-${ZoneId}'
+          - { StackName: !Ref AWS::StackName, ZoneId: !FindInMap [RegionMap, !Ref "AWS::Region", ZoneId3] }
+
+  ManagementSubnetD:
+    Condition: HasMoreThan3Azs
+    Type: AWS::EC2::Subnet
+    Properties:
+      VpcId: !Ref VPC
+      CidrBlock: !Ref CidrManagementSubnetD
+      AvailabilityZoneId: !FindInMap [RegionMap, !Ref "AWS::Region", ZoneId4]
+      MapPublicIpOnLaunch: false
+      Tags:
+      - Key: Name
+        Value: !Sub
+          - '${StackName}:ManagementSubnetD-${ZoneId}'
+          - { StackName: !Ref AWS::StackName, ZoneId: !FindInMap [RegionMap, !Ref "AWS::Region", ZoneId4] }
+
+  ManagementRouteTableAC:
+    Type: AWS::EC2::RouteTable
+    Properties:
+      VpcId: !Ref VPC
+      Tags:
+      - Key: Name
+        Value: !Sub '${AWS::StackName}:ManagementRouteAC'
+
+  ManagementRouteTableBD:
+    Type: AWS::EC2::RouteTable
+    Properties:
+      VpcId: !Ref VPC
+      Tags:
+      - Key: Name
+        Value: !Sub '${AWS::StackName}:ManagementRouteBD'
+
+  ManagementRouteA:
+    Type: AWS::EC2::Route
+    Properties:
+      RouteTableId: !Ref ManagementRouteTableAC
+      DestinationCidrBlock: 0.0.0.0/0
+      NatGatewayId: !Ref NatGatewayAC
+
+  ManagementRouteB:
+    Type: AWS::EC2::Route
+    Properties:
+      RouteTableId: !Ref ManagementRouteTableBD
+      DestinationCidrBlock: 0.0.0.0/0
+      NatGatewayId: !Ref NatGatewayBD
+  
+  ManagementSubnetARouteTableAssociation:
+    Type: AWS::EC2::SubnetRouteTableAssociation
+    Properties:
+      SubnetId: !Ref ManagementSubnetA
+      RouteTableId: !Ref ManagementRouteTableAC
+
+  ManagementSubnetBRouteTableAssociation:
+    Type: AWS::EC2::SubnetRouteTableAssociation
+    Properties:
+      SubnetId: !Ref ManagementSubnetB
+      RouteTableId: !Ref ManagementRouteTableBD
+
+  ManagementSubnetCRouteTableAssociation:
+    Condition: HasMoreThan2Azs
+    Type: AWS::EC2::SubnetRouteTableAssociation
+    Properties:
+      SubnetId: !Ref ManagementSubnetC
+      RouteTableId: !Ref ManagementRouteTableAC
+
+  ManagementSubnetDRouteTableAssociation:
+    Condition: HasMoreThan3Azs
+    Type: AWS::EC2::SubnetRouteTableAssociation
+    Properties:
+      SubnetId: !Ref ManagementSubnetD
+      RouteTableId: !Ref ManagementRouteTableBD
+
+  ### Compute Zone ###
+  ComputeSubnetA:
+    Type: AWS::EC2::Subnet
+    Properties:
+      VpcId: !Ref VPC
+      AvailabilityZoneId: !FindInMap [RegionMap, !Ref "AWS::Region", ZoneId1]
+      CidrBlock: !Ref CidrComputeSubnetA
+      MapPublicIpOnLaunch: false
+      Tags:
+      - Key: Name
+        Value: !Sub
+          - '${StackName}:ComputeSubnetA-${ZoneId}'
+          - { StackName: !Ref AWS::StackName, ZoneId: !FindInMap [RegionMap, !Ref "AWS::Region", ZoneId1] }
+  
+  ComputeSubnetB:
+    Type: AWS::EC2::Subnet
+    Properties:
+      VpcId: !Ref VPC
+      AvailabilityZoneId: !FindInMap [RegionMap, !Ref "AWS::Region", ZoneId2]
+      CidrBlock: !Ref CidrComputeSubnetB
+      MapPublicIpOnLaunch: false
+      Tags:
+      - Key: Name
+        Value: !Sub
+          - '${StackName}:ComputeSubnetB-${ZoneId}'
+          - { StackName: !Ref AWS::StackName, ZoneId: !FindInMap [RegionMap, !Ref "AWS::Region", ZoneId2] }
+
+  ComputeSubnetC:
+    Condition: HasMoreThan2Azs
+    Type: AWS::EC2::Subnet
+    Properties:
+      VpcId: !Ref VPC
+      AvailabilityZoneId: !FindInMap [RegionMap, !Ref "AWS::Region", ZoneId3]
+      CidrBlock: !Ref CidrComputeSubnetC
+      MapPublicIpOnLaunch: false
+      Tags:
+      - Key: Name
+        Value: !Sub
+          - '${StackName}:ComputeSubnetC-${ZoneId}'
+          - { StackName: !Ref AWS::StackName, ZoneId: !FindInMap [RegionMap, !Ref "AWS::Region", ZoneId3] }
+
+  ComputeSubnetD:
+    Condition: HasMoreThan3Azs
+    Type: AWS::EC2::Subnet
+    Properties:
+      VpcId: !Ref VPC
+      AvailabilityZoneId: !FindInMap [RegionMap, !Ref "AWS::Region", ZoneId4]
+      CidrBlock: !Ref CidrComputeSubnetD
+      MapPublicIpOnLaunch: false
+      Tags:
+      - Key: Name
+        Value: !Sub
+          - '${StackName}:ComputeSubnetD-${ZoneId}'
+          - { StackName: !Ref AWS::StackName, ZoneId: !FindInMap [RegionMap, !Ref "AWS::Region", ZoneId4] }
+
+  ComputeRouteTableAC:
+    Type: AWS::EC2::RouteTable
+    Properties:
+      VpcId: !Ref VPC
+      Tags:
+        - Key: Name
+          Value: !Sub '${AWS::StackName}:ComputeRouteAC'
+  
+  ComputeRouteTableBD:
+    Type: AWS::EC2::RouteTable
+    Properties:
+      VpcId: !Ref VPC
+      Tags:
+        - Key: Name
+          Value: !Sub '${AWS::StackName}:ComputeRouteBD'
+
+  # ComputeRouteA:
+  #   Type: AWS::EC2::Route
+  #   Properties:
+  #     RouteTableId: !Ref ComputeRouteTableAC
+  #     DestinationCidrBlock: 0.0.0.0/0
+  #     NatGatewayId: !Ref NatGatewayAC
+
+  # ComputeRouteB:
+  #   Type: AWS::EC2::Route
+  #   Properties:
+  #     RouteTableId: !Ref ComputeRouteTableBD
+  #     DestinationCidrBlock: 0.0.0.0/0
+  #     NatGatewayId: !Ref NatGatewayBD
+
+  ComputeSubnetARouteTableAssociation:
+    Type: AWS::EC2::SubnetRouteTableAssociation
+    Properties:
+      RouteTableId: !Ref ComputeRouteTableAC
+      SubnetId: !Ref ComputeSubnetA
+      
+  ComputeSubnetBRouteTableAssociation:
+    Type: AWS::EC2::SubnetRouteTableAssociation
+    Properties:
+      RouteTableId: !Ref ComputeRouteTableBD
+      SubnetId: !Ref ComputeSubnetB
+
+  ComputeSubnetCRouteTableAssociation:
+    Condition: HasMoreThan2Azs
+    Type: AWS::EC2::SubnetRouteTableAssociation
+    Properties:
+      RouteTableId: !Ref ComputeRouteTableAC
+      SubnetId: !Ref ComputeSubnetC
+
+  ComputeSubnetDRouteTableAssociation:
+    Condition: HasMoreThan3Azs
+    Type: AWS::EC2::SubnetRouteTableAssociation
+    Properties:
+      RouteTableId: !Ref ComputeRouteTableBD
+      SubnetId: !Ref ComputeSubnetD
+
+  ### Data Zone ###
+  StorageSubnetA:
+    Type: AWS::EC2::Subnet
+    Properties:
+      VpcId: !Ref VPC
+      AvailabilityZoneId: !FindInMap [RegionMap, !Ref "AWS::Region", ZoneId1]
+      CidrBlock: !Ref CidrStorageSubnetA
+      MapPublicIpOnLaunch: false
+      Tags:
+      - Key: Name
+        Value: !Sub
+          - '${StackName}:StorageSubnetA-${ZoneId}'
+          - { StackName: !Ref AWS::StackName, ZoneId: !FindInMap [RegionMap, !Ref "AWS::Region", ZoneId1] }
+  
+  StorageSubnetB:
+    Type: AWS::EC2::Subnet
+    Properties:
+      VpcId: !Ref VPC
+      AvailabilityZoneId: !FindInMap [RegionMap, !Ref "AWS::Region", ZoneId2]
+      CidrBlock: !Ref CidrStorageSubnetB
+      MapPublicIpOnLaunch: false
+      Tags:
+      - Key: Name
+        Value: !Sub
+          - '${StackName}:StorageSubnetB-${ZoneId}'
+          - { StackName: !Ref AWS::StackName, ZoneId: !FindInMap [RegionMap, !Ref "AWS::Region", ZoneId2] }
+
+  StorageSubnetC:
+    Condition: HasMoreThan2Azs
+    Type: AWS::EC2::Subnet
+    Properties:
+      VpcId: !Ref VPC
+      AvailabilityZoneId: !FindInMap [RegionMap, !Ref "AWS::Region", ZoneId3]
+      CidrBlock: !Ref CidrStorageSubnetC
+      MapPublicIpOnLaunch: false
+      Tags:
+      - Key: Name
+        Value: !Sub
+          - '${StackName}:StorageSubnetC-${ZoneId}'
+          - { StackName: !Ref AWS::StackName, ZoneId: !FindInMap [RegionMap, !Ref "AWS::Region", ZoneId3] }
+
+  StorageSubnetD:
+    Condition: HasMoreThan3Azs
+    Type: AWS::EC2::Subnet
+    Properties:
+      VpcId: !Ref VPC
+      AvailabilityZoneId: !FindInMap [RegionMap, !Ref "AWS::Region", ZoneId4]
+      CidrBlock: !Ref CidrStorageSubnetD
+      MapPublicIpOnLaunch: false
+      Tags:
+      - Key: Name
+        Value: !Sub
+          - '${StackName}:StorageSubnetD-${ZoneId}'
+          - { StackName: !Ref AWS::StackName, ZoneId: !FindInMap [RegionMap, !Ref "AWS::Region", ZoneId4] }
+
+  StorageRouteTableAC:
+    Type: AWS::EC2::RouteTable
+    Properties:
+      VpcId: !Ref VPC
+      Tags:
+        - Key: Name
+          Value: !Sub '${AWS::StackName}:StorageRouteAC'
+
+  StorageRouteTableBD:
+    Type: AWS::EC2::RouteTable
+    Properties:
+      VpcId: !Ref VPC
+      Tags:
+        - Key: Name
+          Value: !Sub '${AWS::StackName}:StorageRouteBD'
+
+  # StorageRouteA:
+  #   Type: AWS::EC2::Route
+  #   Properties:
+  #     RouteTableId: !Ref StorageRouteTableAC
+  #     DestinationCidrBlock: 0.0.0.0/0
+  #     NatGatewayId: !Ref NatGatewayAC
+
+  # StorageRouteB:
+  #   Type: AWS::EC2::Route
+  #   Properties:
+  #     RouteTableId: !Ref StorageRouteTableBD
+  #     DestinationCidrBlock: 0.0.0.0/0
+  #     NatGatewayId: !Ref NatGatewayBD
+
+  StorageSubnetARouteTableAssociation:
+    Type: AWS::EC2::SubnetRouteTableAssociation
+    Properties:
+      RouteTableId: !Ref StorageRouteTableAC
+      SubnetId: !Ref StorageSubnetA
+      
+  StorageSubnetBRouteTableAssociation:
+    Type: AWS::EC2::SubnetRouteTableAssociation
+    Properties:
+      RouteTableId: !Ref StorageRouteTableBD
+      SubnetId: !Ref StorageSubnetB
+
+  StorageSubnetCRouteTableAssociation:
+    Condition: HasMoreThan2Azs
+    Type: AWS::EC2::SubnetRouteTableAssociation
+    Properties:
+      RouteTableId: !Ref StorageRouteTableAC
+      SubnetId: !Ref StorageSubnetC
+
+  StorageSubnetDRouteTableAssociation:
+    Condition: HasMoreThan3Azs
+    Type: AWS::EC2::SubnetRouteTableAssociation
+    Properties:
+      RouteTableId: !Ref StorageRouteTableBD
+      SubnetId: !Ref StorageSubnetD
+
+  ### Monitoring Network Traffic ###
+  VPCFlowLogsRole:
+    Type: AWS::IAM::Role
+    Properties:
+      AssumeRolePolicyDocument:
+        Version: '2012-10-17'
+        Statement:
+          - Effect: Allow
+            Principal:
+              Service: vpc-flow-logs.amazonaws.com
+            Action: 'sts:AssumeRole'
+      ManagedPolicyArns:
+        - arn:aws:iam::aws:policy/CloudWatchLogsFullAccess
+
+  VPCFlowLogsLogGroup:
+    Type: AWS::Logs::LogGroup
+    Properties:
+      RetentionInDays: 30
+
+  VPCFlowLogs:
+    Type: AWS::EC2::FlowLog
+    Properties:
+      DeliverLogsPermissionArn: !GetAtt VPCFlowLogsRole.Arn
+      LogGroupName: !Ref VPCFlowLogsLogGroup
+      ResourceId: !Ref VPC
+      ResourceType: VPC
+      TrafficType: ALL
+
+  ### Security Groups ###
+  # Resource Security Groups #
+  EndpointSecurityGroup:
+    Type: AWS::EC2::SecurityGroup
+    Properties:
+      GroupDescription: Security group to govern who can access the endpoints
+      VpcId: !Ref VPC
+      SecurityGroupIngress:
+        - IpProtocol: tcp
+          FromPort: 443
+          ToPort: 443
+          CidrIp: !Ref CidrBlock
+  
+  # Default Security Groups for each#
+  AccessZoneSecurityGroup:
+    Type: AWS::EC2::SecurityGroup
+    Properties:
+      GroupDescription: Default security group for access zone
+      VpcId: !Ref VPC
+  AccessZoneSecurityGroupIngress:
+    Type: AWS::EC2::SecurityGroupIngress
+    Properties:
+      Description: Allow all ports between resources with the default access zone security group
+      IpProtocol: tcp
+      FromPort: 0
+      ToPort: 65535
+      SourceSecurityGroupId: !GetAtt AccessZoneSecurityGroup.GroupId
+      GroupId: !GetAtt AccessZoneSecurityGroup.GroupId
+ 
+  ManagementZoneSecurityGroup:
+    Type: AWS::EC2::SecurityGroup
+    Properties:
+      GroupDescription: Default security group for management zone
+      VpcId: !Ref VPC
+  ManagementZoneSecurityGroupIngress:
+    Type: AWS::EC2::SecurityGroupIngress
+    Properties:
+      Description: Allow all ports between resources with the default management zone security group
+      IpProtocol: tcp
+      FromPort: 0
+      ToPort: 65535
+      SourceSecurityGroupId: !GetAtt ManagementZoneSecurityGroup.GroupId
+      GroupId: !GetAtt ManagementZoneSecurityGroup.GroupId
+
+  ComputeZoneSecurityGroup:
+    Type: AWS::EC2::SecurityGroup
+    Properties:
+      GroupDescription: Default security group for Compute zone subnet
+      VpcId: !Ref VPC
+  ComputeZoneSecurityGroupIngress:
+    Type: AWS::EC2::SecurityGroupIngress
+    Properties:
+      Description: Allow all ports between resources with the default Compute zone subnet security group
+      IpProtocol: tcp
+      FromPort: 0
+      ToPort: 65535
+      SourceSecurityGroupId: !GetAtt ComputeZoneSecurityGroup.GroupId
+      GroupId: !GetAtt ComputeZoneSecurityGroup.GroupId
+  
+  StorageZoneSecurityGroup:
+    Type: AWS::EC2::SecurityGroup
+    Properties:
+      GroupDescription: Default security group for data storage zone subnet
+      VpcId: !Ref VPC
+  StorageZoneSecurityGroupIngress:
+    Type: AWS::EC2::SecurityGroupIngress
+    Properties:
+      Description: Allow all ports between resources with the default data storage zone subnet security group
+      IpProtocol: tcp
+      FromPort: 0
+      ToPort: 65535
+      SourceSecurityGroupId: !GetAtt StorageZoneSecurityGroup.GroupId
+      GroupId: !GetAtt StorageZoneSecurityGroup.GroupId
+  
+  # ControlPlaneSecurityGroup:
+  #   Type: AWS::EC2::SecurityGroup
+  #   Properties:
+  #     GroupDescription: Cluster communication with worker nodes
+  #     VpcId: !Ref VPC
+
+  ### Endpoints ###
+  AutoscalingEndpoint:
+    Type: "AWS::EC2::VPCEndpoint"
+    Properties:
+      ServiceName: 
+        !Join [ ".", [ !FindInMap [ServiceNamePrefixMap, !Ref "AWS::Partition", Name], !Ref "AWS::Region", "autoscaling" ] ]
+      VpcEndpointType: Interface
+      PrivateDnsEnabled: true 
+      SecurityGroupIds:
+        - !GetAtt EndpointSecurityGroup.GroupId
+      SubnetIds:
+        - !Ref ManagementSubnetA
+        - !Ref ManagementSubnetB
+        - Fn::If:
+          - HasMoreThan2Azs
+          - !Ref ManagementSubnetC
+          - !Ref AWS::NoValue
+        - Fn::If:
+          - HasMoreThan3Azs
+          - !Ref ManagementSubnetD
+          - !Ref AWS::NoValue
+      VpcId: !Ref VPC
+   
+  CloudformationAPIEndpoint:
+    Type: "AWS::EC2::VPCEndpoint"
+    Properties:
+      ServiceName: 
+        !Join [ ".", [ !FindInMap [ServiceNamePrefixMap, !Ref "AWS::Partition", Name], !Ref "AWS::Region", "cloudformation" ] ]
+      VpcEndpointType: Interface
+      PrivateDnsEnabled: true 
+      SecurityGroupIds:
+        - !GetAtt EndpointSecurityGroup.GroupId
+      SubnetIds:
+        - !Ref ManagementSubnetA
+        - !Ref ManagementSubnetB
+        - Fn::If:
+          - HasMoreThan2Azs
+          - !Ref ManagementSubnetC
+          - !Ref AWS::NoValue
+        - Fn::If:
+          - HasMoreThan3Azs
+          - !Ref ManagementSubnetD
+          - !Ref AWS::NoValue
+      VpcId: !Ref VPC
+
+  CWLogsEndpoint:
+    Type: "AWS::EC2::VPCEndpoint"
+    Properties:
+      ServiceName: 
+        !Join [ ".", [ !FindInMap [ServiceNamePrefixMap, !Ref "AWS::Partition", Name], !Ref "AWS::Region", "logs" ] ]
+      VpcEndpointType: Interface
+      PrivateDnsEnabled: true 
+      SecurityGroupIds:
+        - !GetAtt EndpointSecurityGroup.GroupId
+      SubnetIds:
+        - !Ref ManagementSubnetA
+        - !Ref ManagementSubnetB
+        - Fn::If:
+          - HasMoreThan2Azs
+          - !Ref ManagementSubnetC
+          - !Ref AWS::NoValue
+        - Fn::If:
+          - HasMoreThan3Azs
+          - !Ref ManagementSubnetD
+          - !Ref AWS::NoValue
+      VpcId: !Ref VPC
+
+  CWMonitoringEndpoint:
+    Type: "AWS::EC2::VPCEndpoint"
+    Properties:
+      ServiceName: 
+        !Join [ ".", [ !FindInMap [ServiceNamePrefixMap, !Ref "AWS::Partition", Name], !Ref "AWS::Region", "monitoring" ] ]
+      VpcEndpointType: Interface
+      PrivateDnsEnabled: true 
+      SecurityGroupIds:
+        - !GetAtt EndpointSecurityGroup.GroupId
+      SubnetIds:
+        - !Ref ManagementSubnetA
+        - !Ref ManagementSubnetB
+        - Fn::If:
+          - HasMoreThan2Azs
+          - !Ref ManagementSubnetC
+          - !Ref AWS::NoValue
+        - Fn::If:
+          - HasMoreThan3Azs
+          - !Ref ManagementSubnetD
+          - !Ref AWS::NoValue
+      VpcId: !Ref VPC
+
+  DynamoDBAPIEndpoint:
+    Type: "AWS::EC2::VPCEndpoint"
+    Properties:
+      ServiceName: 
+        !Join [ ".", [ !FindInMap [ServiceNamePrefixMap, !Ref "AWS::Partition", Name], !Ref "AWS::Region", "dynamodb" ] ]
+      VpcEndpointType: Gateway
+      RouteTableIds:
+        - !Ref ManagementRouteTableAC
+        - !Ref ManagementRouteTableBD
+        - !Ref AccessRouteTable
+        - !Ref ComputeRouteTableAC
+        - !Ref ComputeRouteTableBD
+        - !Ref StorageRouteTableAC
+        - !Ref StorageRouteTableBD
+      VpcId: !Ref VPC
+
+  EC2Endpoint:
+    Type: "AWS::EC2::VPCEndpoint"
+    Properties:
+      ServiceName: 
+        !Join [ ".", [ !FindInMap [ServiceNamePrefixMap, !Ref "AWS::Partition", Name], !Ref "AWS::Region", "ec2" ] ]
+      VpcEndpointType: Interface
+      PrivateDnsEnabled: true 
+      SecurityGroupIds:
+        - !GetAtt EndpointSecurityGroup.GroupId
+      SubnetIds:
+        - !Ref ManagementSubnetA
+        - !Ref ManagementSubnetB
+        - Fn::If:
+          - HasMoreThan2Azs
+          - !Ref ManagementSubnetC
+          - !Ref AWS::NoValue
+        - Fn::If:
+          - HasMoreThan3Azs
+          - !Ref ManagementSubnetD
+          - !Ref AWS::NoValue
+      VpcId: !Ref VPC
+
+  # EC2ImageBuilderEndpoint:
+  #   Type: "AWS::EC2::VPCEndpoint"
+  #   Properties:
+  #     ServiceName: 
+  #       !Join [ ".", [ !FindInMap [ServiceNamePrefixMap, !Ref "AWS::Partition", Name], !Ref "AWS::Region", "imagebuilder" ] ]
+  #     VpcEndpointType: Interface
+  #     PrivateDnsEnabled: true 
+  #     SecurityGroupIds:
+  #       - !GetAtt EndpointSecurityGroup.GroupId
+  #     SubnetIds:
+  #       - !Ref ManagementSubnetA
+  #       - !Ref ManagementSubnetB
+  #       - Fn::If:
+  #         - HasMoreThan2Azs
+  #         - !Ref ManagementSubnetC
+  #         - !Ref AWS::NoValue
+  #       - Fn::If:
+  #         - HasMoreThan3Azs
+  #         - !Ref ManagementSubnetD
+  #         - !Ref AWS::NoValue
+  #     VpcId: !Ref VPC
+
+  EC2MessagesEndpoint:
+    Type: "AWS::EC2::VPCEndpoint"
+    Properties:
+      ServiceName: 
+        !Join [ ".", [ !FindInMap [ServiceNamePrefixMap, !Ref "AWS::Partition", Name], !Ref "AWS::Region", "ec2messages" ] ]
+      VpcEndpointType: Interface
+      PrivateDnsEnabled: true 
+      SecurityGroupIds:
+        - !GetAtt EndpointSecurityGroup.GroupId
+      SubnetIds:
+        - !Ref ManagementSubnetA
+        - !Ref ManagementSubnetB
+        - Fn::If:
+          - HasMoreThan2Azs
+          - !Ref ManagementSubnetC
+          - !Ref AWS::NoValue
+        - Fn::If:
+          - HasMoreThan3Azs
+          - !Ref ManagementSubnetD
+          - !Ref AWS::NoValue
+      VpcId: !Ref VPC
+
+  ECRAPIEndpoint:
+    Type: "AWS::EC2::VPCEndpoint"
+    Properties:
+      ServiceName: 
+        !Join [ ".", [ !FindInMap [ServiceNamePrefixMap, !Ref "AWS::Partition", Name], !Ref "AWS::Region", "ecr.api" ] ]
+      VpcEndpointType: Interface
+      PrivateDnsEnabled: true 
+      SecurityGroupIds:
+        - !GetAtt EndpointSecurityGroup.GroupId
+      SubnetIds:
+        - !Ref ManagementSubnetA
+        - !Ref ManagementSubnetB
+        - Fn::If:
+          - HasMoreThan2Azs
+          - !Ref ManagementSubnetC
+          - !Ref AWS::NoValue
+        - Fn::If:
+          - HasMoreThan3Azs
+          - !Ref ManagementSubnetD
+          - !Ref AWS::NoValue
+      VpcId: !Ref VPC
+
+  # ECRDockerEndpoint:
+  #   Type: "AWS::EC2::VPCEndpoint"
+  #   Properties:
+  #     ServiceName: 
+  #       !Join [ ".", [ !FindInMap [ServiceNamePrefixMap, !Ref "AWS::Partition", Name], !Ref "AWS::Region", "ecr.dkr" ] ]
+  #     VpcEndpointType: Interface
+  #     PrivateDnsEnabled: true 
+  #     SecurityGroupIds:
+  #       - !GetAtt EndpointSecurityGroup.GroupId
+  #     SubnetIds:
+  #       - !Ref ManagementSubnetA
+  #       - !Ref ManagementSubnetB
+  #       - Fn::If:
+  #         - HasMoreThan2Azs
+  #         - !Ref ManagementSubnetC
+  #         - !Ref AWS::NoValue
+  #       - Fn::If:
+  #         - HasMoreThan3Azs
+  #         - !Ref ManagementSubnetD
+  #         - !Ref AWS::NoValue
+  #     VpcId: !Ref VPC
+
+  EBSEndpoint:
+    Type: "AWS::EC2::VPCEndpoint"
+    Properties:
+      ServiceName: 
+        !Join [ ".", [ !FindInMap [ServiceNamePrefixMap, !Ref "AWS::Partition", Name], !Ref "AWS::Region", "ebs" ] ]
+      VpcEndpointType: Interface
+      PrivateDnsEnabled: true 
+      SecurityGroupIds:
+        - !GetAtt EndpointSecurityGroup.GroupId
+      SubnetIds:
+        - !Ref ManagementSubnetA
+        - !Ref ManagementSubnetB
+        - Fn::If:
+          - HasMoreThan2Azs
+          - !Ref ManagementSubnetC
+          - !Ref AWS::NoValue
+        - Fn::If:
+          - HasMoreThan3Azs
+          - !Ref ManagementSubnetD
+          - !Ref AWS::NoValue
+      VpcId: !Ref VPC
+
+  EFSEndpoint:
+    Type: "AWS::EC2::VPCEndpoint"
+    Properties:
+      ServiceName: 
+        !Join [ ".", [ !FindInMap [ServiceNamePrefixMap, !Ref "AWS::Partition", Name], !Ref "AWS::Region", "elasticfilesystem" ] ]
+      VpcEndpointType: Interface
+      PrivateDnsEnabled: true 
+      SecurityGroupIds:
+        - !GetAtt EndpointSecurityGroup.GroupId
+      SubnetIds:
+        - !Ref ManagementSubnetA
+        - !Ref ManagementSubnetB
+        - Fn::If:
+          - HasMoreThan2Azs
+          - !Ref ManagementSubnetC
+          - !Ref AWS::NoValue
+        - Fn::If:
+          - HasMoreThan3Azs
+          - !Ref ManagementSubnetD
+          - !Ref AWS::NoValue
+      VpcId: !Ref VPC
+
+  FSxEndpoint:
+    Type: "AWS::EC2::VPCEndpoint"
+    Properties:
+      ServiceName: 
+        !Join [ ".", [ !FindInMap [ServiceNamePrefixMap, !Ref "AWS::Partition", Name], !Ref "AWS::Region", "fsx" ] ]
+      VpcEndpointType: Interface
+      PrivateDnsEnabled: true 
+      SecurityGroupIds:
+        - !GetAtt EndpointSecurityGroup.GroupId
+      SubnetIds:
+        - !Ref ManagementSubnetA
+        - !Ref ManagementSubnetB
+        - Fn::If:
+          - HasMoreThan2Azs
+          - !Ref ManagementSubnetC
+          - !Ref AWS::NoValue
+        - Fn::If:
+          - HasMoreThan3Azs
+          - !Ref ManagementSubnetD
+          - !Ref AWS::NoValue
+      VpcId: !Ref VPC
+      
+  PCSEndpoint:
+    Type: "AWS::EC2::VPCEndpoint"
+    Properties:
+      ServiceName: 
+        !Join [ ".", [ !FindInMap [ServiceNamePrefixMap, !Ref "AWS::Partition", Name], !Ref "AWS::Region", "pcs" ] ]
+      VpcEndpointType: Interface
+      PrivateDnsEnabled: true 
+      SecurityGroupIds:
+        - !GetAtt EndpointSecurityGroup.GroupId
+      SubnetIds:
+        - !Ref ManagementSubnetA
+        - !Ref ManagementSubnetB
+        - Fn::If:
+          - HasMoreThan2Azs
+          - !Ref ManagementSubnetC
+          - !Ref AWS::NoValue
+        - Fn::If:
+          - HasMoreThan3Azs
+          - !Ref ManagementSubnetD
+          - !Ref AWS::NoValue
+      VpcId: !Ref VPC
+
+  S3APIEndpoint:
+    Type: "AWS::EC2::VPCEndpoint"
+    Properties:
+      ServiceName: 
+        !Join [ ".", [ !FindInMap [ServiceNamePrefixMap, !Ref "AWS::Partition", Name], !Ref "AWS::Region", "s3" ] ]
+      VpcEndpointType: Gateway
+      RouteTableIds:
+        - !Ref ManagementRouteTableAC
+        - !Ref ManagementRouteTableBD
+        - !Ref AccessRouteTable
+        - !Ref ComputeRouteTableAC
+        - !Ref ComputeRouteTableBD
+        - !Ref StorageRouteTableAC
+        - !Ref StorageRouteTableBD
+      VpcId: !Ref VPC
+ 
+  SecretsmanagerAPIEndpoint:
+    Type: "AWS::EC2::VPCEndpoint"
+    Properties:
+      ServiceName: 
+        !Join [ ".", [ !FindInMap [ServiceNamePrefixMap, !Ref "AWS::Partition", Name], !Ref "AWS::Region", "secretsmanager" ] ]
+      VpcEndpointType: Interface
+      PrivateDnsEnabled: true 
+      SecurityGroupIds:
+        - !GetAtt EndpointSecurityGroup.GroupId
+      SubnetIds:
+        - !Ref ManagementSubnetA
+        - !Ref ManagementSubnetB
+        - Fn::If:
+          - HasMoreThan2Azs
+          - !Ref ManagementSubnetC
+          - !Ref AWS::NoValue
+        - Fn::If:
+          - HasMoreThan3Azs
+          - !Ref ManagementSubnetD
+          - !Ref AWS::NoValue
+      VpcId: !Ref VPC
+
+  SSMEndpoint:
+    Type: "AWS::EC2::VPCEndpoint"
+    Properties:
+      ServiceName: 
+        !Join [ ".", [ !FindInMap [ServiceNamePrefixMap, !Ref "AWS::Partition", Name], !Ref "AWS::Region", "ssm" ] ]
+      VpcEndpointType: Interface
+      PrivateDnsEnabled: true 
+      SecurityGroupIds:
+        - !GetAtt EndpointSecurityGroup.GroupId
+      SubnetIds:
+        - !Ref ManagementSubnetA
+        - !Ref ManagementSubnetB
+        - Fn::If:
+          - HasMoreThan2Azs
+          - !Ref ManagementSubnetC
+          - !Ref AWS::NoValue
+        - Fn::If:
+          - HasMoreThan3Azs
+          - !Ref ManagementSubnetD
+          - !Ref AWS::NoValue
+      VpcId: !Ref VPC
+
+  SSMMessagesEndpoint:
+    Type: "AWS::EC2::VPCEndpoint"
+    Properties:
+      ServiceName: 
+        !Join [ ".", [ !FindInMap [ServiceNamePrefixMap, !Ref "AWS::Partition", Name], !Ref "AWS::Region", "ssmmessages" ] ]
+      VpcEndpointType: Interface
+      PrivateDnsEnabled: true 
+      SecurityGroupIds:
+        - !GetAtt EndpointSecurityGroup.GroupId
+      SubnetIds:
+        - !Ref ManagementSubnetA
+        - !Ref ManagementSubnetB
+        - Fn::If:
+          - HasMoreThan2Azs
+          - !Ref ManagementSubnetC
+          - !Ref AWS::NoValue
+        - Fn::If:
+          - HasMoreThan3Azs
+          - !Ref ManagementSubnetD
+          - !Ref AWS::NoValue
+      VpcId: !Ref VPC
+
+  STSEndpoint:
+    Type: "AWS::EC2::VPCEndpoint"
+    Properties:
+      ServiceName: 
+        !Join [ ".", [ !FindInMap [ServiceNamePrefixMap, !Ref "AWS::Partition", Name], !Ref "AWS::Region", "sts" ] ]
+      VpcEndpointType: Interface
+      PrivateDnsEnabled: true 
+      SecurityGroupIds:
+        - !GetAtt EndpointSecurityGroup.GroupId
+      SubnetIds:
+        - !Ref ManagementSubnetA
+        - !Ref ManagementSubnetB
+        - Fn::If:
+          - HasMoreThan2Azs
+          - !Ref ManagementSubnetC
+          - !Ref AWS::NoValue
+        - Fn::If:
+          - HasMoreThan3Azs
+          - !Ref ManagementSubnetD
+          - !Ref AWS::NoValue
+      VpcId: !Ref VPC
+
+
+Outputs:
+  NetworkStackName:
+    Value: !Sub ${AWS::StackName}
+    Description: Name of the network stack
+    Export:
+      Name: NISTNetworkStackName
+  VPC:
+    Value: !Ref VPC
+    Description: ID of the VPC
+    Export:
+      Name: !Sub ${AWS::StackName}-VPC
+  ManagementZoneSubnets:
+    Value: !Join
+      - ','
+      - - !Ref ManagementSubnetA
+        - !Ref ManagementSubnetB
+        - Fn::If:
+          - HasMoreThan2Azs
+          - !Ref ManagementSubnetC
+          - !Ref AWS::NoValue
+        - Fn::If:
+          - HasMoreThan3Azs
+          - !Ref ManagementSubnetD
+          - !Ref AWS::NoValue
+    Description: ID of the Management Zone subnets
+    Export:
+      Name: !Sub ${AWS::StackName}-ManagementZoneSubnets
+  ComputeZoneSubnets:
+    Value: !Join
+      - ','
+      - - !Ref ComputeSubnetA
+        - !Ref ComputeSubnetB
+        - Fn::If:
+          - HasMoreThan2Azs
+          - !Ref ManagementSubnetC
+          - !Ref AWS::NoValue
+        - Fn::If:
+          - HasMoreThan3Azs
+          - !Ref ManagementSubnetD
+          - !Ref AWS::NoValue
+    Description: ID of the HPC/Compute Zone subnets
+    Export:
+      Name: !Sub ${AWS::StackName}-ComputeZoneSubnets
+  StorageZoneSubnets:
+    Value: !Join
+      - ','
+      - - !Ref StorageSubnetA
+        - !Ref StorageSubnetB
+        - Fn::If:
+          - HasMoreThan2Azs
+          - !Ref ManagementSubnetC
+          - !Ref AWS::NoValue
+        - Fn::If:
+          - HasMoreThan3Azs
+          - !Ref ManagementSubnetD
+          - !Ref AWS::NoValue
+    Description: ID of the Storage Zone subnets
+    Export:
+      Name: !Sub ${AWS::StackName}-StorageZoneSubnets
+  AccessZoneSubnets:
+    Value: !Join
+      - ','
+      - - !Ref AccessSubnetA
+        - !Ref AccessSubnetB
+        - Fn::If:
+          - HasMoreThan2Azs
+          - !Ref ManagementSubnetC
+          - !Ref AWS::NoValue
+        - Fn::If:
+          - HasMoreThan3Azs
+          - !Ref ManagementSubnetD
+          - !Ref AWS::NoValue
+    Description: ID of the Access Zone subnets
+    Export:
+      Name: !Sub ${AWS::StackName}-AccessZoneSubnets
+  AccessZoneSubnetA:
+    Value: !Ref AccessSubnetA
+    Description: ID of the primary Access Zone subnet
+    Export:
+      Name: !Sub ${AWS::StackName}-AccessZoneSubnet
+  ComputeZoneSubnetA:
+    Value: !Ref ComputeSubnetA
+    Description: ID of the primary Compute Zone subnet
+    Export:
+      Name: !Sub ${AWS::StackName}-ComputeZoneSubnet
+  ManagementZoneSubnetA:
+    Value: !Ref ManagementSubnetA
+    Description: ID of the primary Management Zone subnet
+    Export:
+      Name: !Sub ${AWS::StackName}-ManagementZoneSubnet
+  StorageZoneSubnetA:
+    Value: !Ref StorageSubnetA
+    Description: ID of the primary Storage Zone subnet
+    Export:
+      Name: !Sub ${AWS::StackName}-StorageZoneSubnet
+  DefaultPrivateSubnet:
+    Description: The ID of a default private subnet
+    Value: !Ref ComputeSubnetA
+    Export:
+      Name: !Sub "${AWS::StackName}-DefaultPrivateSubnet"
+  DefaultPublicSubnet:
+    Description: The ID of a default public subnet
+    Value: !Ref AccessSubnetA
+    Export:
+      Name: !Sub "${AWS::StackName}-DefaultPublicSubnet"
+  InternetGatewayId:
+    Description: The ID of the Internet Gateway
+    Value: !Ref InternetGateway
+    Export:
+      Name: !Sub "${AWS::StackName}-InternetGateway"
+  CidrAllowedAccess:
+    Description: The allowed access CIDR Block
+    Value: !Ref CidrAllowedAccess
+    Export:
+      Name: !Sub "${AWS::StackName}-CidrAllowedAccess"
+  AccessZoneSecurityGroupID:
+    Description: The ID of the Access Zone Security Group
+    Value: !GetAtt AccessZoneSecurityGroup.GroupId
+    Export:
+      Name: !Sub "${AWS::StackName}-AccessZoneSecurityGroupID"
+  ManagementZoneSecurityGroupID:
+    Description: The ID of the Management Zone Security Group
+    Value: !GetAtt ManagementZoneSecurityGroup.GroupId
+    Export:
+      Name: !Sub "${AWS::StackName}-ManagementZoneSecurityGroupID"
+  ComputeZoneSecurityGroupID:
+    Description: The ID of the Compute Zone Security Group
+    Value: !GetAtt ComputeZoneSecurityGroup.GroupId
+    Export:
+      Name: !Sub "${AWS::StackName}-ComputeZoneSecurityGroupID"
+  StorageZoneSecurityGroupID:
+    Description: The ID of the Storage Zone Security Group
+    Value: !GetAtt StorageZoneSecurityGroup.GroupId
+    Export:
+      Name: !Sub "${AWS::StackName}-StorageZoneSecurityGroupID"
+  EndpointSecurityGroupID:
+    Description: The ID of the Endpoint Security Group
+    Value: !GetAtt EndpointSecurityGroup.GroupId
+    Export:
+      Name: !Sub "${AWS::StackName}-EndpointSecurityGroupID"

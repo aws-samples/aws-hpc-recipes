@@ -1,0 +1,257 @@
+AWSTemplateFormatVersion: '2010-09-09'
+Description: VPC with Private and Public Subnets, NAT Gateway, and VPC Flow Logs
+
+Parameters:
+  NISTNetworkStackName:
+    Type: String
+    Description: Name of the NIST Networking Stack.
+    Default: "nist-network"
+
+  NISTSecurityStackName:
+    Type: String
+    Description: Name of the NIST Networking Stack.
+    Default: "nist-security"
+
+  NISTStorageStackName:
+    Type: String
+    Description: Name of the NIST Storage Stack.
+    Default: "nist-storage"
+
+  NISTSlurmDBStackName:
+    Type: String
+    Description: Name of the NIST Database Stack.
+    Default: "nist-database"
+
+  NISTADStackName:
+    Type: String
+    Description: Name of the NIST AD Stack.
+    Default: "nist-ad"
+
+  ParallelClusterVersion:
+    Type: String
+    Description: Version of ParallelCluster to be used.
+    Default: 3.11.1
+
+  RetainCluster:
+    Type: String
+    Description: Do you want to retain the HPC Cluster when this stack is updated/deleted?
+    Default: 'Delete'
+    AllowedValues:
+      - 'Retain'
+      - 'Delete'
+  
+  SSHKeyName:
+    Type: AWS::EC2::KeyPair::KeyName
+    Description: Name of the SSH Key
+
+Resources:
+  PclusterClusterProvider:
+    Type: AWS::CloudFormation::Stack
+    Properties:
+      TemplateURL: !Sub
+          - https://${AWS::Region}-aws-parallelcluster.s3.${AWS::Region}.${AWS::URLSuffix}/parallelcluster/${Version}/templates/custom_resource/cluster.yaml
+          - { Version: !Ref ParallelClusterVersion }
+        
+  PClusterCluster:
+    Type: Custom::PclusterCluster
+    Properties:
+      ServiceToken: !GetAtt [ PclusterClusterProvider , Outputs.ServiceToken ]
+      ClusterName: !Sub 'c-${AWS::StackName}'
+      DeletionPolicy: !Ref RetainCluster
+      ClusterConfiguration:
+        Image:
+            Os: alinux2
+        Tags:
+        - Key: 'environment'
+          Value: !Sub ${AWS::StackName}
+        - Key: 'pcluster version'
+          Value: !Ref ParallelClusterVersion
+        HeadNode:
+          InstanceType: t2.micro
+          Networking:
+            SubnetId: 
+              Fn::ImportValue: !Sub '${NISTNetworkStackName}-ManagementZoneSubnet'
+            ElasticIp: false
+            AdditionalSecurityGroups:
+            - Fn::ImportValue: !Sub '${NISTSecurityStackName}-HeadNodeSecurityGroupID'
+            - Fn::ImportValue: !Sub '${NISTNetworkStackName}-ManagementZoneSecurityGroupID'
+            - Fn::ImportValue: !Sub '${NISTStorageStackName}-FSxLSecurityGroupID'
+            - Fn::ImportValue: !Sub '${NISTStorageStackName}-EFSSecurityGroupID'
+          Ssh:
+            KeyName: !Ref SSHKeyName
+          LocalStorage:
+            RootVolume:
+              Size: 50
+              VolumeType: gp3
+          Iam:
+            AdditionalIamPolicies:
+              - Policy: arn:aws:iam::aws:policy/AmazonSSMManagedInstanceCore
+            S3Access:
+              - BucketName:
+                  Fn::ImportValue: !Sub '${NISTStorageStackName}-CampaignStorageBucket'
+        LoginNodes:
+          Pools:
+             - Name: external
+               Count: 1
+               InstanceType: t2.micro
+               GracetimePeriod: 5
+               Ssh:
+                KeyName: !Ref SSHKeyName
+               Networking:
+                SubnetIds: 
+                  - Fn::ImportValue: !Sub '${NISTNetworkStackName}-AccessZoneSubnet'
+                AdditionalSecurityGroups:
+                  - Fn::ImportValue: !Sub '${NISTSecurityStackName}-LoginNodeSecurityGroupID'
+                  - Fn::ImportValue: !Sub '${NISTNetworkStackName}-AccessZoneSecurityGroupID'
+                  - Fn::ImportValue: !Sub '${NISTStorageStackName}-EFSSecurityGroupID'
+                  - Fn::ImportValue: !Sub '${NISTStorageStackName}-FSxLSecurityGroupID'
+               Iam:
+                 AdditionalIamPolicies:
+                  - Policy: arn:aws:iam::aws:policy/AmazonSSMManagedInstanceCore
+        DirectoryService:
+          DomainName: 
+            Fn::ImportValue: !Sub '${NISTADStackName}-Domain'
+          DomainAddr: 
+            Fn::ImportValue: !Sub '${NISTADStackName}-DnsIpAddresses'
+          PasswordSecretArn: 
+            Fn::ImportValue: !Sub '${NISTADStackName}-Admin-Password-Secret-ARN'
+          # Figure out a way to build this dynamically from the domain name
+          DomainReadOnlyUser: cn=ReadOnlyUser,ou=Users,dc=nist,dc=hpc,dc=cloud
+          #LdapTlsCaCert: /etc/openldap/cacerts/ca.cer
+          #LdapTlsReqCert: hard
+          #LdapAccessFilter: memberOf=CN=Group01,OU=Groups,DC=hpc,DC=cloud
+          AdditionalSssdConfigs:
+            ldap_id_mapping: "False"
+            ldap_schema: rfc2307bis
+            ldap_user_name: cn
+            ldap_user_fullname: displayName
+            ldap_user_uuid: objectGUID
+            ldap_user_gecos: displayName
+            ldap_user_modify_timestamp: whenChanged
+            ldap_group_uuid: objectGUID
+            ldap_group_member: member
+            ldap_group_modify_timestamp: whenChanged
+            #ldap_group_search_base: OU=Groups,DC=hpc,DC=cloud
+            ldap_netgroup_modify_timestamp: whenChanged
+            ldap_referrals: "False"
+            #ldap_search_base: OU=people,DC=hpc,DC=cloud
+            override_homedir: /users/%u
+            default_shell : /bin/bash
+            ldap_auth_disable_tls_never_use_in_production: True
+        Scheduling:
+          Scheduler: slurm
+          SlurmSettings:
+            ScaledownIdletime: 10
+            EnableMemoryBasedScheduling: true
+            Database:
+              Uri: 
+                Fn::ImportValue: !Sub '${NISTSlurmDBStackName}-RDS-URI'
+              UserName: 
+                Fn::ImportValue: !Sub '${NISTSlurmDBStackName}-RDS-Admin-Username'
+              PasswordSecretArn: 
+                Fn::ImportValue: !Sub '${NISTSlurmDBStackName}-RDS-Admin-Secret-ARN'
+              DatabaseName: 
+                Fn::ImportValue: !Sub '${NISTSlurmDBStackName}-RDS-DB-Name'
+            Dns:
+              DisableManagedDns: true
+              UseEc2Hostnames: true
+          SlurmQueues:
+            - Name: cpu
+              CapacityType: ONDEMAND
+              ComputeSettings:
+                LocalStorage:
+                  RootVolume:
+                    Size: 50
+                    VolumeType: gp3
+                    Encrypted: true
+                  EphemeralVolume:
+                    MountDir: /localscratch
+              ComputeResources:
+                - Name: cpu
+                  Instances:
+                    - InstanceType: c5.large
+                  MinCount: 0
+                  MaxCount: 2
+                  DisableSimultaneousMultithreading: false
+                  Efa:
+                    Enabled: False
+              Networking:
+                SubnetIds:
+                  Fn::Split:
+                    - ','
+                    - Fn::ImportValue: !Sub '${NISTNetworkStackName}-ComputeZoneSubnets'
+                PlacementGroup:
+                  Enabled: false
+                AdditionalSecurityGroups:
+                  - Fn::ImportValue: !Sub '${NISTSecurityStackName}-ComputeNodeSecurityGroupID'
+                  - Fn::ImportValue: !Sub '${NISTNetworkStackName}-ComputeZoneSecurityGroupID'
+                  - Fn::ImportValue: !Sub '${NISTStorageStackName}-FSxLSecurityGroupID'
+                  - Fn::ImportValue: !Sub '${NISTStorageStackName}-EFSSecurityGroupID'
+              Iam:
+                S3Access:
+                  - BucketName: 
+                      Fn::ImportValue: !Sub '${NISTStorageStackName}-CampaignStorageBucket'
+            - Name: gpu
+              CapacityType: ONDEMAND
+              ComputeSettings:
+                LocalStorage:
+                  RootVolume:
+                    Size: 50
+                    VolumeType: gp3
+                  EphemeralVolume:
+                    MountDir: /localscratch
+              ComputeResources:
+                - Name: gpu
+                  Instances:
+                    - InstanceType: g4dn.xlarge
+                  MinCount: 0
+                  MaxCount: 2
+                  DisableSimultaneousMultithreading: false
+                  Efa:
+                    Enabled: False
+              Networking:
+                SubnetIds:
+                  Fn::Split:
+                    - ','
+                    - Fn::ImportValue: !Sub '${NISTNetworkStackName}-ComputeZoneSubnets'
+                PlacementGroup:
+                  Enabled: false
+                AdditionalSecurityGroups:
+                  - Fn::ImportValue: !Sub '${NISTSecurityStackName}-ComputeNodeSecurityGroupID'
+                  - Fn::ImportValue: !Sub '${NISTNetworkStackName}-ComputeZoneSecurityGroupID'
+                  - Fn::ImportValue: !Sub '${NISTStorageStackName}-FSxLSecurityGroupID'
+                  - Fn::ImportValue: !Sub '${NISTStorageStackName}-EFSSecurityGroupID'
+              Iam:
+                S3Access:
+                  - BucketName: 
+                      Fn::ImportValue: !Sub '${NISTStorageStackName}-CampaignStorageBucket'
+        SharedStorage:
+          - Name: fsxshared
+            StorageType: FsxLustre
+            MountDir: /scratch
+            FsxLustreSettings:
+                FileSystemId: 
+                  Fn::ImportValue: !Sub '${NISTStorageStackName}-FSx-ID'
+          - Name: efsshared
+            StorageType: Efs
+            MountDir: /group
+            EfsSettings:
+              FileSystemId: 
+                Fn::ImportValue: !Sub '${NISTStorageStackName}-EFS-ID'
+          - Name: ebsshared
+            StorageType: Ebs
+            MountDir: /users
+            EbsSettings:
+              VolumeType: gp3
+              Encrypted: true
+              DeletionPolicy: !Ref RetainCluster
+              Size: 50
+        Monitoring:
+          Logs:
+            CloudWatch:
+              Enabled: true
+              RetentionInDays: 30
+              DeletionPolicy: !Ref RetainCluster
+          Dashboards:
+            CloudWatch:
+              Enabled: true
