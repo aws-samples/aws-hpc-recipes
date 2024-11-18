@@ -1,0 +1,566 @@
+AWSTemplateFormatVersion: '2010-09-09'
+Transform: AWS::Serverless-2016-10-31
+Description: Get started with AWS PCS and Amazon EC2 instances with AMD processors
+
+### Stack metadata
+Metadata:
+  AWS::CloudFormation::Interface:
+    ParameterGroups:
+      - Label:
+          default: PCS cluster configuration
+        Parameters:
+          - AmiId
+          - ClientIpCidr
+      - Label:
+          default: HPC Recipes configuration
+        Parameters:
+          - HpcRecipesS3Bucket
+          - HpcRecipesBranch
+
+Parameters:
+
+  AmiId:
+    Description: (Optional) ID of the AMI that the compute / login node groups run. Defaults to Amazon Linux 2/x86_64 PCS sample AMI.
+    Type: String
+    Default: ''
+    AllowedValues:
+         - ''
+
+  ClientIpCidr:
+    Description: IP(s) allowed to directly access the login nodes. We recommend that you restrict it with your own IP/subnet (x.x.x.x/32 for your own ip or x.x.x.x/24 for range. Replace x.x.x.x with your own PUBLIC IP. You can get your public IP using tools such as https://ifconfig.co/)
+    Default: 0.0.0.0/0
+    Type: String
+    AllowedPattern: (\d{1,3})\.(\d{1,3})\.(\d{1,3})\.(\d{1,3})/(\d{1,2})
+    ConstraintDescription: Value must be a valid IP or network range of the form x.x.x.x/x. 
+
+  HpcRecipesS3Bucket:
+    Type: String
+    Default: aws-hpc-recipes
+    Description: HPC Recipes for AWS S3 bucket
+    AllowedValues:
+         - aws-hpc-recipes
+         - aws-hpc-recipes-dev
+  HpcRecipesBranch:
+    Type: String
+    Default: main
+    Description: HPC Recipes for AWS release branch
+    AllowedPattern: '^(?!.*/\.git$)(?!.*/\.)(?!.*\\.\.)[a-zA-Z0-9-_\.]+$'
+
+Resources:
+
+  ##################
+  # Create a keypair
+  ##################
+  CreatedKeyPair:
+    Type: 'AWS::EC2::KeyPair'
+    Properties: 
+      KeyName: !Sub 'key-${AWS::StackName}'
+
+  ##################
+  # Placement groups
+  ##################
+  PgLambdaExecutionRole:
+    Type: AWS::IAM::Role
+    Properties:
+      AssumeRolePolicyDocument:
+        Version: '2012-10-17'
+        Statement:
+          - Effect: Allow
+            Principal:
+              Service: lambda.amazonaws.com
+            Action: sts:AssumeRole
+      ManagedPolicyArns:
+        - arn:aws:iam::aws:policy/service-role/AWSLambdaBasicExecutionRole
+      Policies:
+        - PolicyName: AllowEC2PlacementGroupManagement
+          PolicyDocument:
+            Version: '2012-10-17'
+            Statement:
+              - Effect: Allow
+                Action:
+                  - ec2:CreatePlacementGroup
+                  - ec2:DeletePlacementGroup
+                  - ec2:DescribePlacementGroups
+                Resource: '*'
+
+  PlacementGroupFunction:
+    Type: AWS::Lambda::Function
+    Properties:
+      Handler: index.handler
+      Role: !GetAtt PgLambdaExecutionRole.Arn
+      Code:
+        ZipFile: |
+          import boto3
+          import cfnresponse
+
+          def handler(event, context):
+              ec2 = boto3.client('ec2')
+              responseData = {}
+
+              try:
+                  if event['RequestType'] == 'Create':
+                      ec2.create_placement_group(
+                          GroupName=event['ResourceProperties']['PlacementGroupName'],
+                          Strategy='cluster'
+                      )
+                      # Get the placement group ID
+                      response = ec2.describe_placement_groups(
+                          GroupNames=[event['ResourceProperties']['PlacementGroupName']]
+                      )
+                      placement_group_id = response['PlacementGroups'][0]['GroupId']
+                      responseData['PlacementGroupName'] = event['ResourceProperties']['PlacementGroupName']
+                      responseData['PlacementGroupId'] = placement_group_id
+                      responseData['Message'] = f"Placement group {event['ResourceProperties']['PlacementGroupName']} created successfully"
+                  elif event['RequestType'] == 'Delete':
+                      ec2.delete_placement_group(
+                          GroupName=event['ResourceProperties']['PlacementGroupName']
+                      )
+                      responseData['Message'] = f"Placement group {event['ResourceProperties']['PlacementGroupName']} deleted successfully"
+                  cfnresponse.send(event, context, cfnresponse.SUCCESS, responseData)
+              except Exception as e:
+                  responseData['Error'] = str(e)
+                  cfnresponse.send(event, context, cfnresponse.FAILED, responseData)
+
+      Runtime: python3.12
+      Timeout: 30
+
+  # We create a placement group using a Lambda so we can give it a name. This is a 
+  # workaround for AWS::EC2::PlacementGroup not having support for setting 
+  # placement group name.
+  PlacementGroup:
+    Type: Custom::PlacementGroup
+    Properties:
+      ServiceToken: !GetAtt PlacementGroupFunction.Arn
+      PlacementGroupName: !Sub 'efa-${AWS::StackName}'
+
+  # Create an EFA security group
+  EfaSecurityGroup:
+    Type: "AWS::EC2::SecurityGroup"
+    Properties:
+      GroupDescription: Support EFA
+      GroupName: !Sub "efa-${AWS::StackName}"
+      VpcId: !GetAtt [ Networking, Outputs.VpcId ]
+
+  EfaSecurityGroupOutboundSelfRule:
+    Type: "AWS::EC2::SecurityGroupEgress"
+    Properties:
+      IpProtocol: "-1"
+      GroupId: !Ref EfaSecurityGroup
+      Description: Allow outbound EFA traffic to SG members
+      DestinationSecurityGroupId: !Ref EfaSecurityGroup
+
+  EfaSecurityGroupInboundSelfRule:
+    Type: "AWS::EC2::SecurityGroupIngress"
+    Properties:
+      IpProtocol: "-1"
+      GroupId: !Ref EfaSecurityGroup
+      Description: Allow inbound EFA traffic to SG members
+      SourceSecurityGroupId: !Ref EfaSecurityGroup
+
+  # Resolver for FSx Lustre DNS and mount name from ID
+  FSxLustreLookupLambdaRole:
+    Type: AWS::IAM::Role
+    Properties:
+      AssumeRolePolicyDocument:
+        Version: "2012-10-17"
+        Statement:
+          - Effect: Allow
+            Principal:
+              Service: lambda.amazonaws.com
+            Action: sts:AssumeRole
+      Policies:
+        - PolicyName: FSxLustreLookupPolicy
+          PolicyDocument:
+            Version: "2012-10-17"
+            Statement:
+              - Effect: Allow
+                Action:
+                  - fsx:DescribeFileSystems
+                Resource: "*"
+      ManagedPolicyArns:
+        - arn:aws:iam::aws:policy/service-role/AWSLambdaBasicExecutionRole
+
+  FSxLustreLookupLambda:
+    Type: AWS::Lambda::Function
+    Properties:
+      Handler: index.lambda_handler
+      Role: !GetAtt FSxLustreLookupLambdaRole.Arn
+      Runtime: python3.11
+      Timeout: 30
+      Code:
+        ZipFile: |
+          import boto3
+          import cfnresponse
+
+          def lambda_handler(event, context):
+              fsx_client = boto3.client("fsx")
+              
+              try:
+                  filesystem_id = event["ResourceProperties"]["FilesystemId"]
+                  
+                  response = fsx_client.describe_file_systems(FileSystemIds=[filesystem_id])
+                  
+                  if "FileSystems" in response and len(response["FileSystems"]) > 0:
+                      filesystem = response["FileSystems"][0]
+                      dns_name = filesystem["DNSName"]
+                      mount_name = filesystem["LustreConfiguration"]["MountName"]
+                      
+                      cfnresponse.send(event, context, cfnresponse.SUCCESS, {
+                          "DNSName": dns_name,
+                          "MountName": mount_name
+                      })
+                  else:
+                      cfnresponse.send(event, context, cfnresponse.FAILED, {
+                          "Reason": f"Filesystem {filesystem_id} not found"
+                      })
+              except Exception as e:
+                  cfnresponse.send(event, context, cfnresponse.FAILED, {
+                      "Reason": str(e)
+                  })
+
+  FSxLustreLookup:
+    Type: Custom::FSxLustreLookup
+    Properties:
+      ServiceToken: !GetAtt FSxLustreLookupLambda.Arn
+      FilesystemId: !GetAtt [ FSxLStorage, Outputs.FSxLustreFilesystemId ]
+
+  # Launch template for access node(s)
+  LoginLaunchTemplate:
+    Type: AWS::EC2::LaunchTemplate
+    Properties:
+      LaunchTemplateName: !Sub 'login-${AWS::StackName}'
+      LaunchTemplateData:
+        TagSpecifications:
+          - ResourceType: instance
+            Tags:
+              - Key: HPCRecipes
+                Value: "true"
+        MetadataOptions:
+          HttpEndpoint: enabled
+          HttpPutResponseHopLimit: 2
+          HttpTokens: required
+        KeyName: !Ref CreatedKeyPair
+        SecurityGroupIds: 
+          - !GetAtt [ PCSSecurityGroup, Outputs.ClusterSecurityGroupId ]
+          - !GetAtt [ PCSSecurityGroup, Outputs.InboundSshSecurityGroupId ]
+          - !GetAtt [ EfsStorage, Outputs.SecurityGroupId ]
+          - !GetAtt [ FSxLStorage, Outputs.FSxLustreSecurityGroupId ]
+        UserData:
+          Fn::Base64:
+            Fn::Sub:
+              - |
+                MIME-Version: 1.0
+                Content-Type: multipart/mixed; boundary="==MYBOUNDARY=="
+
+                --==MYBOUNDARY==
+                Content-Type: text/cloud-config; charset="us-ascii"
+                MIME-Version: 1.0
+                
+                runcmd:
+                  # Mount EFS filesystem as /home
+                  - mkdir -p /tmp/home
+                  - rsync -a /home/ /tmp/home
+                  - sudo mount -t nfs4 -o nfsvers=4.1,rsize=1048576,wsize=1048576,hard,timeo=600,retrans=2,noresvport ${EfsFilesystem}.efs.${Region}.amazonaws.com:/ /home
+                  - mount -a -t efs defaults
+                  - if [ "enabled" == "$(sestatus | awk "/^SELinux status:/{print $3}")" ]; then setsebool -P use_nfs_home_dirs 1; fi
+                  - rsync -a --ignore-existing /tmp/home/ /home
+                  - rm -rf /tmp/home/
+                  # Mount FSxL filesystem as /fsx
+                  - mkdir -p /fsx 
+                  - mount -t lustre -o relatime,flock ${FSxLustreDns}@tcp:/${FSxLustreMountName} /fsx
+                  - chmod 777 /fsx
+                --==MYBOUNDARY==
+              - EfsFilesystem: !GetAtt [ EfsStorage, Outputs.EFSFilesystemId ]
+                FSxLustreDns: !GetAtt FSxLustreLookup.DNSName
+                FSxLustreMountName: !GetAtt FSxLustreLookup.MountName
+                Region: !Ref AWS::Region
+
+  # Launch template for compute node(s)
+  HpcComputeLaunchTemplate:
+    Type: AWS::EC2::LaunchTemplate
+    Properties:
+      LaunchTemplateName: !Sub 'hpc-compute-${AWS::StackName}'
+      LaunchTemplateData:
+        TagSpecifications:
+          - ResourceType: instance
+            Tags:
+              - Key: HPCRecipes
+                Value: "true"
+        MetadataOptions:
+          HttpEndpoint: enabled
+          HttpPutResponseHopLimit: 2
+          HttpTokens: required
+        Placement:
+          GroupName: !GetAtt PlacementGroup.PlacementGroupName
+        NetworkInterfaces:
+          # hpc7a have dual NICs
+          - Description: Primary network interface
+            DeviceIndex: 0
+            InterfaceType: efa
+            NetworkCardIndex: 0
+            SubnetId: !GetAtt [ Networking, Outputs.ComputeSubnetId ]
+            Groups:
+              - !Ref EfaSecurityGroup
+              - !GetAtt [ PCSSecurityGroup, Outputs.ClusterSecurityGroupId ]
+              - !GetAtt [ EfsStorage, Outputs.SecurityGroupId ]
+              - !GetAtt [ FSxLStorage, Outputs.FSxLustreSecurityGroupId ]
+          - Description: Secondary network interface
+            DeviceIndex: 1
+            InterfaceType: efa
+            NetworkCardIndex: 1
+            SubnetId: !GetAtt [ Networking, Outputs.ComputeSubnetId ]
+            Groups:
+              - !Ref EfaSecurityGroup
+        # KeyName: !Ref SshKeyName
+        UserData:
+          Fn::Base64:
+            Fn::Sub:
+              - |
+                MIME-Version: 1.0
+                Content-Type: multipart/mixed; boundary="==MYBOUNDARY=="
+
+                --==MYBOUNDARY==
+                Content-Type: text/cloud-config; charset="us-ascii"
+                MIME-Version: 1.0
+                
+                runcmd:
+                  # Mount EFS filesystem as /home
+                  - mkdir -p /tmp/home
+                  - rsync -a /home/ /tmp/home
+                  - sudo mount -t nfs4 -o nfsvers=4.1,rsize=1048576,wsize=1048576,hard,timeo=600,retrans=2,noresvport ${EfsFilesystem}.efs.${Region}.amazonaws.com:/ /home
+                  - mount -a -t efs defaults
+                  - if [ "enabled" == "$(sestatus | awk "/^SELinux status:/{print $3}")" ]; then setsebool -P use_nfs_home_dirs 1; fi
+                  - rsync -a --ignore-existing /tmp/home/ /home
+                  - rm -rf /tmp/home/
+                  # Mount FSxL filesystem as /fsx
+                  - mkdir -p /fsx 
+                  - mount -t lustre -o relatime,flock ${FSxLustreDns}@tcp:/${FSxLustreMountName} /fsx
+                  - chmod 777 /fsx
+                --==MYBOUNDARY==
+              - EfsFilesystem: !GetAtt [ EfsStorage, Outputs.EFSFilesystemId ]
+                FSxLustreDns: !GetAtt FSxLustreLookup.DNSName
+                FSxLustreMountName: !GetAtt FSxLustreLookup.MountName
+                Region: !Ref AWS::Region
+
+  # Launch template for compute node(s)
+  ComputeLaunchTemplate:
+    Type: AWS::EC2::LaunchTemplate
+    Properties:
+      LaunchTemplateName: !Sub 'compute-${AWS::StackName}'
+      LaunchTemplateData:
+        TagSpecifications:
+          - ResourceType: instance
+            Tags:
+              - Key: HPCRecipes
+                Value: "true"
+        MetadataOptions:
+          HttpEndpoint: enabled
+          HttpPutResponseHopLimit: 2
+          HttpTokens: required
+        SecurityGroupIds: 
+          - !GetAtt [ PCSSecurityGroup, Outputs.ClusterSecurityGroupId ]
+          - !GetAtt [ PCSSecurityGroup, Outputs.InboundSshSecurityGroupId ]
+          - !GetAtt [ EfsStorage, Outputs.SecurityGroupId ]
+          - !GetAtt [ FSxLStorage, Outputs.FSxLustreSecurityGroupId ]
+        UserData:
+          Fn::Base64:
+            Fn::Sub:
+              - |
+                MIME-Version: 1.0
+                Content-Type: multipart/mixed; boundary="==MYBOUNDARY=="
+
+                --==MYBOUNDARY==
+                Content-Type: text/cloud-config; charset="us-ascii"
+                MIME-Version: 1.0
+                
+                runcmd:
+                  # Mount EFS filesystem as /home
+                  - mkdir -p /tmp/home
+                  - rsync -a /home/ /tmp/home
+                  - sudo mount -t nfs4 -o nfsvers=4.1,rsize=1048576,wsize=1048576,hard,timeo=600,retrans=2,noresvport ${EfsFilesystem}.efs.${Region}.amazonaws.com:/ /home
+                  - mount -a -t efs defaults
+                  - if [ "enabled" == "$(sestatus | awk "/^SELinux status:/{print $3}")" ]; then setsebool -P use_nfs_home_dirs 1; fi
+                  - rsync -a --ignore-existing /tmp/home/ /home
+                  - rm -rf /tmp/home/
+                  # Mount FSxL filesystem as /fsx
+                  - mkdir -p /fsx 
+                  - mount -t lustre -o relatime,flock ${FSxLustreDns}@tcp:/${FSxLustreMountName} /fsx
+                  - chmod 777 /fsx
+                --==MYBOUNDARY==
+              - EfsFilesystem: !GetAtt [ EfsStorage, Outputs.EFSFilesystemId ]
+                FSxLustreDns: !GetAtt FSxLustreLookup.DNSName
+                FSxLustreMountName: !GetAtt FSxLustreLookup.MountName
+                Region: !Ref AWS::Region
+
+  PCSCfnProvider:
+    Type: AWS::CloudFormation::Stack
+    Properties:
+      TemplateURL: !Sub 'https://${HpcRecipesS3Bucket}.s3.amazonaws.com/${HpcRecipesBranch}/recipes/pcs/getting_started/assets/pcs-cfn.yaml'
+
+  Networking:
+    Type: AWS::CloudFormation::Stack
+    Properties:
+      Parameters:
+        CreateBackupSubnets: "False"
+      TemplateURL: !Sub 'https://${HpcRecipesS3Bucket}.s3.amazonaws.com/${HpcRecipesBranch}/recipes/pcs/try_amd/assets/network.cfn.yaml'
+
+  EfsStorage:
+    Type: AWS::CloudFormation::Stack
+    Properties:
+      Parameters:
+        SubnetIds: !GetAtt [ Networking, Outputs.StorageSubnetId ]
+        SubnetCount: 1
+        VpcId: !GetAtt [ Networking, Outputs.VpcId ]
+      TemplateURL: !Sub 'https://${HpcRecipesS3Bucket}.s3.amazonaws.com/${HpcRecipesBranch}/recipes/storage/efs_simple/assets/main.yaml'
+
+  FSxLStorage:
+    Type: AWS::CloudFormation::Stack
+    Properties:
+      Parameters:
+        PerUnitStorageThroughput: 125
+        SubnetId: !GetAtt [ Networking, Outputs.StorageSubnetId ]
+        VpcId: !GetAtt [ Networking, Outputs.VpcId ]
+      TemplateURL: !Sub 'https://${HpcRecipesS3Bucket}.s3.amazonaws.com/${HpcRecipesBranch}/recipes/storage/fsx_lustre/assets/persistent.yaml'
+
+  PCSSecurityGroup:
+    Type: AWS::CloudFormation::Stack
+    Properties:
+      Parameters:
+        ClientIpCidr: !Ref ClientIpCidr
+        VpcId: !GetAtt [ Networking, Outputs.VpcId ]
+      TemplateURL: !Sub 'https://${HpcRecipesS3Bucket}.s3.amazonaws.com/${HpcRecipesBranch}/recipes/pcs/getting_started/assets/pcs-cluster-sg.yaml'
+
+  # Cluster
+
+  PCSCluster:
+    Type: Custom::Resource
+    Properties:
+      ServiceToken: !GetAtt [ PCSCfnProvider, Outputs.ServiceToken ]
+      clusterName: !Sub '${AWS::StackName}'
+      size: SMALL
+      scheduler:
+        type: SLURM
+        version: 23.11
+      networking:
+        subnetIds:
+          - !GetAtt [ Networking, Outputs.ManagementSubnetId ]
+        securityGroupIds:
+          - !GetAtt [ PCSSecurityGroup, Outputs.ClusterSecurityGroupId ]
+
+  # Compute Node groups
+  PCSInstanceProfile:
+    Type: AWS::CloudFormation::Stack
+    Properties:
+      Parameters:
+        # We regionalize this in case customer uses the template in more than one region. Otherwise,
+        # the create action will fail since instance-role-${AWS::StackName} already exists!
+        RoleName: !Sub '${AWS::StackName}-${AWS::Region}'
+      TemplateURL: !Sub 'https://${HpcRecipesS3Bucket}.s3.amazonaws.com/${HpcRecipesBranch}/recipes/pcs/getting_started/assets/pcs-iip-minimal.yaml'
+
+  # Compute Node groups - Login Nodes
+  PCSNodeGroupLogin:
+    Type: Custom::Resource
+    Properties:
+      ServiceToken: !GetAtt [ PCSCfnProvider, Outputs.ServiceToken ]
+      clusterIdentifier: !GetAtt [ PCSCluster, id ]
+      computeNodeGroupName: login
+      scalingConfiguration:
+        minInstanceCount: 1
+        maxInstanceCount: 1
+      iamInstanceProfileArn: !GetAtt [ PCSInstanceProfile, Outputs.InstanceProfileArn ]
+      customLaunchTemplate:
+        id: !Ref LoginLaunchTemplate
+        version: !GetAtt [ LoginLaunchTemplate, LatestVersionNumber ]
+      subnetIds:
+        - !GetAtt [ Networking, Outputs.AccessSubnetId ]
+      amiId: !Ref AmiId
+      instanceConfigs:
+        - instanceType: c7a.xlarge
+
+  # Compute Node groups - Compute Nodes (HPC)
+  PCSNodeGroupCompute1:
+    Type: Custom::Resource
+    Properties:
+      ServiceToken: !GetAtt [ PCSCfnProvider, Outputs.ServiceToken ]
+      clusterIdentifier: !GetAtt [ PCSCluster, id ]
+      computeNodeGroupName: hpc7a-48xlarge
+      scalingConfiguration:
+        minInstanceCount: 0
+        maxInstanceCount: 4
+      iamInstanceProfileArn: !GetAtt [ PCSInstanceProfile, Outputs.InstanceProfileArn ]
+      customLaunchTemplate:
+        id: !Ref HpcComputeLaunchTemplate
+        version: !GetAtt [ HpcComputeLaunchTemplate, LatestVersionNumber ]
+      subnetIds:
+        - !GetAtt [ Networking, Outputs.ComputeSubnetId ]
+      amiId: !Ref AmiId
+      instanceConfigs:
+        - instanceType: hpc7a.48xlarge
+
+  # Compute Node groups  - Compute Nodes (Small)
+  PCSNodeGroupCompute2:
+    Type: Custom::Resource
+    Properties:
+      ServiceToken: !GetAtt [ PCSCfnProvider, Outputs.ServiceToken ]
+      clusterIdentifier: !GetAtt [ PCSCluster, id ]
+      computeNodeGroupName: c7a-xlarge
+      scalingConfiguration:
+        minInstanceCount: 0
+        maxInstanceCount: 3
+      iamInstanceProfileArn: !GetAtt [ PCSInstanceProfile, Outputs.InstanceProfileArn ]
+      customLaunchTemplate:
+        id: !Ref ComputeLaunchTemplate
+        version: !GetAtt [ ComputeLaunchTemplate, LatestVersionNumber ]
+      subnetIds:
+        - !GetAtt [ Networking, Outputs.ComputeSubnetId ]
+      amiId: !Ref AmiId
+      instanceConfigs:
+        - instanceType: c7a.xlarge
+
+  PCSQueueCompute1:
+    Type: Custom::Resource
+    Properties:
+      ServiceToken: !GetAtt [ PCSCfnProvider, Outputs.ServiceToken ]
+      clusterIdentifier: !GetAtt [ PCSCluster, id ]
+      queueName: large
+      computeNodeGroupConfigurations:
+        - computeNodeGroupId: !GetAtt [ PCSNodeGroupCompute1, id ]
+
+  PCSQueueCompute2:
+    Type: Custom::Resource
+    Properties:
+      ServiceToken: !GetAtt [ PCSCfnProvider, Outputs.ServiceToken ]
+      clusterIdentifier: !GetAtt [ PCSCluster, id ]
+      queueName: small
+      computeNodeGroupConfigurations:
+        - computeNodeGroupId: !GetAtt [ PCSNodeGroupCompute2, id ]
+
+Outputs:
+  ClusterId:
+    Description: The ID of the PCS cluster
+    Value: !GetAtt [ PCSCluster, id ]
+  PcsConsoleUrl:
+    Description: URL to access the cluster in the PCS console
+    Value: !Sub
+      - https://${ConsoleDomain}/pcs/home?region=${AWS::Region}#/clusters/${ClusterId}
+      - { ConsoleDomain: !Sub '${AWS::Region}.console.aws.amazon.com',
+          ClusterId: !GetAtt [ PCSCluster, id ] 
+        }
+    Export:
+      Name: !Sub ${AWS::StackName}-PcsConsoleUrl
+  Ec2ConsoleUrl:
+    Description: URL to access instance(s) in the login node group via Session Manager
+    Value: !Sub
+      - https://${ConsoleDomain}/ec2/home?region=${AWS::Region}#Instances:instanceState=running;tag:aws:pcs:compute-node-group-id=${NodeGroupLoginId}
+      - { ConsoleDomain: !Sub '${AWS::Region}.console.aws.amazon.com',
+          NodeGroupLoginId: !GetAtt [ PCSNodeGroupLogin, id ] 
+        }
+    Export:
+      Name: !Sub ${AWS::StackName}-Ec2ConsoleUrl
+  SshKeyPairSsmParameter:
+    Description: Key pair for accessing the login node(s) via SSH
+    Value: !Sub
+      - https://${ConsoleDomain}/systems-manager/parameters/ec2/keypair/${KeyPairId}/description?region=${AWS::Region}
+      - { ConsoleDomain: !Sub '${AWS::Region}.console.aws.amazon.com',
+          KeyPairId: !GetAtt [ CreatedKeyPair, KeyPairId]
+        }
