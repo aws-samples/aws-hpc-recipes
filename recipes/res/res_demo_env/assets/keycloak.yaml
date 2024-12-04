@@ -144,7 +144,7 @@ Resources:
         Timeout: PT15M
     Properties:
       ImageId: '{{resolve:ssm:/aws/service/ami-amazon-linux-latest/al2023-ami-kernel-6.1-x86_64:75}}'
-      InstanceType: t3.micro
+      InstanceType: t3.medium
       KeyName: !Ref Keypair
       IamInstanceProfile: !Ref KeycloakEC2InstanceProfile
       SubnetId: !Ref PublicSubnet
