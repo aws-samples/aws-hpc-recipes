@@ -144,24 +144,28 @@ Resources:
               set -o pipefail
               exec > >(tee /var/log/user-data.log|logger -t user-data -s 2>/dev/console) 2>&1
               yum update -y aws-cfn-bootstrap
+
               /opt/aws/bin/cfn-init -v --stack "${AWS::StackName}" --resource CertificateNode --configsets setup --region "${AWS::Region}"
               echo "Domain Name: ${DomainName}"
               echo "Domain Certificate Secret: ${CertificateSecret}"
               echo "Domain Private Key Secret: ${PrivateKeySecret}"
 
+              sudo yum install -y wget
               export HOME=/tmp/home
               mkdir -p $HOME
-
               cd /tmp
-              wget https://bootstrap.pypa.io/pip/3.7/get-pip.py 
-              python3 ./get-pip.py
-              pip3 install boto3
+              wget https://bootstrap.pypa.io/pip/3.7/get-pip.py
+              mkdir -p pip
+              python3 ./get-pip.py --target $PWD/pip
+              $PWD/pip/bin/pip3 install boto3
               eval $(python3 -c "from botocore.credentials import InstanceMetadataProvider, InstanceMetadataFetcher; provider = InstanceMetadataProvider(iam_role_fetcher=InstanceMetadataFetcher(timeout=1000, num_attempts=2)); c = provider.load().get_frozen_credentials(); print(f'export AWS_ACCESS_KEY_ID={c.access_key}'); print(f'export AWS_SECRET_ACCESS_KEY={c.secret_key}'); print(f'export AWS_SESSION_TOKEN={c.token}')")
 
               mkdir certificates
               cd certificates
-              git clone https://github.com/acmesh-official/acme.sh.git
-              cd acme.sh
+              VERSION=3.1.0
+              wget https://github.com/acmesh-official/acme.sh/archive/refs/tags/$VERSION.tar.gz -O acme-$VERSION.tar.gz
+              tar -xvf acme-$VERSION.tar.gz
+              cd acme.sh-$VERSION
               ./acme.sh --install
               ./acme.sh --set-default-ca --server letsencrypt
               ./acme.sh --issue --dns dns_aws --ocsp-must-staple --keylength 4096  -d ${DomainName} -d "*.${DomainName}"
@@ -295,25 +299,27 @@ Resources:
                   set -o pipefail
                   exec > >(tee /var/log/user-data.log|logger -t user-data -s 2>/dev/console) 2>&1
                   yum update -y aws-cfn-bootstrap
-                  sudo yum install -y git
 
                   echo "Domain Name: ${DomainName}"
                   echo "Domain Certificate Secret: ${CertificateSecret}"
                   echo "Domain Private Key Secret: ${PrivateKeySecret}"
 
+                  sudo yum install -y wget
                   export HOME=/tmp/home
                   mkdir -p $HOME
-
                   cd /tmp
-                  wget https://bootstrap.pypa.io/pip/3.7/get-pip.py 
-                  python3 ./get-pip.py
-                  pip3 install boto3
+                  wget https://bootstrap.pypa.io/pip/3.7/get-pip.py
+                  mkdir -p pip
+                  python3 ./get-pip.py --target $PWD/pip
+                  $PWD/pip/bin/pip3 install boto3
                   eval $(python3 -c "from botocore.credentials import InstanceMetadataProvider, InstanceMetadataFetcher; provider = InstanceMetadataProvider(iam_role_fetcher=InstanceMetadataFetcher(timeout=1000, num_attempts=2)); c = provider.load().get_frozen_credentials(); print(f'export AWS_ACCESS_KEY_ID={c.access_key}'); print(f'export AWS_SECRET_ACCESS_KEY={c.secret_key}'); print(f'export AWS_SESSION_TOKEN={c.token}')")
 
                   mkdir certificates
                   cd certificates
-                  git clone https://github.com/Neilpang/acme.sh.git
-                  cd acme.sh
+                  VERSION=3.1.0
+                  wget https://github.com/acmesh-official/acme.sh/archive/refs/tags/$VERSION.tar.gz -O acme-$VERSION.tar.gz
+                  tar -xvf acme-$VERSION.tar.gz
+                  cd acme.sh-$VERSION
                   ./acme.sh --install
                   ./acme.sh --set-default-ca --server letsencrypt
                   ./acme.sh --issue --dns dns_aws --ocsp-must-staple --keylength 4096  -d ${DomainName} -d "*.${DomainName}"
