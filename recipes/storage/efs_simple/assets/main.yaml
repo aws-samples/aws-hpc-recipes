@@ -80,6 +80,14 @@ Resources:
             Condition:
               Bool:
                 'elasticfilesystem:AccessedViaMountTarget': 'true'
+          - Sid: efs-enforce-tls
+            Effect: Deny
+            Principal:
+              AWS: '*'
+            Action: '*'
+            Condition:
+              Bool:
+                'aws:SecureTransport': 'false'
       BackupPolicy: 
         Status: !Ref AutomaticBackups
       Encrypted: true
