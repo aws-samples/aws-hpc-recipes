@@ -131,6 +131,9 @@ Resources:
         IAMPermissionBoundary: ""
         DisableADJoin: "False"
         ServiceAccountUserDN: !GetAtt [ RESExternal, Outputs.ServiceAccountUserDN ]
+        HttpProxy: ""
+        HttpsProxy: ""
+        NoProxy: ""
       TemplateURL: https://research-engineering-studio-us-east-1.s3.amazonaws.com/releases/latest/ResearchAndEngineeringStudio.template.json
 
   RESSsoKeycloak:
