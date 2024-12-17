@@ -121,7 +121,7 @@ Resources:
       Size: SMALL
       Scheduler:
         Type: SLURM
-        Version: 23.11
+        Version: !Ref SlurmVersion
       Networking:
         SubnetIds:
           - !GetAtt [ Networking, Outputs.DefaultPrivateSubnet ]
