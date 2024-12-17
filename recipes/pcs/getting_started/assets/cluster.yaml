@@ -123,7 +123,7 @@ Resources:
   PCSNodeGroupLogin:
     Type: AWS::PCS::ComputeNodeGroup
     Properties:
-      ClusterId: !GetAtt [ PCSCluster, id ]
+      ClusterId: !GetAtt [PCSCluster, Id]
       Name: login
       ScalingConfiguration:
         MinInstanceCount: 1
@@ -134,7 +134,7 @@ Resources:
         Version: 1
       SubnetIds:
         - !GetAtt [ Networking, Outputs.DefaultPublicSubnet ]
-      AmiId: !Ref PcsSampleAmi.AmiId
+      AmiId: !GetAtt [PcsSampleAmi, AmiId]
       InstanceConfigs:
         - InstanceType: c6i.xlarge
 
@@ -142,7 +142,7 @@ Resources:
   PCSNodeGroupCompute:
     Type: AWS::PCS::ComputeNodeGroup
     Properties:
-      ClusterId: !GetAtt [ PCSCluster, id ]
+      ClusterId: !GetAtt [PCSCluster, Id]
       Name: compute-1
       ScalingConfiguration:
         MinInstanceCount: 0
@@ -153,17 +153,17 @@ Resources:
         Version: 1
       SubnetIds:
         - !GetAtt [ Networking, Outputs.DefaultPrivateSubnet ]
-      AmiId: !Ref PcsSampleAmi.AmiId
+      AmiId: !GetAtt [PcsSampleAmi, AmiId]
       InstanceConfigs:
         - InstanceType: c6i.xlarge
 
   PCSQueueCompute:
     Type: AWS::PCS::Queue
     Properties:
-      ClusterId: !GetAtt [ PCSCluster, id ]
+      ClusterId: !GetAtt [PCSCluster, Id]
       Name: demo
       ComputeNodeGroupConfigurations:
-        - ComputeNodeGroupId: !GetAtt [ PCSNodeGroupCompute, id ]
+        - ComputeNodeGroupId: !GetAtt [PCSNodeGroupCompute, Id]
 
   PcsAMILookupRole:
     Type: AWS::IAM::Role
@@ -293,13 +293,13 @@ Resources:
 Outputs:
   ClusterId:
     Description: The ID of the PCS cluster
-    Value: !GetAtt [ PCSCluster, id ]
+    Value: !GetAtt [ PCSCluster, Id ]
   PcsConsoleUrl:
     Description: URL to access the cluster in the PCS console
     Value: !Sub
       - https://${ConsoleDomain}/pcs/home?region=${AWS::Region}#/clusters/${ClusterId}
       - { ConsoleDomain: !Sub '${AWS::Region}.console.aws.amazon.com',
-          ClusterId: !GetAtt [ PCSCluster, id ] 
+          ClusterId: !GetAtt [ PCSCluster, Id ]
         }
     Export:
       Name: !Sub ${AWS::StackName}-PcsConsoleUrl
@@ -308,7 +308,7 @@ Outputs:
     Value: !Sub
       - https://${ConsoleDomain}/ec2/home?region=${AWS::Region}#Instances:instanceState=running;tag:aws:pcs:compute-node-group-id=${NodeGroupLoginId}
       - { ConsoleDomain: !Sub '${AWS::Region}.console.aws.amazon.com',
-          NodeGroupLoginId: !GetAtt [ PCSNodeGroupLogin, id ] 
+          NodeGroupLoginId: !GetAtt [ PCSNodeGroupLogin, Id ] 
         }
     Export:
       Name: !Sub ${AWS::StackName}-Ec2ConsoleUrl
