@@ -7,8 +7,13 @@ Metadata:
   AWS::CloudFormation::Interface:
     ParameterGroups:
       - Label:
-          default: PCS cluster configuration
+          default: PCS Cluster configuration
         Parameters:
+          - SlurmVersion
+      - Label:
+          default: PCS ComputeNodeGroups configuration
+        Parameters:
+          - NodeArchitecture
           - KeyName
           - ClientIpCidr
       - Label:
@@ -18,6 +23,22 @@ Metadata:
           - HpcRecipesBranch
 
 Parameters:
+
+  NodeArchitecture:
+    Type: String
+    Default: x86
+    AllowedValues:
+      - x86
+      - Graviton
+    Description: Architecture of the login and compute node instances
+
+  SlurmVersion:
+    Type: String
+    Default: 23.11
+    Description: Version of Slurm to use
+    AllowedValues:
+         - 23.11
+         - 24.05
 
   KeyName:
     Description: KeyPair to login to the head node
@@ -43,6 +64,19 @@ Parameters:
     Default: main
     Description: HPC Recipes for AWS release branch
     AllowedPattern: '^(?!.*/\.git$)(?!.*/\.)(?!.*\\.\.)[a-zA-Z0-9-_\.]+$'
+
+Mappings:
+
+  Architecture:
+    AmiArchParameter:
+      Graviton: arm64
+      x86: x86_64
+    LoginNodeInstances:
+      Graviton: c7g.xlarge
+      x86: c6i.xlarge
+    ComputeNodeInstances:
+      Graviton: c7g.xlarge
+      x86: c6i.xlarge
 
 Resources:
 
@@ -136,7 +170,7 @@ Resources:
         - !GetAtt [ Networking, Outputs.DefaultPublicSubnet ]
       AmiId: !GetAtt [PcsSampleAmi, AmiId]
       InstanceConfigs:
-        - InstanceType: c6i.xlarge
+        - InstanceType: !FindInMap [ Architecture, LoginNodeInstances, !Ref NodeArchitecture ]
 
   # Compute Node groups - Compute Nodes
   PCSNodeGroupCompute:
@@ -155,7 +189,7 @@ Resources:
         - !GetAtt [ Networking, Outputs.DefaultPrivateSubnet ]
       AmiId: !GetAtt [PcsSampleAmi, AmiId]
       InstanceConfigs:
-        - InstanceType: c6i.xlarge
+        - InstanceType: !FindInMap [ Architecture, ComputeNodeInstances, !Ref NodeArchitecture ]
 
   PCSQueueCompute:
     Type: AWS::PCS::Queue
@@ -287,12 +321,12 @@ Resources:
     Properties:
       ServiceToken: !GetAtt PcsAMILookupFn.Arn
       OperatingSystem: 'amzn2'
-      Architecture: 'x86_64'
-      SlurmVersion: '23.11'
+      Architecture: !FindInMap [ Architecture, AmiArchParameter, !Ref NodeArchitecture ]
+      SlurmVersion: !Ref SlurmVersion
 
 Outputs:
   ClusterId:
-    Description: The ID of the PCS cluster
+    Description: The Id of the PCS cluster
     Value: !GetAtt [ PCSCluster, Id ]
   PcsConsoleUrl:
     Description: URL to access the cluster in the PCS console
