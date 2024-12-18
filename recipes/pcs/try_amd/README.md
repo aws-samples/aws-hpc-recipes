@@ -24,7 +24,7 @@ Launch the cluster using AWS CloudFormation in `us-east-2` (Ohio, United States)
 * Follow the instructions in the AWS CloudFormation console:
     * Under **Parameters**
         * (Optional) Customize the stack name
-        * For **AmiId** leave this blank
+        * For **SlurmVersion**, choose one of the supported Slurm versions
         * For **ClientIpCidr**, either leave it as its default value or replace with a more restrictive CIDR range
         * Leave the parameters under **HPC Recipes configuration** as their default values.
     * Under **Capabilities and transforms**
