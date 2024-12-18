@@ -219,6 +219,11 @@ You can use an HPC Recipe for AWS in several ways:
 * **About**: Get started with AMD-powered HPC instances and AWS PCS
 * **Usage**: [README.md](pcs/try_amd/README.md)
 
+#### try_graviton ![tag](https://img.shields.io/badge/-alinux2-%23FF9900) ![tag](https://img.shields.io/badge/-arm64-%23AAB7B8) ![tag](https://img.shields.io/badge/-beta-%23800080) ![tag](https://img.shields.io/badge/-ec2-%23FF9900) ![tag](https://img.shields.io/badge/-efs-%237DCEA0) ![tag](https://img.shields.io/badge/-fsx-%237DCEA0) ![tag](https://img.shields.io/badge/-graviton-%237DCEA0) ![tag](https://img.shields.io/badge/-pcs-%23FF9900) 
+
+* **About**: Get started with Graviton-powered instances on AWS PCS
+* **Usage**: [README.md](pcs/try_graviton/README.md)
+
 
 ### :arrow_right: res: Research and Engineering Studio on AWS
 
