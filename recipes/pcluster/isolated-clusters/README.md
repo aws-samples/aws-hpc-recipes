@@ -5,7 +5,7 @@
 
 ![](images/isolated-cluster.PNG)
 
-1.	Browse [here](isolated-hpc-ad-cfn.yml) and download “isolated-hpc.cfn.yml” 
+1.	Browse [here](isolated-hpc.cfn.yml) and download “isolated-hpc.cfn.yml” 
 2.	Browse [here](https://docs.aws.amazon.com/parallelcluster/latest/ug/install-v3-install-standalone.html) and download the latest pcluster installer that is contained in step 1 of the Linux x86 (64-bit) instructions. This will download a zip file to your local machine.
 3.	Create an S3 bucket
 
