@@ -572,4 +572,7 @@ Outputs:
     Value: !Sub
       - OU=Computers,OU=RES,OU=${ou},DC=${dc}
       - { dc: !Join [",DC=", !Split [".", !If [ SubDomainNotProvided, !Ref DomainName, !Join [ ".", [ !Ref SubDomain, !Ref DomainName]]]]], ou:  !GetAtt [ DirectoryService, Outputs.DomainShortName ]}
+  ActiveDirectoryDNSIPs:
+    Description: The DNS IPs of your Active Directory
+    Value: !Join [ ",", [ !GetAtt [ DirectoryService, Outputs.DnsIpAddress1 ], !GetAtt [ DirectoryService, Outputs.DnsIpAddress2 ] ] ]
 
