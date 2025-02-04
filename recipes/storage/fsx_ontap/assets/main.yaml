@@ -1,0 +1,912 @@
+AWSTemplateFormatVersion: '2010-09-09'
+Description: Creates a basic Single-AZ FSx for NetApp ONTAP file system and a storage virtual machine with a non-root volume.
+
+Metadata:
+  AWS::CloudFormation::Interface:
+    ParameterGroups:
+      - Label:
+          default: Networking and Access
+        Parameters:
+          - VpcId
+          - SubnetId
+          - ClientIpCidr
+          - SecurityGroupName
+          - KmsKeyId
+      - Label:
+          default: File System Options
+        Parameters:
+          - OntapVolumeStyle
+          - OntapStorageCapacity
+          - OntapVolumeGiBSize
+          - OntapHAPairs
+          - OntapDiskIopsMode
+          - OntapDiskIops
+          - OntapThroughputCapacity
+          - OntapSecurityStyle
+          - OntapVolumeJunctionPath
+      - Label:
+          default: (Optional) Join File System to an Active Directory
+        Parameters:
+          - EnableActiveDirectory
+          - ActiveDirectoryName
+          - DNSServerIPs
+          - ServiceAccountCredentialsSecretArn
+          - ComputersOU
+          - SudoersGroupName
+          - CIFSShareName
+
+Parameters:
+  VpcId:
+    Type: AWS::EC2::VPC::Id
+    Description: VPC where the file system will be created.
+  SubnetId:
+    Type: AWS::EC2::Subnet::Id
+    Description: Subnet ID where the file system will be created (must be in same VPC).
+  ClientIpCidr:
+    Description: CIDR block controlling incoming NFS and/or SMB traffic to FSx file system.
+    Default: ""
+    Type: String
+    AllowedPattern: ^((\d{1,3})\.(\d{1,3})\.(\d{1,3})\.(\d{1,3})/(\d{1,2}))?$
+    ConstraintDescription: ClientIP must be a valid IP or network range of the form x.x.x.x/x. specify your IP/NETMASK (e.g x.x.x/32 or x.x.x.x/24 for subnet range)
+  SecurityGroupName:
+    Type: String
+    Description: (Optional) An existing security group to associate to the file system (must be in same VPC). If none is provided, a new security group will be created.
+    Default: ""
+  KmsKeyId:
+    Type: String
+    Description: (Optional) An existing ID of the AWS Key Management Service (AWS KMS) key used to encrypt Amazon FSx file system data. If none is provided, the default aws/fsx encryption key will be used.
+    Default: ""
+  OntapVolumeStyle:
+    Type: String
+    Description: Style of the file system's non-root volume. Default is set to FLEXVOL.
+    Default: FLEXVOL
+    AllowedValues:
+      - FLEXVOL
+      - FLEXGROUP
+  OntapStorageCapacity:
+    Type: Number
+    Description: Storage capacity for the file system (GiB). Default is set to 1,024 GiB (1 TiB).
+    ConstraintDescription: "Minimum: 1,024 GiB"
+    Default: 1024
+    MinValue: 1024
+  OntapVolumeGiBSize:
+    Type: Number
+    Description: Size of the non-root volume (GiB). Default is set to 1,024 GiB (1 TiB).
+    ConstraintDescription: "Minimum: 1 GiB"
+    Default: 1024
+    MinValue: 1
+  OntapHAPairs:
+    Type: Number
+    Description: Number of high-availability (HA) pairs of file servers will power your file system. Default is set to 1 HA pair.
+    ConstraintDescription: "Minimum: 1 HA pair"
+    Default: 1
+    MinValue: 1
+  OntapDiskIopsMode:
+    Type: String
+    Description: Specifies whether the file system is using the AUTOMATIC setting of SSD IOPS of 3 IOPS per GB of storage capacity, or if it is using a USER_PROVISIONED value. Default is set to AUTOMATIC.
+    Default: "AUTOMATIC"
+    AllowedValues:
+      - "AUTOMATIC"
+      - "USER_PROVISIONED"
+  OntapDiskIops:
+    Type: Number
+    Description: Total number of SSD IOPS provisioned for the file system if using USER_PROVISIONED for file system's disk IOPS. Default is set to 3,072 SSD IOPS.
+    ConstraintDescription: "Minimum: 3,072 SSD IOPS"
+    Default: 3072
+    MinValue: 3072
+  OntapThroughputCapacity:
+    Type: Number
+    Description: Throughput capacity for the file system (MBps). Default is set to 384 MBps.
+    ConstraintDescription: "Minimum: 384 MBps"
+    Default: 384
+    MinValue: 384
+  OntapSecurityStyle:
+    Type: String
+    Description: Security style of the file system's volumes. Default is set to UNIX.
+    Default: UNIX
+    AllowedValues:
+      - UNIX
+      - NTFS
+      - MIXED
+  OntapVolumeJunctionPath:
+    Type: String
+    Description: The location in the storage virtual machine's namespace where the non-root volume is mounted. Default is set to /vol1.
+    ConstraintDescription: "Must start with /"
+    Default: "/vol1"
+    AllowedPattern: "^/[a-zA-Z0-9-_/]+$"
+  EnableActiveDirectory:
+    Type: String
+    Description: Enable file system to join an Active Directory. Required for Windows SMB clients to mount file system. Default is set to false.
+    Default: "false"
+    AllowedValues:
+      - "true"
+      - "false"
+  ActiveDirectoryName:
+    Type: String
+    Description: Fully Qualified Domain Name (FQDN) for the Active Directory.
+    Default: ""
+  DNSServerIPs:
+    Type: CommaDelimitedList
+    Description: A comma separated list of DNS server IPs of the Active Directory.
+    Default: ""
+  ServiceAccountCredentialsSecretArn:
+    Type: String
+    Description: Directory Service Root (Service Account) Credentials Secret ARN. The username and password for the Active Directory ServiceAccount user formatted as a username:password key/value pair.
+    ConstraintDescription: "Secret name can be 512 characters long and may include letters, numbers, and the following characters: /_+=.@-."
+    AllowedPattern: ^$|^(?:arn:(?:aws|aws-us-gov|aws-cn):secretsmanager:[a-z0-9-]+:[0-9]{12}:secret:[A-Za-z0-9\-\_\+\=\/\.\@]{1,519})?$
+    Default: ""
+  ComputersOU:
+    Type: String
+    Description: Organization Unit (OU) for compute and storage servers in the Active Directory.
+    Default: ""
+  SudoersGroupName:
+    Type: String
+    Description: Group name of users who are have administrative (sudo) access in the Active Directory.
+    Default: ""
+  CIFSShareName:
+    Type: String
+    Description: (Optional) Automatically create a basic CIFS share with the provided name preconfigured with R/W permissions for all AD users.
+    Default: ""
+
+Conditions:
+  UseActiveDirectory: !Equals [!Ref EnableActiveDirectory, "true"]
+  CreateSecurityGroup: !Equals [!Ref SecurityGroupName, ""]
+  UseExistingSecurityGroup: !Not [!Equals [!Ref SecurityGroupName, ""]]
+  UseProvidedKMSKey: !Not [!Equals [!Ref KmsKeyId, ""]]
+  SetOntapDiskIops: !Equals [!Ref OntapDiskIopsMode, "USER_PROVISIONED"]
+  CreateCIFSShare: !Not [!Equals [!Ref CIFSShareName, ""]]
+  AddSMBAccess: !And
+    - !Condition UseActiveDirectory
+    - !Condition CreateSecurityGroup
+  AddSSHAccess: !And
+    - !Condition UseActiveDirectory
+    - !Condition CreateSecurityGroup
+    - !Condition CreateCIFSShare
+
+Rules:
+  ActiveDirectoryParametersRule:
+    RuleCondition: !Equals [!Ref EnableActiveDirectory, "true"]
+    Assertions:
+      - Assert: !And
+        - !Not [!Equals [!Ref ActiveDirectoryName, ""]]
+        - !Not [!EachMemberEquals [!Ref DNSServerIPs, ""]]
+        - !Not [!Equals [!Ref ServiceAccountCredentialsSecretArn, ""]]
+        - !Not [!Equals [!Ref ComputersOU, ""]]
+        - !Not [!Equals [!Ref SudoersGroupName, ""]]
+        AssertDescription: Joining the file system to an Active Directory has been enabled, all Active Directory related parameters must be specified
+  CIFSShareCreationParametersRule:
+    RuleCondition: !Not [!Equals [!Ref CIFSShareName, ""]]
+    Assertions:
+      - Assert: !Not [!Equals [!Ref EnableActiveDirectory, "false"]]
+        AssertDescription: Must join an Active Directory to create a CIFS share
+
+Resources:
+  OntapFileSystem:
+    Type: AWS::FSx::FileSystem
+    DeletionPolicy: Delete
+    UpdateReplacePolicy: Delete
+    Properties:
+      FileSystemType: ONTAP
+      StorageCapacity: !Ref OntapStorageCapacity
+      SubnetIds:
+         - !Ref SubnetId
+      SecurityGroupIds:
+        - !If 
+          - CreateSecurityGroup
+          - !Ref OntapSecurityGroup
+          - !GetAtt SecurityGroupLookup.GroupId
+      KmsKeyId: !If
+        - UseProvidedKMSKey
+        - !Ref KmsKeyId
+        - !Ref AWS::NoValue
+      OntapConfiguration:
+        DeploymentType: SINGLE_AZ_2
+        FsxAdminPassword: !If 
+        - CreateCIFSShare
+        - !Sub '{{resolve:secretsmanager:${FSxAdminSecret}:SecretString}}'
+        - !Ref AWS::NoValue
+        HAPairs: !Ref OntapHAPairs
+        DiskIopsConfiguration: !If 
+          - SetOntapDiskIops
+          - Mode: !Ref OntapDiskIopsMode
+            Iops: !Ref OntapDiskIops
+          - !Ref AWS::NoValue
+        ThroughputCapacity: !Ref OntapThroughputCapacity
+        AutomaticBackupRetentionDays: 30
+
+  OntapSecurityGroup:
+    Type: AWS::EC2::SecurityGroup
+    Condition: CreateSecurityGroup
+    Properties:
+      GroupDescription: Security group for FSx ONTAP
+      VpcId: !Ref VpcId
+      SecurityGroupIngress:
+        - IpProtocol: tcp
+          FromPort: 111
+          ToPort: 111
+          CidrIp: !Ref ClientIpCidr
+          Description: Allow NFS traffic from Client IP Cidr
+        - IpProtocol: udp
+          FromPort: 111
+          ToPort: 111
+          CidrIp: !Ref ClientIpCidr
+          Description: Allow NFS traffic from Client IP Cidr
+        - IpProtocol: tcp
+          FromPort: 2049
+          ToPort: 2049
+          CidrIp: !Ref ClientIpCidr
+          Description: Allow NFS traffic from Client IP Cidr
+        - IpProtocol: udp
+          FromPort: 2049
+          ToPort: 2049
+          CidrIp: !Ref ClientIpCidr
+          Description: Allow NFS traffic from Client IP Cidr
+        - IpProtocol: tcp
+          FromPort: 20048
+          ToPort: 20048
+          CidrIp: !Ref ClientIpCidr
+          Description: Allow NFS traffic from Client IP Cidr
+        - IpProtocol: udp
+          FromPort: 20048
+          ToPort: 20048
+          CidrIp: !Ref ClientIpCidr
+          Description: Allow NFS traffic from Client IP Cidr
+        - !If 
+          - AddSMBAccess
+          - IpProtocol: tcp
+            FromPort: 139
+            ToPort: 139
+            CidrIp: !Ref ClientIpCidr
+            Description: Allow SMB traffic from Client IP Cidr
+          - !Ref AWS::NoValue
+        - !If 
+          - AddSMBAccess
+          - IpProtocol: tcp
+            FromPort: 445
+            ToPort: 445
+            CidrIp: !Ref ClientIpCidr
+            Description: Allow SMB traffic from Client IP Cidr
+          - !Ref AWS::NoValue
+        - !If 
+          - AddSSHAccess
+          - IpProtocol: tcp
+            FromPort: 22
+            ToPort: 22
+            CidrIp: !GetAtt SubnetCidrLookup.CidrBlock
+            Description: Allow SSH traffic from Subnet Cidr
+          - !Ref AWS::NoValue
+
+
+  OntapStorageVirtualMachine:
+    Type: AWS::FSx::StorageVirtualMachine
+    Properties:
+      FileSystemId: !Ref OntapFileSystem
+      Name: !Join ["", ["FSXOntapSVM_", !Select [0, !Split ["-", !Select [2, !Split ["/", !Ref "AWS::StackId"]]]]]]
+      RootVolumeSecurityStyle: !Ref OntapSecurityStyle
+      ActiveDirectoryConfiguration: !If 
+        - UseActiveDirectory
+        - NetBiosName: !Join ["", ["SVM-", !Select [0, !Split ["-", !Select [2, !Split ["/", !Ref "AWS::StackId"]]]]]]
+          SelfManagedActiveDirectoryConfiguration:
+            DomainName: !Ref ActiveDirectoryName
+            DnsIps: !Ref DNSServerIPs
+            UserName: !GetAtt ServiceAccountResolver.Username
+            Password: !GetAtt ServiceAccountResolver.Password
+            OrganizationalUnitDistinguishedName: !Ref ComputersOU
+            FileSystemAdministratorsGroup: !Ref SudoersGroupName
+        - !Ref AWS::NoValue
+  
+  OntapVolume:
+    Type: AWS::FSx::Volume
+    Properties:
+      VolumeType: ONTAP
+      Name: !Join ["", ["FSXOntapVol_", !Select [0, !Split ["-", !Select [2, !Split ["/", !Ref "AWS::StackId"]]]]]]
+      OntapConfiguration:
+        StorageVirtualMachineId: !Ref OntapStorageVirtualMachine
+        VolumeStyle: !Ref OntapVolumeStyle
+        SizeInBytes: !GetAtt ConvertGiBToBytes.Bytes
+        OntapVolumeType: RW
+        JunctionPath: !Ref OntapVolumeJunctionPath
+        StorageEfficiencyEnabled: true
+        SecurityStyle: !Ref OntapSecurityStyle
+        SnapshotPolicy: default
+        TieringPolicy:
+          Name: NONE
+  
+  FSxAdminSecret:
+    Type: AWS::SecretsManager::Secret
+    Condition: CreateCIFSShare
+    UpdateReplacePolicy: Retain
+    DeletionPolicy: Delete
+    Properties:
+      Description: "Password for the FSx ONTAP file system administrator account"
+      GenerateSecretString:
+        PasswordLength: 32
+        ExcludeCharacters: '"@/\\'
+        ExcludePunctuation: true
+        RequireEachIncludedType: true
+
+  FSxOntapAdminNode:
+    Type: AWS::EC2::Instance
+    DependsOn: OntapVolume
+    Condition: CreateCIFSShare
+    CreationPolicy:
+      ResourceSignal:
+        Timeout: PT10M
+    DeletionPolicy: Delete
+    UpdateReplacePolicy: Retain
+    Metadata:
+      "AWS::CloudFormation::Init":
+        configSets:
+          setup:
+            - install_dependencies
+        install_dependencies:
+          packages:
+            yum:
+              expect: []
+              jq: []
+              unzip: []
+              amazon-cloudwatch-agent: []
+    Properties:
+      IamInstanceProfile: !Ref AdminNodeInstanceProfile
+      ImageId: '{{resolve:ssm:/aws/service/ami-amazon-linux-latest/amzn2-ami-hvm-x86_64-gp2}}'
+      InstanceType: t3.micro
+      EbsOptimized: true
+      Monitoring: true
+      SecurityGroupIds:
+        - !Ref AdminNodeSecurityGroup
+      SubnetId: !Ref SubnetId
+      Tags:
+        - Key: "Name"
+          Value: !Sub [ "FSxOntapAdminNode-${StackIdSuffix}", {StackIdSuffix: !Select [1, !Split ['/', !Ref 'AWS::StackId']]}]
+      BlockDeviceMappings:
+        - DeviceName: /dev/xvda
+          Ebs:
+            VolumeSize: 8
+            VolumeType: gp2
+            Encrypted: true
+      InstanceInitiatedShutdownBehavior: terminate
+      UserData:
+        Fn::Base64:
+          !Sub 
+            - |
+              #!/bin/bash
+
+              # Function to handle errors and signal failure
+              function error_exit() {
+                # Signal failure
+                /opt/aws/bin/cfn-signal -e 1 \
+                  --stack ${AWS::StackName} \
+                  --resource FSxOntapAdminNode \
+                  --region ${AWS::Region}
+                exit 1
+              }
+
+              # Set error handling
+              set -e
+              trap 'error_exit' ERR
+
+              # Redirect all output to a log file
+              exec > >(tee /var/log/user-data.log|logger -t user-data -s 2>/dev/console) 2>&1
+
+              # Install cfn-init helper scripts
+              yum update -y aws-cfn-bootstrap
+              
+              # Install dependencies
+              /opt/aws/bin/cfn-init -v \
+                --stack ${AWS::StackName} \
+                --resource FSxOntapAdminNode \
+                --configsets setup \
+                --region ${AWS::Region}
+              
+              # Configure CloudWatch agent
+              cat << 'EOF' > /opt/aws/amazon-cloudwatch-agent/bin/config.json
+              {
+                "logs": {
+                  "logs_collected": {
+                    "files": {
+                      "collect_list": [
+                        {
+                          "file_path": "/var/log/user-data.log",
+                          "log_group_name": "${AWS::StackName}-${StackSuffix}/FSxOntapAdminNode",
+                          "log_stream_name": "{instance_id}",
+                          "timestamp_format": "%Y-%m-%d %H:%M:%S"
+                        }
+                      ]
+                    }
+                  }
+                }
+              }
+              EOF
+
+              # Start CloudWatch agent
+              /opt/aws/amazon-cloudwatch-agent/bin/amazon-cloudwatch-agent-ctl -a fetch-config -m ec2 -s -c file:/opt/aws/amazon-cloudwatch-agent/bin/config.json
+              /opt/aws/amazon-cloudwatch-agent/bin/amazon-cloudwatch-agent-ctl -a start
+
+              # Remove AWS CLI version 1
+              yum remove -y awscli
+
+              # Install AWS CLI version 2
+              curl "https://awscli.amazonaws.com/awscli-exe-linux-x86_64.zip" -o "awscliv2.zip"
+              unzip awscliv2.zip
+              ./aws/install --bin-dir /usr/local/bin --install-dir /usr/local/aws-cli --update
+
+              # Verify AWS CLI v2 installation and add to PATH
+              export PATH=/usr/local/bin:$PATH
+              aws --version
+
+              # Get FSx admin password from Secrets Manager
+              FSX_ADMIN_SECRET=$(aws secretsmanager get-secret-value \
+                --secret-id ${FSxAdminSecretARN} \
+                --region ${AWS::Region} \
+                --query 'SecretString' \
+                --output text)
+
+              # Get SVM name from StorageVirtualMachineId
+              SVM_NAME=$(aws fsx describe-storage-virtual-machines \
+                --storage-virtual-machine-ids ${StorageVirtualMachineId} \
+                --region ${AWS::Region} \
+                --query 'StorageVirtualMachines[0].Name' \
+                --output text)
+
+              # Create expect script for SSH connection
+              cat << 'EOF' > /root/ssh_script.exp
+              #!/usr/bin/expect -f
+
+              # Set timeout and variables
+              set timeout 60
+              set fsx_ontap_admin_username [lindex $argv 0]
+              set fsx_ontap_management_endpoint [lindex $argv 1]
+              set fsx_ontap_admin_password [lindex $argv 2]
+              set fsx_ontap_svm_name [lindex $argv 3]
+              set share_name [lindex $argv 4]
+              set share_path [lindex $argv 5]
+
+              # Check if all required arguments are provided
+              if {[llength $argv] != 6} {
+                  puts "Error: Missing required arguments"
+                  puts "Usage: $argv0 username endpoint password svm_name share_name share_path"
+                  exit 1
+              }
+
+              # Error handling procedure
+              proc handle_error {message} {
+                  puts "Error: $message"
+                  exit 1
+              }
+
+              # Log start of script
+              puts "Starting SSH connection to $fsx_ontap_management_endpoint..."
+
+              # Spawn SSH connection with error handling
+              if {[catch {spawn ssh $fsx_ontap_admin_username@$fsx_ontap_management_endpoint} err]} {
+                  handle_error "Failed to spawn SSH connection: $err"
+              }
+
+              expect {
+                  timeout {
+                      handle_error "Connection timed out"
+                  }
+                  "Connection refused" {
+                      handle_error "Connection refused by host"
+                  }
+                  "No route to host" {
+                      handle_error "No route to host"
+                  }
+                  "yes/no" {
+                      send "yes\r"
+                      exp_continue
+                  }
+                  "*?assword:" {
+                      send "$fsx_ontap_admin_password\r"
+                  }
+                  eof {
+                      handle_error "SSH connection failed"
+                  }
+              }
+
+              # Handle password authentication
+              expect {
+                  timeout {
+                      handle_error "Password authentication timed out"
+                  }
+                  "Permission denied" {
+                      handle_error "Authentication failed - incorrect password"
+                  }
+                  "> " {
+                      puts "Successfully logged in"
+                  }
+                  eof {
+                      handle_error "Connection closed unexpectedly"
+                  }
+              }
+
+              # Create CIFS share
+              send "vserver cifs share create -vserver $fsx_ontap_svm_name -share-name $share_name -path $share_path\r"
+
+              # Check for command execution status
+              expect {
+                  timeout {
+                      handle_error "Command execution timed out"
+                  }
+                  "*Error*" {
+                      handle_error "CIFS share creation failed"
+                  }
+                  "*already exists*" {
+                      puts "Warning: Share already exists"
+                  }
+                  "> " {
+                      puts "CIFS share created successfully"
+                  }
+              }
+
+              # Exit gracefully
+              send "exit\r"
+              expect eof
+
+              # Check if the script completed successfully
+              if {[string match "Error*" [wait]]} {
+                  handle_error "Script execution failed"
+              }
+
+              puts "Script completed successfully"
+              exit 0
+              EOF
+
+              chmod +x /root/ssh_script.exp
+
+              # Run the expect script
+              /root/ssh_script.exp "fsxadmin" "management.${FileSystemId}.fsx.${AWS::Region}.amazonaws.com" $FSX_ADMIN_SECRET $SVM_NAME "${ShareName}" "${SharePath}"
+
+              # Signal success
+              /opt/aws/bin/cfn-signal -e 0 \
+                --stack ${AWS::StackName} \
+                --resource FSxOntapAdminNode \
+                --region ${AWS::Region}
+
+              # Shutdown the instance after script completion
+              shutdown -h now
+            - FileSystemId: !Ref OntapFileSystem
+              StorageVirtualMachineId: !Ref OntapStorageVirtualMachine
+              FSxAdminSecretARN: !Ref FSxAdminSecret
+              StackSuffix: !Select [0, !Split ["-", !Select [2, !Split ["/", !Ref "AWS::StackId"]]]]
+              ShareName: !Ref CIFSShareName
+              SharePath: !Ref OntapVolumeJunctionPath
+
+  AdminNodeRole:
+    Type: AWS::IAM::Role
+    Condition: CreateCIFSShare
+    Properties:
+      AssumeRolePolicyDocument:
+        Version: '2012-10-17'
+        Statement:
+          - Effect: Allow
+            Principal:
+              Service: ec2.amazonaws.com
+            Action: sts:AssumeRole
+      ManagedPolicyArns:
+        - arn:aws:iam::aws:policy/AmazonSSMManagedInstanceCore
+        - arn:aws:iam::aws:policy/AmazonFSxReadOnlyAccess
+        - arn:aws:iam::aws:policy/CloudWatchAgentServerPolicy
+      Policies:
+        - PolicyName: FSxAdminSecretAccess
+          PolicyDocument:
+            Version: 2012-10-17
+            Statement:
+              - Effect: Allow
+                Action:
+                  - secretsmanager:GetSecretValue
+                Resource: !Ref FSxAdminSecret
+
+  AdminNodeInstanceProfile:
+    Type: AWS::IAM::InstanceProfile
+    Condition: CreateCIFSShare
+    Properties:
+      Roles:
+        - !Ref AdminNodeRole
+  
+  AdminNodeSecurityGroup:
+    Type: AWS::EC2::SecurityGroup
+    Condition: CreateCIFSShare
+    Properties:
+      GroupDescription: Security group for EC2 instance to access FSx ONTAP file system.
+      VpcId: !Ref VpcId
+      SecurityGroupIngress:
+        - IpProtocol: tcp
+          FromPort: 22
+          ToPort: 22
+          SourceSecurityGroupId: !If 
+            - CreateSecurityGroup
+            - !Ref OntapSecurityGroup
+            - !GetAtt SecurityGroupLookup.GroupId
+          Description: Allow SSH access from FSx ONTAP security group
+
+  ServiceAccountResolver:
+    Type: Custom::ServiceAccountResolver
+    Condition: UseActiveDirectory
+    Properties:
+      ServiceToken: !GetAtt ServiceAccountResolverFunction.Arn
+      ServiceTimeout: 60
+      SecretARN: !Ref ServiceAccountCredentialsSecretArn
+  
+  ServiceAccountResolverRole:
+    Type: AWS::IAM::Role
+    Condition: UseActiveDirectory
+    Properties:
+      AssumeRolePolicyDocument:
+        Version: 2012-10-17
+        Statement:
+          - Action:
+              - sts:AssumeRole
+            Effect: Allow
+            Principal:
+              Service:
+                - lambda.amazonaws.com
+      Policies:
+        - PolicyName: SecretsAccess
+          PolicyDocument:
+            Version: 2012-10-17
+            Statement:
+              - Effect: Allow
+                Action:
+                  - secretsmanager:GetSecretValue
+                Resource: !Ref ServiceAccountCredentialsSecretArn
+
+  ServiceAccountResolverFunction:
+    Type: AWS::Lambda::Function
+    Condition: UseActiveDirectory
+    Properties:
+      Timeout: 60
+      Runtime: python3.9
+      Handler: index.handler
+      Role: !GetAtt ServiceAccountResolverRole.Arn
+      Code:
+        ZipFile: |
+          import json
+          import cfnresponse
+          import boto3
+          
+          def handler(event, context):
+              secrets = boto3.client("secretsmanager")
+              secret_arn = event['ResourceProperties']['SecretARN']
+
+              response_status = cfnresponse.SUCCESS
+              response_data = {}
+              
+              if event['RequestType'] == 'Create':
+                  try:
+
+                      secret_response = secrets.get_secret_value(SecretId=secret_arn)
+                      secret_string = json.loads(secret_response['SecretString'])
+                      
+                      if not secret_string:
+                        raise ValueError("Secret is empty")
+
+                      username = list(secret_string.keys())[0]
+                      password = secret_string[username]
+
+                      response_data.update({
+                          'Username': username,
+                          'Password': password,
+                          'Message': 'Resource creation successful!'
+                      })
+                  except Exception as e:
+                      response_status = cfnresponse.FAILED
+                      response_data['Message'] = 'Resource creation failed!'
+              cfnresponse.send(event, context, response_status, response_data)
+  
+  SubnetCidrLookup:
+    Type: Custom::SubnetCidrLookup
+    Condition: AddSSHAccess
+    Properties:
+      ServiceToken: !GetAtt SubnetCidrLookupFunction.Arn
+      ServiceTimeout: 60
+      SubnetId: !Ref SubnetId
+
+  SubnetCidrLookupRole:
+    Type: AWS::IAM::Role
+    Condition: AddSSHAccess
+    Properties:
+      AssumeRolePolicyDocument:
+        Version: '2012-10-17'
+        Statement:
+          - Effect: Allow
+            Principal:
+              Service: lambda.amazonaws.com
+            Action: sts:AssumeRole
+      ManagedPolicyArns:
+        - arn:aws:iam::aws:policy/service-role/AWSLambdaBasicExecutionRole
+      Policies:
+        - PolicyName: EC2DescribeSubnets
+          PolicyDocument:
+            Version: '2012-10-17'
+            Statement:
+              - Effect: Allow
+                Action:
+                  - ec2:DescribeSubnets
+                Resource: '*'
+    
+  SubnetCidrLookupFunction:
+    Type: AWS::Lambda::Function
+    Condition: AddSSHAccess
+    Properties:
+      Timeout: 60
+      Runtime: python3.9
+      Handler: index.handler
+      Role: !GetAtt SubnetCidrLookupRole.Arn
+      Code:
+        ZipFile: |
+          import boto3
+          import cfnresponse
+          
+          def handler(event, context):
+              ec2_client = boto3.client('ec2')
+              try:
+                  if event['RequestType'] in ['Create', 'Update']:
+                      subnet_id = event['ResourceProperties']['SubnetId']
+                      
+                      subnet_response = ec2_client.describe_subnets(SubnetIds=[subnet_id])
+                      subnet_cidr = subnet_response['Subnets'][0]['CidrBlock']
+                      
+                      response_data = {'CidrBlock': subnet_cidr}
+                      cfnresponse.send(event, context, cfnresponse.SUCCESS, response_data)
+                  else:
+                      cfnresponse.send(event, context, cfnresponse.SUCCESS, {})
+              except Exception as e:
+                  cfnresponse.send(event, context, cfnresponse.FAILED, {'Error': str(e)})
+
+  SecurityGroupLookup:
+    Type: Custom::SecurityGroupLookup
+    Condition: UseExistingSecurityGroup
+    Properties:
+      ServiceToken: !GetAtt SecurityGroupLookupFunction.Arn
+      ServiceTimeout: 60
+      VpcId: !Ref VpcId
+      GroupName: !Ref SecurityGroupName
+
+  SecurityGroupLookupRole:
+    Type: AWS::IAM::Role
+    Condition: UseExistingSecurityGroup
+    Properties:
+      AssumeRolePolicyDocument:
+        Version: '2012-10-17'
+        Statement:
+          - Effect: Allow
+            Principal:
+              Service: lambda.amazonaws.com
+            Action: sts:AssumeRole
+      ManagedPolicyArns:
+        - arn:aws:iam::aws:policy/service-role/AWSLambdaBasicExecutionRole
+      Policies:
+        - PolicyName: DescribeSecurityGroups
+          PolicyDocument:
+            Version: '2012-10-17'
+            Statement:
+              - Effect: Allow
+                Action: ec2:DescribeSecurityGroups
+                Resource: '*'
+
+  SecurityGroupLookupFunction:
+    Type: AWS::Lambda::Function
+    Condition: UseExistingSecurityGroup
+    Properties:
+      Timeout: 60
+      Runtime: python3.9
+      Handler: index.handler
+      Role: !GetAtt SecurityGroupLookupRole.Arn
+      Code:
+        ZipFile: |
+          import boto3
+          import cfnresponse
+          
+          def handler(event, context):
+            try:
+              if event['RequestType'] in ['Create', 'Update']:
+                ec2 = boto3.client('ec2')
+                vpc_id = event['ResourceProperties']['VpcId']
+                group_name = event['ResourceProperties']['GroupName']
+                
+                response = ec2.describe_security_groups(
+                  Filters=[
+                    {'Name': 'vpc-id', 'Values': [vpc_id]},
+                    {'Name': 'group-name', 'Values': [group_name]}
+                  ]
+                )
+                
+                if len(response['SecurityGroups']) == 0:
+                  raise Exception(f"Security group {group_name} not found in VPC {vpc_id}")
+                
+                group_id = response['SecurityGroups'][0]['GroupId']
+                cfnresponse.send(event, context, cfnresponse.SUCCESS, 
+                               {'GroupId': group_id})
+              else:
+                cfnresponse.send(event, context, cfnresponse.SUCCESS, {})
+            except Exception as e:
+              cfnresponse.send(event, context, cfnresponse.FAILED, 
+                             {'Error': str(e)})
+  
+  ConvertGiBToBytes:
+    Type: Custom::SecurityGroupLookup
+    Properties:
+      ServiceToken: !GetAtt ConvertGiBToBytesFunction.Arn
+      ServiceTimeout: 60
+      GiB: !Ref OntapVolumeGiBSize
+
+  ConvertGiBToBytesRole:
+    Type: AWS::IAM::Role
+    Properties:
+      AssumeRolePolicyDocument:
+        Version: '2012-10-17'
+        Statement:
+          - Effect: Allow
+            Principal:
+              Service: lambda.amazonaws.com
+            Action: sts:AssumeRole
+      ManagedPolicyArns:
+        - arn:aws:iam::aws:policy/service-role/AWSLambdaBasicExecutionRole
+
+  ConvertGiBToBytesFunction:
+    Type: AWS::Lambda::Function
+    Properties:
+      Timeout: 60
+      Runtime: python3.9
+      Handler: index.handler
+      Role: !GetAtt ConvertGiBToBytesRole.Arn
+      Code:
+        ZipFile: |
+          import cfnresponse
+          
+          def handler(event, context):
+            try:
+              if event['RequestType'] in ['Create', 'Update']:
+
+                # Get the GiB value from the resource properties
+                gib = event['ResourceProperties']['GiB']
+                
+                # Convert GiB to bytes (1 GiB = 1024^3 bytes)
+                bytes = int(float(gib) * 1024 * 1024 * 1024)
+                
+                cfnresponse.send(event, context, cfnresponse.SUCCESS, 
+                               {'Bytes': bytes})
+              else:
+                cfnresponse.send(event, context, cfnresponse.SUCCESS, {})
+            except Exception as e:
+              cfnresponse.send(event, context, cfnresponse.FAILED, 
+                             {'Error': str(e)})
+
+Outputs:
+  FileSystemId:
+    Description: The ID of the FSx for ONTAP file system.
+    Value: !Ref OntapFileSystem
+
+  StorageVirtualMachineId:
+    Description: The ID of the FSx ONTAP Storage Virtual Machine.
+    Value: !Ref OntapStorageVirtualMachine
+
+  StorageVirtualMachineName:
+    Description: The name of the FSx ONTAP Storage Virtual Machine.
+    Value: !Join ["", ["FSXOntapSVM_", !Select [0, !Split ["-", !Select [2, !Split ["/", !Ref "AWS::StackId"]]]]]]
+
+  VolumeId:
+    Description: The ID of the FSx ONTAP volume.
+    Value: !Ref OntapVolume
+
+  VolumeName:
+    Description: The name of the FSx ONTAP volume
+    Value: !Join ["", ["FSXOntapVol_", !Select [0, !Split ["-", !Select [2, !Split ["/", !Ref "AWS::StackId"]]]]]]
+
+  SecurityGroupId:
+    Description: The ID of the security group for the FSx ONTAP file system.
+    Value: !If 
+    - CreateSecurityGroup
+    - !Ref OntapSecurityGroup
+    - !GetAtt SecurityGroupLookup.GroupId
+  
+  CloudWatchLogGroupName:
+    Description: The CloudWatch log group name for the FSxOntapAdminNode EC2 instance.
+    Value: !Join ["", [!Ref "AWS::StackName", "-", !Select [0, !Split ["-", !Select [2, !Split ["/", !Ref "AWS::StackId"]]]], "/FSxOntapAdminNode"]]
+    Condition: CreateCIFSShare
+
+  FSxAdminSecretArn:
+    Description: The resource ARN of the secret containing the fsxadmin credentials for the FSx ONTAP file system.
+    Value: !Ref FSxAdminSecret
+    Condition: CreateCIFSShare
