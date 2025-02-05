@@ -6,6 +6,7 @@ Metadata:
       - Label:
           default: "AD Configuration"
         Parameters:
+          - CreateActiveDirectory
           - DomainName
           - SubDomain
           - AdminPassword
@@ -21,10 +22,10 @@ Metadata:
 
 Parameters:
   DomainName:
-    Description: Active Directory Domain Name. The supplied LDIF file which provides bootstrap users uses this domain. A different LDIF file needs to be provided for a different domain.
+    Description: (Optional) Active Directory Domain Name. The supplied LDIF file which provides bootstrap users uses this domain. A different LDIF file needs to be provided for a different domain.
     Type: String
     Default: corp.res.com
-    AllowedPattern: ^([a-zA-Z0-9]+[\\.-])+([a-zA-Z0-9])+$
+    AllowedPattern: ^$|^([a-zA-Z0-9]+[\\.-])+([a-zA-Z0-9])+$
   SubDomain:
     Description: (Optional, but required for GovCloud regions) SubDomain for the Active Directory Domain Name. If provided, Active Directory Domain Name will be {SubDomain}.{DomainName}
     Type: String
@@ -37,21 +38,20 @@ Parameters:
     Description: (Optional) EnvironmentName must start with "res-"and should be less than or equal to 11 characters. Required to generate certificates.
     Type: String
     AllowedPattern: ^$|^res-[A-Za-z\-\_0-9]{0,7}$
-
     Default: res-demo
   AdminPassword:
-    Description: Provide the Active Directory Administrator Account Password Directly or Resource ARN to Secret Containing Password.
+    Description: (Optional) Provide the Active Directory Administrator Account Password Directly or Resource ARN to Secret Containing Password.
     Type: String
-    MinLength: 8
+    MinLength: 0
     MaxLength: 2048
-    AllowedPattern: (arn:(aws(-cn|-us-gov)?):secretsmanager:(us(-gov)?|ap|ca|cn|eu|il|sa)-(central|(north|south)?(east|west)?)-\d:\d{12}:secret:[a-zA-Z0-9/_+=.@-]+)|(?=^.{8,64}$)((?=.*\d)(?=.*[A-Z])(?=.*[a-z])|(?=.*\d)(?=.*[^A-Za-z0-9\s])(?=.*[a-z])|(?=.*[^A-Za-z0-9\s])(?=.*[A-Z])(?=.*[a-z])|(?=.*\d)(?=.*[A-Z])(?=.*[^A-Za-z0-9\s]))^.*
+    AllowedPattern: ^$|(arn:(aws(-cn|-us-gov)?):secretsmanager:(us(-gov)?|ap|ca|cn|eu|il|sa)-(central|(north|south)?(east|west)?)-\d:\d{12}:secret:[a-zA-Z0-9/_+=.@-]+)|(?=^.{8,64}$)((?=.*\d)(?=.*[A-Z])(?=.*[a-z])|(?=.*\d)(?=.*[^A-Za-z0-9\s])(?=.*[a-z])|(?=.*[^A-Za-z0-9\s])(?=.*[A-Z])(?=.*[a-z])|(?=.*\d)(?=.*[A-Z])(?=.*[^A-Za-z0-9\s]))^.*
     NoEcho: true
   ServiceAccountPassword:
-    Description: Provide the Active Directory Service Account Password Directly or Resource ARN to Secret Containing Password.
+    Description: (Optional) Provide the Active Directory Service Account Password Directly or Resource ARN to Secret Containing Password.
     Type: String
-    MinLength: 8
+    MinLength: 0
     MaxLength: 2048
-    AllowedPattern: (arn:(aws(-cn|-us-gov)?):secretsmanager:(us(-gov)?|ap|ca|cn|eu|il|sa)-(central|(north|south)?(east|west)?)-\d:\d{12}:secret:[a-zA-Z0-9/_+=.@-]+)|(?=^.{8,64}$)((?=.*\d)(?=.*[A-Z])(?=.*[a-z])|(?=.*\d)(?=.*[^A-Za-z0-9\s])(?=.*[a-z])|(?=.*[^A-Za-z0-9\s])(?=.*[A-Z])(?=.*[a-z])|(?=.*\d)(?=.*[A-Z])(?=.*[^A-Za-z0-9\s]))^.*
+    AllowedPattern: ^$|(arn:(aws(-cn|-us-gov)?):secretsmanager:(us(-gov)?|ap|ca|cn|eu|il|sa)-(central|(north|south)?(east|west)?)-\d:\d{12}:secret:[a-zA-Z0-9/_+=.@-]+)|(?=^.{8,64}$)((?=.*\d)(?=.*[A-Z])(?=.*[a-z])|(?=.*\d)(?=.*[^A-Za-z0-9\s])(?=.*[a-z])|(?=.*[^A-Za-z0-9\s])(?=.*[A-Z])(?=.*[a-z])|(?=.*\d)(?=.*[A-Z])(?=.*[^A-Za-z0-9\s]))^.*
     NoEcho: true
   LDIFS3Path:
     Description: (Optional) An S3 Path (without the s3://) to an LDIF file that will be used during stack creation.
@@ -65,10 +65,12 @@ Parameters:
          - "True"
          - "False"
   Keypair:
-    Description: EC2 Keypair to access AD management instances.
-    Type: AWS::EC2::KeyPair::KeyName
+    Description: (Optional) EC2 Keypair to access AD management instances.
+    Type: String
+    MinLength: 0
+    MaxLength: 2048
   ClientIpCidr:
-    Description: CIDR controlling incoming traffic to AD management instances.
+    Description: (Optional) CIDR controlling incoming traffic to AD management instances.
     Default: ""
     Type: String
     AllowedPattern: ^((\d{1,3})\.(\d{1,3})\.(\d{1,3})\.(\d{1,3})/(\d{1,2}))?$
@@ -93,6 +95,13 @@ Parameters:
     AllowedValues:
       - "True"
       - "False"
+  CreateActiveDirectory:
+    Description: Create a demo Active Directory for RES to connect to. If `True` is selected, the following parameters are required DomainName, AdminPassword, ServiceAccountPassword, and Keypair.
+    Type: String
+    Default: "False"
+    AllowedValues:
+         - "True"
+         - "False"
 
 Conditions:
   GenerateCerts: !Not [!Equals [!Ref PortalDomainName, ""]]
@@ -100,6 +109,7 @@ Conditions:
   SubDomainNotProvided: !Equals [!Ref SubDomain, ""]
   InGovCloud: !Equals [!Ref 'AWS::Partition', "aws-us-gov"]
   RetainStorageAndNetworking: !Equals [!Ref RetainStorageResources, "True"]
+  CreateAD: !Equals [!Ref CreateActiveDirectory, "True"]
 
 Resources:
 
@@ -114,6 +124,7 @@ Resources:
       TemplateURL: https://aws-hpc-recipes.s3.us-east-1.amazonaws.com/main/recipes/net/hpc_large_scale/assets/main.yaml
 
   DirectoryService:
+    Condition: CreateAD
     Type: AWS::CloudFormation::Stack
     Properties:
       Parameters:
@@ -135,6 +146,7 @@ Resources:
       TemplateURL: https://aws-hpc-recipes.s3.us-east-1.amazonaws.com/main/recipes/dir/demo_managed_ad/assets/main.yaml
 
   WindowsManagementHost:
+    Condition: CreateAD
     Type: AWS::CloudFormation::Stack
     Properties:
       Parameters:
@@ -532,29 +544,37 @@ Outputs:
   Keypair:
     Description: Keypair used for management instances
     Value: !Ref Keypair
+    Condition: CreateAD
   ActiveDirectoryName:
     Description: Fully Qualified Domain Name (FQDN) for your Active Directory
     Value: !If [ SubDomainNotProvided, !Ref DomainName, !Join [ ".", [ !Ref SubDomain, !Ref DomainName] ] ]
+    Condition: CreateAD
   ADShortName:
     Description: Please provide the short name in Active directory
     Value: !GetAtt [ DirectoryService, Outputs.DomainShortName ]
+    Condition: CreateAD
   LDAPConnectionURI:
     Value: !Sub
       - ldap://${DomainName}
       - { DomainName: !If [ SubDomainNotProvided, !Ref DomainName, !Join [ ".", [ !Ref SubDomain, !Ref DomainName] ] ] }
+    Condition: CreateAD
   SudoersGroupName:
     Value: RESAdministrators
+    Condition: CreateAD
   LDAPBase:
     Value: !Sub
       - dc=${dc}
       - { dc: !Join [",dc=", !Split [".", !If [ SubDomainNotProvided, !Ref DomainName, !Join [ ".", [ !Ref SubDomain, !Ref DomainName] ] ] ]] }
+    Condition: CreateAD
   ServiceAccountCredentialsSecretArn:
     Value: !GetAtt [ DirectoryService, Outputs.CredentialsSecretArn ]
+    Condition: CreateAD
   ServiceAccountUserDN:
     Description: The Distinguished Name (DN) of the ServiceAccount user in your Active Directory
     Value: !Sub
       - CN=ServiceAccount,OU=Users,OU=${ou},DC=${dc}
       - {dc: !Join [",DC=", !Split [".", !If [ SubDomainNotProvided, !Ref DomainName, !Join [ ".", [ !Ref SubDomain, !Ref DomainName]]]]], ou:  !GetAtt [ DirectoryService, Outputs.DomainShortName ]}
+    Condition: CreateAD
   SharedHomeFilesystemId:
     Value: !GetAtt [ Storage, Outputs.EFSFilesystemId ]
   UsersOU:
@@ -562,17 +582,21 @@ Outputs:
     Value: !Sub
       - OU=Users,OU=RES,OU=${ou},DC=${dc}
       - { dc: !Join [",DC=", !Split [".", !If [ SubDomainNotProvided, !Ref DomainName, !Join [ ".", [ !Ref SubDomain, !Ref DomainName]]]]], ou:  !GetAtt [ DirectoryService, Outputs.DomainShortName ]}
+    Condition: CreateAD
   GroupsOU:
     Description: The OU for groups that users belong to who might join the system. The value provided here is based off of a supplied LDIF file.
     Value: !Sub
       - OU=Users,OU=RES,OU=${ou},DC=${dc}
       - { dc: !Join [",DC=", !Split [".", !If [ SubDomainNotProvided, !Ref DomainName, !Join [ ".", [ !Ref SubDomain, !Ref DomainName]]]]], ou:  !GetAtt [ DirectoryService, Outputs.DomainShortName ]}
+    Condition: CreateAD
   ComputersOU:
     Description: The OU for computers that join the AD. The value provided here is based off of a supplied LDIF file.
     Value: !Sub
       - OU=Computers,OU=RES,OU=${ou},DC=${dc}
       - { dc: !Join [",DC=", !Split [".", !If [ SubDomainNotProvided, !Ref DomainName, !Join [ ".", [ !Ref SubDomain, !Ref DomainName]]]]], ou:  !GetAtt [ DirectoryService, Outputs.DomainShortName ]}
+    Condition: CreateAD
   ActiveDirectoryDNSIPs:
     Description: The DNS IPs of your Active Directory
     Value: !Join [ ",", [ !GetAtt [ DirectoryService, Outputs.DnsIpAddress1 ], !GetAtt [ DirectoryService, Outputs.DnsIpAddress2 ] ] ]
+    Condition: CreateAD
 
