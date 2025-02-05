@@ -7,10 +7,14 @@ Metadata:
   AWS::CloudFormation::Interface:
     ParameterGroups:
       - Label:
-          default: PCS cluster configuration
+          default: PCS Cluster configuration
         Parameters:
+          - SlurmVersion
+      - Label:
+          default: PCS ComputeNodeGroups configuration
+        Parameters:
+          - NodeArchitecture
           - KeyName
-          - AmiId
           - ClientIpCidr
       - Label:
           default: HPC Recipes configuration
@@ -20,17 +24,26 @@ Metadata:
 
 Parameters:
 
+  NodeArchitecture:
+    Type: String
+    Default: x86
+    AllowedValues:
+      - x86
+      - Graviton
+    Description: Architecture of the login and compute node instances
+
+  SlurmVersion:
+    Type: String
+    Default: 23.11
+    Description: Version of Slurm to use
+    AllowedValues:
+         - 23.11
+         - 24.05
+
   KeyName:
     Description: KeyPair to login to the head node
     Type: AWS::EC2::KeyPair::KeyName
     AllowedPattern: ".+"  # Required
-
-  AmiId:
-    Description: (Optional) ID of the AMI that the compute / login node groups run. Defaults to AWS PCS sample ami.
-    Type: String
-    Default: ''
-    AllowedValues:
-         - ''
 
   ClientIpCidr:
     Description: IP(s) allowed to directly access the login nodes. We recommend that you restrict it with your own IP/subnet (x.x.x.x/32 for your own ip or x.x.x.x/24 for range. Replace x.x.x.x with your own PUBLIC IP. You can get your public IP using tools such as https://ifconfig.co/)
@@ -52,12 +65,20 @@ Parameters:
     Description: HPC Recipes for AWS release branch
     AllowedPattern: '^(?!.*/\.git$)(?!.*/\.)(?!.*\\.\.)[a-zA-Z0-9-_\.]+$'
 
-Resources:
+Mappings:
 
-  PCSCfnProvider:
-    Type: AWS::CloudFormation::Stack
-    Properties:
-      TemplateURL: !Sub 'https://${HpcRecipesS3Bucket}.s3.amazonaws.com/${HpcRecipesBranch}/recipes/pcs/getting_started/assets/pcs-cfn.yaml'
+  Architecture:
+    AmiArchParameter:
+      Graviton: arm64
+      x86: x86_64
+    LoginNodeInstances:
+      Graviton: c7g.xlarge
+      x86: c6i.xlarge
+    ComputeNodeInstances:
+      Graviton: c7g.xlarge
+      x86: c6i.xlarge
+
+Resources:
 
   Networking:
     Type: AWS::CloudFormation::Stack
@@ -93,20 +114,18 @@ Resources:
       TemplateURL: !Sub 'https://${HpcRecipesS3Bucket}.s3.amazonaws.com/${HpcRecipesBranch}/recipes/pcs/getting_started/assets/pcs-cluster-sg.yaml'
 
   # Cluster
-
   PCSCluster:
-    Type: Custom::Resource
+    Type: AWS::PCS::Cluster
     Properties:
-      ServiceToken: !GetAtt [ PCSCfnProvider, Outputs.ServiceToken ]
-      clusterName: !Sub '${AWS::StackName}'
-      size: SMALL
-      scheduler:
-        type: SLURM
-        version: 23.11
-      networking:
-        subnetIds:
+      Name: !Sub '${AWS::StackName}'
+      Size: SMALL
+      Scheduler:
+        Type: SLURM
+        Version: !Ref SlurmVersion
+      Networking:
+        SubnetIds:
           - !GetAtt [ Networking, Outputs.DefaultPrivateSubnet ]
-        securityGroupIds:
+        SecurityGroupIds:
           - !GetAtt [ PCSSecurityGroup, Outputs.ClusterSecurityGroupId ]
 
   # Compute Node groups
@@ -136,63 +155,185 @@ Resources:
 
   # Compute Node groups - Login Nodes
   PCSNodeGroupLogin:
-    Type: Custom::Resource
+    Type: AWS::PCS::ComputeNodeGroup
     Properties:
-      ServiceToken: !GetAtt [ PCSCfnProvider, Outputs.ServiceToken ]
-      clusterIdentifier: !GetAtt [ PCSCluster, id ]
-      computeNodeGroupName: login
-      scalingConfiguration:
-        minInstanceCount: 1
-        maxInstanceCount: 1
-      iamInstanceProfileArn: !GetAtt [ PCSInstanceProfile, Outputs.InstanceProfileArn ]
-      customLaunchTemplate:
-        id: !GetAtt [ PCSLaunchTemplate, Outputs.LoginLaunchTemplateId ]
-        version: 1
-      subnetIds:
+      ClusterId: !GetAtt [PCSCluster, Id]
+      Name: login
+      ScalingConfiguration:
+        MinInstanceCount: 1
+        MaxInstanceCount: 1
+      IamInstanceProfileArn: !GetAtt [ PCSInstanceProfile, Outputs.InstanceProfileArn ]
+      CustomLaunchTemplate:
+        Id: !GetAtt [ PCSLaunchTemplate, Outputs.LoginLaunchTemplateId ]
+        Version: 1
+      SubnetIds:
         - !GetAtt [ Networking, Outputs.DefaultPublicSubnet ]
-      amiId: !Ref AmiId
-      instanceConfigs:
-        - instanceType: c6i.xlarge
+      AmiId: !GetAtt [PcsSampleAmi, AmiId]
+      InstanceConfigs:
+        - InstanceType: !FindInMap [ Architecture, LoginNodeInstances, !Ref NodeArchitecture ]
 
   # Compute Node groups - Compute Nodes
   PCSNodeGroupCompute:
-    Type: Custom::Resource
+    Type: AWS::PCS::ComputeNodeGroup
     Properties:
-      ServiceToken: !GetAtt [ PCSCfnProvider, Outputs.ServiceToken ]
-      clusterIdentifier: !GetAtt [ PCSCluster, id ]
-      computeNodeGroupName: compute-1
-      scalingConfiguration:
-        minInstanceCount: 0
-        maxInstanceCount: 4
-      iamInstanceProfileArn: !GetAtt [ PCSInstanceProfile, Outputs.InstanceProfileArn ]
-      customLaunchTemplate:
-        id: !GetAtt [ PCSLaunchTemplate, Outputs.ComputeLaunchTemplateId ]
-        version: 1
-      subnetIds:
+      ClusterId: !GetAtt [PCSCluster, Id]
+      Name: compute-1
+      ScalingConfiguration:
+        MinInstanceCount: 0
+        MaxInstanceCount: 4
+      IamInstanceProfileArn: !GetAtt [ PCSInstanceProfile, Outputs.InstanceProfileArn ]
+      CustomLaunchTemplate:
+        Id: !GetAtt [ PCSLaunchTemplate, Outputs.ComputeLaunchTemplateId ]
+        Version: 1
+      SubnetIds:
         - !GetAtt [ Networking, Outputs.DefaultPrivateSubnet ]
-      amiId: !Ref AmiId
-      instanceConfigs:
-        - instanceType: c6i.xlarge
+      AmiId: !GetAtt [PcsSampleAmi, AmiId]
+      InstanceConfigs:
+        - InstanceType: !FindInMap [ Architecture, ComputeNodeInstances, !Ref NodeArchitecture ]
 
   PCSQueueCompute:
-    Type: Custom::Resource
+    Type: AWS::PCS::Queue
     Properties:
-      ServiceToken: !GetAtt [ PCSCfnProvider, Outputs.ServiceToken ]
-      clusterIdentifier: !GetAtt [ PCSCluster, id ]
-      queueName: demo
-      computeNodeGroupConfigurations:
-        - computeNodeGroupId: !GetAtt [ PCSNodeGroupCompute, id ]
+      ClusterId: !GetAtt [PCSCluster, Id]
+      Name: demo
+      ComputeNodeGroupConfigurations:
+        - ComputeNodeGroupId: !GetAtt [PCSNodeGroupCompute, Id]
+
+  PcsAMILookupRole:
+    Type: AWS::IAM::Role
+    Properties:
+      AssumeRolePolicyDocument:
+        Version: '2012-10-17'
+        Statement:
+          - Effect: Allow
+            Principal:
+              Service: lambda.amazonaws.com
+            Action: sts:AssumeRole
+      ManagedPolicyArns:
+        - arn:aws:iam::aws:policy/service-role/AWSLambdaBasicExecutionRole
+      Policies:
+        - PolicyName: EC2DescribeImages
+          PolicyDocument:
+            Version: '2012-10-17'
+            Statement:
+              - Effect: Allow
+                Action:
+                  - ec2:DescribeImages
+                Resource: '*'
+
+  PcsAMILookupFn:
+    Type: AWS::Lambda::Function
+    Properties:
+      Runtime: python3.12
+      Handler: index.handler
+      Role: !GetAtt PcsAMILookupRole.Arn
+      Code:
+        ZipFile: |
+          import boto3
+          import json
+          import logging
+          import urllib3
+          from botocore.exceptions import ClientError
+
+          logger = logging.getLogger()
+          logger.setLevel(logging.INFO)
+
+          def construct_ami_prefix(os_name, architecture, slurm_version):
+              return f'aws-pcs-sample_ami-{os_name}-{architecture}-slurm-{slurm_version}'
+
+          def get_latest_ami(ami_name_prefix):
+              ec2_client = boto3.client('ec2')
+              filters = [{'Name': 'name','Values': [f'{ami_name_prefix}*']}]
+              response = ec2_client.describe_images(Filters=filters)
+              ami_list = response['Images']
+              sorted_ami_list = sorted(ami_list, key=lambda x: x['CreationDate'], reverse=True)
+              return sorted_ami_list[0]['ImageId'] if sorted_ami_list else None
+
+          def send_response(event, context, response_status, response_data, physical_resource_id=None):
+              response_body = {
+                  'Status': response_status,
+                  'Reason': f'See CloudWatch Log Stream: {context.log_stream_name}',
+                  'PhysicalResourceId': physical_resource_id or context.log_stream_name,
+                  'StackId': event['StackId'],
+                  'RequestId': event['RequestId'],
+                  'LogicalResourceId': event['LogicalResourceId'],
+                  'NoEcho': False,
+                  'Data': response_data
+              }
+
+              logger.info(f'Response body: {json.dumps(response_body)}')
+
+              http = urllib3.PoolManager()
+              try:
+                  response = http.request(
+                      'PUT',
+                      event['ResponseURL'],
+                      headers={'Content-Type': 'application/json'},
+                      body=json.dumps(response_body).encode('utf-8')
+                  )
+                  logger.info(f'Status code: {response.status}')
+              except Exception as e:
+                  logger.error(f'Failed to send response: {str(e)}')
+                  raise
+
+          def handler(event, context):
+              logger.info(f'Received event: {json.dumps(event)}')
+              
+              try:
+                  properties = event['ResourceProperties']
+                  os_name = properties.get('OperatingSystem')
+                  architecture = properties.get('Architecture')
+                  slurm_version = properties.get('SlurmVersion')
+                  
+                  # Validate required properties
+                  if not all([os_name, architecture, slurm_version]):
+                      raise ValueError('OperatingSystem, Architecture, and SlurmVersion are required in ResourceProperties')
+
+                  # Skip actual work on delete
+                  if event['RequestType'] == 'Delete':
+                      send_response(event, context, 'SUCCESS', {})
+                      return
+
+                  ami_name_prefix = construct_ami_prefix(os_name, architecture, slurm_version)
+                  logger.info(f'Looking up AMI with prefix: {ami_name_prefix}')
+                  
+                  ami_id = get_latest_ami(ami_name_prefix)
+                  if not ami_id:
+                      raise ValueError(f'No AMI found matching prefix: {ami_name_prefix}')
+
+                  response_data = {
+                      'AmiId': ami_id,
+                      'AmiPrefix': ami_name_prefix
+                  }
+                  
+                  send_response(event, context, 'SUCCESS', response_data, ami_id)
+
+              except Exception as e:
+                  logger.error(f'Exception: {str(e)}')
+                  send_response(event, context, 'FAILED', {'Error': str(e)})
+                  raise
+      Timeout: 30
+      MemorySize: 128
+
+  # Example of using the custom resource to look up an AMI
+  PcsSampleAmi:
+    Type: Custom::AMILookup
+    Properties:
+      ServiceToken: !GetAtt PcsAMILookupFn.Arn
+      OperatingSystem: 'amzn2'
+      Architecture: !FindInMap [ Architecture, AmiArchParameter, !Ref NodeArchitecture ]
+      SlurmVersion: !Ref SlurmVersion
 
 Outputs:
   ClusterId:
-    Description: The ID of the PCS cluster
-    Value: !GetAtt [ PCSCluster, id ]
+    Description: The Id of the PCS cluster
+    Value: !GetAtt [ PCSCluster, Id ]
   PcsConsoleUrl:
     Description: URL to access the cluster in the PCS console
     Value: !Sub
       - https://${ConsoleDomain}/pcs/home?region=${AWS::Region}#/clusters/${ClusterId}
       - { ConsoleDomain: !Sub '${AWS::Region}.console.aws.amazon.com',
-          ClusterId: !GetAtt [ PCSCluster, id ] 
+          ClusterId: !GetAtt [ PCSCluster, Id ]
         }
     Export:
       Name: !Sub ${AWS::StackName}-PcsConsoleUrl
@@ -201,7 +342,7 @@ Outputs:
     Value: !Sub
       - https://${ConsoleDomain}/ec2/home?region=${AWS::Region}#Instances:instanceState=running;tag:aws:pcs:compute-node-group-id=${NodeGroupLoginId}
       - { ConsoleDomain: !Sub '${AWS::Region}.console.aws.amazon.com',
-          NodeGroupLoginId: !GetAtt [ PCSNodeGroupLogin, id ] 
+          NodeGroupLoginId: !GetAtt [ PCSNodeGroupLogin, Id ] 
         }
     Export:
       Name: !Sub ${AWS::StackName}-Ec2ConsoleUrl

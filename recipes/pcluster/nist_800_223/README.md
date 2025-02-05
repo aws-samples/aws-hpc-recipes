@@ -37,7 +37,7 @@ We developed this guidance in response to the growing need for secure HPC enviro
 
 Architecture diagrams below show sample NIST 800-223 based architecture, provisoning and deployment process using cloudformation, HPC Cluster deployment, and user interactions via AWS ParallelCluster.  Depending on the region you deploy the recipe in, it will automatically scale to from 2-4 AZs in order to maximize availability and redundancy of your cluster.
 
-![Infrastructure](images/ref-arch.png "Reference Architecture")
+![Infrastructure](docs/ref-arch.png "Reference Architecture")
 
 ### Cost
 
@@ -119,59 +119,59 @@ This deployment requires you have access to Amazon CloudFormation in your AWS ac
 5. Locate the search bar at the top of your screen and type in CloudFormation
 6. When presented with a list of services click CloudFormation to open the CloudFormation console
 
-![CloudFormation](images/deployment_steps/0_deployment.png)
+![CloudFormation](docs/deployment_steps/0_deployment.png)
 
-7. Click the Create Stack button
+1. Click the Create Stack button
 
-![Create Stack](images/deployment_steps/1_deployment.png)
+![Create Stack](docs/deployment_steps/1_deployment.png)
 
-8. In the "Prepare template" section select "Choose an existing template"
+1. In the "Prepare template" section select "Choose an existing template"
 
-![Prepare Tempalte](images/deployment_steps/2_deployment.png)
+![Prepare Tempalte](docs/deployment_steps/2_deployment.png)
 
-9. In the "Specifiy teamplate" section select "Upload a template file"
-10. Click the "Choose file" button
+1. In the "Specifiy teamplate" section select "Upload a template file"
+2.  Click the "Choose file" button
 
-![Choose File](images/deployment_steps/3_deployment.png)
+![Choose File](docs/deployment_steps/3_deployment.png)
 
-11. Navigate to the location on your local computer where you clone the repo too and go to the deployment folder.  There you will find the CloudFormation templates prefaced with a number that will indicate the order to execute them in.
-12. Select the first template titled "0_network.yaml"
-13. For each template you will be asked to provide a Stack name, this name must be a unique stack name for the region you are deploying in.
+1.  Navigate to the location on your local computer where you clone the repo too and go to the deployment folder.  There you will find the CloudFormation templates prefaced with a number that will indicate the order to execute them in.
+2.  Select the first template titled "0_network.yaml"
+3.  For each template you will be asked to provide a Stack name, this name must be a unique stack name for the region you are deploying in.
 
 ***Important: The stack name should be noted for use in later templates.  Downstream services will need to know this stack name in order to reference Amazon Resource Names (ARNs) or resource IDs that will be exported/output for each template***
 
-![Stack Name](images/deployment_steps/4_deployment.png)
+![Stack Name](docs/deployment_steps/4_deployment.png)
 
-14. For the network stack review the parameters and adjust as needed based on your specific use case or requirements
-15. Once you have reviewed and validated the parameters click the Next button at the bottom of the page
-16. Leave the default options on the "Configure stack options" page
-17. You will need to scroll to the bottom of this page and select the check box to allow CloudFormation to create IAM resources on your behlaf
-18. Click Next
+1.  For the network stack review the parameters and adjust as needed based on your specific use case or requirements
+2.  Once you have reviewed and validated the parameters click the Next button at the bottom of the page
+3.  Leave the default options on the "Configure stack options" page
+4.  You will need to scroll to the bottom of this page and select the check box to allow CloudFormation to create IAM resources on your behlaf
+5.  Click Next
 
-![Choose File](images/deployment_steps/5_deployment.png)
+![Choose File](docs/deployment_steps/5_deployment.png)
 
-19. On the "Review and create" screen review your selections one last time and then click the Submit button at the bottom of the page.
+1.  On the "Review and create" screen review your selections one last time and then click the Submit button at the bottom of the page.
 
-![Submit](images/deployment_steps/6_deployment.png)
+![Submit](docs/deployment_steps/6_deployment.png)
 
-20. Your CloudFormation stack will begin deploying
-21. You can monitor the progress of the deployment with in the CloudFormation console
+1.  Your CloudFormation stack will begin deploying
+2.  You can monitor the progress of the deployment with in the CloudFormation console
 
-![Choose File](images/deployment_steps/7_deployment.png)
+![Choose File](docs/deployment_steps/7_deployment.png)
 
-22. Wait until you see the stack status update from "CREATE_IN_PROGRESS" to "CREATE_COMPLETE" before moving on to the next template
-23. You can review the outputs generated by the stack by going to the Outputs tab for each stack or going to the Exports page on the left-hand menu
+1.  Wait until you see the stack status update from "CREATE_IN_PROGRESS" to "CREATE_COMPLETE" before moving on to the next template
+2.  You can review the outputs generated by the stack by going to the Outputs tab for each stack or going to the Exports page on the left-hand menu
     - ***Note: The export values will be used by later templates to reference resources created in earlier templates***
 
 Outputs View
 
-![Outputs](images/deployment_steps/8_deployment.png)
+![Outputs](docs/deployment_steps/8_deployment.png)
 
 Exports View
    
-![Exports](images/deployment_steps/9_deployment.png)
+![Exports](docs/deployment_steps/9_deployment.png)
 
-24.  Repeat the steps above starting with step 7. moving on to the next stack in the deployment folder
+1. Repeat the steps above starting with step 7. moving on to the next stack in the deployment folder
 
 ***Important: Stacks 1-5 will have a parameter that asks for the previous stack names.  If you modify the stack names from the default values, you will need to also update the parameters in each subsequent stack with the appropriate name so that the relevant services can be referenced.***
 
@@ -192,10 +192,9 @@ Exports View
 
 * Open CloudFormation console and verify the status of the template with the name starting with each of the names above.
 
-<img src="https://github.com/aws-samples/aws-hpc-recipes/tree/main/recipes/pcluster/nist-800-223/images/deployment_steps/0_validate.png" alt="Validate" width="200" height="325">
+<img src="https://github.com/aws-samples/aws-hpc-recipes/blob/main/recipes/pcluster/nist_800_223/docs/deployment_steps/0_validate.png" alt="Validate" width="325">
 
 * Make sure that all CloudFormation stacks have a status of "CREATE_COMPLETE"
-
 
 ## Next Steps 
 

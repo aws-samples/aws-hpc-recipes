@@ -37,8 +37,9 @@ To create a demonstration PCS cluster:
 3. Follow the instructions in the AWS CloudFormation console:
     * (Optional) Customize the stack name.
     * Under **Parameters**
+        * For **SlurmVersion** choose any available version of Slurm.
+        * For **NodeArchitecture** choose either `x86` or `Graviton` for your login and compute node groups.
         * For **KeyName** choose an SSH key for connecting to the login nodes
-        * Leave **AmiId** empty
         * For **ClientIpCidr**, either leave it as its default value or replace with a more restrictive CIDR range
         * Leave the parameters under **HPC Recipes configuration** as their default values.
     * Under **Capabilities and transforms**
@@ -61,3 +62,7 @@ Once you have connected to a login instance, follow along with the **Getting Sta
 When you are done using your PCS cluster, you can delete it and all its associated resources by navigating to the AWS CloudFormation console and deleting the stack you created.
 
 **Note** If you have created additional compute node groups or queues in your cluster, beyond the `login` and `compute-1` groups created by the CloudFormation stack, you will need to delete those resources in the PCS console before deleting the CloudFormation stack. 
+
+### Deprecation Notice
+
+Versions of this recipe released prior to 12/17/2024 use an AWS CloudFormation helper to manage the AWS PCS cluster. With the release of official CloudFormation support for PCS, this is no longer necessary. The file [pcs-cfn.yaml](assets/pcs-cfn.yaml), which provides this helper, will be deleted from this recipe on January 17, 2025. 

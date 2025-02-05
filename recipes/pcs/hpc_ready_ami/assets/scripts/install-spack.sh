@@ -81,7 +81,7 @@ download_and_install_spack() {
 
 handle_ubuntu_22.04() {
     logger "Installing deps for Ubuntu 22.04" "INFO"
-    sudo apt update && sudo apt install -y git python3-pip && sudo apt clean
+    sudo apt update && sudo apt install -y git python3-pip unzip && sudo apt clean
 }
 
 handle_rhel_9() { 

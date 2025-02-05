@@ -116,6 +116,11 @@ You can use an HPC Recipe for AWS in several ways:
 * **About**: Creates a multi-user instance of AWS ParallelCluster using AWS Managed AD as the directory service.
 * **Usage**: [README.md](pcluster/multi_user/README.md)
 
+#### nist_800_223 ![tag](https://img.shields.io/badge/-activedirectory-%23AAB7B8) ![tag](https://img.shields.io/badge/-beta-%23800080) ![tag](https://img.shields.io/badge/-efs-%237DCEA0) ![tag](https://img.shields.io/badge/-fsx-%237DCEA0) ![tag](https://img.shields.io/badge/-parallelcluster-%23FF9900) ![tag](https://img.shields.io/badge/-rds-%237DCEA0) ![tag](https://img.shields.io/badge/-secretsmanager-%237DCEA0) ![tag](https://img.shields.io/badge/-ssm-%23AAB7B8) 
+
+* **About**: Creats an AWS ParallelCluster using recommendations from [NIST SP 800-223](https://csrc.nist.gov/pubs/sp/800/223/final).
+* **Usage**: [README.md](pcluster/nist_800_223/README.md)
+
 #### pcui ![tag](https://img.shields.io/badge/-cognito-%237DCEA0) ![tag](https://img.shields.io/badge/-lambda-%237DCEA0) ![tag](https://img.shields.io/badge/-parallelcluster-%23FF9900) 
 
 * **About**: Create an AWS ParallelCluster with ParallelClusterUI to manage it.
@@ -208,6 +213,16 @@ You can use an HPC Recipe for AWS in several ways:
 
 * **About**: Install Spack on AWS PCS
 * **Usage**: [README.md](pcs/spack_for_pcs/README.md)
+
+#### try_amd ![tag](https://img.shields.io/badge/-amd-%23AAB7B8) ![tag](https://img.shields.io/badge/-beta-%23800080) ![tag](https://img.shields.io/badge/-cloudformation-%237DCEA0) ![tag](https://img.shields.io/badge/-demo-%23AAB7B8) ![tag](https://img.shields.io/badge/-efs-%237DCEA0) ![tag](https://img.shields.io/badge/-pcs-%23FF9900) 
+
+* **About**: Get started with AMD-powered HPC instances and AWS PCS
+* **Usage**: [README.md](pcs/try_amd/README.md)
+
+#### try_graviton ![tag](https://img.shields.io/badge/-alinux2-%23FF9900) ![tag](https://img.shields.io/badge/-arm64-%23AAB7B8) ![tag](https://img.shields.io/badge/-beta-%23800080) ![tag](https://img.shields.io/badge/-ec2-%23FF9900) ![tag](https://img.shields.io/badge/-efs-%237DCEA0) ![tag](https://img.shields.io/badge/-fsx-%237DCEA0) ![tag](https://img.shields.io/badge/-graviton-%237DCEA0) ![tag](https://img.shields.io/badge/-pcs-%23FF9900) 
+
+* **About**: Get started with Graviton-powered instances on AWS PCS
+* **Usage**: [README.md](pcs/try_graviton/README.md)
 
 
 ### :arrow_right: res: Research and Engineering Studio on AWS
