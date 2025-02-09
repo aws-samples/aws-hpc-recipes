@@ -1,0 +1,28 @@
+---
+# The name of the recipe. This has the same character requirements as namespace.
+name: hpc_zonal_networking
+# The version of the recipe. Must be compatible with semantic versioning.
+version: "1.0.0"
+# A short summary description of the recipe
+description: Creates a multi-zone network architecture for HPC aligned with NIST 800-223 guidelines
+# The path to the README for the recipe relative to its root directory.
+readme: README.md
+# Optional URL for external documentation
+documentation: 
+# Optional URL for a homepage
+homepage:
+# A list of recipe content authors
+authors:
+  - Lowell Wofford
+  - Matt Vaughn
+# A list of tags you want to associate with the collection for indexing/searching. Tags have the same character requirements as namespace.
+tags:
+  - vpc
+  - core
+  - beta
+# A list of file glob-like patterns used to filter any files or directories that should not be included in the S3 release. 
+build_ignore: []
+# Recipe type
+type: cloudformation
+# Default asset path
+default: assets/network-cfn.yaml

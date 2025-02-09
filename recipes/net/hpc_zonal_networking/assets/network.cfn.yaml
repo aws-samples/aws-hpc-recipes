@@ -1,0 +1,636 @@
+# This sample, non-production-ready template to create a multi-zone HPC architecture for parallelcluster.
+# © 2024 Amazon Web Services, Inc. or its affiliates. All Rights Reserved.  
+# This AWS Content is provided subject to the terms of the AWS Customer Agreement available at  
+# http://aws.amazon.com/agreement or other written agreement between Customer and either
+# Amazon Web Services, Inc. or Amazon Web Services EMEA SARL or both.
+# Authors: J. Lowell Wofford <jlowellw@amazon.com>, Matthew Vaughn <mwvaughn@amazon.com>
+
+AWSTemplateFormatVersion: '2010-09-09'
+Description: >
+  Creates a 4-zone subnet structure for NIST 800-223-aligned HPC networking. Each AZ is allocated separate Access, Management, Storage, and Compute subnets corresponding to the 4 security zones. See https://csrc.nist.gov/pubs/sp/800/223/final for details. 
+
+Parameters:
+
+  VpcCIDR:
+    Type: String
+    Default: '10.0.0.0/16'
+    Description: 'CIDR block for the VPC'
+
+  ComputeSubnetCIDR:
+    Type: String
+    Default: '10.0.0.0/21'
+    Description: 'CIDR block for Compute Subnet'
+
+  AccessSubnetCIDR:
+    Type: String
+    Default: '10.0.8.0/24'
+    Description: 'CIDR block for Access Subnet'
+
+  ManagementSubnetCIDR:
+    Type: String
+    Default: '10.0.9.0/24'
+    Description: 'CIDR block for Management Subnet'
+
+  StorageSubnetCIDR:
+    Type: String
+    Default: '10.0.10.0/24'
+    Description: 'CIDR block for Storage Subnet'
+
+  TransitSubnetCIDR:
+    Type: String
+    Default: '10.0.11.0/24'
+    Description: 'CIDR block for Transit Subnet' 
+
+  ComputeSubnetBackupCIDR:
+    Type: String
+    Default: 10.0.16.0/21
+    Description: 'CIDR block for Compute Subnet (backup AZ)'
+    
+  AccessSubnetBackupCIDR:
+    Type: String
+    Default: '10.0.24.0/24'
+    Description: 'CIDR block for Access Subnet (backup AZ)' 
+
+  ManagementSubnetBackupCIDR:
+    Type: String
+    Default: '10.0.25.0/24'
+    Description: 'CIDR block for Management Subnet (backup AZ)'
+  
+  StorageSubnetBackupCIDR:
+    Type: String
+    Default: '10.0.26.0/24'
+    Description: 'CIDR block for Storage Subnet (backup AZ)'
+  
+  TransitSubnetBackupCIDR:
+    Type: String
+    Default: '10.0.27.0/24'
+    Description: 'CIDR block for Storage Subnet (backup AZ)' 
+
+  ExternalConnectivity:
+    Type: String
+    AllowedValues: ['transit', 'access', 'none']
+    Default: 'access'
+    Description: |
+      Choose how networks will reach the internet.  We currently support three modes:
+        - access (default): Access subnets are directly connected to the internet
+        - transit: Mimic a transit VPC by creating a pair of transit subnets
+        - none: No IGW or NAT gateway is created
+  
+  CreateBackupSubnets:
+    Type: String
+    AllowedValues: ['True', 'False']
+    Default: 'True'
+    Description: |
+      Choose whether to create backup subnets.
+      These subnets can be used for services require mulit-AZ HA
+      Examples: Directory Services, Research and Engineering Studio
+
+  AvailabilityZoneID:
+    Type: String
+    Description: |
+      Availability zone ID for the primary compute pool (e.g. use2-az2).
+      By default, the AZ in the region with Hpc* instance capacity will be selected.
+    Default: ''
+  
+  AvailabilityZoneBackupID:
+    Type: String
+    Description: |
+      Availability zone ID for the HA resources (e.g. use2-az1)
+      This should be different than AvailabilityZoneID.
+      By default a consistent AZ different than AvailabilityZoneID will be selected.
+      This AZ is selected based on a hash of the account ID, and will be consistent in a single account.
+    Default: ''
+
+Conditions:
+  AZSpecified: !Not [ !Equals [ !Ref AvailabilityZoneID, '']]
+  AZBSpecified: !Not [ !Equals [ !Ref AvailabilityZoneBackupID, '']]
+  CreateTransitSubnets: !Equals [!Ref ExternalConnectivity, 'transit']
+  CreateTransitBackupSubnets: !And
+    - !Equals [!Ref ExternalConnectivity, 'transit']
+    - !Equals [!Ref CreateBackupSubnets, 'True']
+  AccessIsPublic: !Equals [!Ref ExternalConnectivity, 'access']
+  CreateBackupSubnets: !Equals [!Ref CreateBackupSubnets, 'True']
+  CreateGateways: !Or
+    - !Condition CreateTransitSubnets
+    - !Condition AccessIsPublic
+  CreateGatewaysBackup: !And
+    - !Condition CreateBackupSubnets
+    - !Or
+      - !Condition CreateTransitBackupSubnets
+      - !Condition AccessIsPublic
+
+Metadata:
+  AWS::CloudFormation::Interface:
+    ParameterGroups:
+      -
+        Label:
+          default: External Connectivity
+        Parameters:
+          - ExternalConnectivity
+      -
+        Label:
+          default: Availability Zones
+        Parameters:
+          - AvailabilityZoneID
+          - AvailabilityZoneBackupID
+      -
+        Label:
+          default: CIDR Blocks
+        Parameters:
+          - VpcCIDR
+          - ComputeSubnetCIDR
+          - AccessSubnetCIDR
+          - ManagementSubnetCIDR
+          - StorageSubnetCIDR
+          - TransitSubnetCIDR
+          - ManagementSubnetBackupCIDR
+          - AccessSubnetBackupCIDR
+          - TransitSubnetBackupCIDR
+
+Resources:
+  AZFinderRole:
+    Type: AWS::IAM::Role
+    Properties:
+      AssumeRolePolicyDocument:
+        Version: '2012-10-17'
+        Statement:
+          - Effect: Allow
+            Principal:
+              Service: lambda.amazonaws.com
+            Action: sts:AssumeRole
+      ManagedPolicyArns:
+        - arn:aws:iam::aws:policy/service-role/AWSLambdaBasicExecutionRole
+      Policies:
+        - PolicyName: DescribeEC2Resources
+          PolicyDocument:
+            Version: '2012-10-17'
+            Statement:
+              - Effect: Allow
+                Action:
+                  - ec2:DescribeAvailabilityZones
+                  - ec2:DescribeInstanceTypeOfferings
+                  - sts:GetCallerIdentity
+                Resource: '*'
+
+  AZFinderFunction:
+    Type: AWS::Lambda::Function
+    Properties:
+      Runtime: python3.9
+      Handler: index.handler
+      Role: !GetAtt AZFinderRole.Arn
+      Code:
+        ZipFile: |
+          import boto3
+          import cfnresponse
+          import hashlib
+          
+          def get_az_mappings(ec2):
+              """Get AZ name to ID mappings"""
+              response = ec2.describe_availability_zones(
+                  Filters=[{'Name': 'zone-type', 'Values': ['availability-zone']}]
+              )
+              return {az['ZoneName']: az['ZoneId'] for az in response['AvailabilityZones']}
+          
+          def find_hpc_az(ec2, az_map):
+              """Find the AZ where HPC instances are deployed"""
+              paginator = ec2.get_paginator('describe_instance_type_offerings')
+              for page in paginator.paginate(
+                  LocationType='availability-zone',
+                  Filters=[{'Name': 'instance-type', 'Values': ['hpc*']}]
+              ):
+                  # Return the first AZ that supports any HPC instance
+                  for offering in page['InstanceTypeOfferings']:
+                      az_name = offering['Location']
+                      if az_name in az_map:
+                          return az_map[az_name]
+              return None
+          
+          def select_backup_az(account_id, available_azs, primary_az):
+              """
+              Deterministically select backup AZ based on account ID hash
+              """
+              # Remove primary AZ from options
+              backup_options = [az for az in available_azs if az != primary_az]
+              if not backup_options:
+                  return None
+                  
+              # Create a hash of the account ID
+              hash_object = hashlib.md5(account_id.encode())
+              hash_value = int(hash_object.hexdigest(), 16)
+              
+              # Use the hash to consistently select an AZ
+              return backup_options[hash_value % len(backup_options)]
+          
+          def handler(event, context):
+              try:
+                  if event['RequestType'] in ['Create', 'Update']:
+                      region = event['ResourceProperties']['Region']
+                      
+                      # Get AWS Account ID
+                      sts = boto3.client('sts')
+                      account_id = sts.get_caller_identity()['Account']
+                      
+                      ec2 = boto3.client('ec2', region_name=region)
+                      
+                      # Get AZ mappings
+                      az_map = get_az_mappings(ec2)
+                      all_az_ids = list(az_map.values())
+                      
+                      # Find HPC AZ
+                      hpc_az_id = find_hpc_az(ec2, az_map)
+                      if not hpc_az_id:
+                          raise Exception(f"No AZs found supporting HPC instances in {region}")
+                      
+                      # Select backup AZ deterministically
+                      backup_az_id = select_backup_az(account_id, all_az_ids, hpc_az_id)
+                      
+                      response_data = {
+                          'HPCAZId': hpc_az_id,
+                          'BackupAZId': backup_az_id or '',
+                          'AccountId': account_id  # Include for verification
+                      }
+                      
+                      cfnresponse.send(event, context, cfnresponse.SUCCESS, response_data)
+                  else:
+                      cfnresponse.send(event, context, cfnresponse.SUCCESS, {})
+                      
+              except Exception as e:
+                  print(f"Error: {str(e)}")
+                  cfnresponse.send(event, context, cfnresponse.FAILED, {
+                      'Error': str(e)
+                  })
+      Timeout: 30
+
+  # Custom resource to get AZ recommendations
+  HPCAZFinder:
+    Type: Custom::HPCAZFinder
+    Properties:
+      ServiceToken: !GetAtt AZFinderFunction.Arn
+      Region: !Ref 'AWS::Region'
+      # Add a version number to force updates when needed
+      Version: '1.0'
+
+  VPC:
+    Type: AWS::EC2::VPC
+    Properties:
+      CidrBlock: !Ref VpcCIDR
+      EnableDnsHostnames: true
+      EnableDnsSupport: true
+      Tags:
+        - Key: Name
+          Value: !Sub '${AWS::StackName}-VPC'
+  ###
+  # Subnets
+  ###
+  AccessSubnet:
+    Type: AWS::EC2::Subnet
+    Properties:
+      VpcId: !Ref VPC
+      CidrBlock: !Ref AccessSubnetCIDR
+      AvailabilityZoneId: !If [ AZSpecified,  !Ref AvailabilityZoneID, !GetAtt HPCAZFinder.HPCAZId ]
+      MapPublicIpOnLaunch: !If [ AccessIsPublic, 'true', 'false' ]
+      Tags:
+        - Key: Name
+          Value: Access Subnet
+
+  AccessSubnetBackup:
+    Type: AWS::EC2::Subnet
+    Condition: CreateBackupSubnets
+    Properties:
+      VpcId: !Ref VPC
+      CidrBlock: !Ref AccessSubnetBackupCIDR
+      AvailabilityZoneId: !If [ AZBSpecified,  !Ref AvailabilityZoneID, !GetAtt HPCAZFinder.BackupAZId ]
+      MapPublicIpOnLaunch: !If [ AccessIsPublic, 'true', 'false' ]
+      Tags:
+        - Key: Name
+          Value: Access Subnet Backup
+
+  ComputeSubnet:
+    Type: AWS::EC2::Subnet
+    Properties:
+      VpcId: !Ref VPC
+      CidrBlock: !Ref ComputeSubnetCIDR
+      AvailabilityZoneId: !If [ AZSpecified,  !Ref AvailabilityZoneID, !GetAtt HPCAZFinder.HPCAZId ]
+      Tags:
+        - Key: Name
+          Value: Compute Subnet
+  
+  ComputeSubnetBackup:
+    Type: AWS::EC2::Subnet
+    Condition: CreateBackupSubnets
+    Properties:
+      VpcId: !Ref VPC
+      CidrBlock: !Ref ComputeSubnetBackupCIDR
+      AvailabilityZoneId: !If [ AZBSpecified,  !Ref AvailabilityZoneID, !GetAtt HPCAZFinder.BackupAZId ]
+      Tags:
+        - Key: Name
+          Value: Compute Subnet (backup)
+
+  ManagementSubnet:
+    Type: AWS::EC2::Subnet
+    Properties:
+      VpcId: !Ref VPC
+      CidrBlock: !Ref ManagementSubnetCIDR
+      AvailabilityZoneId: !If [ AZSpecified,  !Ref AvailabilityZoneID, !GetAtt HPCAZFinder.HPCAZId ]
+      Tags:
+        - Key: Name
+          Value: Management Subnet
+  
+  ManagementSubnetBackup:
+    Type: AWS::EC2::Subnet
+    Condition: CreateBackupSubnets
+    Properties:
+      VpcId: !Ref VPC
+      CidrBlock: !Ref ManagementSubnetBackupCIDR
+      AvailabilityZoneId: !If [ AZBSpecified,  !Ref AvailabilityZoneID, !GetAtt HPCAZFinder.BackupAZId ]
+      Tags:
+        - Key: Name
+          Value: Management Subnet (backup)
+
+  StorageSubnet:
+    Type: AWS::EC2::Subnet
+    Properties:
+      VpcId: !Ref VPC
+      CidrBlock: !Ref StorageSubnetCIDR
+      AvailabilityZoneId: !If [ AZSpecified,  !Ref AvailabilityZoneID, !GetAtt HPCAZFinder.HPCAZId ]
+      Tags:
+        - Key: Name
+          Value: Storage Subnet
+
+  StorageSubnetBackup:
+    Type: AWS::EC2::Subnet
+    Condition: CreateBackupSubnets
+    Properties:
+      VpcId: !Ref VPC
+      CidrBlock: !Ref StorageSubnetBackupCIDR
+      AvailabilityZoneId: !If [ AZBSpecified,  !Ref AvailabilityZoneID, !GetAtt HPCAZFinder.BackupAZId ]
+      Tags:
+        - Key: Name
+          Value: Storage Subnet (backup)
+
+  TransitSubnet:
+    Condition: CreateTransitSubnets
+    Type: AWS::EC2::Subnet
+    Properties:
+      VpcId: !Ref VPC
+      CidrBlock: !Ref TransitSubnetCIDR
+      AvailabilityZoneId: !If [ AZSpecified,  !Ref AvailabilityZoneID, !GetAtt HPCAZFinder.HPCAZId ]
+      MapPublicIpOnLaunch: true
+      Tags:
+        - Value: Name
+          Key: Transit Subnet
+
+  TransitSubnetBackup:
+    Condition: CreateTransitBackupSubnets
+    Type: AWS::EC2::Subnet
+    Properties:
+      VpcId: !Ref VPC
+      CidrBlock: !Ref TransitSubnetBackupCIDR
+      AvailabilityZoneId: !If [ AZBSpecified,  !Ref AvailabilityZoneID, !GetAtt HPCAZFinder.BackupAZId ]
+      MapPublicIpOnLaunch: true
+      Tags:
+        - Value: Name
+          Key: Transit Subnet Backup
+
+  ###
+  # Gateways
+  ###
+  InternetGateway:
+    Type: AWS::EC2::InternetGateway
+    Condition: CreateGateways
+    Properties:
+      Tags:
+        - Key: Name
+          Value: !Sub '${AWS::StackName}-InternetGateway'
+
+  VPCGatewayAttachment:
+    Type: AWS::EC2::VPCGatewayAttachment
+    Condition: CreateGateways
+    Properties:
+      VpcId: !Ref VPC
+      InternetGatewayId: !Ref InternetGateway
+
+  NATGateway:
+    Type: AWS::EC2::NatGateway
+    Condition: CreateGateways
+    Properties:
+      AllocationId: !GetAtt NATGatewayEIP.AllocationId
+      SubnetId: !If [ AccessIsPublic, !Ref AccessSubnet, !Ref TransitSubnet ]
+      Tags:
+        - Key: Name
+          Value: !Sub '${AWS::StackName}-NATGateway'
+
+  NATGatewayEIP:
+    Type: AWS::EC2::EIP
+    Condition: CreateGateways
+    Properties:
+      Domain: vpc
+
+  NATGatewayBackup:
+    Type: AWS::EC2::NatGateway
+    Condition: CreateGatewaysBackup
+    Properties:
+      AllocationId: !GetAtt NATGatewayBackupEIP.AllocationId
+      SubnetId: !If [ AccessIsPublic, !Ref AccessSubnetBackup, !Ref TransitSubnetBackup ]
+      Tags:
+        - Key: Name
+          Value: !Sub '${AWS::StackName}-NATGatewayBackup'
+
+  NATGatewayBackupEIP:
+    Type: AWS::EC2::EIP
+    Condition: CreateGatewaysBackup
+    Properties:
+      Domain: vpc
+
+  ###
+  # Routing
+  ###
+  PublicRouteTable:
+    Type: AWS::EC2::RouteTable
+    Condition: CreateGateways
+    Properties:
+      VpcId: !Ref VPC
+      Tags:
+        - Key: Name
+          Value: !Sub '${AWS::StackName}-PublicRouteTable'
+
+  PublicRoute:
+    Type: AWS::EC2::Route
+    Condition: CreateGateways
+    DependsOn: VPCGatewayAttachment
+    Properties:
+      RouteTableId: !Ref PublicRouteTable
+      DestinationCidrBlock: '0.0.0.0/0'
+      GatewayId: !Ref InternetGateway
+
+  PrivateRouteTable:
+    Type: AWS::EC2::RouteTable
+    Properties:
+      VpcId: !Ref VPC
+      Tags:
+        - Key: Name
+          Value: Private Route Table
+  
+  PrivateRoute:
+    Type: AWS::EC2::Route
+    Condition: CreateGateways
+    Properties:
+      RouteTableId: !Ref PrivateRouteTable
+      DestinationCidrBlock: '0.0.0.0/0'
+      NatGatewayId: !Ref NATGateway
+
+  PrivateRouteTableBackup:
+    Condition: CreateBackupSubnets
+    Type: AWS::EC2::RouteTable
+    Properties:
+      VpcId: !Ref VPC
+      Tags:
+        - Key: Name
+          Value: Private Route Table Backup
+  
+  PrivateRouteBackup:
+    Type: AWS::EC2::Route
+    Condition: CreateGatewaysBackup
+    Properties:
+      RouteTableId: !Ref PrivateRouteTableBackup
+      DestinationCidrBlock: '0.0.0.0/0'
+      NatGatewayId: !Ref NATGatewayBackup
+
+  AccessSubnetRouteTableAssociation:
+    Type: AWS::EC2::SubnetRouteTableAssociation
+    Properties:
+      SubnetId: !Ref AccessSubnet
+      RouteTableId: !If [ AccessIsPublic, !Ref PublicRouteTable, !Ref PrivateRouteTable ]
+
+  AccessSubnetBackupRouteTableAssociation:
+    Type: AWS::EC2::SubnetRouteTableAssociation
+    Condition: CreateBackupSubnets
+    Properties:
+      SubnetId: !Ref AccessSubnetBackup
+      RouteTableId: !If [ AccessIsPublic, !Ref PublicRouteTable, !Ref PrivateRouteTableBackup ]
+
+  ComputeSubnetRouteTableAssociation:
+    Type: AWS::EC2::SubnetRouteTableAssociation
+    Properties:
+      SubnetId: !Ref ComputeSubnet
+      RouteTableId: !Ref PrivateRouteTable
+  
+  ComputeSubnetBackupRouteTableAssociation:
+    Type: AWS::EC2::SubnetRouteTableAssociation
+    Condition: CreateBackupSubnets
+    Properties:
+      SubnetId: !Ref ComputeSubnetBackup
+      RouteTableId: !Ref PrivateRouteTableBackup
+
+  ManagementSubnetRouteTableAssociation:
+    Type: AWS::EC2::SubnetRouteTableAssociation
+    Properties:
+      SubnetId: !Ref ManagementSubnet
+      RouteTableId: !Ref PrivateRouteTable
+
+  ManagementSubnetBackupRouteTableAssociation:
+    Type: AWS::EC2::SubnetRouteTableAssociation
+    Condition: CreateBackupSubnets
+    Properties:
+      SubnetId: !Ref ManagementSubnetBackup
+      RouteTableId: !Ref PrivateRouteTableBackup
+
+  StorageSubnetRouteTableAssociation:
+    Type: AWS::EC2::SubnetRouteTableAssociation
+    Properties:
+      SubnetId: !Ref StorageSubnet
+      RouteTableId: !Ref PrivateRouteTable
+  
+  StorageSubnetBackupRouteTableAssociation:
+    Type: AWS::EC2::SubnetRouteTableAssociation
+    Condition: CreateBackupSubnets
+    Properties:
+      SubnetId: !Ref StorageSubnetBackup
+      RouteTableId: !Ref PrivateRouteTableBackup
+
+  TransitSubnetRouteTableAssociation:
+    Type: AWS::EC2::SubnetRouteTableAssociation
+    Condition: CreateTransitSubnets
+    Properties:
+      SubnetId: !Ref TransitSubnet
+      RouteTableId: !Ref PublicRouteTable
+
+  TransitBackupSubnetRouteTableAssociation:
+    Type: AWS::EC2::SubnetRouteTableAssociation
+    Condition: CreateTransitBackupSubnets
+    Properties:
+      SubnetId: !Ref TransitSubnetBackup
+      RouteTableId: !Ref PublicRouteTable
+
+Outputs:
+  VpcId:
+    Value: !Ref VPC 
+    Description: 'ID of the created VPC'
+    Export:
+      Name: !Sub '${AWS::StackName}-VpcId'
+  
+  TransitSubnetId:
+    Condition: CreateTransitSubnets
+    Value: !Ref TransitSubnet
+    Description: 'ID of the public subnet'
+    Export:
+      Name: !Sub '${AWS::StackName}-TransitSubnetId'
+
+  TransitSubnetBackupId:
+    Condition: CreateTransitBackupSubnets
+    Value: !Ref TransitSubnetBackup
+    Description: 'ID of the public subnet backup'
+    Export:
+      Name: !Sub '${AWS::StackName}-TransitSubnetBackupId'
+
+  AccessSubnetId:
+    Value: !Ref AccessSubnet
+    Description: 'ID of the access subnet'
+    Export:
+      Name: !Sub '${AWS::StackName}-AccessSubnetId'
+
+  AccessSubnetBackupId:
+    Value: !Ref AccessSubnetBackup
+    Condition: CreateBackupSubnets
+    Description: 'ID of the access subnet (backup)'
+    Export:
+      Name: !Sub '${AWS::StackName}-AccessSubnetBackupId'
+
+  ManagementSubnetId:
+    Value: !Ref ManagementSubnet
+    Description: 'ID of the management subnet'
+    Export:
+      Name: !Sub '${AWS::StackName}-ManagementSubnetId'
+
+  ManagementSubnetBackupId:
+    Value: !Ref ManagementSubnetBackup
+    Condition: CreateBackupSubnets
+    Description: 'ID of the management subnet (backup)'
+    Export:
+      Name: !Sub '${AWS::StackName}-ManagementSubnetBackupId'
+
+  ComputeSubnetId:
+    Value: !Ref ComputeSubnet
+    Description: 'ID of the compute subnet'
+    Export:
+      Name: !Sub '${AWS::StackName}-ComputeSubnetId'
+
+  ComputeSubnetBackupId:
+    Value: !Ref ComputeSubnetBackup
+    Condition: CreateBackupSubnets
+    Description: 'ID of the compute subnet (backup)'
+    Export:
+      Name: !Sub '${AWS::StackName}-ComputeSubnetBackupId'
+
+  StorageSubnetId:
+    Value: !Ref StorageSubnet
+    Description: 'ID of the storage subnet'
+    Export:
+      Name: !Sub '${AWS::StackName}-StorageSubnetId'
+
+  StorageSubnetBackupId:
+    Value: !Ref StorageSubnetBackup
+    Condition: CreateBackupSubnets
+    Description: 'ID of the storage subnet (backup)'
+    Export:
+      Name: !Sub '${AWS::StackName}-StorageSubnetBackupId'
