@@ -8,7 +8,7 @@ The template demonstrates how to create a VPC with dedicated subnets for compute
 
 ## Usage
 
-Download the [assets/network-cfn.yaml](assets/network-cfn.yaml) file and upload it to the [AWS CloudFormation console](https://console.aws.amazon.com/cloudformation). Then, proceed with creating a stack. 
+Download the [assets/network.cfn.yaml](assets/network.cfn.yaml) file and upload it to the [AWS CloudFormation console](https://console.aws.amazon.com/cloudformation). Then, proceed with creating a stack. 
 
 The template is is pre-configured with sensible defaults. 
 
