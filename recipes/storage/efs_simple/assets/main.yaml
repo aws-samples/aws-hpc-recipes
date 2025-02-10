@@ -9,12 +9,14 @@ Metadata:
         Parameters:
           - AutomaticBackups
           - ThroughputMode
+          - EnforceTLS
       - Label:
           default: Networking and Access
         Parameters:
           - VpcId
           - SubnetIds
           - SubnetCount
+          - SecurityGroupName
 
 Parameters:
   VpcId:
@@ -45,6 +47,17 @@ Parameters:
     AllowedValues:
          - "elastic"
          - "bursting"
+  EnforceTLS:
+    Description: Enforce TLS for data in transit
+    Type: String
+    Default: "true"
+    AllowedValues:
+      - "true"
+      - "false"
+  SecurityGroupName:
+    Type: String
+    Description: (Optional) An existing security group to associate to the file system. If none is provided, a new security group will be created.
+    Default: ""
 
 Conditions:
   1AZCondition: !Or
@@ -54,6 +67,9 @@ Conditions:
     - !Equals [!Ref 'SubnetCount', '2']
     - !Condition '3AZCondition'
   3AZCondition: !Equals [!Ref 'SubnetCount', '3']
+  EnforceTLSCondition: !Equals ["true", !Ref EnforceTLS]
+  CreateSecurityGroup: !Equals ["", !Ref SecurityGroupName]
+  UseExistingSecurityGroup: !Not [!Equals ["", !Ref SecurityGroupName]]
 
 Resources:
 
@@ -80,14 +96,17 @@ Resources:
             Condition:
               Bool:
                 'elasticfilesystem:AccessedViaMountTarget': 'true'
-          - Sid: efs-enforce-tls
-            Effect: Deny
-            Principal:
-              AWS: '*'
-            Action: '*'
-            Condition:
-              Bool:
-                'aws:SecureTransport': 'false'
+          - !If
+            - EnforceTLSCondition
+            - Sid: efs-enforce-tls
+              Effect: Deny
+              Principal:
+                AWS: '*'
+              Action: '*'
+              Condition:
+                Bool:
+                  'aws:SecureTransport': 'false'
+            - !Ref 'AWS::NoValue'
       BackupPolicy: 
         Status: !Ref AutomaticBackups
       Encrypted: true
@@ -96,6 +115,7 @@ Resources:
   # Security group
   EfsSecurityGroup:
     Type: AWS::EC2::SecurityGroup
+    Condition: CreateSecurityGroup
     Properties: 
       GroupDescription: !Sub 
        - 'Allows traffic to EFS filesystem ${FileSystemId}'
@@ -120,7 +140,10 @@ Resources:
       Description: Allow incoming traffic to EFS from members of security group
       FromPort: 2049
       ToPort: 2049
-      GroupId: !Ref EfsSecurityGroup
+      GroupId: !If 
+          - CreateSecurityGroup
+          - !Ref EfsSecurityGroup
+          - !GetAtt SecurityGroupLookup.GroupId
       SourceSecurityGroupId: !Ref EfsClientSecurityGroup
 
   EfsClientSecurityGroupOutboundRule:
@@ -131,15 +154,20 @@ Resources:
       FromPort: 2049
       ToPort: 2049
       GroupId: !Ref EfsClientSecurityGroup
-      DestinationSecurityGroupId: !Ref EfsSecurityGroup
+      DestinationSecurityGroupId: !If 
+          - CreateSecurityGroup
+          - !Ref EfsSecurityGroup
+          - !GetAtt SecurityGroupLookup.GroupId
 
   EfsMountTarget1:
     Type: AWS::EFS::MountTarget
     Condition: 1AZCondition
     Properties:
          FileSystemId: !Ref EfsFilesystem
-         SecurityGroups:
-              - !Ref EfsSecurityGroup
+         SecurityGroups: !If 
+                - CreateSecurityGroup
+                - [!Ref EfsSecurityGroup]
+                - [!GetAtt SecurityGroupLookup.GroupId]
          SubnetId: !Select [ 0, !Ref SubnetIds ]
 
   EfsMountTarget2:
@@ -147,8 +175,10 @@ Resources:
     Condition: 2AZCondition
     Properties:
          FileSystemId: !Ref EfsFilesystem
-         SecurityGroups:
-              - !Ref EfsSecurityGroup
+         SecurityGroups: !If 
+                - CreateSecurityGroup
+                - [!Ref EfsSecurityGroup]
+                - [!GetAtt SecurityGroupLookup.GroupId]
          SubnetId: !Select [ 1, !Ref SubnetIds ]
 
   EfsMountTarget3:
@@ -156,9 +186,79 @@ Resources:
     Condition: 3AZCondition
     Properties:
          FileSystemId: !Ref EfsFilesystem
-         SecurityGroups:
-              - !Ref EfsSecurityGroup
+         SecurityGroups: !If 
+                - CreateSecurityGroup
+                - [!Ref EfsSecurityGroup]
+                - [!GetAtt SecurityGroupLookup.GroupId]
          SubnetId: !Select [ 2, !Ref SubnetIds ]
+
+  SecurityGroupLookup:
+    Type: Custom::SecurityGroupLookup
+    Condition: UseExistingSecurityGroup
+    Properties:
+      ServiceToken: !GetAtt SecurityGroupLookupFunction.Arn
+      VpcId: !Ref VpcId
+      GroupName: !Ref SecurityGroupName
+
+  SecurityGroupLookupRole:
+    Type: AWS::IAM::Role
+    Condition: UseExistingSecurityGroup
+    Properties:
+      AssumeRolePolicyDocument:
+        Version: '2012-10-17'
+        Statement:
+          - Effect: Allow
+            Principal:
+              Service: lambda.amazonaws.com
+            Action: sts:AssumeRole
+      ManagedPolicyArns:
+        - arn:aws:iam::aws:policy/service-role/AWSLambdaBasicExecutionRole
+      Policies:
+        - PolicyName: DescribeSecurityGroups
+          PolicyDocument:
+            Version: '2012-10-17'
+            Statement:
+              - Effect: Allow
+                Action: ec2:DescribeSecurityGroups
+                Resource: '*'
+
+  SecurityGroupLookupFunction:
+    Type: AWS::Lambda::Function
+    Condition: UseExistingSecurityGroup
+    Properties:
+      Runtime: python3.9
+      Handler: index.handler
+      Role: !GetAtt SecurityGroupLookupRole.Arn
+      Code:
+        ZipFile: |
+          import boto3
+          import cfnresponse
+          
+          def handler(event, context):
+            try:
+              if event['RequestType'] in ['Create', 'Update']:
+                ec2 = boto3.client('ec2')
+                vpc_id = event['ResourceProperties']['VpcId']
+                group_name = event['ResourceProperties']['GroupName']
+                
+                response = ec2.describe_security_groups(
+                  Filters=[
+                    {'Name': 'vpc-id', 'Values': [vpc_id]},
+                    {'Name': 'group-name', 'Values': [group_name]}
+                  ]
+                )
+                
+                if len(response['SecurityGroups']) == 0:
+                  raise Exception(f"Security group {group_name} not found in VPC {vpc_id}")
+                
+                group_id = response['SecurityGroups'][0]['GroupId']
+                cfnresponse.send(event, context, cfnresponse.SUCCESS, 
+                               {'GroupId': group_id})
+              else:
+                cfnresponse.send(event, context, cfnresponse.SUCCESS, {})
+            except Exception as e:
+              cfnresponse.send(event, context, cfnresponse.FAILED, 
+                             {'Error': str(e)})
 
 Outputs:
   EFSFilesystemId:

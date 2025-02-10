@@ -8,6 +8,7 @@ Metadata:
         Parameters:
           - EnvironmentName
           - AdministratorEmail
+          - CreateActiveDirectory
       - Label:
           default: Access Management
         Parameters:
@@ -46,12 +47,22 @@ Parameters:
     AllowedPattern: ^(pl-[a-z0-9]{8,20})?$
     ConstraintDescription: Must be a valid VPC Prefix List ID, which begins with `pl-` or be empty.
 
+  CreateActiveDirectory:
+    Description: Create a demo Active Directory for RES to connect to.
+    Type: String
+    Default: "False"
+    AllowedValues:
+         - "True"
+         - "False"
+
 Conditions:
   UseEnvironmentName: !Not [!Equals [!Ref EnvironmentName, ""]]
+  CreateAD: !Equals [!Ref CreateActiveDirectory, "True"]
 
 Resources:
 
   AdminPassword:
+    Condition: CreateAD
     Type: AWS::SecretsManager::Secret
     Properties:
       Description: Active Directory Administrator Account Password.
@@ -67,6 +78,7 @@ Resources:
           Value: !Ref EnvironmentName
 
   ServiceAccountPassword:
+    Condition: CreateAD
     Type: AWS::SecretsManager::Secret
     Properties:
       Description: Active Directory Service Account Password.
@@ -88,11 +100,12 @@ Resources:
         PortalDomainName: ""
         Keypair: !Ref Keypair
         EnvironmentName: !If [UseEnvironmentName, !Ref EnvironmentName, ""]
-        AdminPassword: !Ref AdminPassword
-        ServiceAccountPassword: !Ref ServiceAccountPassword
+        AdminPassword: !If [CreateAD, !Ref AdminPassword, ""]
+        ServiceAccountPassword: !If [CreateAD, !Ref ServiceAccountPassword, ""]
         ClientIpCidr: !Ref ClientIpCidr
         ClientPrefixList: !Ref InboundPrefixList
         RetainStorageResources: "False"  
+        CreateActiveDirectory: !Ref CreateActiveDirectory
       TemplateURL: https://aws-hpc-recipes.s3.us-east-1.amazonaws.com/main/recipes/res/res_demo_env/assets/bi.yaml
 
   RES:
@@ -116,27 +129,28 @@ Resources:
         InfrastructureHostSubnets: !GetAtt [ RESExternal, Outputs.PrivateSubnets ]
         VdiSubnets: !GetAtt [ RESExternal, Outputs.PrivateSubnets ]
         IsLoadBalancerInternetFacing: "true"
-        ActiveDirectoryName: !GetAtt [ RESExternal, Outputs.ActiveDirectoryName ]
-        ADShortName: !GetAtt [ RESExternal, Outputs.ADShortName ]
-        LDAPBase: !GetAtt [ RESExternal, Outputs.LDAPBase ]
-        LDAPConnectionURI: !GetAtt [ RESExternal, Outputs.LDAPConnectionURI ]
-        SudoersGroupName: RESAdministrators
-        ServiceAccountCredentialsSecretArn: !GetAtt [ RESExternal, Outputs.ServiceAccountCredentialsSecretArn ]
-        UsersOU: !GetAtt [ RESExternal, Outputs.UsersOU ]
-        GroupsOU: !GetAtt [ RESExternal, Outputs.GroupsOU ]
-        ComputersOU: !GetAtt [ RESExternal, Outputs.ComputersOU ]
+        ActiveDirectoryName: !If [CreateAD, !GetAtt [ RESExternal, Outputs.ActiveDirectoryName ], ""]
+        ADShortName: !If [CreateAD, !GetAtt [ RESExternal, Outputs.ADShortName ], ""]
+        LDAPBase: !If [CreateAD, !GetAtt [ RESExternal, Outputs.LDAPBase ], ""]
+        LDAPConnectionURI: !If [CreateAD, !GetAtt [ RESExternal, Outputs.LDAPConnectionURI ], ""]
+        SudoersGroupName: !If [CreateAD, RESAdministrators, ""]
+        ServiceAccountCredentialsSecretArn: !If [CreateAD, !GetAtt [ RESExternal, Outputs.ServiceAccountCredentialsSecretArn ], ""]
+        UsersOU: !If [CreateAD, !GetAtt [ RESExternal, Outputs.UsersOU ], ""]
+        GroupsOU: !If [CreateAD, !GetAtt [ RESExternal, Outputs.GroupsOU ], ""]
+        ComputersOU: !If [CreateAD, !GetAtt [ RESExternal, Outputs.ComputersOU ], ""]
         SharedHomeFileSystemId: !GetAtt [ RESExternal, Outputs.SharedHomeFilesystemId ]
         InfrastructureHostAMI: ""
         EnableLdapIDMapping: "True"
         IAMPermissionBoundary: ""
         DisableADJoin: "False"
-        ServiceAccountUserDN: !GetAtt [ RESExternal, Outputs.ServiceAccountUserDN ]
+        ServiceAccountUserDN: !If [CreateAD, !GetAtt [ RESExternal, Outputs.ServiceAccountUserDN ], ""]
         HttpProxy: ""
         HttpsProxy: ""
         NoProxy: ""
       TemplateURL: https://research-engineering-studio-us-east-1.s3.amazonaws.com/releases/latest/ResearchAndEngineeringStudio.template.json
 
   RESSsoKeycloak:
+    Condition: CreateAD
     Type: AWS::CloudFormation::Stack
     DependsOn: RES
     Properties:
@@ -362,9 +376,12 @@ Outputs:
   KeycloakUrl:
     Description: Keycloak Administrator Url
     Value: !GetAtt [ RESSsoKeycloak, Outputs.KeycloakUrl ]
+    Condition: CreateAD
   KeycloakAdminPasswordSecretArn:
     Description: Keycloak password for admin user
     Value: !GetAtt [ RESSsoKeycloak, Outputs.KeycloakAdminPasswordSecretArn ]
+    Condition: CreateAD
   ApplicationUrl:
     Description: RES application Url
     Value: !GetAtt [ RESSsoKeycloak, Outputs.ApplicationUrl ]
+    Condition: CreateAD
