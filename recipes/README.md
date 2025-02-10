@@ -277,6 +277,11 @@ You can use an HPC Recipe for AWS in several ways:
 * **About**: Demonstrates an FSx for Lustre filesystem with an S3 data repository association
 * **Usage**: [README.md](storage/fsx_lustre_s3_dra/README.md)
 
+#### fsx_ontap ![tag](https://img.shields.io/badge/-activedirectory-%23AAB7B8) ![tag](https://img.shields.io/badge/-core-%23146EB4) ![tag](https://img.shields.io/badge/-fsx-%237DCEA0) ![tag](https://img.shields.io/badge/-netapp-%23AAB7B8) ![tag](https://img.shields.io/badge/-nfs-%23AAB7B8) ![tag](https://img.shields.io/badge/-ontap-%23AAB7B8) ![tag](https://img.shields.io/badge/-smb-%23AAB7B8) 
+
+* **About**: Creates a basic Single-AZ FSx for NetApp ONTAP file system and a storage virtual machine with a non-root volume.
+* **Usage**: [README.md](storage/fsx_ontap/README.md)
+
 #### fsx_openzfs ![tag](https://img.shields.io/badge/-fsx-%237DCEA0) ![tag](https://img.shields.io/badge/-nfs-%23AAB7B8) ![tag](https://img.shields.io/badge/-openzfs-%23AAB7B8) 
 
 * **About**: Provision an FSx for OpenZFS filesystem and a security groups for accessing the filesystem
