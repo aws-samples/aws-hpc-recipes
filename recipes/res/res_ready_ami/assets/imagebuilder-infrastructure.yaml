@@ -18,8 +18,8 @@ Parameters:
   EnvironmentName:
     Type: String
     Description: Provide name of the RES Environment. Must be unique for your account and AWS Region.
-    AllowedPattern: ^res-[A-Za-z\-\_0-9]{0,7}$
-    ConstraintDescription: EnvironmentName must start with "res-" and should be less than or equal to 11 characters.
+    AllowedPattern: ^res-[a-z\-\_0-9]{0,7}$
+    ConstraintDescription: EnvironmentName must start with "res-" without capital letters and should be less than or equal to 11 characters.
   VPC:
     Description: VPC where RES is deployed
     Type: 'AWS::EC2::VPC::Id'
