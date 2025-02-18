@@ -6,7 +6,7 @@ Description: HPC-scale VPC with Multi-AZ Architecture.
   VPC Flow Logs are enabled and directed to CloudWatch for comprehensive network traffic monitoring.
   An S3 VPC Endpoint is configured to allow private subnet resources to access S3 without traversing the internet.
   A VPC-wide security group is created to enable communication between resources within the VPC.
-  Use this template as a foundation for creating custom launch templates tailored to your specific HPC infrastructure requirements.
+  Use this template as a foundation for building scalable, secure networking infrastructure for HPC workloads.
   Refer to the Outputs tab of the deployed stack for important resource identifiers including VPC ID, subnet IDs, security group ID, and internet gateway ID.
 
 Metadata:
