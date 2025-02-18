@@ -1,6 +1,12 @@
 AWSTemplateFormatVersion: '2010-09-09'
 Transform: AWS::Serverless-2016-10-31
-Description: Get started with AWS PCS and Amazon EC2 instances with AMD processors
+Description: AWS PCS Getting Started Environment with AMD Instances.
+  This template deploys a demonstration cluster using AMD-based instances and AWS Parallel Computing Service (PCS).
+  It configures a multi-tier network with FSx Lustre and EFS storage, EFA-enabled instances, and auto-scaling Slurm queues.
+  The cluster includes a login node (c7a.xlarge) and two compute queues - high-performance (hpc7a.48xlarge) and general purpose (c7a.xlarge).
+  Network security is managed through security groups with client IP restrictions and EFA support.
+  Use this template as a starting point for evaluating AWS PCS capabilities with AMD processors.
+  Refer to the Outputs tab for cluster access URLs and SSH key pair information.
 
 ### Stack metadata
 Metadata:

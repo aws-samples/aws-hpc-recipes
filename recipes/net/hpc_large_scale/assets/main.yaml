@@ -1,5 +1,13 @@
 AWSTemplateFormatVersion: '2010-09-09'
-Description: Create public and private subnets in two or three AZs. Specified CIDR blocks allow 4096 IPs each. 
+Description: HPC-scale VPC with Multi-AZ Architecture.
+  This template creates a highly available VPC infrastructure optimized for HPC workloads across multiple Availability Zones.
+  It provisions both public and private subnets in two or optionally three AZs, with each subnet configured for 4096 IP addresses.
+  The template sets up NAT Gateways and Internet Gateway for secure outbound connectivity from private subnets.
+  VPC Flow Logs are enabled and directed to CloudWatch for comprehensive network traffic monitoring.
+  An S3 VPC Endpoint is configured to allow private subnet resources to access S3 without traversing the internet.
+  A VPC-wide security group is created to enable communication between resources within the VPC.
+  Use this template as a foundation for creating custom launch templates tailored to your specific HPC infrastructure requirements.
+  Refer to the Outputs tab of the deployed stack for important resource identifiers including VPC ID, subnet IDs, security group ID, and internet gateway ID.
 
 Metadata:
   AWS::CloudFormation::Interface:

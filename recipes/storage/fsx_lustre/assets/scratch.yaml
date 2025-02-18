@@ -1,5 +1,11 @@
 AWSTemplateFormatVersion: '2010-09-09'
-Description: Creates a SCRATCH FSx for Lustre filesystem and a client security group for access to the filesystem
+Description: FSx for Lustre SCRATCH_2 Filesystem.
+  This template creates a scratch FSx for Lustre filesystem optimized for temporary high-performance workloads.
+  It configures a single-AZ deployment with customizable storage capacity and compression settings.
+  Security groups are configured to enable required Lustre network ports (988, 1021-1023) between clients and servers.
+  The filesystem supports Lustre versions 2.12 and 2.15 with LZ4 compression for optimized storage efficiency.
+  Use this template as a foundation for deploying high-performance temporary storage solutions.
+  Refer to the Outputs tab for the filesystem ID, mount name, and security group ID needed to mount the filesystem.
 
 ### Stack metadata
 Metadata:

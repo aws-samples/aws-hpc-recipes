@@ -1,5 +1,11 @@
 AWSTemplateFormatVersion: '2010-09-09'
-Description: Creates a PERSISTENT_2 FSx for Lustre filesystem and a client security group for access to the filesystem
+Description: FSx for Lustre PERSISTENT_2 Filesystem.
+  This template creates a persistent FSx for Lustre filesystem optimized for high-performance workloads.
+  It configures a single-AZ deployment with customizable storage capacity, throughput, and compression settings.
+  Security groups are configured to enable required Lustre network ports (988, 1021-1023) between clients and servers.
+  The filesystem supports Lustre versions 2.12 and 2.15 with LZ4 compression for optimized storage efficiency.
+  Use this template as a foundation for deploying high-performance shared storage solutions.
+  Refer to the Outputs tab for the filesystem ID, mount name, and security group ID needed to mount the filesystem.
 
 ### Stack metadata
 Metadata:

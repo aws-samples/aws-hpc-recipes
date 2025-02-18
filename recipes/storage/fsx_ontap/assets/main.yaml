@@ -1,5 +1,11 @@
 AWSTemplateFormatVersion: '2010-09-09'
-Description: Creates a basic Single-AZ FSx for NetApp ONTAP file system and a storage virtual machine with a non-root volume.
+Description: FSx for NetApp ONTAP Single-AZ Filesystem.
+  This template creates a Single-AZ FSx for ONTAP filesystem with a storage virtual machine and non-root volume.
+  It supports FLEXVOL or FLEXGROUP volume types with customizable storage capacity and throughput settings.
+  Optional Active Directory integration enables Windows SMB client access with automatic CIFS share creation.
+  Security groups are configured to enable required NFS/SMB ports with client CIDR-based access control.
+  Use this template as a foundation for deploying enterprise storage solutions with NetApp ONTAP features.
+  Refer to the Outputs tab for filesystem, storage virtual machine, volume, and security group IDs.
 
 Metadata:
   AWS::CloudFormation::Interface:
