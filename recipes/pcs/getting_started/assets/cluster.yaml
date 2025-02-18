@@ -1,6 +1,11 @@
 AWSTemplateFormatVersion: '2010-09-09'
 Transform: AWS::Serverless-2016-10-31
-Description: AWS Parallel Computing Service "getting started" cluster
+Description: AWS PCS "Getting Started" cluster. 
+  This template deploys a small HPC cluster with 1 login node and up to 4 compute nodes.  
+  It includes an EFS file system for shared storage and an FSx for Lustre file system for high-speed temporary storage.  
+  The cluster is deployed in a new VPC with both public and private subnets.  
+  It can be accessed via the browser using AWS Systems Manager Session Manager or over the internet via SSH.  
+  To access the cluster, check the Outputs tab of this stack for relevant links.  
 
 ### Stack metadata
 Metadata:
@@ -30,7 +35,7 @@ Parameters:
     AllowedValues:
       - x86
       - Graviton
-    Description: Architecture of the login and compute node instances
+    Description: Processor architecture for the login and compute node instances
 
   SlurmVersion:
     Type: String
@@ -41,12 +46,12 @@ Parameters:
          - 24.05
 
   KeyName:
-    Description: KeyPair to login to the head node
+    Description: SSH keypair to log in to the head node
     Type: AWS::EC2::KeyPair::KeyName
     AllowedPattern: ".+"  # Required
 
   ClientIpCidr:
-    Description: IP(s) allowed to directly access the login nodes. We recommend that you restrict it with your own IP/subnet (x.x.x.x/32 for your own ip or x.x.x.x/24 for range. Replace x.x.x.x with your own PUBLIC IP. You can get your public IP using tools such as https://ifconfig.co/)
+    Description: IP(s) allowed to access the login node over SSH. We recommend that you restrict it with your own IP/subnet (x.x.x.x/32 for your own ip or x.x.x.x/24 for range. Replace x.x.x.x with your own PUBLIC IP. You can get your public IP using tools such as https://ifconfig.co/)
     Default: 127.0.0.1/32
     Type: String
     AllowedPattern: (\d{1,3})\.(\d{1,3})\.(\d{1,3})\.(\d{1,3})/(\d{1,2})

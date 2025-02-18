@@ -1,5 +1,10 @@
 AWSTemplateFormatVersion: 2010-09-09
-Description: Launch templates for AWS PCS login and compute node groups, supporting shared EFS and FSx for Lustre file systems
+Description: EC2 launch templates for AWS PCS login and compute node groups.
+  This template creates EC2 launch templates for AWS PCS login and compute node groups. 
+  It demonstrates mounting EFS and FSx for Lustre file systems, configuring EC2 instance tags, enabling Instance Metadata Service Version 2 (IMDSv2), and setting up the cluster security group for communication with the AWS PCS controller. 
+  Additionally, it shows how to configure inbound SSH access to the login nodes. 
+  Use this template as a starting point to create custom launch templates tailored to your specific requirements.
+  Check the Outputs tab of this stack for useful details about resources created by this template.
 
 Metadata:
   AWS::CloudFormation::Interface:

@@ -1,5 +1,8 @@
 AWSTemplateFormatVersion: 2010-09-09
-Description: Security group for communications between AWS PCS controller, compute nodes, and client nodes, plus optional inbound SSH security group.
+Description: Security group for AWS PCS clusters.
+  This template creates a self-referencing security group that enables communications between AWS PCS controller, compute nodes, and client nodes.
+  Optionally, it can also create a security group to enable SSH access to the cluster.
+  Check the Outputs tab of this stack for useful details about resources created by this template.
 
 Metadata:
   AWS::CloudFormation::Interface:
