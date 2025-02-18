@@ -88,5 +88,6 @@ Outputs:
     Description: Supports communication between PCS controller, compute nodes, and login nodes
     Value: !Ref ClusterSecurityGroup
   InboundSshSecurityGroupId:
+    Condition: CreateSshSecGroup
     Description: Enables SSH access to login nodes
     Value: !Ref InboundSshSecurityGroup
