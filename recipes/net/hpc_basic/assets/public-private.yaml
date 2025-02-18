@@ -1,6 +1,14 @@
 ---
 AWSTemplateFormatVersion: '2010-09-09'
-Description: Create one public and one private subnet. Can create a VPC or use an existing one.
+Description: Basic VPC with Public/Private Subnets.
+  This template creates a simple VPC architecture with one public and one private subnet in a single Availability Zone.
+  The template offers flexibility by allowing you to either create a new VPC or use an existing one.
+  When creating a new VPC, it provisions an Internet Gateway for public subnet connectivity.
+  A NAT Gateway is deployed in the public subnet to enable outbound internet access for resources in the private subnet.
+  Appropriate route tables are configured to direct traffic between the subnets and the internet.
+  The template supports customizable CIDR ranges for both the VPC and subnet configurations.
+  Use this template as a starting point for creating basic two-tier architectures with public-facing and backend resources.
+  Refer to the Outputs tab of the deployed stack for important resource identifiers including VPC ID, subnet IDs, and internet gateway ID.
 
 ### Stack metadata
 Metadata:

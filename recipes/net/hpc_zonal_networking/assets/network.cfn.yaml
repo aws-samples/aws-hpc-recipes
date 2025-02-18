@@ -6,8 +6,13 @@
 # Authors: J. Lowell Wofford <jlowellw@amazon.com>, Matthew Vaughn <mwvaughn@amazon.com>
 
 AWSTemplateFormatVersion: '2010-09-09'
-Description: >
-  Creates a 4-zone subnet structure for NIST 800-223-aligned HPC networking. Each AZ is allocated separate Access, Management, Storage, and Compute subnets corresponding to the 4 security zones. See https://csrc.nist.gov/pubs/sp/800/223/final for details. 
+Description: NIST 800-223 Aligned HPC Network Architecture.
+  This template creates separate Access, Management, Storage, and Compute subnets aligned with NIST SP 800-223 security zones (https://csrc.nist.gov/pubs/sp/800/223/final).
+  It automatically selects Availability Zones with HPC instance support and provides optional backup AZ subnets for high availability.
+  External connectivity can be configured through transit gateway, direct access, or full isolation modes.
+  NAT Gateways and route tables enforce proper network segmentation between zones.
+  Use this template as a foundation for building NIST-compliant HPC environments.
+  Refer to the Outputs tab for IDs of all created network resources.
 
 Parameters:
 
