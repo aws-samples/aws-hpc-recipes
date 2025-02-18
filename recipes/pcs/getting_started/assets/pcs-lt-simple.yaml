@@ -1,5 +1,9 @@
 AWSTemplateFormatVersion: 2010-09-09
-Description: Simple launch template for an AWS PCS compute node group
+Description: Minimal EC2 launch template for an AWS PCS compute node group.
+  This template creates a minimal EC2 launch template for AWS PCS compute node groups.
+  It demonstrates how to configure EC2 instance tags, IMDSv2, and the cluster security group needed to communicate with the AWS PCS controller.
+  You can use it as a starting point for creating a custom launch template to meet your specific needs.
+  Check the Outputs tab of this stack for useful details about resources created by this template.
 
 Metadata:
   AWS::CloudFormation::Interface:
