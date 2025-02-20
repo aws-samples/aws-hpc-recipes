@@ -168,7 +168,7 @@ Resources:
               cd acme.sh-$VERSION
               ./acme.sh --install
               ./acme.sh --set-default-ca --server letsencrypt
-              ./acme.sh --issue --dns dns_aws --ocsp-must-staple --keylength 4096  -d ${DomainName} -d "*.${DomainName}"
+              ./acme.sh --issue --dns dns_aws --keylength 4096  -d ${DomainName} -d "*.${DomainName}"
 
               CERTKEYFILE=$HOME/.acme.sh/${DomainName}/${DomainName}.key
               CERTCERFILE=$HOME/.acme.sh/${DomainName}/${DomainName}.cer
@@ -322,7 +322,7 @@ Resources:
                   cd acme.sh-$VERSION
                   ./acme.sh --install
                   ./acme.sh --set-default-ca --server letsencrypt
-                  ./acme.sh --issue --dns dns_aws --ocsp-must-staple --keylength 4096  -d ${DomainName} -d "*.${DomainName}"
+                  ./acme.sh --issue --dns dns_aws --keylength 4096  -d ${DomainName} -d "*.${DomainName}"
 
                   CERTKEYFILE=$HOME/.acme.sh/${DomainName}/${DomainName}.key
                   CERTCERFILE=$HOME/.acme.sh/${DomainName}/${DomainName}.cer
