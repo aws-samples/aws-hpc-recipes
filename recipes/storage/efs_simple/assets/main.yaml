@@ -141,15 +141,13 @@ Resources:
 
   EfsSecurityGroupInboundRule:
     Type: 'AWS::EC2::SecurityGroupIngress'
+    Condition: CreateSecurityGroup
     Properties:
       IpProtocol: tcp
       Description: Allow incoming traffic to EFS from members of security group
       FromPort: 2049
       ToPort: 2049
-      GroupId: !If 
-          - CreateSecurityGroup
-          - !Ref EfsSecurityGroup
-          - !GetAtt SecurityGroupLookup.GroupId
+      GroupId: !Ref EfsSecurityGroup
       SourceSecurityGroupId: !Ref EfsClientSecurityGroup
 
   EfsClientSecurityGroupOutboundRule:
@@ -203,6 +201,7 @@ Resources:
     Condition: UseExistingSecurityGroup
     Properties:
       ServiceToken: !GetAtt SecurityGroupLookupFunction.Arn
+      ServiceTimeout: 60
       VpcId: !Ref VpcId
       GroupName: !Ref SecurityGroupName
 
@@ -232,6 +231,7 @@ Resources:
     Type: AWS::Lambda::Function
     Condition: UseExistingSecurityGroup
     Properties:
+      Timeout: 60
       Runtime: python3.9
       Handler: index.handler
       Role: !GetAtt SecurityGroupLookupRole.Arn

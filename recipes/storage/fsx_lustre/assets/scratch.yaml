@@ -61,12 +61,12 @@ Conditions:
 Resources:
 
   LustreServersSG:
-      Type: AWS::EC2::SecurityGroup
-      Condition: CreateSecurityGroup
-      Properties:
-        GroupDescription: 'Allows traffic to FSx for Lustre filesystem'
-        GroupName: !Sub '${AWS::StackName}-fsxl-security-group'
-        VpcId: !Ref VpcId
+    Type: AWS::EC2::SecurityGroup
+    Condition: CreateSecurityGroup
+    Properties:
+      GroupDescription: 'Allows traffic to FSx for Lustre filesystem'
+      GroupName: !Sub '${AWS::StackName}-fsxl-security-group'
+      VpcId: !Ref VpcId
 
   LustreClientsSG:
     Type: AWS::EC2::SecurityGroup
@@ -87,16 +87,14 @@ Resources:
 
   LustreClientsSGxxFROMxxLustreServersSG988:
     Type: AWS::EC2::SecurityGroupIngress
+    Condition: CreateSecurityGroup
     Properties:
       IpProtocol: tcp
       Description: Allows Lustre traffic on port 988 between Amazon FSx for Lustre file servers and Lustre clients
       FromPort: 988
       ToPort: 988
       GroupId: !Ref LustreClientsSG
-      SourceSecurityGroupId: !If 
-          - CreateSecurityGroup
-          - !Ref LustreServersSG
-          - !GetAtt SecurityGroupLookup.GroupId
+      SourceSecurityGroupId: !Ref LustreServersSG
 
   LustreClientsSGfromLustreClients1021:
     Type: AWS::EC2::SecurityGroupIngress
@@ -110,16 +108,14 @@ Resources:
   
   LustreClientsSGxxFROMxxLustreServersSG1021:
     Type: AWS::EC2::SecurityGroupIngress
+    Condition: CreateSecurityGroup
     Properties:
       IpProtocol: tcp
       Description: Allows Lustre traffic on ports 1021-23 between Amazon FSx for Lustre file servers and Lustre clients
       FromPort: 1021
       ToPort: 1023
       GroupId: !Ref LustreClientsSG
-      SourceSecurityGroupId: !If 
-          - CreateSecurityGroup
-          - !Ref LustreServersSG
-          - !GetAtt SecurityGroupLookup.GroupId
+      SourceSecurityGroupId: !Ref LustreServersSG
   
   LustreClientsSGtoLustreClients988:
     Type: AWS::EC2::SecurityGroupEgress
@@ -133,19 +129,18 @@ Resources:
   
   LustreClientsSGtopclusterLustreServersSG:
     Type: AWS::EC2::SecurityGroupEgress
+    Condition: CreateSecurityGroup
     Properties:
       IpProtocol: tcp
       Description: Allow Lustre traffic on port 988 between Amazon FSx for Lustre file servers and Lustre clients
       FromPort: 988
       ToPort: 988
       GroupId: !Ref LustreClientsSG
-      DestinationSecurityGroupId: !If 
-          - CreateSecurityGroup
-          - !Ref LustreServersSG
-          - !GetAtt SecurityGroupLookup.GroupId
+      DestinationSecurityGroupId: !Ref LustreServersSG
 
   LustreClientsSGtoLustreClients1021:
     Type: AWS::EC2::SecurityGroupEgress
+    Condition: CreateSecurityGroup
     Properties:
       IpProtocol: tcp
       Description: Allows Lustre traffic on ports 1021-23 between Amazon FSx for Lustre clients
@@ -156,16 +151,14 @@ Resources:
 
   LustreClientsSGtoLustreServersSG:
     Type: AWS::EC2::SecurityGroupEgress
+    Condition: CreateSecurityGroup
     Properties:
       IpProtocol: tcp
       Description: Allows Lustre traffic on ports 1021-23 between Amazon FSx for Lustre file servers and Lustre clients
       FromPort: 1021
       ToPort: 1023
       GroupId: !Ref LustreClientsSG
-      DestinationSecurityGroupId: !If 
-          - CreateSecurityGroup
-          - !Ref LustreServersSG
-          - !GetAtt SecurityGroupLookup.GroupId
+      DestinationSecurityGroupId: !Ref LustreServersSG
 
   FSxLFilesystem:
     Type: AWS::FSx::FileSystem
@@ -196,6 +189,7 @@ Resources:
     Condition: UseExistingSecurityGroup
     Properties:
       ServiceToken: !GetAtt SecurityGroupLookupFunction.Arn
+      ServiceTimeout: 60
       VpcId: !Ref VpcId
       GroupName: !Ref SecurityGroupName
 
@@ -225,6 +219,7 @@ Resources:
     Type: AWS::Lambda::Function
     Condition: UseExistingSecurityGroup
     Properties:
+      Timeout: 60
       Runtime: python3.9
       Handler: index.handler
       Role: !GetAtt SecurityGroupLookupRole.Arn
