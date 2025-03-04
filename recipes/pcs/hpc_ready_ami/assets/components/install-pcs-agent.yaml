@@ -6,13 +6,21 @@ Metadata:
   AWS::CloudFormation::Interface:
     ParameterGroups:
       - Label:
+          default: Installer Parameters
+        Parameters:
+          - PcsAgentInstallerVersion
+      - Label:
           default: HPC Recipes Configuration
         Parameters:
           - HpcRecipesS3Bucket
           - HpcRecipesBranch
 
-# TODO - parameterize PCS agent installer version
 Parameters:
+  PcsAgentInstallerVersion:
+    Type: String
+    Default: latest
+    Description: Version of the AWS PCS agent installer to use
+    AllowedPattern: '^(latest|[0-9]+)$'
   HpcRecipesS3Bucket:
     Type: String
     Default: aws-hpc-recipes
@@ -41,7 +49,7 @@ Resources:
           - PcsAgentInstallerVersion:
               type: string
               description: 'Version of the AWS PCS agent installer to use'
-              default: 'latest'
+              default: '${PcsAgentInstallerVersion}'
         phases:
           - name: build
             steps:
