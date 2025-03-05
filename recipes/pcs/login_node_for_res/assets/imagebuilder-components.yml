@@ -6,12 +6,23 @@ Metadata:
   AWS::CloudFormation::Interface:
     ParameterGroups:
       - Label:
+          default: Installer Configuration
+        Parameters:
+          - SlurmVersion
+      - Label:
           default: HPC Recipes Configuration
         Parameters:
           - HpcRecipesS3Bucket
           - HpcRecipesBranch
 
 Parameters:
+  SlurmVersion:
+    Type: String
+    Default: '24.05'
+    Description: Slurm version (e.g. 24.05)
+    AllowedValues:
+         - '23.11'
+         - '24.05'
   HpcRecipesS3Bucket:
     Type: String
     Default: aws-hpc-recipes
@@ -44,6 +55,7 @@ Resources:
     UpdateReplacePolicy: Delete
     Properties:
       Parameters:
+        SlurmVersion: !Ref SlurmVersion
         HpcRecipesS3Bucket: !Ref HpcRecipesS3Bucket
         HpcRecipesBranch: !Ref HpcRecipesBranch
       TemplateURL: !Sub 'https://${HpcRecipesS3Bucket}.s3.us-east-1.amazonaws.com/${HpcRecipesBranch}/recipes/pcs/hpc_ready_ami/assets/components/install-pcs-slurm.yaml'
@@ -65,7 +77,7 @@ Resources:
       Description: 'Component to enable RES integration with Parallel Computing Service'
       Platform: Linux
       Version: '1.0.0'
-      Data: |
+      Data: !Sub |
         name: res-pcs-login-node-post-install
         description: A component to configure a Parallel Computing Service Login Node
         schemaVersion: 1.0
@@ -79,7 +91,7 @@ Resources:
           - SlurmVersion:
               type: string
               description: Slurm version (e.g. 23.11)
-              default: "23.11"
+              default: "${SlurmVersion}"
         phases:
           - name: build
             steps:
