@@ -1,16 +1,16 @@
 AWSTemplateFormatVersion: '2010-09-09'
 Transform: 'AWS::LanguageExtensions'
-Description: VPC with Private and Public Subnets, NAT Gateway, and VPC Flow Logs
+Description: Implements multi-tiered storage infrastructure for HPC workloads following NIST SP 800-223 guidelines. Deploys Amazon FSx for Lustre for high-performance scratch storage, Amazon EFS for shared persistent storage, and S3 buckets for campaign and archival data. Creates necessary mount targets, security groups, and backup policies. Storage resources are deployed in dedicated Storage zone subnets with controlled access from Compute zone. Exports storage system IDs, mount targets, and bucket names for use by ParallelCluster and other dependent stacks.
 
 Parameters:
   NISTNetworkStackName:
     Type: String
-    Description: Name of the NIST Networking Stack.
-    Default: "nist-network"
+    Description: Name of the NIST Networking Stack. (You can find this value in the left hand menu by right-clicking Stacks and opening in a new tab.)
+    Default: ""
 
   StorageSubnetIDs:
     Type: CommaDelimitedList
-    Description: Find the Storage Subnet IDs export from your NIST Networking Stack (comma-separated list)
+    Description: Find the Storage Subnet IDs export from your NIST Networking Stack (comma-separated list). (You can find this value in the left hand menu by right-clicking Exports and opening in a new tab.)
     AllowedPattern: ^(?!\s*$).+
     ConstraintDescription: Must provide at least one value (comma-separated list)
 
