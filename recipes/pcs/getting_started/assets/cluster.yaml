@@ -169,7 +169,7 @@ Resources:
         MaxInstanceCount: 1
       IamInstanceProfileArn: !GetAtt [ PCSInstanceProfile, Outputs.InstanceProfileArn ]
       CustomLaunchTemplate:
-        Id: !GetAtt [ PCSLaunchTemplate, Outputs.LoginLaunchTemplateId ]
+        TemplateId: !GetAtt [ PCSLaunchTemplate, Outputs.LoginLaunchTemplateId ]
         Version: 1
       SubnetIds:
         - !GetAtt [ Networking, Outputs.DefaultPublicSubnet ]
@@ -188,7 +188,7 @@ Resources:
         MaxInstanceCount: 4
       IamInstanceProfileArn: !GetAtt [ PCSInstanceProfile, Outputs.InstanceProfileArn ]
       CustomLaunchTemplate:
-        Id: !GetAtt [ PCSLaunchTemplate, Outputs.ComputeLaunchTemplateId ]
+        TemplateId: !GetAtt [ PCSLaunchTemplate, Outputs.ComputeLaunchTemplateId ]
         Version: 1
       SubnetIds:
         - !GetAtt [ Networking, Outputs.DefaultPrivateSubnet ]

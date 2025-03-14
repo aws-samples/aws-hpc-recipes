@@ -438,7 +438,7 @@ Resources:
         MaxInstanceCount: 1
       IamInstanceProfileArn: !GetAtt [ PCSInstanceProfile, Outputs.InstanceProfileArn ]
       CustomLaunchTemplate:
-        Id: !Ref LoginLaunchTemplate
+        TemplateId: !Ref LoginLaunchTemplate
         Version: !GetAtt [ LoginLaunchTemplate, LatestVersionNumber ]
       SubnetIds:
         - !GetAtt [ Networking, Outputs.AccessSubnetId ]
@@ -457,7 +457,7 @@ Resources:
         MaxInstanceCount: !Ref MaxInstances
       IamInstanceProfileArn: !GetAtt [ PCSInstanceProfile, Outputs.InstanceProfileArn ]
       CustomLaunchTemplate:
-        Id: !Ref HpcComputeLaunchTemplate
+        TemplateId: !Ref HpcComputeLaunchTemplate
         Version: !GetAtt [ HpcComputeLaunchTemplate, LatestVersionNumber ]
       SubnetIds:
         - !GetAtt [ Networking, Outputs.ComputeSubnetId ]
