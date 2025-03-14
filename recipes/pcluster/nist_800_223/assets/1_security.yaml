@@ -1,11 +1,11 @@
 AWSTemplateFormatVersion: '2010-09-09'
-Description: VPC with Private and Public Subnets, NAT Gateway, and VPC Flow Logs
+Description: Creates security groups and IAM roles following NIST SP 800-223 HPC security guidelines. Establishes zone-specific security groups for Access, Management, Storage, and Compute zones with defined ingress/egress rules. Configures IAM roles and policies for EC2 instances, including required permissions for AWS ParallelCluster operations. Exports security group IDs and IAM role ARNs for use by dependent stacks in the HPC environment.
 
 Parameters:
   NISTNetworkStackName:
     Type: String
-    Description: Name of the NIST Networking Stack.
-    Default: "nist-network"
+    Description: Name of the NIST Networking Stack. (You can find this value in the left hand menu by right-clicking Stacks and opening in a new tab.)
+    Default: ""
 
 Resources:
   LoginNodeSecurityGroup:
