@@ -1,0 +1,5 @@
+project_name = "hpcrecipes"
+ssh_key_name = "mattv-us-east-2"
+aws_region = "us-east-2"
+availability_zone = "us-east-2a"
+pcs_cng_ami_id = "ami-0c07bc9deffbe976e"
