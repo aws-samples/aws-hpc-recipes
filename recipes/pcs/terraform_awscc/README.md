@@ -94,7 +94,7 @@ This Terraform project provides the following outputs:
 
 These outputs can be used to reference these resources in other parts of your infrastructure or to retrieve information about the deployed resources.
 
-## Connecting the the AWS PCS cluster
+## Connecting to the AWS PCS cluster
 
 View the outputs from `terraform apply`. There will be two URLs. 
 
