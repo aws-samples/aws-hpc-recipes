@@ -219,6 +219,11 @@ You can use an HPC Recipe for AWS in several ways:
 * **About**: Install Spack on AWS PCS
 * **Usage**: [README.md](pcs/spack_for_pcs/README.md)
 
+#### terraform_awscc ![tag](https://img.shields.io/badge/-beta-%23800080) ![tag](https://img.shields.io/badge/-efs-%237DCEA0) ![tag](https://img.shields.io/badge/-fsx-%237DCEA0) ![tag](https://img.shields.io/badge/-lustre-%23AAB7B8) ![tag](https://img.shields.io/badge/-pcs-%23FF9900) ![tag](https://img.shields.io/badge/-terraform-%23AAB7B8) 
+
+* **About**: Create a demo PCS cluster using the Terraform AWSCC provider
+* **Usage**: [README.md](pcs/terraform_awscc/README.md)
+
 #### try_amd ![tag](https://img.shields.io/badge/-amd-%23AAB7B8) ![tag](https://img.shields.io/badge/-beta-%23800080) ![tag](https://img.shields.io/badge/-cloudformation-%237DCEA0) ![tag](https://img.shields.io/badge/-demo-%23AAB7B8) ![tag](https://img.shields.io/badge/-efs-%237DCEA0) ![tag](https://img.shields.io/badge/-pcs-%23FF9900) 
 
 * **About**: Get started with AMD-powered HPC instances and AWS PCS
