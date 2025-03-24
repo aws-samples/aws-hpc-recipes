@@ -112,15 +112,15 @@ Resources:
                         slurm_key_arn=$(aws pcs get-cluster --region $region --cluster-identifier $cluster_id --query "cluster.slurmConfiguration.authKey.secretArn")
 
                         #strip the double-quote 
-                        slurm_ip=$(echo $slurm_ip | tr -d '"')
-                        slurm_port=$(echo $slurm_port | tr -d '"')
-                        slurm_key_arn=$(echo $slurm_key_arn | tr -d '"')
+                        slurm_ip=$(echo ${!slurm_ip} | tr -d '"')
+                        slurm_port=$(echo ${!slurm_port} | tr -d '"')
+                        slurm_key_arn=$(echo ${!slurm_key_arn} | tr -d '"')
 
                         mkdir -p /etc/slurm
 
                         aws secretsmanager get-secret-value \
                             --region $region \
-                            --secret-id $slurm_key_arn \
+                            --secret-id ${!slurm_key_arn} \
                             --version-stage AWSCURRENT \
                             --query 'SecretString' \
                             --output text | base64 -d > /etc/slurm/slurm.key
@@ -128,7 +128,7 @@ Resources:
                         chmod 0600 /etc/slurm/slurm.key
                         chown slurm:slurm /etc/slurm/slurm.key
 
-                        echo "SACKD_OPTIONS='--conf-server=${slurm_ip}:${slurm_port}'" > /etc/sysconfig/sackd
+                        echo "SACKD_OPTIONS='--conf-server=${!slurm_ip}:${!slurm_port}'" > /etc/sysconfig/sackd
 
                         sudo cat << EOF > /etc/systemd/system/sackd.service
                         [Unit]
@@ -144,7 +144,7 @@ Resources:
                         Group=slurm
                         RuntimeDirectory=slurm
                         RuntimeDirectoryMode=0755
-                        ExecStart=/opt/aws/pcs/scheduler/slurm-${slurm_version}/sbin/sackd --systemd \$SACKD_OPTIONS
+                        ExecStart=/opt/aws/pcs/scheduler/slurm-${!slurm_version}/sbin/sackd --systemd \$SACKD_OPTIONS
                         ExecReload=/bin/kill -HUP \$MAINPID
                         KillMode=process
                         LimitNOFILE=131072
