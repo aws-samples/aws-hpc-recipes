@@ -112,15 +112,15 @@ Resources:
                         slurm_key_arn=$(aws pcs get-cluster --region $region --cluster-identifier $cluster_id --query "cluster.slurmConfiguration.authKey.secretArn")
 
                         #strip the double-quote 
-                        slurm_ip=$(echo $slurm_ip | tr -d '"')
-                        slurm_port=$(echo $slurm_port | tr -d '"')
-                        slurm_key_arn=$(echo $slurm_key_arn | tr -d '"')
+                        slurm_ip=$(echo ${!slurm_ip} | tr -d '"')
+                        slurm_port=$(echo ${!slurm_port} | tr -d '"')
+                        slurm_key_arn=$(echo ${!slurm_key_arn} | tr -d '"')
 
                         mkdir -p /etc/slurm
 
                         aws secretsmanager get-secret-value \
                             --region $region \
-                            --secret-id $slurm_key_arn \
+                            --secret-id ${!slurm_key_arn} \
                             --version-stage AWSCURRENT \
                             --query 'SecretString' \
                             --output text | base64 -d > /etc/slurm/slurm.key
