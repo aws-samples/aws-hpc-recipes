@@ -1,0 +1,138 @@
+AWSTemplateFormatVersion: '2010-09-09'
+Description: Cron based DRA release task
+Metadata:
+  AWS::CloudFormation::Interface:
+    ParameterGroups:
+      - Label:
+          default: FSx DRA configuration
+        Parameters:
+          - FSId
+      - Label:
+          default: Release Task configuration
+        Parameters:
+          - CronSchedule
+          - DaysLastAccess
+          - FsxReleasePath
+          - S3ReportPath
+Parameters:
+  FSId:
+    Type: String
+    Description: The ID of the file system on which the data repository association is configured.
+  CronSchedule:
+    Description: CRON schedule for backups (default every 6 hours)
+    Type: String
+    Default: "0 0/6 * * ? *"
+  DaysLastAccess:
+    Type: Number
+    Description: specify the the duration, in days, such that any file not accessed in that duration should be released.
+  FsxReleasePath:
+    Type: String
+    Description: specify the path of your Amazon FSx file system that contains the files to be released. The paths that you provide must be relative to the mount point of the file system. For example, if the mount point is /mnt/fsx and /mnt/fsx/path1 is a folder on the file system that you want to release, then the path to provide is /path1. To release all files in the file system, specify a forward slash (/) as the path.
+  S3ReportPath:
+    Type: String
+    Description: Enter a relative path on the file system's linked S3 data repository for Report path. The format is s3://<bucket/<prefix>. 
+Resources:
+  LambdaExecutionRole:
+    Type: AWS::IAM::Role
+    Properties:
+      AssumeRolePolicyDocument:
+        Version: '2012-10-17'
+        Statement:
+          - Effect: Allow
+            Principal:
+              Service:
+                - lambda.amazonaws.com
+            Action:
+              - sts:AssumeRole
+      Path: /
+      Policies:
+        - PolicyName: root
+          PolicyDocument:
+            Version: '2012-10-17'
+            Statement:
+              - Effect: Allow
+                Action:
+                  - logs:*
+                Resource: arn:aws:logs:*:*:*
+              - Effect: Allow
+                Action:
+                  - fsx:CreateDataRepositoryTask
+                Resource: 
+                  - arn:aws:fsx:*:*:task/*
+                  - arn:aws:fsx:*:*:file-system/*
+  LambdaFunction:
+    Type: AWS::Lambda::Function
+    Properties:
+      Role: !GetAtt LambdaExecutionRole.Arn
+      Runtime: python3.11
+      Environment:
+        Variables:
+          FSX_FILE_SYSTEM_ID: 
+            Ref: "FSId"
+          DAYS_SINCE_LAST_ACCESS: 
+            Ref: "DaysLastAccess"
+          FSX_RELEASE_PATH: 
+            Ref: "FsxReleasePath"
+          FSX_ENABLE_REPORT: "true"
+          FSX_REPORT_BUCKET: 
+            Ref: "S3ReportPath"
+      Handler: index.lambda_handler
+      Code:
+        ZipFile: |
+            import os
+            
+            import boto3
+            
+            file_system_id = os.environ["FSX_FILE_SYSTEM_ID"]
+            days = os.environ["DAYS_SINCE_LAST_ACCESS"]
+            path = os.environ["FSX_RELEASE_PATH"]
+            report = os.environ["FSX_ENABLE_REPORT"]
+            bucket = os.environ["FSX_REPORT_BUCKET"]
+            
+            client = boto3.client("fsx")
+            
+            
+            def lambda_handler(event, context):
+                try:
+                    ReportCode={"Enabled": False}
+                    if report.lower() == "true":
+                        ReportCode={
+                            'Enabled': True,
+                            'Path': bucket + '/release_task_logs',
+                            'Format': 'REPORT_CSV_20191124',
+                            'Scope': 'FAILED_FILES_ONLY'
+                        }
+                    response = client.create_data_repository_task(
+                        Type="RELEASE_DATA_FROM_FILESYSTEM",
+                        Paths=[
+                            path,
+                        ],
+                        FileSystemId=file_system_id,
+                        Report=ReportCode,
+                        ReleaseConfiguration={
+                            "DurationSinceLastAccess": {"Unit": "DAYS", "Value": int(days)}
+                        },
+                    )
+                except Exception as e:
+                    raise
+  FSxReleaseStartEvent:
+    Type: AWS::Events::Rule
+    Properties:
+      Description: Schedule to run FSx release task event
+      ScheduleExpression: !Sub 'cron(${CronSchedule})'
+      State: ENABLED
+      Targets:
+        - Arn: !Sub ${LambdaFunction.Arn}
+          Id: FsxRelease
+
+  FSxReleaseStartEventLambdaPermission:
+    Type: AWS::Lambda::Permission
+    Properties:
+      FunctionName: !Sub ${LambdaFunction}
+      Action: lambda:InvokeFunction
+      Principal: events.amazonaws.com
+      SourceArn: !Sub ${FSxReleaseStartEvent.Arn}
+Outputs:
+  LambdaArn:
+    Value:
+      !Sub ${LambdaFunction.Arn}
