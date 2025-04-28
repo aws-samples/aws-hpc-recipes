@@ -34,11 +34,10 @@ Parameters:
   SssdConfigTemplateS3Path:
     Description: An S3 Path (without the s3://) to a configuration file template for configuring SSSD. 
     Type: String
-    # TODO - update with published recipe locations
-    Default: awspcs-hpc-recipes-demo/ad.sssd.conf.template
+    Default: aws-hpc-recipes/main/recipes/pcs/multiuser_demo/assets/ad.sssd.conf.template
     AllowedValues:
-         - "awspcs-hpc-recipes-demo/ad.sssd.conf.template"
-         - "awspcs-hpc-recipes-demo/openldap.sssd.conf.template"
+         - "aws-hpc-recipes/main/recipes/pcs/multiuser_demo/assets/ad.sssd.conf.template"
+         - "aws-hpc-recipes/main/recipes/pcs/multiuser_demo/assets/openldap.sssd.conf.template"
   DomainName:
     Type: String
     Description: LDAP domain name (e.g. corp.example.com)
