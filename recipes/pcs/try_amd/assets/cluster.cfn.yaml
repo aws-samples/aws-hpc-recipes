@@ -24,11 +24,12 @@ Parameters:
 
   SlurmVersion:
     Type: String
-    Default: 23.11
+    Default: 24.11
     Description: Version of Slurm to use
     AllowedValues:
          - 23.11
          - 24.05
+         - 24.11
 
   ClientIpCidr:
     Description: IP(s) allowed to directly access the login nodes. We recommend that you restrict it with your own IP/subnet (x.x.x.x/32 for your own ip or x.x.x.x/24 for range. Replace x.x.x.x with your own PUBLIC IP. You can get your public IP using tools such as https://ifconfig.co/)

@@ -34,11 +34,12 @@ Parameters:
 
   SlurmVersion:
     Type: String
-    Default: 23.11
+    Default: 24.11
     Description: Version of Slurm to use
     AllowedValues:
          - 23.11
          - 24.05
+         - 24.11
 
   KeyName:
     Description: KeyPair to login to the head node
