@@ -75,7 +75,7 @@ Note: Find the AMI ID using the following command, subbing `region-code` for the
 
 ```shell
 aws ec2 describe-images --region region-code --owners amazon \
---filters 'Name=name,Values=aws-pcs-sample_ami-amzn2-x86_64-slurm-24.05*' \
+--filters 'Name=name,Values=aws-pcs-sample_ami-amzn2-x86_64-slurm-24.11*' \
             'Name=state,Values=available' \
 --query 'sort_by(Images, &CreationDate)[-1].[Name,ImageId]' --output text
 ```
