@@ -78,6 +78,11 @@ You can use an HPC Recipe for AWS in several ways:
 * **About**: Networking configuration for large-scale HPC on AWS. Creates a new VPC.
 * **Usage**: [README.md](net/hpc_large_scale/README.md)
 
+#### hpc_zonal_networking ![tag](https://img.shields.io/badge/-beta-%23800080) ![tag](https://img.shields.io/badge/-core-%23146EB4) ![tag](https://img.shields.io/badge/-vpc-%23AAB7B8) 
+
+* **About**: Creates a multi-zone network architecture for HPC aligned with NIST 800-223 guidelines
+* **Usage**: [README.md](net/hpc_zonal_networking/README.md)
+
 
 ### :arrow_right: pcluster: AWS ParallelCluster
 
@@ -214,6 +219,11 @@ You can use an HPC Recipe for AWS in several ways:
 * **About**: Install Spack on AWS PCS
 * **Usage**: [README.md](pcs/spack_for_pcs/README.md)
 
+#### terraform_awscc ![tag](https://img.shields.io/badge/-beta-%23800080) ![tag](https://img.shields.io/badge/-efs-%237DCEA0) ![tag](https://img.shields.io/badge/-fsx-%237DCEA0) ![tag](https://img.shields.io/badge/-lustre-%23AAB7B8) ![tag](https://img.shields.io/badge/-pcs-%23FF9900) ![tag](https://img.shields.io/badge/-terraform-%23AAB7B8) 
+
+* **About**: Create a demo PCS cluster using the Terraform AWSCC provider
+* **Usage**: [README.md](pcs/terraform_awscc/README.md)
+
 #### try_amd ![tag](https://img.shields.io/badge/-amd-%23AAB7B8) ![tag](https://img.shields.io/badge/-beta-%23800080) ![tag](https://img.shields.io/badge/-cloudformation-%237DCEA0) ![tag](https://img.shields.io/badge/-demo-%23AAB7B8) ![tag](https://img.shields.io/badge/-efs-%237DCEA0) ![tag](https://img.shields.io/badge/-pcs-%23FF9900) 
 
 * **About**: Get started with AMD-powered HPC instances and AWS PCS
@@ -271,6 +281,11 @@ You can use an HPC Recipe for AWS in several ways:
 
 * **About**: Demonstrates an FSx for Lustre filesystem with an S3 data repository association
 * **Usage**: [README.md](storage/fsx_lustre_s3_dra/README.md)
+
+#### fsx_ontap ![tag](https://img.shields.io/badge/-activedirectory-%23AAB7B8) ![tag](https://img.shields.io/badge/-core-%23146EB4) ![tag](https://img.shields.io/badge/-fsx-%237DCEA0) ![tag](https://img.shields.io/badge/-netapp-%23AAB7B8) ![tag](https://img.shields.io/badge/-nfs-%23AAB7B8) ![tag](https://img.shields.io/badge/-ontap-%23AAB7B8) ![tag](https://img.shields.io/badge/-smb-%23AAB7B8) 
+
+* **About**: Creates a basic Single-AZ FSx for NetApp ONTAP file system and a storage virtual machine with a non-root volume.
+* **Usage**: [README.md](storage/fsx_ontap/README.md)
 
 #### fsx_openzfs ![tag](https://img.shields.io/badge/-fsx-%237DCEA0) ![tag](https://img.shields.io/badge/-nfs-%23AAB7B8) ![tag](https://img.shields.io/badge/-openzfs-%23AAB7B8) 
 

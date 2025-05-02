@@ -1,6 +1,11 @@
 AWSTemplateFormatVersion: '2010-09-09'
-Description: >
-  Deploy a demo of the latest AWS ParallelCluster release. 
+Description: AWS ParallelCluster Demo Environment.
+  This template deploys a demonstration HPC cluster using the latest AWS ParallelCluster release with key enterprise features.
+  It creates a VPC with public/private subnets, a head node with DCV support, and a dynamically scaling Slurm compute fleet.
+  The cluster supports multiple architectures (x86, Graviton, GPU) and operating systems with configurable queue sizes.
+  Shared storage is implemented through either EFS or EBS, with SSM integration for simplified access.
+  Use this template as a foundation for evaluating ParallelCluster capabilities and features.
+  Refer to the Outputs tab for the head node IP address and Systems Manager access URL.
 
 ### Stack metadata
 Metadata:

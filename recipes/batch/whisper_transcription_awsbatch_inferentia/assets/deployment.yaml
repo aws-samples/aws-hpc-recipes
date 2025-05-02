@@ -73,6 +73,10 @@ Parameters:
     Type: Number
     Default: 50
     Description: Size in GiB of EBS root volume
+  LatestAmiId:
+    Type: 'AWS::SSM::Parameter::Value<AWS::EC2::Image::Id>'
+    Default: '/aws/service/ecs/optimized-ami/amazon-linux-2023/neuron/recommended/image_id'
+    Description: The latest ECS Neuron AMI
 
 Resources:
   BatchLaunchTemplate:
@@ -170,7 +174,7 @@ Resources:
           Name: "Inference-demo-batch"
         Ec2Configuration:
           - ImageType: ECS_AL2023
-            ImageIdOverride: ami-07979ad4c774a29ab
+            ImageIdOverride: !Ref LatestAmiId
 
   DefaultQueue:
     Type: AWS::Batch::JobQueue
@@ -230,9 +234,9 @@ Resources:
             Version: latest
         ResourceRequirements:
         - Type: VCPU
-          Value: '32'
+          Value: '16'
         - Type: MEMORY
-          Value: '125000'
+          Value: '30000'
         LinuxParameters:
           Devices:
           - HostPath: /dev/neuron0
@@ -252,6 +256,8 @@ Resources:
             Value: 'model-artifacts/whisper_large-v3_1_neuron_encoder.pt'
           - Name: MODEL_DECODER_S3_KEY
             Value: 'model-artifacts/whisper_large-v3_1_448_neuron_decoder.pt'
+          - Name: MODEL_PROJ_S3_KEY
+            Value: 'model-artifacts/whisper_large-v3_1_448_neuron_proj.pt'
         Command:
         - python3
         - inference.py

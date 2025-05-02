@@ -1,5 +1,8 @@
 AWSTemplateFormatVersion: 2010-09-09
-Description: Minimal IAM instance profile for AWS PCS compute node groups
+Description: Minimal IAM instance profile for AWS PCS compute node groups.
+  This template creates an IAM instance profile with a role that has the minimum required permissions for AWS PCS compute node groups.
+  Optionally, the profile can be configured to enable the following services on PCS-managed instances - AWS Systems Manager, Amazon S3 (read-only access), Amazon CloudWatch Agent.
+  Check the Outputs tab of this stack for useful details about resources created by this template.
 
 Metadata:
   AWS::CloudFormation::Interface:

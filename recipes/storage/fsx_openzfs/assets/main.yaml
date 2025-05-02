@@ -1,5 +1,11 @@
 AWSTemplateFormatVersion: '2010-09-09'
-Description: Creates an FSx for OpenZFS filesystem and a client security group for access to the filesystem
+Description: FSx for OpenZFS Single-AZ Filesystem.
+  This template creates an FSx for OpenZFS filesystem with single-AZ deployment.
+  It configures storage capacity, throughput, record size, and supports LZ4/ZSTD compression for optimized efficiency.
+  Security groups enable required NFS ports (111, 2049, 20001-20003) with both TCP and UDP protocols for client access.
+  The filesystem is deployed with NFS exports configured for cross-mount support and synchronous write operations.
+  Use this template as a foundation for deploying NFS-based shared storage solutions.
+  Refer to the Outputs tab for the filesystem ID, root volume ID, and security group ID needed to mount the filesystem.
 
 ### Stack metadata
 Metadata:
