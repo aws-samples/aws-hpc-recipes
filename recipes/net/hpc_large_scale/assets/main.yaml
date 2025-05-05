@@ -151,6 +151,10 @@ Mappings:
       ZoneId1: usgw1-az1
       ZoneId2: usgw1-az2
       ZoneId3: usgw1-az3
+    us-gov-east-1:
+      ZoneId1: usge1-az1
+      ZoneId2: usge1-az2
+      ZoneId3: usge1-az3
     ap-northeast-3:
       ZoneId1: apne3-az3
       ZoneId2: apne3-az2
