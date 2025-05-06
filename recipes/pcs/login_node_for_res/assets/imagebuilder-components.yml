@@ -128,6 +128,7 @@ Resources:
                         chmod 0600 /etc/slurm/slurm.key
                         chown slurm:slurm /etc/slurm/slurm.key
 
+                        mkdir -p /etc/sysconfig/
                         echo "SACKD_OPTIONS='--conf-server=${!slurm_ip}:${!slurm_port}'" > /etc/sysconfig/sackd
 
                         sudo cat << EOF > /etc/systemd/system/sackd.service
