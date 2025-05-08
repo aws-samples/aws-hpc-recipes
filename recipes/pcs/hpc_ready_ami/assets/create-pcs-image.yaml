@@ -93,6 +93,30 @@ Conditions:
     - "ami"
 
 Resources:
+  # IAM Role and Instance Profile for Image Builder
+  ImageBuilderRole:
+    Type: AWS::IAM::Role
+    Properties:
+      AssumeRolePolicyDocument:
+        Version: '2012-10-17'
+        Statement:
+          - Effect: Allow
+            Principal:
+              Service: ec2.amazonaws.com
+            Action: sts:AssumeRole
+      ManagedPolicyArns:
+        - arn:aws:iam::aws:policy/AmazonSSMManagedInstanceCore
+        - arn:aws:iam::aws:policy/EC2InstanceProfileForImageBuilder
+      Path: /
+
+  ImageBuilderInstanceProfile:
+    Type: AWS::IAM::InstanceProfile
+    Properties:
+      InstanceProfileName: EC2InstanceProfileForImageBuilder
+      Path: /
+      Roles:
+        - !Ref ImageBuilderRole
+
   ImageBuilderComponentsStack:
     Type: AWS::CloudFormation::Stack
     DeletionPolicy: Delete
@@ -142,6 +166,7 @@ Resources:
 
   PCSInfrastructureConfiguration:
     Type: AWS::ImageBuilder::InfrastructureConfiguration
+    DependsOn: ImageBuilderInstanceProfile
     Properties:
       Description: !Sub '${Architecture} infrastructure'
       InstanceProfileName: EC2InstanceProfileForImageBuilder
