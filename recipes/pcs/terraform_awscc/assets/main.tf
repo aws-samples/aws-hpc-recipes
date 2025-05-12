@@ -55,11 +55,18 @@ module "fsx_lustre" {
   # Security group
   create_security_group = true
   security_group_ingress_rules = {
-    in = {
+    in_a = {
       cidr_ipv4   = module.vpc.vpc_cidr_block
       description = "Allow inbound traffic from the VPC"
-      from_port   = 0
-      to_port     = 0
+      from_port   = 988
+      to_port     = 988
+      protocol    = "tcp"
+    }
+    in_b = {
+      cidr_ipv4   = module.vpc.vpc_cidr_block
+      description = "Allow inbound traffic from the VPC"
+      from_port   = 1018
+      to_port     = 1023
       protocol    = "tcp"
     }
   }
