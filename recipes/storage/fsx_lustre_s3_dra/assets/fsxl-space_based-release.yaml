@@ -1,0 +1,147 @@
+AWSTemplateFormatVersion: '2010-09-09'
+Description: CloudWatch alarm for FSx file system storage space
+Metadata:
+  AWS::CloudFormation::Interface:
+    ParameterGroups:
+      - Label:
+          default: FSx DRA configuration
+        Parameters:
+          - FSId
+      - Label:
+          default: Release Task configuration
+        Parameters:
+          - DaysLastAccess
+          - FsxReleasePath
+          - S3ReportPath
+          - StorageUtilization
+Parameters:
+  FSId:
+    Type: String
+    Description: The ID of the file system on which the data repository association is configured.
+  DaysLastAccess:
+    Type: Number
+    Description: specify the the duration, in days, such that any file not accessed in that duration should be released.
+  FsxReleasePath:
+    Type: String
+    Description: specify the path of your Amazon FSx file system thta contains the files to be released. The paths that you provide must be relative to the mount point of the file system. For example, if the mount point is /mnt/fsx and /mnt/fsx/path1 is a folder on the file system that you want to release, then the path to provide is /path1. To release all files in the file system, specify a forward slash (/) as the path.
+  S3ReportPath:
+    Type: String
+    Description: Enter a relative path on the file system's linked S3 data repository for Report path. . The format is s3://<bucket/<prefix>.
+  StorageUtilization:
+    Type: Number
+    Description: The total number of bytes available in the file system under wich is executed the release task.
+Resources:
+  LambdaExecutionRole:
+    Type: AWS::IAM::Role
+    Properties:
+      AssumeRolePolicyDocument:
+        Version: '2012-10-17'
+        Statement:
+          - Effect: Allow
+            Principal:
+              Service:
+                - lambda.amazonaws.com
+            Action:
+              - sts:AssumeRole
+      Path: /
+      Policies:
+        - PolicyName: root
+          PolicyDocument:
+            Version: '2012-10-17'
+            Statement:
+              - Effect: Allow
+                Action:
+                  - logs:*
+                Resource: arn:aws:logs:*:*:*
+              - Effect: Allow
+                Action:
+                  - fsx:CreateDataRepositoryTask
+                Resource: 
+                  - arn:aws:fsx:*:*:task/*
+                  - arn:aws:fsx:*:*:file-system/*
+  LambdaFunction:
+    Type: AWS::Lambda::Function
+    Properties:
+      Role: !GetAtt LambdaExecutionRole.Arn
+      Runtime: python3.11
+      Environment:
+        Variables:
+          FSX_FILE_SYSTEM_ID: 
+            Ref: "FSId"
+          DAYS_SINCE_LAST_ACCESS: 
+            Ref: "DaysLastAccess"
+          FSX_RELEASE_PATH: 
+            Ref: "FsxReleasePath"
+          FSX_ENABLE_REPORT: "true"
+          FSX_REPORT_BUCKET: 
+            Ref: "S3ReportPath"
+      Handler: index.lambda_handler
+      Code:
+        ZipFile: |
+            import os
+            
+            import boto3
+            
+            file_system_id = os.environ["FSX_FILE_SYSTEM_ID"]
+            days = os.environ["DAYS_SINCE_LAST_ACCESS"]
+            path = os.environ["FSX_RELEASE_PATH"]
+            report = os.environ["FSX_ENABLE_REPORT"]
+            bucket = os.environ["FSX_REPORT_BUCKET"]
+            
+            client = boto3.client("fsx")
+            
+            
+            def lambda_handler(event, context):
+                try:
+                    ReportCode={"Enabled": False}
+                    if report.lower() == "true":
+                        ReportCode={
+                            'Enabled': True,
+                            'Path': bucket + '/release_task_logs',
+                            'Format': 'REPORT_CSV_20191124',
+                            'Scope': 'FAILED_FILES_ONLY'
+                        }
+                    response = client.create_data_repository_task(
+                        Type="RELEASE_DATA_FROM_FILESYSTEM",
+                        Paths=[
+                            path,
+                        ],
+                        FileSystemId=file_system_id,
+                        Report=ReportCode,
+                        ReleaseConfiguration={
+                            "DurationSinceLastAccess": {"Unit": "DAYS", "Value": int(days)}
+                        },
+                    )
+                except Exception as e:
+                    raise
+                    
+  FSxStorageSpaceAlarm:
+    Type: AWS::CloudWatch::Alarm
+    Properties:
+      AlarmName: FSx Storage Space Alarm
+      AlarmDescription: Alarm FSx file system storage space
+      MetricName: FreeDataStorageCapacity
+      Namespace: AWS/FSx
+      Dimensions:
+        - Name: FileSystemId
+          Value: !Ref FSId
+      Statistic: Sum
+      Period: 60
+      EvaluationPeriods: 1
+      Threshold: !Ref StorageUtilization
+      ComparisonOperator: LessThanThreshold
+      TreatMissingData: notBreaching
+      AlarmActions:
+        - !Sub ${LambdaFunction.Arn}
+  FSxAlarmTriggerLambda:
+    Type: AWS::Lambda::Permission
+    Properties:
+      FunctionName: !Ref LambdaFunction
+      Action: lambda:InvokeFunction
+      Principal: lambda.alarms.cloudwatch.amazonaws.com
+      SourceArn: !Sub ${FSxStorageSpaceAlarm.Arn}
+      
+Outputs:
+  LambdaArn:
+    Value:
+      !Sub ${LambdaFunction.Arn}

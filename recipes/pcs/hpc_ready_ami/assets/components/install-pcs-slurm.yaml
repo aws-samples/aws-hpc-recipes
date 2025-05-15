@@ -6,13 +6,29 @@ Metadata:
   AWS::CloudFormation::Interface:
     ParameterGroups:
       - Label:
+          default: Installer Parameters
+        Parameters:
+          - SlurmVersion
+          - PcsSlurmInstallerVersion
+      - Label:
           default: HPC Recipes Configuration
         Parameters:
           - HpcRecipesS3Bucket
           - HpcRecipesBranch
 
-# TODO - parameterize major and installer version
 Parameters:
+  SlurmVersion:
+    Type: String
+    Default: '24.05'
+    Description: Major version of Slurm to install
+    AllowedValues:
+         - '24.05'
+         - '23.11'
+  PcsSlurmInstallerVersion:
+    Type: String
+    Default: latest
+    Description: Version of the PCS Slurm installer to use
+    AllowedPattern: '^(latest|[0-9]+)$'
   HpcRecipesS3Bucket:
     Type: String
     Default: aws-hpc-recipes
@@ -41,11 +57,11 @@ Resources:
           - PcsSlurmVersion:
               type: string
               description: 'Major version of Slurm to install'
-              default: '23.11'
+              default: '${SlurmVersion}'
           - PcsSlurmInstallerVersion:
               type: string
               description: 'Version of the AWS PCS Slurm installer to use'
-              default: 'latest'
+              default: '${PcsSlurmInstallerVersion}'
         phases:
           - name: build
             steps:

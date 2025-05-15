@@ -1,5 +1,11 @@
 AWSTemplateFormatVersion: '2010-09-09'
-Description: Creates an EFS filesystem, mount targets, and a client security group for access to the filesystem
+Description: EFS Filesystem with Multi-AZ Mount Targets.
+  This template creates an Amazon EFS filesystem with configurable mount targets across multiple Availability Zones.
+  It supports encrypted data at rest, enforced TLS for data in transit, and automatic backups through AWS Backup.
+  Security is managed through dedicated security groups that control NFS access to the filesystem.
+  Throughput can be configured for either bursting or elastic modes to match workload requirements.
+  Use this template as a foundation for deploying shared storage solutions with customized security and performance settings.
+  Refer to the Outputs tab for the filesystem ID and security group ID needed to mount the filesystem.
 
 Metadata:
   AWS::CloudFormation::Interface:

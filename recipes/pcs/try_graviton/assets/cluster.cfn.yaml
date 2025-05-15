@@ -1,6 +1,12 @@
 AWSTemplateFormatVersion: '2010-09-09'
 Transform: AWS::Serverless-2016-10-31
-Description: Get started with AWS PCS and Amazon EC2 instances with Graviton processors
+Description: AWS PCS Getting Started Environment with Graviton Instances.
+  This template deploys a demonstration cluster using Graviton-based instances and AWS Parallel Computing Service (PCS).
+  It configures a multi-tier network with FSx Lustre and EFS storage, EFA-enabled instances, and an auto-scaling Slurm queue.
+  The cluster includes a login node (c7g.2xlarge) and a compute queue with high-performance instances (hpc7g.16xlarge).
+  Network security is managed through security groups with client IP restrictions and EFA support.
+  Use this template as a starting point for evaluating AWS PCS capabilities with Graviton processors.
+  Refer to the Outputs tab for cluster access URLs and SSH key pair information.
 
 ### Stack metadata
 Metadata:
@@ -25,11 +31,12 @@ Parameters:
 
   SlurmVersion:
     Type: String
-    Default: 23.11
+    Default: 24.11
     Description: Version of Slurm to use
     AllowedValues:
          - 23.11
          - 24.05
+         - 24.11
 
   ClientIpCidr:
     Description: IP(s) allowed to directly access the login nodes. We recommend that you restrict it with your own IP/subnet (x.x.x.x/32 for your own ip or x.x.x.x/24 for range. Replace x.x.x.x with your own PUBLIC IP. You can get your public IP using tools such as https://ifconfig.co/)
@@ -432,7 +439,7 @@ Resources:
         MaxInstanceCount: 1
       IamInstanceProfileArn: !GetAtt [ PCSInstanceProfile, Outputs.InstanceProfileArn ]
       CustomLaunchTemplate:
-        Id: !Ref LoginLaunchTemplate
+        TemplateId: !Ref LoginLaunchTemplate
         Version: !GetAtt [ LoginLaunchTemplate, LatestVersionNumber ]
       SubnetIds:
         - !GetAtt [ Networking, Outputs.AccessSubnetId ]
@@ -451,7 +458,7 @@ Resources:
         MaxInstanceCount: !Ref MaxInstances
       IamInstanceProfileArn: !GetAtt [ PCSInstanceProfile, Outputs.InstanceProfileArn ]
       CustomLaunchTemplate:
-        Id: !Ref HpcComputeLaunchTemplate
+        TemplateId: !Ref HpcComputeLaunchTemplate
         Version: !GetAtt [ HpcComputeLaunchTemplate, LatestVersionNumber ]
       SubnetIds:
         - !GetAtt [ Networking, Outputs.ComputeSubnetId ]

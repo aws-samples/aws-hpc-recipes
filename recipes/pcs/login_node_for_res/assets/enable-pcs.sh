@@ -27,7 +27,7 @@ if [ -z "$region" ] || [ -z "$cluster_id" ]; then
     exit 1
 fi
 
-DEFAULT_SLURM_VERSION="23.11.9-1"
+DEFAULT_SLURM_VERSION="24.05.5-2"
 slurm_version=${SLURM_VERSION:-$DEFAULT_SLURM_VERSION}
 slurm_major_minor=$(echo $slurm_version | cut -d. -f1,2)
 
@@ -107,10 +107,12 @@ chmod 0600 /etc/slurm/slurm.key
 chown slurm:slurm /etc/slurm/slurm.key
 
 #install pcs agent
-curl https://aws-pcs-repo-${region}.s3.amazonaws.com/aws-pcs-agent/aws-pcs-agent-v1.0.0-1.tar.gz -o aws-pcs-agent-v1.0.0-1.tar.gz
+DEFAULT_AGENT_VERSION="1.1.1-1"
+agent_version=${PCS_AGENT_VERSION:-$DEFAULT_AGENT_VERSION}
+curl https://aws-pcs-repo-${region}.s3.amazonaws.com/aws-pcs-agent/aws-pcs-agent-v${agent_version}.tar.gz -o aws-pcs-agent-v${agent_version}.tar.gz
 
-tar -xf aws-pcs-agent-v1.0.0-1.tar.gz && \
-    rm aws-pcs-agent-v1.0.0-1.tar.gz
+tar -xf aws-pcs-agent-v${agent_version}.tar.gz && \
+    rm aws-pcs-agent-v${agent_version}.tar.gz
     cd aws-pcs-agent
 
 echo "Installing aws-pcs-agent"

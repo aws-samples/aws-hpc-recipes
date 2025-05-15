@@ -21,6 +21,49 @@ By default, this template will create a bidirectional DRA. That means that files
 
 The key difference between this template and the read-only version is in resource `FSxLDra`, where we create both an `AutoExportPolicy` and an `AutoImportPolicy`, rather than just an `AutoImportPolicy`.
 
+### FSx for Lustre Automated Release Tasks
+
+This repository contains also CloudFormation templates to automate the release of files from FSx for Lustre file systems. Two different release strategies are available:
+
+#### 1. Time-Based Release Task
+
+Automatically releases files that haven't been accessed for a specified period, helping to optimize storage usage.
+
+When files haven't been accessed for the specified timeframe, they are [released](https://docs.aws.amazon.com/fsx/latest/LustreGuide/release-files-task.html) from the file system but remain in the S3 bucket. Subsequent access attempts automatically retrieve the files from S3 back to the file system.
+
+**Features**
+- Configurable Lambda function that scans the file system periodically
+- Customizable file access age threshold
+- Configurable scan frequency
+- Files remain available in S3 and are automatically retrieved when accessed
+
+If you want to use this template:
+
+1. Ensure you're in the AWS region where your source S3 bucket exists
+2. Deploy using this quick-launch link: [Time-based release task](https://console.aws.amazon.com/cloudformation/home?region=us-east-2#/stacks/create/review?stackName=fsxl-timebased-release&templateURL=https://aws-hpc-recipes.s3.us-east-1.amazonaws.com/main/recipes/storage/fsx_lustre_s3_dra/assets/fsxl-time_based-release.yaml)
+
+#### 2. Space-Based Release Task
+
+Monitors available file system space and automatically releases files when space becomes constrained.
+
+The system monitors the available file system space through CloudWatch. When free space falls below the configured threshold, it triggers a Lambda function that releases files based on their last access time.
+
+**Features**
+
+- Configurable free space threshold
+- CloudWatch event-driven architecture
+- Customizable file access age for release criteria
+- Automatic file release when space threshold is reached
+
+If you want to use this template:
+
+1. Ensure you're in the AWS region where your source S3 bucket exists
+2. Deploy using this quick-launch link: [Space-based release task](https://console.aws.amazon.com/cloudformation/home?region=us-east-2#/stacks/create/review?stackName=fsxl-spacebased-release&templateURL=https://aws-hpc-recipes.s3.us-east-1.amazonaws.com/main/recipes/storage/fsx_lustre_s3_dra/assets/fsxl-space_based-release.yaml)
+
+#### Note
+
+Both templates are optional and can be used independently or together based on your storage management needs.
+
 ### Use with AWS ParallelCluster
 
 Add the new FSx for Lustre filesystem to your ParallelCluster deployment with an entry in the `SharedStorage` configuration section. 

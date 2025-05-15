@@ -285,6 +285,7 @@ Note that while the `aws-hpc-recipes-dev` bucket itself is a stable resource, an
 
 Here are some near-future improvements we have planned:
 
+- [x] Parameterize Slurm and Slurm/Agent Installer versions
 - [ ] Add checks for dependencies in the build scripts to enforce ordering
 - [x] Actually implement the optimize-performance script rather than having it be a stub
 - [ ] Add support for creating a custom Spack environment 
