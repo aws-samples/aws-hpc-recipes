@@ -379,7 +379,7 @@ Resources:
             AllowedIps: !Ref AllowedIps
           Iam:
             AdditionalIamPolicies:
-              - Policy: arn:aws:iam::aws:policy/AmazonSSMManagedInstanceCore
+              - Policy: !Sub arn:${AWS::Partition}:iam::aws:policy/AmazonSSMManagedInstanceCore
           CustomActions:
             OnNodeConfigured:
               Script: !Sub

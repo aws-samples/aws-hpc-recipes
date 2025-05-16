@@ -1,0 +1,1 @@
+{"flow_id": "SumOfSquaresFlow", "run_number": "1741722009302712", "step_name": "on_cluster", "task_id": "5", "field_name": "slurm-cluster-name", "type": "slurm-cluster-name", "value": "metaflow-blog", "tags": ["attempt_id:0"], "user_name": "mwvaughn", "ts_epoch": 1741722033192}

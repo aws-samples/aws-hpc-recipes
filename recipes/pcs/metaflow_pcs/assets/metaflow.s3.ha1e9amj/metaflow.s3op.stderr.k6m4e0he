@@ -1,0 +1,15 @@
+Traceback (most recent call last):
+  File "/Users/mwvaughn/src/cfn3/.env/lib/python3.12/site-packages/metaflow/plugins/datatools/s3/s3op.py", line 18, in <module>
+    from boto3.s3.transfer import TransferConfig
+  File "/Users/mwvaughn/src/cfn3/.env/lib/python3.12/site-packages/boto3/s3/transfer.py", line 128, in <module>
+    from s3transfer.exceptions import (
+  File "/Users/mwvaughn/src/cfn3/.env/lib/python3.12/site-packages/s3transfer/__init__.py", line 143, in <module>
+    import s3transfer.compat
+  File "/Users/mwvaughn/src/cfn3/.env/lib/python3.12/site-packages/s3transfer/compat.py", line 94, in <module>
+    from multiprocessing.managers import BaseManager  # noqa: F401,E402
+    ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/opt/homebrew/Cellar/python@3.12/3.12.8/Frameworks/Python.framework/Versions/3.12/lib/python3.12/multiprocessing/managers.py", line 36, in <module>
+    from . import shared_memory
+  File "/opt/homebrew/Cellar/python@3.12/3.12.8/Frameworks/Python.framework/Versions/3.12/lib/python3.12/multiprocessing/shared_memory.py", line 12, in <module>
+    import mmap
+KeyboardInterrupt

@@ -1,0 +1,1 @@
+{"flow_id": "SumOfSquaresFlow", "run_number": "1741721199192901", "step_name": "on_cluster", "task_id": "3", "field_name": "slurm-job-partition", "type": "slurm-job-partition", "value": "demo", "tags": ["attempt_id:0"], "user_name": "mwvaughn", "ts_epoch": 1741721222540}

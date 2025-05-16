@@ -58,8 +58,8 @@ Resources:
             Service: ec2.amazonaws.com
           Action: "sts:AssumeRole"
       ManagedPolicyArns: 
-        - arn:aws:iam::aws:policy/AmazonSSMManagedInstanceCore
-        - arn:aws:iam::aws:policy/EC2InstanceProfileForImageBuilder
+        - !Sub arn:${AWS::Partition}:iam::aws:policy/AmazonSSMManagedInstanceCore
+        - !Sub arn:${AWS::Partition}:iam::aws:policy/EC2InstanceProfileForImageBuilder
       Policies:
         - PolicyName: !Sub ${AWS::StackName}-RES-EnvironmentPolicy
           PolicyDocument:
@@ -84,14 +84,14 @@ Resources:
                 - s3:GetObject
                 - s3:ListBucket
               Resource:
-                - "arn:aws:s3:::dcv-license.us-east-1/*"
-                - "arn:aws:s3:::ec2-linux-nvidia-drivers/*"
-                - "arn:aws:s3:::ec2-linux-nvidia-drivers"
-                - "arn:aws:s3:::nvidia-gaming/*"
-                - "arn:aws:s3:::nvidia-gaming-drivers"
-                - "arn:aws:s3:::nvidia-gaming-drivers/*"
-                - "arn:aws:s3:::ec2-amd-linux-drivers/*"
-                - "arn:aws:s3:::ec2-amd-linux-drivers"
+                - !Sub "arn:${AWS::Partition}:s3:::dcv-license.us-east-1/*"
+                - !Sub "arn:${AWS::Partition}:s3:::ec2-linux-nvidia-drivers/*"
+                - !Sub "arn:${AWS::Partition}:s3:::ec2-linux-nvidia-drivers"
+                - !Sub "arn:${AWS::Partition}:s3:::nvidia-gaming/*"
+                - !Sub "arn:${AWS::Partition}:s3:::nvidia-gaming-drivers"
+                - !Sub "arn:${AWS::Partition}:s3:::nvidia-gaming-drivers/*"
+                - !Sub "arn:${AWS::Partition}:s3:::ec2-amd-linux-drivers/*"
+                - !Sub "arn:${AWS::Partition}:s3:::ec2-amd-linux-drivers"
       RoleName: !Sub "${EnvironmentName}-EC2InstanceProfileForImageBuilder"
 
   RESEC2InstanceProfileForImageBuilder:

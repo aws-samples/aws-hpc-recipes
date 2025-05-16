@@ -1,0 +1,1 @@
+{"flow_id": "HelloFlow", "run_number": "1739551488496757", "step_name": "start", "task_id": "1", "field_name": "metaflow_version", "type": "metaflow_version", "value": "2.13.9+slurm(0.0.4)", "tags": ["attempt_id:0"], "user_name": "mwvaughn", "ts_epoch": 1739551490618}

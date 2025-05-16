@@ -1,0 +1,1 @@
+{"flow_id": "SumOfSquaresFlow", "run_number": "1741882528661957", "step_name": "on_cluster", "task_id": "5", "field_name": "conda_env_prefix", "type": "conda_env_prefix", "value": "metaflow/linux-64/865249a4d6102b7", "tags": ["attempt_id:0"], "user_name": "mwvaughn", "ts_epoch": 1741883096949}

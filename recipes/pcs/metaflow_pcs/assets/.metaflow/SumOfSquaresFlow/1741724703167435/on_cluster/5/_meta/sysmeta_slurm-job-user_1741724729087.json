@@ -1,0 +1,1 @@
+{"flow_id": "SumOfSquaresFlow", "run_number": "1741724703167435", "step_name": "on_cluster", "task_id": "5", "field_name": "slurm-job-user", "type": "slurm-job-user", "value": "ec2-user", "tags": ["attempt_id:0"], "user_name": "mwvaughn", "ts_epoch": 1741724729087}

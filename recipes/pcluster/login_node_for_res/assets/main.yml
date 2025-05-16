@@ -269,7 +269,7 @@ Resources:
               Action: lambda:InvokeFunction
               Resource: !GetAtt UpdateHeadNodeSGLambda.Arn
       ManagedPolicyArns:
-        - "arn:aws:iam::aws:policy/service-role/AmazonSSMAutomationRole"
+        - !Sub "arn:${AWS::Partition}:iam::aws:policy/service-role/AmazonSSMAutomationRole"
 
   # Add an ImageBuilder::Component
   RESPCLoginNodeComponent:

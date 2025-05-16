@@ -1,0 +1,1 @@
+{"flow_id": "SumOfSquaresFlow", "run_number": "1741723074224271", "step_name": "join", "task_id": "6", "field_name": "ds-root", "type": "ds-root", "value": "s3://metaflow-slurm-demo/", "tags": ["attempt_id:0"], "user_name": "mwvaughn", "ts_epoch": 1741723515898}

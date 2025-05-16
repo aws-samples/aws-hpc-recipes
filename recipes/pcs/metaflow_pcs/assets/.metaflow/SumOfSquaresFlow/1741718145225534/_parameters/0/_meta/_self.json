@@ -1,0 +1,1 @@
+{"run_number": "1741718145225534", "step_name": "_parameters", "task_id": "0", "flow_id": "SumOfSquaresFlow", "user_name": "mwvaughn", "tags": [], "system_tags": ["metaflow_version:2.15.4+slurm(0.0.4)", "python_version:3.12.8", "runtime:dev", "user:mwvaughn"], "ts_epoch": 1741718145227}

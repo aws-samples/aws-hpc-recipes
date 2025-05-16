@@ -823,7 +823,7 @@ Resources:
               Service: vpc-flow-logs.amazonaws.com
             Action: 'sts:AssumeRole'
       ManagedPolicyArns:
-        - arn:aws:iam::aws:policy/CloudWatchLogsFullAccess
+        - !Sub arn:${AWS::Partition}:iam::aws:policy/CloudWatchLogsFullAccess
 
   VPCFlowLogsLogGroup:
     Type: AWS::Logs::LogGroup
