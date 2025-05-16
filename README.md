@@ -25,11 +25,17 @@ This recipe is named **byo_login**. It's part of the **pcs** (Parallel Computing
 
 ## Cross-Region and GovCloud Support
 
-All CloudFormation templates in this repository use the `AWS::Partition` pseudo-parameter for ARNs to ensure they work across all AWS partitions, including:
+All CloudFormation templates in this repository are designed to work across all AWS partitions, including:
 - Standard AWS regions (`aws`)
 - AWS GovCloud regions (`aws-us-gov`)
+- AWS China regions (`aws-cn`)
 
-This allows the templates to be used without modification in any AWS region. For more information, see the [ARN Regionalization Script](scripts/README_regionalize_arns.md).
+This is achieved through:
+
+1. **ARN Regionalization**: All templates use the `AWS::Partition` pseudo-parameter for ARNs to ensure they work across all AWS partitions.
+2. **Console URL Regionalization**: All console URLs use the `AWS::URLSuffix` pseudo-parameter to ensure they generate the correct domain for each partition (e.g., `console.amazonaws-us-gov.com` for GovCloud).
+
+For more information, see the [ARN and Console URL Regionalization Scripts](scripts/README_regionalize_arns.md).
 
 ## Security
 

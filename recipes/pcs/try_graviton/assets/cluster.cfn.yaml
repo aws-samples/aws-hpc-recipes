@@ -607,7 +607,7 @@ Outputs:
     Description: URL to access the cluster in the PCS console
     Value: !Sub
       - https://${ConsoleDomain}/pcs/home?region=${AWS::Region}#/clusters/${ClusterId}
-      - { ConsoleDomain: !Sub '${AWS::Region}.console.aws.amazon.com',
+      - { ConsoleDomain: !Sub '${AWS::Region}.console.${AWS::URLSuffix}',
           ClusterId: !GetAtt [ PCSCluster, Id ] 
         }
     Export:
@@ -616,7 +616,7 @@ Outputs:
     Description: URL to access instance(s) in the login node group via Session Manager
     Value: !Sub
       - https://${ConsoleDomain}/ec2/home?region=${AWS::Region}#Instances:instanceState=running;tag:aws:pcs:compute-node-group-id=${NodeGroupLoginId}
-      - { ConsoleDomain: !Sub '${AWS::Region}.console.aws.amazon.com',
+      - { ConsoleDomain: !Sub '${AWS::Region}.console.${AWS::URLSuffix}',
           NodeGroupLoginId: !GetAtt [ PCSNodeGroupLogin, Id ] 
         }
     Export:
@@ -625,6 +625,6 @@ Outputs:
     Description: Key pair for accessing the login node(s) via SSH
     Value: !Sub
       - https://${ConsoleDomain}/systems-manager/parameters/ec2/keypair/${KeyPairId}/description?region=${AWS::Region}
-      - { ConsoleDomain: !Sub '${AWS::Region}.console.aws.amazon.com',
+      - { ConsoleDomain: !Sub '${AWS::Region}.console.${AWS::URLSuffix}',
           KeyPairId: !GetAtt [ CreatedKeyPair, KeyPairId]
         }
