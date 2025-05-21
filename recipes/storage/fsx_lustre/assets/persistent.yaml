@@ -1,11 +1,17 @@
 AWSTemplateFormatVersion: '2010-09-09'
-Description: FSx for Lustre PERSISTENT_2 Filesystem.
+Description: FSx for Lustre Persistent Filesystem.
   This template creates a persistent FSx for Lustre filesystem optimized for high-performance workloads.
   It configures a single-AZ deployment with customizable storage capacity, throughput, and compression settings.
   Security groups are configured to enable required Lustre network ports (988, 1021-1023) between clients and servers.
   The filesystem supports Lustre versions 2.12 and 2.15 with LZ4 compression for optimized storage efficiency.
   Use this template as a foundation for deploying high-performance shared storage solutions.
   Refer to the Outputs tab for the filesystem ID, mount name, and security group ID needed to mount the filesystem.
+  Note - In GovCloud regions, PERSISTENT_1 deployment type is used instead of PERSISTENT_2.
+
+Conditions:
+  IsGovCloud: !Equals 
+    - !Sub '${AWS::Partition}'
+    - 'aws-us-gov'
 
 ### Stack metadata
 Metadata:
@@ -36,14 +42,9 @@ Parameters:
     Type: Number
     Default: 1200
   PerUnitStorageThroughput:
-    Description: Provisioned Read/Write (MB/s/TiB)
+    Description: Provisioned Read/Write (MB/s/TiB). Enter are 125, 250, 500, or 1000 MBps/TiB in commerical regions. Will be set to 200 MBps/TiB in GovCloud regions.
     Type: Number
     Default: 1000
-    AllowedValues:
-      - 125
-      - 250
-      - 500
-      - 1000
   Compression:
     Description: Data compression type
     Type: String
@@ -171,8 +172,8 @@ Resources:
         - !Ref SubnetId
       LustreConfiguration:
         DataCompressionType: !Ref Compression
-        DeploymentType: PERSISTENT_2
-        PerUnitStorageThroughput: !Ref PerUnitStorageThroughput
+        DeploymentType: !If [IsGovCloud, 'PERSISTENT_1', 'PERSISTENT_2']
+        PerUnitStorageThroughput: !If [IsGovCloud, 200, !Ref PerUnitStorageThroughput]
       Tags:
         - Key: HPCRecipes
           Value: "true"
