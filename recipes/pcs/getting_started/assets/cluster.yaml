@@ -1,7 +1,7 @@
 AWSTemplateFormatVersion: '2010-09-09'
 Transform: AWS::Serverless-2016-10-31
 Description: AWS PCS "Getting Started" cluster. 
-  This template deploys a small HPC cluster with 1 login node and up to 4 compute nodes. Optionally, Slurm accounting can be enabled
+  This template deploys a small HPC cluster with 1 login node and up to 4 compute nodes. Optionally, Slurm accounting can be enabled.
   It includes an EFS file system for shared storage and an FSx for Lustre file system for high-speed temporary storage.  
   The cluster is deployed in a new VPC with both public and private subnets.  
   It can be accessed via the browser using AWS Systems Manager Session Manager or over the internet via SSH.  
@@ -15,6 +15,8 @@ Metadata:
           default: PCS Cluster configuration
         Parameters:
           - SlurmVersion
+          - ManagedAccounting
+          - AccountingPolicyEnforcement
       - Label:
           default: PCS ComputeNodeGroups configuration
         Parameters:
@@ -57,9 +59,9 @@ Parameters:
   AccountingPolicyEnforcement:
     Description: Specify which Slurm accounting policies to enforce
     Type: String
-    Default: ''
+    Default: none
     AllowedValues:
-      - ''
+      - none
       - 'associations,limits,safe'
 
   KeyName:
@@ -91,6 +93,7 @@ Conditions:
   HasAccountingSupport: !Not [!Or [!Equals [!Ref SlurmVersion, "23.11"], !Equals [!Ref SlurmVersion, "24.05"]]]
   IsAccountingEnabled: !Equals [!Ref ManagedAccounting, 'enabled']
   IncludeAccountingConfig: !And [!Condition HasAccountingSupport, !Condition IsAccountingEnabled]
+  SetAccountingPolicy: !Not [!Equals [!Ref AccountingPolicyEnforcement, 'none']]
 
 Mappings:
 
@@ -157,11 +160,13 @@ Resources:
       SlurmConfiguration: !If
         - IncludeAccountingConfig
         - Accounting:
-            Mode: None
+            Mode: STANDARD
             DefaultPurgeTimeInDays: 30
-          SlurmCustomSettings:
-            - ParameterName: AccountingStorageEnforce
-              ParameterValue: !Ref AccountingPolicyEnforcement
+          SlurmCustomSettings: !If 
+            - SetAccountingPolicy
+            - - ParameterName: AccountingStorageEnforce
+                ParameterValue: !Ref AccountingPolicyEnforcement
+            - []
         - !Ref AWS::NoValue
 
   # Compute Node groups
