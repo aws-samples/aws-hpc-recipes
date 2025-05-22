@@ -1,1 +1,0 @@
-{"flow_id": "HelloFlow", "run_number": "1739140656860416", "step_name": "end", "task_id": "3", "field_name": "conda_env_prefix", "type": "conda_env_prefix", "value": "metaflow/osx-arm64/cdce3b9fae92ede", "tags": ["attempt_id:0"], "user_name": "mwvaughn", "ts_epoch": 1739141015080}

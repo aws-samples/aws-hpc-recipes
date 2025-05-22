@@ -1,1 +1,0 @@
-{"flow_id": "SumOfSquaresFlow", "run_number": "1741721199192901", "step_name": "on_cluster", "task_id": "3", "field_name": "slurm-submit-dir", "type": "slurm-submit-dir", "value": "/home/ec2-user/metaflow", "tags": ["attempt_id:0"], "user_name": "mwvaughn", "ts_epoch": 1741721222540}

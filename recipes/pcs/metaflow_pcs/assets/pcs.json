@@ -1,7 +1,0 @@
-{
-    "username": "ec2-user",
-    "ssh_key_file": "/Users/mwvaughn/Downloads/mwvaughn-us-east-2.pem",
-    "partition": "demo",
-    "path_to_python3": "/usr/bin/python3",
-    "address": "3.143.68.182"
-}

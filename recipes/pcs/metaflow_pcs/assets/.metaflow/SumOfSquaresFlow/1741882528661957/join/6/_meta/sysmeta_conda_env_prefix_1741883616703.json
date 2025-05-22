@@ -1,1 +1,0 @@
-{"flow_id": "SumOfSquaresFlow", "run_number": "1741882528661957", "step_name": "join", "task_id": "6", "field_name": "conda_env_prefix", "type": "conda_env_prefix", "value": "metaflow/osx-arm64/cdce3b9fae92ede", "tags": ["attempt_id:0"], "user_name": "mwvaughn", "ts_epoch": 1741883616703}
