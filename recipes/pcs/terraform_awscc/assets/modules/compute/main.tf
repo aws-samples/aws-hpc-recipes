@@ -137,6 +137,17 @@ resource "awscc_pcs_cluster" "main" {
     subnet_ids         = [var.management_subnet_id]
   }
 
+  slurm_configuration = {
+    accounting = {
+      mode = "STANDARD"
+      default_purge_time_in_days = 30
+    }
+    slurm_custom_settings = [ {
+      parameter_name = "AccountingStorageEnforce"
+      parameter_value = "associations,limits,qos"
+    } ]
+  }
+
   tags = merge(var.tags, {
     Project = var.project_name
   })

@@ -74,7 +74,10 @@ The following variables need to be configured when using this repository:
 Note: Find the AMI ID using the following command, subbing `region-code` for the value of `aws_region`: 
 
 ```shell
-aws ec2 describe-images --region region-code --owners amazon \
+# Export the region where you will deploy PCS
+export REGION_CODE=us-east-2
+
+aws ec2 describe-images --region ${REGION_CODE} --owners amazon \
 --filters 'Name=name,Values=aws-pcs-sample_ami-amzn2-x86_64-slurm-24.11*' \
             'Name=state,Values=available' \
 --query 'sort_by(Images, &CreationDate)[-1].[Name,ImageId]' --output text
