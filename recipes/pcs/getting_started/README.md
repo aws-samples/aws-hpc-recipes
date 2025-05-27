@@ -38,6 +38,8 @@ To create a demonstration PCS cluster:
     * (Optional) Customize the stack name.
     * Under **Parameters**
         * For **SlurmVersion** choose any available version of Slurm.
+        * For **ManagedAccounting** choose whether to enable accounting. Note that accounting is only supported for Slurm version 24.11 or newer.
+        * For **AccountingPolicyEnforcement** choose whether to turn on enforcement of associations, limits, and safe job launching. Note that this requires accounting to be enabled. 
         * For **NodeArchitecture** choose either `x86` or `Graviton` for your login and compute node groups.
         * For **KeyName** choose an SSH key for connecting to the login nodes
         * For **ClientIpCidr**, either leave it as its default value or replace with a more restrictive CIDR range
