@@ -59,7 +59,7 @@ Resources:
             - Sid: RESDynamoDBAccess
               Effect: Allow
               Action: "dynamodb:GetItem"
-              Resource: !Sub !Sub "arn:${AWS::Partition}:dynamodb:${AWS::Region}:${AWS::AccountId}:table/${RESEnvironment}.cluster-settings"
+              Resource: !Sub"arn:${AWS::Partition}:dynamodb:${AWS::Region}:${AWS::AccountId}:table/${RESEnvironment}.cluster-settings"
               Condition:
                 ForAllValues:StringLike:
                   "dynamodb:LeadingKeys":
@@ -68,7 +68,7 @@ Resources:
             - Sid: RESS3Access
               Effect: Allow
               Action: "s3:GetObject"
-              Resource: !Sub !Sub "arn:${AWS::Partition}:s3:::${RESEnvironment}-cluster-${AWS::Region}-${AWS::AccountId}/idea/vdc/res-ready-install-script-packages/*"
+              Resource: !Sub"arn:${AWS::Partition}:s3:::${RESEnvironment}-cluster-${AWS::Region}-${AWS::AccountId}/idea/vdc/res-ready-install-script-packages/*"
             - Sid: GPUDriverAccess
               Effect: Allow
               Action: 

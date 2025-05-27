@@ -190,7 +190,7 @@ Resources:
             Action: ['sts:AssumeRole']
             Condition:
               ArnLike:
-                aws:SourceArn: !Sub !Sub arn:${AWS::Partition}:ecs:${AWS::Region}:${AWS::AccountId}:*
+                aws:SourceArn: !Subarn:${AWS::Partition}:ecs:${AWS::Region}:${AWS::AccountId}:*
               StringEquals:
                 aws:SourceAccount: !Ref AWS::AccountId
       ManagedPolicyArns:
@@ -208,7 +208,7 @@ Resources:
             Action: ['sts:AssumeRole']
             Condition:
               ArnLike:
-                aws:SourceArn: !Sub !Sub arn:${AWS::Partition}:ecs:${AWS::Region}:${AWS::AccountId}:*
+                aws:SourceArn: !Subarn:${AWS::Partition}:ecs:${AWS::Region}:${AWS::AccountId}:*
               StringEquals:
                 aws:SourceAccount: !Ref AWS::AccountId
       Policies:

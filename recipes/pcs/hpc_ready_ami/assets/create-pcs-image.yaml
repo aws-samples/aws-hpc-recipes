@@ -134,7 +134,7 @@ Resources:
       Components:
         - ComponentArn: !GetAtt [ImageBuilderComponentsStack, Outputs.UpdateOsComponent]
         - ComponentArn: !GetAtt [ImageBuilderComponentsStack, Outputs.DowngradeKernelComponent]
-        - ComponentArn: !Sub !Sub 'arn:${AWS::Partition}:imagebuilder:${AWS::Region}:aws:component/reboot-linux/1.0.1/1'
+        - ComponentArn: !Sub'arn:${AWS::Partition}:imagebuilder:${AWS::Region}:aws:component/reboot-linux/1.0.1/1'
         - ComponentArn: !GetAtt [ImageBuilderComponentsStack, Outputs.OptimizePerformanceComponent]
         - ComponentArn: !GetAtt [ImageBuilderComponentsStack, Outputs.CloudwatchAgentComponent]
         - ComponentArn: !GetAtt [ImageBuilderComponentsStack, Outputs.SsmAgentComponent]

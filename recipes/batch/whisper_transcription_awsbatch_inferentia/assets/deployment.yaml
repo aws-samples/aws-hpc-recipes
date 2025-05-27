@@ -401,7 +401,7 @@ Resources:
             Principal:
               Service: logging.s3.amazonaws.com
             Action: s3:PutObject
-            Resource: !Sub !Sub arn:${AWS::Partition}:s3:::${S3BucketLogs}/*
+            Resource: !Subarn:${AWS::Partition}:s3:::${S3BucketLogs}/*
   
 # Invoke a Batch job through EventBridge
   InferenceEventBridgeRole:
