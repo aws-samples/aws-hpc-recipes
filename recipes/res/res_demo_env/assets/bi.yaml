@@ -80,7 +80,7 @@ Parameters:
     Default: ""
     Type: String
     AllowedPattern: ^(pl-[a-z0-9]{8,20})?$
-    ConstraintDescription: Must be a valid VPC Prefix List ID, which begins with `pl-`.  Prefix Lists can be configured at !Sub "https://console.${AWS::URLSuffix}"/vpcconsole/home#ManagedPrefixLists
+    ConstraintDescription: Must be a valid VPC Prefix List ID, which begins with `pl-`.  Prefix Lists can be configured at https://console.aws.amazon.com/vpcconsole/home#ManagedPrefixLists
   EFSThroughputMode:
     Description: (Optional) EFS filesystem throughput mode.
     Type: String
