@@ -85,7 +85,7 @@ Resources:
               VolumeType: gp3
           Iam:
             AdditionalIamPolicies:
-              - Policy: arn:aws:iam::aws:policy/AmazonSSMManagedInstanceCore
+              - Policy: !Sub arn:${AWS::Partition}:iam::aws:policy/AmazonSSMManagedInstanceCore
               - Policy: 
                   Fn::ImportValue: 
                     Fn::Sub: '${NISTSlurmDBStackName}-RDS-Secret-Policy-ARN'
@@ -113,7 +113,7 @@ Resources:
                   - Fn::ImportValue: !Sub '${NISTStorageStackName}-FSxLSecurityGroupID'
                Iam:
                  AdditionalIamPolicies:
-                  - Policy: arn:aws:iam::aws:policy/AmazonSSMManagedInstanceCore
+                  - Policy: !Sub arn:${AWS::Partition}:iam::aws:policy/AmazonSSMManagedInstanceCore
         DirectoryService:
           DomainName: 
             Fn::ImportValue: !Sub '${NISTADStackName}-Domain'

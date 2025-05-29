@@ -117,7 +117,7 @@ Resources:
               Size: 40
           Iam:
             AdditionalIamPolicies:
-              - Policy: arn:aws:iam::aws:policy/AmazonSSMManagedInstanceCore
+              - Policy: !Sub arn:${AWS::Partition}:iam::aws:policy/AmazonSSMManagedInstanceCore
         Scheduling:
           Scheduler: slurm
           SlurmSettings:

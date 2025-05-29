@@ -52,13 +52,13 @@ Resources:
               - Effect: Allow
                 Action:
                   - logs:*
-                Resource: arn:aws:logs:*:*:*
+                Resource: !Sub arn:${AWS::Partition}:logs:*:*:*
               - Effect: Allow
                 Action:
                   - fsx:CreateDataRepositoryTask
                 Resource: 
-                  - arn:aws:fsx:*:*:task/*
-                  - arn:aws:fsx:*:*:file-system/*
+                  - !Sub arn:${AWS::Partition}:fsx:*:*:task/*
+                  - !Sub arn:${AWS::Partition}:fsx:*:*:file-system/*
   LambdaFunction:
     Type: AWS::Lambda::Function
     Properties:

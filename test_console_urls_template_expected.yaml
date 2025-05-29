@@ -1,0 +1,33 @@
+AWSTemplateFormatVersion: 2010-09-09
+Description: Test template for console URL regionalization
+
+Resources:
+  TestBucket:
+    Type: AWS::S3::Bucket
+    Properties:
+      BucketName: !Sub "${AWS::StackName}-bucket"
+
+Outputs:
+  # Test case 1: Console domain in a !Sub mapping
+  PcsConsoleUrl:
+    Description: URL to access the cluster in the PCS console
+    Value: !Sub
+      - https://${ConsoleDomain}/pcs/home?region=${AWS::Region}#/clusters/${ClusterId}
+      - { ConsoleDomain: !Sub '${AWS::Region}.console.${AWS::URLSuffix}',
+          ClusterId: "cluster-123456" 
+        }
+  
+  # Test case 2: Direct URL in a !Sub expression
+  Ec2ConsoleUrl:
+    Description: URL to access EC2 instances
+    Value: !Sub "https://${AWS::Region}.console.${AWS::URLSuffix}/ec2/home?region=${AWS::Region}#Instances"
+  
+  # Test case 3: Direct URL without !Sub
+  S3ConsoleUrl:
+    Description: URL to access S3 bucket
+    Value: !Sub "https://console.${AWS::URLSuffix}/s3/buckets/${AWS::StackName}-bucket"
+  
+  # Test case 4: Already using AWS::URLSuffix
+  CloudFormationConsoleUrl:
+    Description: URL to access CloudFormation stack
+    Value: !Sub "https://console.${AWS::URLSuffix}/cloudformation/home?region=${AWS::Region}#/stacks"

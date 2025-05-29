@@ -197,7 +197,7 @@ Resources:
             Service: batch.amazonaws.com
           Action: sts:AssumeRole
       ManagedPolicyArns:
-      - arn:aws:iam::aws:policy/service-role/AWSBatchServiceRole
+      - !Sub arn:${AWS::Partition}:iam::aws:policy/service-role/AWSBatchServiceRole
 
   ECSInstanceRole:
     Type: AWS::IAM::Role
@@ -210,9 +210,9 @@ Resources:
             Service: ec2.amazonaws.com
           Action: sts:AssumeRole
       ManagedPolicyArns:
-      - arn:aws:iam::aws:policy/service-role/AmazonEC2ContainerServiceforEC2Role
-      - arn:aws:iam::aws:policy/CloudWatchFullAccessV2
-      - arn:aws:iam::aws:policy/AmazonS3FullAccess
+      - !Sub arn:${AWS::Partition}:iam::aws:policy/service-role/AmazonEC2ContainerServiceforEC2Role
+      - !Sub arn:${AWS::Partition}:iam::aws:policy/CloudWatchFullAccessV2
+      - !Sub arn:${AWS::Partition}:iam::aws:policy/AmazonS3FullAccess
 
   ECSInstanceProfile:
     Type: AWS::IAM::InstanceProfile
@@ -401,7 +401,7 @@ Resources:
             Principal:
               Service: logging.s3.amazonaws.com
             Action: s3:PutObject
-            Resource: !Sub arn:aws:s3:::${S3BucketLogs}/*
+            Resource: !Subarn:${AWS::Partition}:s3:::${S3BucketLogs}/*
   
 # Invoke a Batch job through EventBridge
   InferenceEventBridgeRole:

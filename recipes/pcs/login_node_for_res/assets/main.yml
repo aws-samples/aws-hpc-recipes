@@ -48,8 +48,8 @@ Resources:
           Action: "sts:AssumeRole"
       # Add AmazonSSMManagedInstanceCore and EC2InstanceProfileForImageBuilder managed policies
       ManagedPolicyArns: 
-        - arn:aws:iam::aws:policy/AmazonSSMManagedInstanceCore
-        - arn:aws:iam::aws:policy/EC2InstanceProfileForImageBuilder
+        - !Sub arn:${AWS::Partition}:iam::aws:policy/AmazonSSMManagedInstanceCore
+        - !Sub arn:${AWS::Partition}:iam::aws:policy/EC2InstanceProfileForImageBuilder
         - !Ref RESPCSPolicy
       Policies:
         - PolicyName: !Sub ${AWS::StackName}-RES-EnvironmentPolicy
@@ -59,7 +59,7 @@ Resources:
             - Sid: RESDynamoDBAccess
               Effect: Allow
               Action: "dynamodb:GetItem"
-              Resource: !Sub "arn:aws:dynamodb:${AWS::Region}:${AWS::AccountId}:table/${RESEnvironment}.cluster-settings"
+              Resource: !Sub"arn:${AWS::Partition}:dynamodb:${AWS::Region}:${AWS::AccountId}:table/${RESEnvironment}.cluster-settings"
               Condition:
                 ForAllValues:StringLike:
                   "dynamodb:LeadingKeys":
@@ -68,21 +68,21 @@ Resources:
             - Sid: RESS3Access
               Effect: Allow
               Action: "s3:GetObject"
-              Resource: !Sub "arn:aws:s3:::${RESEnvironment}-cluster-${AWS::Region}-${AWS::AccountId}/idea/vdc/res-ready-install-script-packages/*"
+              Resource: !Sub"arn:${AWS::Partition}:s3:::${RESEnvironment}-cluster-${AWS::Region}-${AWS::AccountId}/idea/vdc/res-ready-install-script-packages/*"
             - Sid: GPUDriverAccess
               Effect: Allow
               Action: 
                 - s3:GetObject
                 - s3:ListBucket
               Resource:
-                - "arn:aws:s3:::dcv-license.us-east-1/*"
-                - "arn:aws:s3:::ec2-linux-nvidia-drivers/*"
-                - "arn:aws:s3:::ec2-linux-nvidia-drivers"
-                - "arn:aws:s3:::nvidia-gaming/*"
-                - "arn:aws:s3:::nvidia-gaming-drivers"
-                - "arn:aws:s3:::nvidia-gaming-drivers/*"
-                - "arn:aws:s3:::ec2-amd-linux-drivers/*"
-                - "arn:aws:s3:::ec2-amd-linux-drivers"
+                - !Sub "arn:${AWS::Partition}:s3:::dcv-license.us-east-1/*"
+                - !Sub "arn:${AWS::Partition}:s3:::ec2-linux-nvidia-drivers/*"
+                - !Sub "arn:${AWS::Partition}:s3:::ec2-linux-nvidia-drivers"
+                - !Sub "arn:${AWS::Partition}:s3:::nvidia-gaming/*"
+                - !Sub "arn:${AWS::Partition}:s3:::nvidia-gaming-drivers"
+                - !Sub "arn:${AWS::Partition}:s3:::nvidia-gaming-drivers/*"
+                - !Sub "arn:${AWS::Partition}:s3:::ec2-amd-linux-drivers/*"
+                - !Sub "arn:${AWS::Partition}:s3:::ec2-amd-linux-drivers"
       RoleName: !Sub "${AWS::StackName}-RES-PCS-Ec2ImageBuilderRole"
 
   RESEnvironmentImageBuilderIAMInstanceProfile:
@@ -126,7 +126,7 @@ Resources:
                   - logs:CreateLogGroup
                   - logs:CreateLogStream
                   - logs:PutLogEvents
-                Resource: arn:aws:logs:*:*:*
+                Resource: !Sub arn:${AWS::Partition}:logs:*:*:*
               - Effect: Allow
                 Action:
                   - iam:TagPolicy
