@@ -23,6 +23,20 @@ If you just want to explore what all is available, the [recipes home page](./rec
 
 This recipe is named **byo_login**. It's part of the **pcs** (Parallel Computing Service) collection. Its tags tell us its a **core** recipe (i.e. maintained by AWS staff) and that it pertains to EC2, Lambda, and Secrets Manager as well as PCS. 
 
+## Cross-Region and GovCloud Support
+
+All CloudFormation templates in this repository are designed to work across all AWS partitions, including:
+- Standard AWS regions (`aws`)
+- AWS GovCloud regions (`aws-us-gov`)
+- AWS China regions (`aws-cn`)
+
+This is achieved through:
+
+1. **ARN Regionalization**: All templates use the `AWS::Partition` pseudo-parameter for ARNs to ensure they work across all AWS partitions.
+2. **Console URL Regionalization**: All console URLs use the `AWS::URLSuffix` pseudo-parameter to ensure they generate the correct domain for each partition (e.g., `console.amazonaws-us-gov.com` for GovCloud).
+
+For more information, see the [ARN and Console URL Regionalization Scripts](scripts/README_regionalize_arns.md).
+
 ## Security
 
 See [CONTRIBUTING](CONTRIBUTING.md#security-issue-notifications) for more information.

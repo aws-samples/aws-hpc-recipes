@@ -130,7 +130,7 @@ Resources:
               - BucketName: neuron-s3
                 EnableWriteAccess: false
             AdditionalIamPolicies:
-              - Policy: arn:aws:iam::aws:policy/AmazonSSMManagedInstanceCore
+              - Policy: !Sub arn:${AWS::Partition}:iam::aws:policy/AmazonSSMManagedInstanceCore
           LocalStorage:
             RootVolume:
               Size: !Ref RootVolumeSize
@@ -173,7 +173,7 @@ Resources:
                 - BucketName: neuron-s3
                   EnableWriteAccess: false
               AdditionalIamPolicies:
-                - Policy: arn:aws:iam::aws:policy/AmazonS3ReadOnlyAccess
+                - Policy: !Sub arn:${AWS::Partition}:iam::aws:policy/AmazonS3ReadOnlyAccess
         SharedStorage:
         - StorageType: FsxLustre
           Name: pclusterfsx
