@@ -44,7 +44,6 @@ Parameters:
     Default: 24.11
     Description: Version of Slurm to use
     AllowedValues:
-         - 23.11
          - 24.05
          - 24.11
 

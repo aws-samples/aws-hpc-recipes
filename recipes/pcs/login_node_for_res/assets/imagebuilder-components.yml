@@ -18,11 +18,11 @@ Metadata:
 Parameters:
   SlurmVersion:
     Type: String
-    Default: '24.05'
+    Default: '24.11'
     Description: Slurm version (e.g. 24.05)
     AllowedValues:
-         - '23.11'
          - '24.05'
+         - '24.11'
   HpcRecipesS3Bucket:
     Type: String
     Default: aws-hpc-recipes
@@ -90,7 +90,7 @@ Resources:
               description: PCS Cluster id (e.g. pcs-abc1234)
           - SlurmVersion:
               type: string
-              description: Slurm version (e.g. 23.11)
+              description: Slurm version (e.g. 24.11)
               default: "${SlurmVersion}"
         phases:
           - name: build

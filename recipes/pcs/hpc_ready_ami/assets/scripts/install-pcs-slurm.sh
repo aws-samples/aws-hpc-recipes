@@ -4,7 +4,6 @@
 AWS_REGION="us-east-1"
 PCS_SLURM_VERSION="24.11"
 # PCS_SLURM_VERSION="24.05"
-# PCS_SLURM_VERSION="23.11"
 PCS_SLURM_INSTALLER_VERSION="latest"
 
 # Function to print usage
