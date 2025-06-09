@@ -1,0 +1,53 @@
+AWSTemplateFormatVersion: 2010-09-09
+Description: Create a Log Delivery binding for PCS Cluster to CloudWatch. 
+
+Parameters: 
+  PCSClusterId: 
+    Type: String
+    Description: "Enter PCS Cluser ID (format: pcs_XXXXXXXXXX)"
+    AllowedPattern: "pcs_[A-Za-z0-9]{10}"
+    ConstraintDescription: "Must match pattern: pcs_XXXXXXXXXX where X can be letters or numbers"
+
+Resources: 
+  PCSLogDeliverySource:
+    Type: AWS::Logs::DeliverySource
+    Properties:
+      LogType: PCS_SCHEDULER_LOGS
+      ResourceArn: !Sub "arn:${AWS::Partition}:pcs:${AWS::Region}:${AWS::AccountId}:cluster/${PCSClusterId}"
+      Name: !Sub "${PCSClusterId}-cluster-logs-source"
+
+  PCSLogCloudwatchDeliveryDestination:
+    Type: AWS::Logs::DeliveryDestination
+    #DependsOn: PCSLogDeliveryGroup
+    Properties:
+      DestinationResourceArn: !GetAtt PCSLogDeliveryGroup.Arn
+      Name: !Sub "${PCSClusterId}-cw-logs-destination"
+
+  PCSLogDelivery:
+    Type: AWS::Logs::Delivery
+    Properties:
+      DeliveryDestinationArn: !GetAtt PCSLogCloudwatchDeliveryDestination.Arn
+      DeliverySourceName: !Ref PCSLogDeliverySource
+    
+  # Log groups prefixed with '/aws/vendedlogs/' will be created automatically.
+  # Other log groups must be created prior to setting up a log delivery. 
+  # We opt to create groups regardless of destination. 
+  #############################
+  PCSLogDeliveryGroup:
+    Type: AWS::Logs::LogGroup
+    DeletionPolicy: RetainExceptOnCreate
+    UpdateReplacePolicy: Retain
+    Properties:
+      LogGroupClass: STANDARD
+      LogGroupName: !Sub "/aws/vendedlogs/pcs/cluster/PCS_SCHEDULER_LOGS/${PCSClusterId}"
+      RetentionInDays: 60
+
+Outputs: 
+
+  PCSCluster: 
+    Description: "ARN of the PCS Cluster (Source)"
+    Value: !Select [0, !GetAtt PCSLogDeliverySource.ResourceArns]
+    
+  PCSLogDeliveryDestination: 
+    Description: "ARN of the CloudWatch LogGroup (Destination)"
+    Value: !GetAtt PCSLogCloudwatchDeliveryDestination.Arn
