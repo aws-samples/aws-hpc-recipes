@@ -44,7 +44,6 @@ Parameters:
     Default: 24.11
     Description: Version of Slurm to use
     AllowedValues:
-         - 23.11
          - 24.05
          - 24.11
 
@@ -92,6 +91,12 @@ Parameters:
 Conditions:
   GovCloud: !Equals [!Ref AWS::Partition, 'aws-us-gov']
   China: !Equals [!Ref AWS::Partition, 'aws-cn']
+  # Disabled for older SLurm versions and in GovCloud
+  HasAccountingSupport: !Not [!Or [!Equals [!Ref SlurmVersion, "23.11"], !Equals [!Ref SlurmVersion, "24.05"], !Equals [!Ref AWS::Partition, 'aws-us-gov']]]
+  IsAccountingEnabled: !Equals [!Ref ManagedAccounting, 'enabled']
+  IncludeAccountingConfig: !And [!Condition HasAccountingSupport, !Condition IsAccountingEnabled]
+  SetAccountingPolicy: !Not [!Equals [!Ref AccountingPolicyEnforcement, 'none']]
+
 
 Mappings:
 
