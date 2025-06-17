@@ -1,11 +1,5 @@
 AWSTemplateFormatVersion: '2010-09-09'
-Description: FSx for Lustre PERSISTENT_2 Filesystem.
-  This template creates a persistent FSx for Lustre filesystem optimized for high-performance workloads.
-  It configures a single-AZ deployment with customizable storage capacity, throughput, and compression settings.
-  Security groups are configured to enable required Lustre network ports (988, 1021-1023) between clients and servers.
-  The filesystem supports Lustre versions 2.12 and 2.15 with LZ4 compression for optimized storage efficiency.
-  Use this template as a foundation for deploying high-performance shared storage solutions.
-  Refer to the Outputs tab for the filesystem ID, mount name, and security group ID needed to mount the filesystem.
+Description: Creates a FSx for Lustre Intelligent-Tiering filesystem and a client security group for access to the filesystem
 
 ### Stack metadata
 Metadata:
@@ -14,12 +8,12 @@ Metadata:
       - Label:
           default: Filesystem Options
         Parameters:
-          - Capacity
-          - PerUnitStorageThroughput
+          - ThroughputCapacity
           - Compression
           - LustreVersion
-          - MetadataMode
           - MetadataIops
+          - DataReadCacheSizingMode
+          - DataReadCacheSizeInGB
       - Label:
           default: Networking and Access
         Parameters:
@@ -35,47 +29,46 @@ Parameters:
     Description: Subnet where you will deploy the FSx filesystem (must be in same VPC)
     Type: AWS::EC2::Subnet::Id
   EfaEnabled:
-    Description: Enable/Disable support for EFA/GPU Direct Storage (GDS) for up to 12x higher per-client througphput. Requires MetadataMode to be USER_PROVISIONED and Capacity to be at least 4800 GiB. 
+    Description: Enable/Disable support for EFA/GPU Direct Storage (GDS) for up to 12x higher per-client througphput
     Type: String
-    Default: FALSE
+    Default: TRUE
     AllowedValues: 
      - TRUE
      - FALSE
-
-  Capacity:
-    Description: Storage capacity in GiB (1200 or increments of 2400). If EfaEnabled this needs to be at least 4800.
+  ThroughputCapacity:
+    Description: Provisioned Read/Write throughput (MB/s/TiB). Must be 4000 or multiples of 4000.
     Type: Number
-    Default: 1200
-  PerUnitStorageThroughput:
-    Description: Provisioned Read/Write (MB/s/TiB)
-    Type: Number
-    Default: 1000
+    Default: 4000
     AllowedValues:
-      - 125
-      - 250
-      - 500
-      - 1000
+      - 4000
+      - 8000
+      - 12000
+      - 16000
+      - 20000
+      - 24000
+      - 28000
+      - 32000
+      - 36000
+      - 40000
   MetadataIops:
-    Description: Provisioned metadata IOPS. Ignored if MetadataMode is AUTOMATIC.
+    Description: Provisioned metadata IOPS
     Type: Number
     Default: 6000
     AllowedValues:
-      - 1500
-      - 3000
       - 6000
       - 12000
-      - 24000
-      - 36000
-      - 48000
-      - 60000
-      # More multiples possible up to 192000...
-  MetadataMode:
-    Description: Provisioned metadata MODE. If EFA is enabled, this must be USER_PROVISIONED.
+  DataReadCacheSizingMode:
+    Description: Read Cache Sizing Mode
     Type: String
-    Default: AUTOMATIC
+    Default: PROPORTIONAL_TO_THROUGHPUT_CAPACITY
     AllowedValues:
-      - AUTOMATIC
+      - PROPORTIONAL_TO_THROUGHPUT_CAPACITY
       - USER_PROVISIONED
+      - NO_CACHE
+  DataReadCacheSizeInGB:
+    Description: Read Cache Size in GB (ignored unless DataReadCacheSizingMode is set to USER_PROVISIONED)
+    Type: Number
+    Default: 123
 
   Compression:
     Description: Data compression type
@@ -89,12 +82,12 @@ Parameters:
     Type: String
     AllowedValues:
       - "2.15"
-      - "2.12"
+      #- "2.12"         # Not supported for PERSISTENT_2 with Metadata or Intelligent Tiering
     Default: "2.15"
 
 Conditions: 
+  DataReadCacheIsUSER: !Or [ !Equals [!Ref DataReadCacheSizingMode, USER_PROVISIONED], !Equals [!Ref DataReadCacheSizingMode, NO_CACHE]]
   IsEfaEnabled: !Equals [!Ref EfaEnabled, TRUE]
-  MetadataIopsEnabled: !Equals [!Ref MetadataMode, USER_PROVISIONED]
 
 Resources:
 
@@ -236,23 +229,28 @@ Resources:
     UpdateReplacePolicy: Delete
     Properties:
       FileSystemType: LUSTRE
-      StorageType: SSD
+      StorageType: INTELLIGENT_TIERING
       FileSystemTypeVersion: !Ref LustreVersion
-      StorageCapacity: !Ref Capacity        # At least 4800 GB required to use EFA
-      SecurityGroupIds:
+      StorageCapacity: !Ref AWS::NoValue
+      SecurityGroupIds: 
         - !If [ IsEfaEnabled, !Ref LustreEFASG, !Ref AWS::NoValue ]
         - !Ref LustreServersSG
         - !Ref LustreClientsSG
       SubnetIds:
         - !Ref SubnetId
       LustreConfiguration:
-        EfaEnabled: !Ref EfaEnabled
         DataCompressionType: !Ref Compression
         DeploymentType: PERSISTENT_2
-        PerUnitStorageThroughput: !Ref PerUnitStorageThroughput
+        EfaEnabled: !Ref EfaEnabled
+        PerUnitStorageThroughput: !Ref AWS::NoValue
+        ThroughputCapacity: !Ref ThroughputCapacity
         MetadataConfiguration: 
-          Mode: !Ref MetadataMode           # USER_PROVISIONED is required to use EFA
-          Iops: !If [ MetadataIopsEnabled, !Ref MetadataIops, !Ref AWS::NoValue ]
+          Mode: USER_PROVISIONED   # NOTE: AUTOMATIC is NOT allowed here (06/13/2025)
+          Iops: !Ref MetadataIops
+        DataReadCacheConfiguration:
+          SizingMode: !Ref DataReadCacheSizingMode
+          SizeGiB: !If [ DataReadCacheIsUSER, !Ref DataReadCacheSizeInGB, !Ref AWS::NoValue ]
+
       Tags:
         - Key: HPCRecipes
           Value: "true"

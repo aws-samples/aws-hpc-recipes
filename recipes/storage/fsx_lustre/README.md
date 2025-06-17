@@ -16,6 +16,7 @@ There are two templates. One creates a "scratch" filesystem, suitable for short-
 
 * Create a [Scratch Filesystem](https://console.aws.amazon.com/cloudformation/home?region=us-east-2#/stacks/create/review?stackName=fsxl-scratch&templateURL=https://aws-hpc-recipes.s3.us-east-1.amazonaws.com/main/recipes/storage/fsx_lustre/assets/scratch.yaml)
 * Create a [Persistent Filesystem](https://console.aws.amazon.com/cloudformation/home?region=us-east-2#/stacks/create/review?stackName=fsxl-persistent&templateURL=https://aws-hpc-recipes.s3.us-east-1.amazonaws.com/main/recipes/storage/fsx_lustre/assets/persistent.yaml)
+* Create an [Intelligent-Tiering Filesystem](https://console.aws.amazon.com/cloudformation/home?region=us-east-2#/stacks/create/review?stackName=fsxl-intelligent-tiering&templateURL=https://aws-hpc-recipes.s3.us-east-1.amazonaws.com/main/recipes/storage/fsx_lustre/assets/intelligent_tiering.yaml)
 
 When prompted to choose a VPC and subnet, select the one where you intend to place the majority of your computing. It is possible to access FSx for Lustre filesystems across Availability Zones, but there will be higher latency and additional costs due to cross-zone traffic.
 
