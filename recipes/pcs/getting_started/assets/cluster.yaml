@@ -89,10 +89,14 @@ Parameters:
     AllowedPattern: '^(?!.*/\.git$)(?!.*/\.)(?!.*\\.\.)[a-zA-Z0-9-_\.]+$'
 
 Conditions:
-  HasAccountingSupport: !Not [!Or [!Equals [!Ref SlurmVersion, "23.11"], !Equals [!Ref SlurmVersion, "24.05"]]]
+  GovCloud: !Equals [!Ref AWS::Partition, 'aws-us-gov']
+  China: !Equals [!Ref AWS::Partition, 'aws-cn']
+  # Disabled for older SLurm versions and in GovCloud
+  HasAccountingSupport: !Not [!Or [!Equals [!Ref SlurmVersion, "23.11"], !Equals [!Ref SlurmVersion, "24.05"], !Equals [!Ref AWS::Partition, 'aws-us-gov']]]
   IsAccountingEnabled: !Equals [!Ref ManagedAccounting, 'enabled']
   IncludeAccountingConfig: !And [!Condition HasAccountingSupport, !Condition IsAccountingEnabled]
   SetAccountingPolicy: !Not [!Equals [!Ref AccountingPolicyEnforcement, 'none']]
+
 
 Mappings:
 
@@ -250,7 +254,7 @@ Resources:
               Service: lambda.amazonaws.com
             Action: sts:AssumeRole
       ManagedPolicyArns:
-        - arn:aws:iam::aws:policy/service-role/AWSLambdaBasicExecutionRole
+        - !Sub arn:${AWS::Partition}:iam::aws:policy/service-role/AWSLambdaBasicExecutionRole
       Policies:
         - PolicyName: EC2DescribeImages
           PolicyDocument:
@@ -372,16 +376,16 @@ Outputs:
     Description: URL to access the cluster in the PCS console
     Value: !Sub
       - https://${ConsoleDomain}/pcs/home?region=${AWS::Region}#/clusters/${ClusterId}
-      - { ConsoleDomain: !Sub '${AWS::Region}.console.aws.amazon.com',
-          ClusterId: !GetAtt [ PCSCluster, Id ]
+      - { ConsoleDomain: !If [ GovCloud, 'console.amazonaws-us-gov.com', !If [ China, 'console.amazonaws.cn', !Sub '${AWS::Region}.console.aws.amazon.com']],
+          ClusterId: !GetAtt [ PCSCluster, Id ] 
         }
     Export:
       Name: !Sub ${AWS::StackName}-PcsConsoleUrl
   Ec2ConsoleUrl:
-    Description: URL to access instance(s) in the login node group
+    Description: URL to access instance(s) in the login node group via Session Manager
     Value: !Sub
       - https://${ConsoleDomain}/ec2/home?region=${AWS::Region}#Instances:instanceState=running;tag:aws:pcs:compute-node-group-id=${NodeGroupLoginId}
-      - { ConsoleDomain: !Sub '${AWS::Region}.console.aws.amazon.com',
+      - { ConsoleDomain: !If [ GovCloud, 'console.amazonaws-us-gov.com', !If [ China, 'console.amazonaws.cn', !Sub '${AWS::Region}.console.aws.amazon.com']],
           NodeGroupLoginId: !GetAtt [ PCSNodeGroupLogin, Id ] 
         }
     Export:

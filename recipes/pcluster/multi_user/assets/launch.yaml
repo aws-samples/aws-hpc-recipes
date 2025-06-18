@@ -194,7 +194,7 @@ Resources:
             AllowedIps: !Ref AllowedIps
           Iam:
             AdditionalIamPolicies:
-              - Policy: arn:aws:iam::aws:policy/AmazonSSMManagedInstanceCore
+              - Policy: !Sub arn:${AWS::Partition}:iam::aws:policy/AmazonSSMManagedInstanceCore
         DirectoryService:
           DomainName: !GetAtt [ ManagedAD , Outputs.DomainName ]
           DomainAddr: !GetAtt [ ManagedAD , Outputs.DomainAddrLdap ]

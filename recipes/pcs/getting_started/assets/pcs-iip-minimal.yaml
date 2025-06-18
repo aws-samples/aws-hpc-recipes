@@ -64,15 +64,15 @@ Resources:
       ManagedPolicyArns:
         - !If
           - EnableSsmCondition
-          - "arn:aws:iam::aws:policy/AmazonSSMManagedInstanceCore"
+          - !Sub "arn:${AWS::Partition}:iam::aws:policy/AmazonSSMManagedInstanceCore"
           - !Ref AWS::NoValue
         - !If
           - EnableS3ReadOnlyCondition
-          - "arn:aws:iam::aws:policy/AmazonS3ReadOnlyAccess"
+          - !Sub "arn:${AWS::Partition}:iam::aws:policy/AmazonS3ReadOnlyAccess"
           - !Ref AWS::NoValue
         - !If
           - EnableCloudwatchAgentCondition
-          - "arn:aws:iam::aws:policy/CloudWatchAgentServerPolicy"
+          - !Sub "arn:${AWS::Partition}:iam::aws:policy/CloudWatchAgentServerPolicy"
           - !Ref AWS::NoValue
       Policies:
         - PolicyDocument:

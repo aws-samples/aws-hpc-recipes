@@ -105,8 +105,8 @@ Resources:
               Service: ec2.amazonaws.com
             Action: sts:AssumeRole
       ManagedPolicyArns:
-        - arn:aws:iam::aws:policy/AmazonSSMManagedInstanceCore
-        - arn:aws:iam::aws:policy/EC2InstanceProfileForImageBuilder
+        - !Sub arn:${AWS::Partition}:iam::aws:policy/AmazonSSMManagedInstanceCore
+        - !Sub arn:${AWS::Partition}:iam::aws:policy/EC2InstanceProfileForImageBuilder
       Path: /
 
   ImageBuilderInstanceProfile:
@@ -134,7 +134,7 @@ Resources:
       Components:
         - ComponentArn: !GetAtt [ImageBuilderComponentsStack, Outputs.UpdateOsComponent]
         - ComponentArn: !GetAtt [ImageBuilderComponentsStack, Outputs.DowngradeKernelComponent]
-        - ComponentArn: !Sub 'arn:aws:imagebuilder:${AWS::Region}:aws:component/reboot-linux/1.0.1/1'
+        - ComponentArn: !Sub'arn:${AWS::Partition}:imagebuilder:${AWS::Region}:aws:component/reboot-linux/1.0.1/1'
         - ComponentArn: !GetAtt [ImageBuilderComponentsStack, Outputs.OptimizePerformanceComponent]
         - ComponentArn: !GetAtt [ImageBuilderComponentsStack, Outputs.CloudwatchAgentComponent]
         - ComponentArn: !GetAtt [ImageBuilderComponentsStack, Outputs.SsmAgentComponent]

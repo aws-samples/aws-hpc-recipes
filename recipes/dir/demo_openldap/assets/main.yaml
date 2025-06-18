@@ -190,11 +190,11 @@ Resources:
             Action: ['sts:AssumeRole']
             Condition:
               ArnLike:
-                aws:SourceArn: !Sub arn:aws:ecs:${AWS::Region}:${AWS::AccountId}:*
+                aws:SourceArn: !Subarn:${AWS::Partition}:ecs:${AWS::Region}:${AWS::AccountId}:*
               StringEquals:
                 aws:SourceAccount: !Ref AWS::AccountId
       ManagedPolicyArns:
-        - arn:aws:iam::aws:policy/service-role/AmazonECSTaskExecutionRolePolicy
+        - !Sub arn:${AWS::Partition}:iam::aws:policy/service-role/AmazonECSTaskExecutionRolePolicy
 
   # This role is used at runtime.
   TaskRole:
@@ -208,7 +208,7 @@ Resources:
             Action: ['sts:AssumeRole']
             Condition:
               ArnLike:
-                aws:SourceArn: !Sub arn:aws:ecs:${AWS::Region}:${AWS::AccountId}:*
+                aws:SourceArn: !Subarn:${AWS::Partition}:ecs:${AWS::Region}:${AWS::AccountId}:*
               StringEquals:
                 aws:SourceAccount: !Ref AWS::AccountId
       Policies:
