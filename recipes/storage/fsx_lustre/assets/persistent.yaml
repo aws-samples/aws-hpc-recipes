@@ -8,6 +8,10 @@ Description: FSx for Lustre Persistent Filesystem.
   Refer to the Outputs tab for the filesystem ID, mount name, and security group ID needed to mount the filesystem.
   Note - In GovCloud regions, PERSISTENT_1 deployment type is used instead of PERSISTENT_2.
 
+Conditions:
+  IsGovCloud: !Equals 
+    - !Sub '${AWS::Partition}'
+    - 'aws-us-gov'
 
 ### Stack metadata
 Metadata:
@@ -20,14 +24,11 @@ Metadata:
           - PerUnitStorageThroughput
           - Compression
           - LustreVersion
-          - MetadataMode
-          - MetadataIops
       - Label:
           default: Networking and Access
         Parameters:
           - VpcId
           - SubnetId
-          - EfaEnabled
 
 Parameters:
   VpcId:
@@ -36,16 +37,8 @@ Parameters:
   SubnetId:
     Description: Subnet where you will deploy the FSx filesystem (must be in same VPC)
     Type: AWS::EC2::Subnet::Id
-  EfaEnabled:
-    Description: Enable/Disable support for EFA/GPU Direct Storage (GDS) for up to 12x higher per-client througphput. Requires MetadataMode to be USER_PROVISIONED and Capacity to be at least 4800 GiB. 
-    Type: String
-    Default: FALSE
-    AllowedValues: 
-     - TRUE
-     - FALSE
-
   Capacity:
-    Description: Storage capacity in GiB (1200 or increments of 2400). If EfaEnabled this needs to be at least 4800.
+    Description: Storage capacity in GiB (1200 or increments of 2400)
     Type: Number
     Default: 1200
   PerUnitStorageThroughput:
@@ -57,28 +50,6 @@ Parameters:
       - 250
       - 500
       - 1000
-  MetadataIops:
-    Description: Provisioned metadata IOPS. Ignored if MetadataMode is AUTOMATIC.
-    Type: Number
-    Default: 6000
-    AllowedValues:
-      - 1500
-      - 3000
-      - 6000
-      - 12000
-      - 24000
-      - 36000
-      - 48000
-      - 60000
-      # More multiples possible up to 192000...
-  MetadataMode:
-    Description: Provisioned metadata MODE. If EFA is enabled, this must be USER_PROVISIONED.
-    Type: String
-    Default: AUTOMATIC
-    AllowedValues:
-      - AUTOMATIC
-      - USER_PROVISIONED
-
   Compression:
     Description: Data compression type
     Type: String
@@ -94,40 +65,7 @@ Parameters:
       - "2.12"
     Default: "2.15"
 
-Conditions: 
-  IsEfaEnabled: !Equals [!Ref EfaEnabled, TRUE]
-  MetadataIopsEnabled: !Equals [!Ref MetadataMode, USER_PROVISIONED]
-  IsGovCloud: !Equals 
-    - !Sub '${AWS::Partition}'
-    - 'aws-us-gov'
-
 Resources:
-
-  LustreEFASG:
-    Type: AWS::EC2::SecurityGroup
-    Condition: IsEfaEnabled
-    Properties:
-      GroupDescription: 'Allows EFA traffic to/from FSx for Lustre filesystem'
-      GroupName: !Sub '${AWS::StackName}-fsxl-efa-security-group'
-      VpcId: !Ref VpcId
-        
-  LustreEFASGfromSelf:
-    Type: AWS::EC2::SecurityGroupIngress
-    Condition: IsEfaEnabled
-    Properties:
-      IpProtocol: -1
-      Description: Allows all internal inbound traffic from the security group itself
-      GroupId: !Ref LustreEFASG
-      SourceSecurityGroupId: !Ref LustreEFASG
-
-  LustreEFASGtoSelf:
-    Type: AWS::EC2::SecurityGroupEgress
-    Condition: IsEfaEnabled
-    Properties:
-      IpProtocol: -1
-      Description: Allows all internal inbound traffic to the security group itself
-      GroupId: !Ref LustreEFASG
-      DestinationSecurityGroupId: !Ref LustreEFASG
 
   LustreServersSG:
       Type: AWS::EC2::SecurityGroup
@@ -223,41 +161,24 @@ Resources:
       GroupId: !Ref LustreClientsSG
       DestinationSecurityGroupId: !Ref LustreServersSG
 
-  # This wait condition holds FSxL from building filesystem until all rules are
-  # attached. Needed for FSxL EFA security group validation. 
-  SecurityGroupsWaitConditionHandle:
-    Type: AWS::CloudFormation::WaitConditionHandle
-    Metadata:
-      EFASecurityGroupReady: !If
-        - IsEfaEnabled 
-        - [ !Ref LustreEFASG, !Ref LustreEFASGtoSelf, !Ref LustreEFASGfromSelf ]
-        - !Ref AWS::NoValue
-
-
   FSxLFilesystem:
     Type: AWS::FSx::FileSystem
-    DependsOn: SecurityGroupsWaitConditionHandle
     DeletionPolicy: Delete
     UpdateReplacePolicy: Delete
     Properties:
       FileSystemType: LUSTRE
       StorageType: SSD
       FileSystemTypeVersion: !Ref LustreVersion
-      StorageCapacity: !Ref Capacity        # At least 4800 GB required to use EFA
+      StorageCapacity: !Ref Capacity
       SecurityGroupIds:
-        - !If [ IsEfaEnabled, !Ref LustreEFASG, !Ref AWS::NoValue ]
         - !Ref LustreServersSG
         - !Ref LustreClientsSG
       SubnetIds:
         - !Ref SubnetId
       LustreConfiguration:
-        EfaEnabled: !Ref EfaEnabled
         DataCompressionType: !Ref Compression
         DeploymentType: !If [IsGovCloud, 'PERSISTENT_1', 'PERSISTENT_2']
         PerUnitStorageThroughput: !If [IsGovCloud, 200, !Ref PerUnitStorageThroughput]
-        MetadataConfiguration: 
-          Mode: !Ref MetadataMode           # USER_PROVISIONED is required to use EFA
-          Iops: !If [ MetadataIopsEnabled, !Ref MetadataIops, !Ref AWS::NoValue ]
       Tags:
         - Key: HPCRecipes
           Value: "true"
@@ -275,6 +196,6 @@ Outputs:
       Name: !Sub ${AWS::StackName}-FSxLustreMountName
   FSxLustreSecurityGroupId:
     Description: Clients join this group for access to the FSx for Lustre filesystem
-    Value: !If [ IsEfaEnabled, !Ref LustreEFASG, !Ref LustreClientsSG ]
+    Value: !Ref LustreClientsSG
     Export:
       Name: !Sub ${AWS::StackName}-FSxLustreSecurityGroupId
