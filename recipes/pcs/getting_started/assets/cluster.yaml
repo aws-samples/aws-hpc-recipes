@@ -64,7 +64,7 @@ Parameters:
       - 'associations,limits,safe'
 
   KeyName:
-    Description: SSH keypair to log in to the head node
+    Description: SSH keypair to connect to the login node (s)
     Type: AWS::EC2::KeyPair::KeyName
     AllowedPattern: ".+"  # Required
 
