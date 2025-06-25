@@ -47,7 +47,7 @@ download_and_verify_pubkey() {
     cd "$temp_dir" || exit 1
 
     # Import and validate public key
-    curl -fsSL "https://aws-pcs-repo-public-keys-${AWS_REGION}.s3.amazonaws.com/aws-pcs-public-key.pub" -o aws-pcs-public-key.pub && \
+    curl -fsSL "https://aws-pcs-repo-public-keys-${AWS_REGION}.s3.${AWS_REGION}.amazonaws.com/aws-pcs-public-key.pub" -o aws-pcs-public-key.pub && \
         sudo gpg --import aws-pcs-public-key.pub
 
     # # Get the actual fingerprint
@@ -74,10 +74,10 @@ download_verify_and_install_software() {
     cd "$temp_dir" || exit 1
 
     # Download Slurm software tarball
-    curl -fsSL "https://aws-pcs-repo-${AWS_REGION}.s3.amazonaws.com/aws-pcs-slurm/aws-pcs-slurm-${PCS_SLURM_VERSION}-installer-${PCS_SLURM_INSTALLER_VERSION}.tar.gz" -o "aws-pcs-slurm-${PCS_SLURM_VERSION}-installer-${PCS_SLURM_INSTALLER_VERSION}.tar.gz"
+    curl -fsSL "https://aws-pcs-repo-${AWS_REGION}.s3.${AWS_REGION}.amazonaws.com/aws-pcs-slurm/aws-pcs-slurm-${PCS_SLURM_VERSION}-installer-${PCS_SLURM_INSTALLER_VERSION}.tar.gz" -o "aws-pcs-slurm-${PCS_SLURM_VERSION}-installer-${PCS_SLURM_INSTALLER_VERSION}.tar.gz"
 
     # # Download and verify signature file
-    # curl -fsSL "https://aws-pcs-repo-${AWS_REGION}.s3.amazonaws.com/aws-pcs-slurm/aws-pcs-slurm-${PCS_SLURM_VERSION}-installer-${PCS_SLURM_INSTALLER_VERSION}.tar.gz.sig" -o "aws-pcs-slurm-${PCS_SLURM_VERSION}-installer-${PCS_SLURM_INSTALLER_VERSION}.tar.gz.sig"
+    # curl -fsSL "https://aws-pcs-repo-${AWS_REGION}.s3.${AWS_REGION}.amazonaws.com/aws-pcs-slurm/aws-pcs-slurm-${PCS_SLURM_VERSION}-installer-${PCS_SLURM_INSTALLER_VERSION}.tar.gz.sig" -o "aws-pcs-slurm-${PCS_SLURM_VERSION}-installer-${PCS_SLURM_INSTALLER_VERSION}.tar.gz.sig"
     # # Verify the signature
     # gpg --verify aws-pcs-slurm-${PCS_SLURM_VERSION}-installer-${PCS_SLURM_INSTALLER_VERSION}.tar.gz.sig aws-pcs-slurm-${PCS_SLURM_VERSION}-installer-${PCS_SLURM_INSTALLER_VERSION}.tar.gz
 
