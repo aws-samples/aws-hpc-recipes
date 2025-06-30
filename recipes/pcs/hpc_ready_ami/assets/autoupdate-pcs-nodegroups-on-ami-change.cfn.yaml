@@ -1,0 +1,216 @@
+AWSTemplateFormatVersion: '2010-09-09'
+Description: EventBridge rule to trigger Lambda function on EC2 Image Builder completion
+
+Parameters:
+  ClusterIdentifier:
+    Type: String
+    Description: Identifier of the Parallel Computing Service (PCS) cluster
+  ComputeNodeGroupIdentifiers:
+    Type: CommaDelimitedList
+    Description: Comma-Delimited List of Compute Node Group Identifiers to update when a new AMI is built
+  ImageName:
+    Type: String
+    Description: 'Name of the Image built by ImageBuilder'
+  ImageSemanticVersion:
+    Type: String
+    Default: "0.0.1"
+    Description: 'Semantic version of the Image built by ImagePipeline Builder. This is used as a filter to track EventBridge events for one version of image. The actual image version is in format: ${ImageSemanticVersion}/${BuildNumber}, where BuildNumber is automatically incremented based on triggered pipeline builds (cron / manual / other). Do not specify the BuildNumber here.'
+
+Resources:
+  LambdaExecutionRole:
+    Type: AWS::IAM::Role
+    Properties:
+      AssumeRolePolicyDocument:
+        Version: '2012-10-17'
+        Statement:
+          - Effect: Allow
+            Principal:
+              Service: lambda.amazonaws.com
+            Action: sts:AssumeRole
+      Policies:
+        - PolicyName: LambdaBasicExecution
+          PolicyDocument:
+            Version: '2012-10-17'
+            Statement:
+              - Effect: Allow
+                Action:
+                  - logs:CreateLogGroup
+                  - logs:CreateLogStream
+                  - logs:PutLogEvents
+                Resource: !Sub "arn:${AWS::Partition}:logs:*:*:*"
+        - PolicyName: ImageBuilderAccess
+          PolicyDocument:
+            Version: '2012-10-17'
+            Statement:
+              - Effect: Allow
+                Action:
+                  - imagebuilder:GetImage
+                Resource: '*'
+        # Documented here: https://docs.aws.amazon.com/pcs/latest/userguide/security-min-permissions.html
+        - PolicyName: PCSUpdatePolicy
+          PolicyDocument:
+            Version: '2012-10-17'
+            Statement:
+              - Effect: Allow
+                Action: [
+                  ec2:DescribeVpcs,
+                  ec2:DescribeSubnets,
+                  ec2:DescribeSecurityGroups,
+                  ec2:DescribeLaunchTemplates,
+                  ec2:DescribeLaunchTemplateVersions,
+                  ec2:DescribeInstanceTypes,
+                  ec2:DescribeInstanceTypeOfferings,
+                  ec2:RunInstances,
+                  ec2:CreateFleet,
+                  ec2:CreateTags,
+                  iam:PassRole,
+                  iam:GetInstanceProfile,
+                  pcs:UpdateComputeNodeGroup
+                ]
+                Resource: '*'
+
+  ImageBuilderNotificationFunction:
+    Type: AWS::Lambda::Function
+    Properties:
+      Code:
+        ZipFile: |
+          import boto3
+          import os
+          import json
+
+          def lambda_handler(event, context):
+              #print(f"Event: {event}")
+
+              pcs_client = boto3.client(service_name='pcs')
+              imagebuilder_client = boto3.client(service_name='imagebuilder')
+
+              cluster_id = os.environ['CLUSTER_ID']
+              compute_node_groups = os.environ['COMPUTE_NODE_GROUP']
+              image_arn = event['resources'][0]
+              
+              print(f"Cluster ID: {cluster_id}")
+              print(f"Compute Node Group(s): {compute_node_groups}")
+              print(f"Image ARN: {image_arn}")
+
+              try:    
+                  image = imagebuilder_client.get_image(imageBuildVersionArn=image_arn)
+                  #print(f"GetImage: {image}")
+                  ami_id = image['image']['outputResources']['amis'][0]['image']
+
+              except Exception as e:
+                  print(f"Error calling ImageBuilder GetImage API: {str(e)}")
+                  raise
+
+              responses=[]
+
+              for compute_node_group in compute_node_groups.split(','):
+                print(f"Updating CNG {compute_node_group} with AMI ID: {ami_id}")
+
+                try: 
+                  response = pcs_client.update_compute_node_group(
+                      clusterIdentifier=cluster_id,
+                      computeNodeGroupIdentifier=compute_node_group,
+                      amiId=ami_id
+                  )
+                  responses.append(response)
+                except Exception as e:
+                    print(f"Error calling UpdateComputeNodeGroup API: {str(e)}")
+                    raise
+              print(f"UpdateComputeNodeGroup API called successfully for cluster {cluster_id}")
+              return json.loads(json.dumps(responses, default=str))
+      Handler: index.lambda_handler
+      Runtime: python3.9
+      Role: !GetAtt LambdaExecutionRole.Arn
+      Timeout: 300
+      Environment:
+        Variables:
+          CLUSTER_ID: !Ref ClusterIdentifier
+          COMPUTE_NODE_GROUP: !Join [",", !Ref ComputeNodeGroupIdentifiers]
+
+  # Example Event: 
+  # {
+  #  "version": "0",
+  #  "id": "abcdefgh-ijkl-mnop-qrst-uvwxyzabcdef",
+  #  "detail-type": "EC2 Image Builder Image State Change",
+  #  "source": "aws.imagebuilder",
+  #  "account": "123456789012",
+  #  "time": "2024-10-02T15:57:33Z",
+  #  "region": "us-east-1",
+  #  "resources": [
+  #      "arn:aws:imagebuilder:us-east-1:123456789012:image/pcs-ami-amzn-2-x86-amd-pcs-imagebuilder-x86/0.0.1/2"
+  #  ],
+  #  "detail": {
+  #      "previous-state": {
+  #          "status": "BUILDING"
+  #      },
+  #      "state": {
+  #          "status": "TESTING"
+  #      }
+  #  }
+  # }
+  ImageBuilderEventRule:
+    Type: AWS::Events::Rule
+    Properties:
+      Description: "EventBridge rule to track new Image Builder pipeline images"
+      EventPattern:
+        source:
+          - aws.imagebuilder
+        detail-type:
+          - EC2 Image Builder Image State Change
+        resources: 
+          - prefix: !Sub "arn:${AWS::Partition}:imagebuilder:${AWS::Region}:${AWS::AccountId}:image/${ImageName}/${ImageSemanticVersion}"
+        detail:
+          state:
+            status: 
+              # Options: PENDING -> CREATING -> BUILDING -> TESTING -> DISTRIBUTING -> INTEGRATING -> AVAILABLE
+              - AVAILABLE
+      State: ENABLED
+      Targets:
+        - Arn: !GetAtt ImageBuilderNotificationFunction.Arn
+          Id: "ImageBuilderNotificationFunction"
+
+
+  LambdaInvokePermission:
+    Type: AWS::Lambda::Permission
+    Properties:
+      FunctionName: !GetAtt ImageBuilderNotificationFunction.Arn
+      Action: 'lambda:InvokeFunction'
+      Principal: events.amazonaws.com
+      SourceArn: !GetAtt ImageBuilderEventRule.Arn
+
+
+
+  LayerBuilderRole:
+    Type: AWS::IAM::Role
+    Properties:
+      AssumeRolePolicyDocument:
+        Version: '2012-10-17'
+        Statement:
+          - Effect: Allow
+            Principal:
+              Service: lambda.amazonaws.com
+            Action: sts:AssumeRole
+      ManagedPolicyArns:
+        - !Sub "arn:${AWS::Partition}:iam::aws:policy/service-role/AWSLambdaBasicExecutionRole"
+      Policies:
+        - PolicyName: LayerBuilderPolicy
+          PolicyDocument:
+            Version: '2012-10-17'
+            Statement:
+              - Effect: Allow
+                Action:
+                  - lambda:PublishLayerVersion
+                Resource: '*'
+
+Outputs:
+  ImageBuilderNotificationFunctionArn:
+    Description: ARN of the Lambda function
+    Value: !GetAtt ImageBuilderNotificationFunction.Arn
+    Export:
+      Name: !Sub '${AWS::StackName}-ImageBuilderNotificationFunction'
+
+  ImageBuilderEventRuleArn:
+    Description: ARN of the EventBridge rule
+    Value: !GetAtt ImageBuilderEventRule.Arn
+    Export:
+      Name: !Sub '${AWS::StackName}-ImageBuilderEventRuleArn'

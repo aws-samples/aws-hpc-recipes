@@ -63,7 +63,7 @@ The ImageBuilder components are available as individual templates that deploy a 
 5. Finish creating the stack. When its status reaches `CREATE_COMPLETE`, navigate to the [EC2 Image Builder console](https://console.aws.amazon.com/imagebuilder/home#/components).
     * On the **Components** page, choose **Onwed by me**. Your new ImageBuilder component should be avilable there. 
 
-#### Use the example all-in-one ImageBuilder template
+#### Use the example all-in-one ImageBuilder Image template
 
 Check out the HPC recipes repo or download the [CloudFormation template](assets/create-pcs-image.yaml), then run a command resembling this one:
 
@@ -81,12 +81,66 @@ stack_id=$(aws cloudformation create-stack \
                --template-body file://$PWD/create-pcs-image.yaml)
 ```
 
-This will create an [ImageBuilder image](https://console.aws.amazon.com/imagebuilder/home#/images) named **pcs_ami-ubuntu-22-04-arm64**, which will in turn build an AMI named **pcs_ami-ubuntu-22-04-arm64 <TIMESTAMP>**. 
+This will create an [ImageBuilder image](https://console.aws.amazon.com/imagebuilder/home#/images) named **pcs_ami-ubuntu-22-04-arm64**, which will in turn build an AMI named **pcs_ami-ubuntu-22-04-arm64 <TIMESTAMP>**. The ARN for the image will be in format `arn:${AWS::Partition}:imagebuilder:${AWS::Region}:${AWS::AccountID}:image/$imageName/x.x.x/1` where x.x.x is the semantic version of the image recipe, and /1 is the build attempt on the recipe version. 
 
 **Notes:**
 1. If you are building AMIs based on RHEL9 or Rocky Linux 9 in a region that is not `us-east-2`, you will need to change the AMI IDs in the CloudFormation template. The ones in the template are specific to `us-east-2`. For Amazon Linux 2 and Ubuntu 22, SSM parameters are used to resolve the AMI ID in all AWS regions.
 2. If you choose **rhel-9** as your source Linux distribution, you must subscribe to RHEL 9 in the AMI marketplace before building an image from it. 
 3. Uncomment and add AWS IDs to `LaunchPermissionConfiguration` in the template to share the AMI with additional accounts once it is built.
+
+
+#### Use the example all-in-one ImageBuilder ImagePipeline template
+
+Check out the HPC recipes repo or download the [CloudFormation template](assets/create-pcs-imagepipeline.yaml), then run a command resembling this one:
+
+```shell
+stack_id=$(aws cloudformation create-stack \
+               --region us-east-2 \
+               --capabilities "CAPABILITY_NAMED_IAM" "CAPABILITY_AUTO_EXPAND" \
+               --parameters \
+               ParameterKey=Distro,ParameterValue=ubuntu-22-04 \
+               ParameterKey=Architecture,ParameterValue=arm64 \
+               ParameterKey=SemanticVersion,ParameterValue=$(date +%Y.%m.%d) \
+               --output text \
+               --query "StackId" \
+               --stack-name "buildPCSImagePipeline" \
+               --template-body file://$PWD/create-pcs-imagepipeline.yaml)
+```
+
+This will create an [ImageBuilder image](https://console.aws.amazon.com/imagebuilder/home#/images) named **pcs_ami-ubuntu-22-04-arm64**, which will in turn build an AMI named **pcs_ami-ubuntu-22-04-arm64 <TIMESTAMP>**. It will also create and ImageBuilder Pipeline that will rebuild the image every Sunday at 0830 UTC. New versions of the image will be consistently named, but with an incremental build number and fresh timestamp indicating when the image is produced. The ARN for images will be in format `arn:${AWS::Partition}:imagebuilder:${AWS::Region}:${AWS::AccountID}:image/$imageName/x.x.x/Y` where x.x.x is the semantic version of the image recipe, and /Y is the build attempt on the recipe version. A pipeline lifecycle policy is included that will cleanup stale images older than 30 days (see Note 3). ImagePipelines are useful to continuously build images for security/compliance patching and development. 
+
+**Notes:**
+1. The same ImageBuilder Image caveats apply here
+2. When you modify ImageBuilder Components, the ImagePipeline semantic version is NOT required to change so long as your ImageRecipe tracks the latest component versions. 
+3. The Image Lifecycle policy is Conditioned on region. The feature is not available in GovCloud. 
+
+##### Automatically Update PCS Compute Node Groups to Latest Images
+
+PCS Compute Node Groups do not automatically update when a new image is built. However, this behavior can be triggered by monitoring ImageBuilder Events through EventBridge. 
+
+Check out or download this [CloudFormation template](assets/autoupdate-pcs-nodegroups-on-ami-change.cfn.yaml), it illustrates how to subscribe to ImageBuilder Image status changes in EventBridge, then execute a Lambda function to programmatically update one or more PCS Compute Node Groups to the fresh AMI. 
+
+Launch the template with
+```shell
+stack_id=$(aws cloudformation create-stack \
+               --region us-east-2 \
+               --capabilities "CAPABILITY_NAMED_IAM" "CAPABILITY_AUTO_EXPAND" \
+               --parameters \
+               ParameterKey=ClusterIdentifier,ParameterValue=pcs_xxxxxxxxxx \
+               ParameterKey=ComputeNodeGroupIdentifiers,ParameterValue="pcs_yyyyyyyyyy,pcs_zzzzzzzzzz" \
+               ParameterKey=ImageName,ParameterValue=pcs_ami-ubuntu-22-04-arm64 \
+               ParameterKey=ImageSemanticVersion,ParameterValue=x.x.x \
+               --output text \
+               --query "StackId" \
+               --stack-name "autoupdate-pcs-nodegroups-on-ami-change" \
+               --template-body file://$PWD/autoupdate-pcs-nodegroups-on-ami-change.cfn.yaml)
+```
+where ImageSemanticVersion is a match for the ImageBuilder Pipeline created above. 
+
+**Notes:**
+1. This template subscribes to EventBridge events using the ImageName and ImageSemanticVersion defined by the ImagePipeline sample above.
+2. Image semantic versions outside the semantic version specified here will not trigger compute node group updates
+3. An update to the Compute Node Group consists of call to the PCS UpdateComputeNodeGroup API with the new AMI ID. PCS will automatically replace compute nodes with instances booted from the new AMI. 
 
 ### HashiCorp Packer resources
 
