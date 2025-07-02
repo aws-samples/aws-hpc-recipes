@@ -5,11 +5,11 @@ Resources:
   RESVDIWindowsInstaller:
     Type: AWS::ImageBuilder::Component
     Properties:
-      Name: !Sub 'research-and-engineering-studio-vdi-windows'
+      Name: 'research-and-engineering-studio-vdi-windows'
       Description: RES VDI Bootstrap for Windows
-      Version: '0.0.1'
+      Version: '1.0.0'
       Platform: Windows
-      Data: !Sub |
+      Data: |
         #  Copyright Amazon.com, Inc. or its affiliates. All Rights Reserved.
         #
         #  Licensed under the Apache License, Version 2.0 (the "License"). You may not use this file except in compliance
@@ -23,19 +23,6 @@ Resources:
         name: research-and-engineering-studio-vdi-windows
         description: An RES EC2 Image Builder component to install required RES software dependencies for Windows VDI.
         schemaVersion: 1.0
-        parameters:
-          - AWSAccountID:
-              type: string
-              description: RES Environment AWS Account ID
-          - RESEnvName:
-              type: string
-              description: RES Environment Name
-          - RESEnvRegion:
-              type: string
-              description: RES Environment Region
-          - RESEnvReleaseVersion:
-              type: string
-              description: RES Release Version
 
         phases:
           - name: build
@@ -52,9 +39,8 @@ Resources:
                 onFailure: Abort
                 maxAttempts: 3
                 inputs:
-                    - source: 's3://{{ RESEnvName }}-cluster-{{ RESEnvRegion }}-{{ AWSAccountID }}/idea/vdc/res-ready-install-script-packages/windows/res_windows_install_{{ RESEnvReleaseVersion }}.tar.gz'
-                      destination: '{{ build.CreateRESBootstrapFolder.inputs[0].path }}\res_windows_install_{{ RESEnvReleaseVersion }}.tar.gz'
-                      expectedBucketOwner: '{{ AWSAccountID }}'
+                    - source: 's3://research-engineering-studio-us-east-1/releases/latest/res-installation-scripts.tar.gz'
+                      destination: '{{ build.CreateRESBootstrapFolder.inputs[0].path }}\res-installation-scripts.tar.gz'
               - name: RunInstallScript
                 action: ExecutePowerShell
                 onFailure: Abort
@@ -62,15 +48,9 @@ Resources:
                 inputs:
                     commands:
                         - 'cd {{ build.CreateRESBootstrapFolder.inputs[0].path }}'
-                        - 'Tar -xf res_windows_install_{{ RESEnvReleaseVersion }}.tar.gz'
-                        - 'Import-Module .\virtual-desktop-host-windows\Install.ps1'
-                        - 'Install-WindowsEC2Instance'
-              - name: Reboot
-                action: Reboot
-                onFailure: Abort
-                maxAttempts: 3
-                inputs:
-                    delaySeconds: 0  
+                        - 'tar -xf res-installation-scripts.tar.gz'
+                        - 'Import-Module .\scripts\virtual-desktop-host\windows\Install.ps1'
+                        - 'Install-WindowsEC2Instance -PrebakeAMI'
 
 
 Outputs:

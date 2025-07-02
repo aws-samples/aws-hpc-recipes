@@ -5,11 +5,11 @@ Resources:
   RESVDILinuxInstaller:
     Type: AWS::ImageBuilder::Component
     Properties:
-      Name: !Sub 'research-and-engineering-studio-vdi-linux'
+      Name: 'research-and-engineering-studio-vdi-linux'
       Description: RES VDI Bootstrap for Linux
-      Version: '0.0.1'
+      Version: '1.0.0'
       Platform: Linux
-      Data: !Sub |
+      Data: |
         #  Copyright Amazon.com, Inc. or its affiliates. All Rights Reserved.
         #
         #  Licensed under the Apache License, Version 2.0 (the "License"). You may not use this file except in compliance
@@ -23,19 +23,6 @@ Resources:
         name: research-and-engineering-studio-vdi-linux
         description: An RES EC2 Image Builder component to install required RES software dependencies for Linux VDI.
         schemaVersion: 1.0
-        parameters:
-          - AWSAccountID:
-              type: string
-              description: RES Environment AWS Account ID
-          - RESEnvName:
-              type: string
-              description: RES Environment Name
-          - RESEnvRegion:
-              type: string
-              description: RES Environment Region
-          - RESEnvReleaseVersion:
-              type: string
-              description: RES Release Version
 
         phases:
           - name: build
@@ -53,36 +40,33 @@ Resources:
                 onFailure: Abort
                 maxAttempts: 3
                 inputs:
-                    - source: 's3://{{ RESEnvName }}-cluster-{{ RESEnvRegion }}-{{ AWSAccountID }}/idea/vdc/res-ready-install-script-packages/linux/res_linux_install_{{ RESEnvReleaseVersion }}.tar.gz'
-                      destination: '/root/bootstrap/res_linux_install_{{ RESEnvReleaseVersion }}.tar.gz'
-                      expectedBucketOwner: '{{ AWSAccountID }}'
+                    - source: 's3://research-engineering-studio-us-east-1/releases/latest/res-installation-scripts.tar.gz'
+                      destination: '/root/bootstrap/res-installation-scripts/res-installation-scripts.tar.gz'
               - name: RunInstallScript
                 action: ExecuteBash
                 onFailure: Abort
                 maxAttempts: 3
                 inputs:
                     commands:
-                        - 'tar -xvf {{ build.DownloadRESLinuxInstallPackage.inputs[0].destination }} -C /root/bootstrap/latest'
-                        - '/bin/bash /root/bootstrap/latest/virtual-desktop-host-linux/install.sh -r {{ RESEnvRegion }} -n {{ RESEnvName }} -g NONE'
-              - name: FirstReboot
-                action: Reboot
-                onFailure: Abort
-                maxAttempts: 3
-                inputs:
-                    delaySeconds: 0
+                      - 'cd /root/bootstrap/res-installation-scripts'
+                      - 'tar -xf res-installation-scripts.tar.gz'
+                      - 'cd scripts/virtual-desktop-host/linux'
+                      - '/bin/bash install.sh -g NONE'
               - name: RunInstallPostRebootScript
                 action: ExecuteBash
                 onFailure: Abort
                 maxAttempts: 3
                 inputs:
                     commands:
-                        - '/bin/bash /root/bootstrap/latest/virtual-desktop-host-linux/install_post_reboot.sh'
-              - name: SecondReboot
-                action: Reboot
+                      - 'cd /root/bootstrap/res-installation-scripts/scripts/virtual-desktop-host/linux'
+                      - '/bin/bash install_post_reboot.sh -g NONE'
+              - name: PreventAL2023FromUninstallingCronie
+                action: ExecuteBash
                 onFailure: Abort
                 maxAttempts: 3
                 inputs:
-                    delaySeconds: 0      
+                    commands:
+                      - 'rm -f /tmp/imagebuilder_service/crontab_installed' 
 
 
 Outputs:

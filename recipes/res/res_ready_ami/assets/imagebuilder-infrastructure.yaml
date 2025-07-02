@@ -58,6 +58,7 @@ Resources:
             Service: ec2.amazonaws.com
           Action: "sts:AssumeRole"
       ManagedPolicyArns: 
+        - arn:aws:iam::aws:policy/AmazonS3ReadOnlyAccess
         - arn:aws:iam::aws:policy/AmazonSSMManagedInstanceCore
         - arn:aws:iam::aws:policy/EC2InstanceProfileForImageBuilder
       Policies:
@@ -74,10 +75,14 @@ Resources:
                   "dynamodb:LeadingKeys":
                   - "global-settings.gpu_settings.*"
                   - "global-settings.package_config.*"
+                  - "cluster-manager.host_modules.*"
+                  - "identity-provider.cognito.enable_native_user_login"
             - Sid: RESS3Access
               Effect: Allow
               Action: "s3:GetObject"
-              Resource: !Sub "arn:${AWS::Partition}:s3:::${EnvironmentName}-cluster-${AWS::Region}-${AWS::AccountId}/idea/vdc/res-ready-install-script-packages/*"
+              Resource: 
+                - !Sub "arn:${AWS::Partition}:s3:::${EnvironmentName}-cluster-${AWS::Region}-${AWS::AccountId}/idea/vdc/res-ready-install-script-packages/*"
+                - !Sub "arn:${AWS::Partition}:s3:::research-engineering-studio-${AWS::Region}/host_modules/*"
             - Sid: GPUDriverAccess
               Effect: Allow
               Action: 
@@ -104,7 +109,7 @@ Resources:
   RESInfrastructureConfig:
     Type: AWS::ImageBuilder::InfrastructureConfiguration
     Properties:
-      Name: !Sub "${AWS::StackName}-RES-PCS-Ec2ImageBuilder-InfrastructureConfig"
+      Name: !Sub "${AWS::StackName}-${EnvironmentName}-InfrastructureConfig"
       InstanceProfileName: !Ref RESEC2InstanceProfileForImageBuilder
       InstanceTypes: 
         - m5.large
