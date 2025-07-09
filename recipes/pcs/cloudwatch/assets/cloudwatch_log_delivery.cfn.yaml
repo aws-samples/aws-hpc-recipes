@@ -1,5 +1,5 @@
 AWSTemplateFormatVersion: 2010-09-09
-Description: Create a Log Delivery binding for PCS Cluster to CloudWatch. 
+Description: Create Log Delivery bindings for PCS Cluster scheduler logs and job completion logs to CloudWatch. 
 
 Parameters: 
   PCSClusterId: 
@@ -9,31 +9,31 @@ Parameters:
     ConstraintDescription: "Must match pattern: pcs_XXXXXXXXXX where X can be letters or numbers"
 
 Resources: 
-  PCSLogDeliverySource:
+  PCSSchedulerLogDeliverySource:
     Type: AWS::Logs::DeliverySource
     Properties:
       LogType: PCS_SCHEDULER_LOGS
       ResourceArn: !Sub "arn:${AWS::Partition}:pcs:${AWS::Region}:${AWS::AccountId}:cluster/${PCSClusterId}"
-      Name: !Sub "${PCSClusterId}-cluster-logs-source"
+      Name: !Sub "${PCSClusterId}-cluster-scheduler-logs-source"
 
-  PCSLogCloudwatchDeliveryDestination:
+  PCSSchedulerLogCloudwatchDeliveryDestination:
     Type: AWS::Logs::DeliveryDestination
-    #DependsOn: PCSLogDeliveryGroup
+    #DependsOn: PCSSchedulerLogDeliveryGroup
     Properties:
-      DestinationResourceArn: !GetAtt PCSLogDeliveryGroup.Arn
-      Name: !Sub "${PCSClusterId}-cw-logs-destination"
+      DestinationResourceArn: !GetAtt PCSSchedulerLogDeliveryGroup.Arn
+      Name: !Sub "${PCSClusterId}-cluster-scheduler-cw-logs-destination"
 
-  PCSLogDelivery:
+  PCSSchedulerLogDelivery:
     Type: AWS::Logs::Delivery
     Properties:
-      DeliveryDestinationArn: !GetAtt PCSLogCloudwatchDeliveryDestination.Arn
-      DeliverySourceName: !Ref PCSLogDeliverySource
+      DeliveryDestinationArn: !GetAtt PCSSchedulerLogCloudwatchDeliveryDestination.Arn
+      DeliverySourceName: !Ref PCSSchedulerLogDeliverySource
     
   # Log groups prefixed with '/aws/vendedlogs/' will be created automatically.
   # Other log groups must be created prior to setting up a log delivery. 
   # We opt to create groups regardless of destination. 
   #############################
-  PCSLogDeliveryGroup:
+  PCSSchedulerLogDeliveryGroup:
     Type: AWS::Logs::LogGroup
     DeletionPolicy: RetainExceptOnCreate
     UpdateReplacePolicy: Retain
@@ -42,12 +42,50 @@ Resources:
       LogGroupName: !Sub "/aws/vendedlogs/pcs/cluster/PCS_SCHEDULER_LOGS/${PCSClusterId}"
       RetentionInDays: 60
 
+
+  PCSJobCompLogDeliverySource:
+    Type: AWS::Logs::DeliverySource
+    Properties:
+      LogType: PCS_JOBCOMP_LOGS
+      ResourceArn: !Sub "arn:${AWS::Partition}:pcs:${AWS::Region}:${AWS::AccountId}:cluster/${PCSClusterId}"
+      Name: !Sub "${PCSClusterId}-cluster-jobcomp-logs-source"
+
+  PCSJobCompLogCloudwatchDeliveryDestination:
+    Type: AWS::Logs::DeliveryDestination
+    #DependsOn: PCSJobCompLogDeliveryGroup
+    Properties:
+      DestinationResourceArn: !GetAtt PCSJobCompLogDeliveryGroup.Arn
+      Name: !Sub "${PCSClusterId}-cluster-jobcomp-cw-logs-destination"
+
+  PCSJobCompLogDelivery:
+    Type: AWS::Logs::Delivery
+    Properties:
+      DeliveryDestinationArn: !GetAtt PCSJobCompLogCloudwatchDeliveryDestination.Arn
+      DeliverySourceName: !Ref PCSJobCompLogDeliverySource
+    
+  # Log groups prefixed with '/aws/vendedlogs/' will be created automatically.
+  # Other log groups must be created prior to setting up a log delivery. 
+  # We opt to create groups regardless of destination. 
+  #############################
+  PCSJobCompLogDeliveryGroup:
+    Type: AWS::Logs::LogGroup
+    DeletionPolicy: RetainExceptOnCreate
+    UpdateReplacePolicy: Retain
+    Properties:
+      LogGroupClass: STANDARD
+      LogGroupName: !Sub "/aws/vendedlogs/pcs/cluster/PCS_JOBCOMP_LOGS/${PCSClusterId}"
+      RetentionInDays: 60
+
 Outputs: 
 
   PCSCluster: 
     Description: "ARN of the PCS Cluster (Source)"
-    Value: !Select [0, !GetAtt PCSLogDeliverySource.ResourceArns]
+    Value: !Select [0, !GetAtt PCSSchedulerLogDeliverySource.ResourceArns]
     
-  PCSLogDeliveryDestination: 
-    Description: "ARN of the CloudWatch LogGroup (Destination)"
-    Value: !GetAtt PCSLogCloudwatchDeliveryDestination.Arn
+  PCSSchedulerLogDeliveryDestination: 
+    Description: "ARN of the CloudWatch LogGroup for Scheduler Logs (Destination)"
+    Value: !GetAtt PCSSchedulerLogCloudwatchDeliveryDestination.Arn
+
+  PCSJobCompLogDeliveryDestination: 
+    Description: "ARN of the CloudWatch LogGroup for Job Completion Logs (Destination)"
+    Value: !GetAtt PCSJobCompLogCloudwatchDeliveryDestination.Arn
