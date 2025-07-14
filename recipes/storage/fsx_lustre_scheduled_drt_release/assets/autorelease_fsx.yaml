@@ -1,0 +1,78 @@
+AWSTemplateFormatVersion: '2010-09-09'
+
+Transform: 'AWS::LanguageExtensions'
+
+Parameters: 
+  FSxLustreFileSystem: 
+    Type: String
+    Description: FSx Lustre Filesystem ID (fs-XXXXXXXX)
+    Default: ''
+
+  DropDataOlderThanXDays:
+    Type: Number
+    Description: Number of days before data expires (e.g., older than 5 days)
+    Default: '5'
+      
+  ReleaseSchedule:
+    Type: String
+    Description: "CRON Schedule for release. This default expression translates to 30 minutes after 8 am UTC every Sunday. To run the schedule every day of the week: cron(30 8 ? * * *). The field order is cron(Minutes Hours DayOfMonth Month DayOfWeek Year); * indicates EVERY, and ? indicates NO SPECIFIC VALUE."
+    Default: 'cron(30 8 ? * 1 *)'
+
+  ReleasePaths:
+    Type: List<String>
+    Description: "Paths to clear files from relative to the FSx filesystem root (e.g., if you have filesystem mounted to /fsx and a data repository association that mounts s3 to /fsx/s3 (i.e., the DRA is /s3), then the path here should be /s3. List multiple DRA paths as a comma-separated list."
+    Default: "/s3"
+
+Resources: 
+
+  FSxLustreReleasePolicy:
+    Type: AWS::IAM::ManagedPolicy
+    Properties:
+      Path: '/fsx/'
+      Description: Policies needed for FSx CreateDataRepositoryTask
+      PolicyDocument:
+        Statement:
+          - Action:
+              - fsx:CreateDataRepositoryTask
+              # TagResource is required dependency to run CreateDataRepositoryTask
+              - fsx:TagResource
+            Effect: Allow
+            Resource:
+              - !Sub arn:${AWS::Partition}:fsx:${AWS::Region}:${AWS::AccountId}:file-system/*
+              - !Sub arn:${AWS::Partition}:fsx:${AWS::Region}:${AWS::AccountId}:task/*
+        Version: '2012-10-17'
+
+  EventBridgeRoleFSxRelease:
+    Properties:
+      Description: Role to be used by EventBridge to run CreateDataRepositoryTask
+      AssumeRolePolicyDocument:
+        Statement:
+          - Action: sts:AssumeRole
+            Effect: Allow
+            Principal:
+              Service: scheduler.amazonaws.com
+        Version: '2012-10-17'
+      Path: '/fsx/'
+      ManagedPolicyArns:
+        - !Ref FSxLustreReleasePolicy
+    Type: AWS::IAM::Role
+
+  AutoReleaseFiles:
+    Type: AWS::Scheduler::Schedule
+    Properties:
+      FlexibleTimeWindow:
+        MaximumWindowInMinutes: 60
+        Mode: 'FLEXIBLE' # || 'OFF' (OFF requires that you comment out MaximumWindowInMinutes)
+      ScheduleExpression: !Ref ReleaseSchedule
+      ScheduleExpressionTimezone: 'UTC'
+      Target:
+        Arn: arn:aws:scheduler:::aws-sdk:fsx:createDataRepositoryTask
+        RoleArn: !GetAtt EventBridgeRoleFSxRelease.Arn
+        # Release files not touched within 5 days
+        Input: !Sub [ '{ "FileSystemId": "${FSxLustreFileSystem}", "Report": { "Enabled": "false" }, "Type": "RELEASE_DATA_FROM_FILESYSTEM", "Paths": ${ReleasePathString}, "ReleaseConfiguration": { "DurationSinceLastAccess": { "Unit": "DAYS", "Value": ${DropDataOlderThanXDays} } } }', { ReleasePathString: { Fn::ToJsonString: !Ref ReleasePaths }}]
+
+Outputs: 
+  FSxAutoReleaseSchedule:
+    Value:
+      Ref: AutoReleaseFiles
+    Description: this is the EventBridge Schedule resource for auto-release
