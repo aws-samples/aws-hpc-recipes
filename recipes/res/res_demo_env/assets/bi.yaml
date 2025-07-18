@@ -19,6 +19,14 @@ Metadata:
           - ClientIpCidr
           - ClientPrefixList
           - StopAdAdminInstances
+      - Label:
+          default: "VPC Configuration"
+        Parameters:
+          - CidrBlock
+          - CidrPublicSubnetA
+          - CidrPrivateSubnetA
+          - CidrPublicSubnetB
+          - CidrPrivateSubnetB
 
 Parameters:
   DomainName:
@@ -102,6 +110,31 @@ Parameters:
     AllowedValues:
          - "True"
          - "False"
+  CidrBlock:
+    AllowedPattern: '((\d{1,3})\.){3}\d{1,3}/\d{1,2}'
+    Default: 10.3.0.0/16
+    Description: VPC CIDR Block (eg 10.3.0.0/16)
+    Type: String
+  CidrPublicSubnetA:
+    AllowedPattern: '((\d{1,3})\.){3}\d{1,3}/\d{1,2}'
+    Default: 10.3.0.0/20
+    Description: VPC CIDR Block for the Public Subnet A
+    Type: String
+  CidrPublicSubnetB:
+    AllowedPattern: '((\d{1,3})\.){3}\d{1,3}/\d{1,2}'
+    Default: 10.3.16.0/20
+    Description: VPC CIDR Block for the Public Subnet B
+    Type: String
+  CidrPrivateSubnetA:
+    AllowedPattern: '((\d{1,3})\.){3}\d{1,3}/\d{1,2}'
+    Default: 10.3.128.0/20
+    Description: VPC CIDR Block for the Private Subnet A
+    Type: String
+  CidrPrivateSubnetB:
+    AllowedPattern: '((\d{1,3})\.){3}\d{1,3}/\d{1,2}'
+    Default: 10.3.144.0/20
+    Description: VPC CIDR Block for the Private Subnet B
+    Type: String
 
 Conditions:
   GenerateCerts: !Not [!Equals [!Ref PortalDomainName, ""]]
@@ -121,6 +154,11 @@ Resources:
     Properties:
       Parameters:
         ProvisionSubnetsC: "False"
+        CidrBlock: !Ref CidrBlock
+        CidrPublicSubnetA: !Ref CidrPublicSubnetA
+        CidrPrivateSubnetA: !Ref CidrPrivateSubnetA
+        CidrPublicSubnetB: !Ref CidrPublicSubnetB
+        CidrPrivateSubnetB: !Ref CidrPrivateSubnetB
       TemplateURL: https://aws-hpc-recipes.s3.us-east-1.amazonaws.com/main/recipes/net/hpc_large_scale/assets/main.yaml
 
   DirectoryService:
