@@ -49,3 +49,8 @@ We encourage your contributions to this collection. Read up on our [contribution
 
 This repository is licensed under the MIT-0 License. See the [LICENSE](LICENSE) file.
 
+## Star History
+
+[![Star History Chart](https://api.star-history.com/svg?repos=aws-samples/aws-hpc-recipes&type=Timeline)](https://star-history.com/#huggingface/lerobot&Timeline)
+
+
