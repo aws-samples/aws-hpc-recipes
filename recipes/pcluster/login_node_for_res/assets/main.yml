@@ -298,6 +298,43 @@ Resources:
                         /opt/parallelcluster/scripts/imds/imds-access.sh --allow dcvsmagent
                         /usr/local/sbin/save_tables.sh
 
+  RESPCAL23Component:
+    Type: "AWS::ImageBuilder::Component"
+    Properties:
+      Name: "res-pcluster-al2023-bootstrap"
+      Description: "Component to bootstrap a ParallelCluster AL2023 LoginNode for RES"
+      Platform: Linux
+      SupportedOsVersions:
+        - "Amazon Linux 2023"
+      Version: "1.0.0"
+      Data: |
+        name: res-pcluster-al2023-bootstrap
+        description: A component to upgrade Amazon Linux 2023 to a specific version
+        schemaVersion: 1.0
+        parameters:
+          - AL2023Version:
+              type: string
+              default: "2023.8.20250818"
+              description: The target version of Amazon Linux 2023 to upgrade to, e.g., "2023.8.20250818"
+        phases:
+          - name: build
+            steps:
+              - name: Install
+                action: ExecuteBash
+                onFailure: Abort
+                maxAttempts: 3
+                inputs:
+                    commands:
+                      - |
+                        # Update AL2023
+                        # Required to run at least {{ AL2023Version }}
+
+                        # Update AL2023
+                        dnf --releasever="{{ AL2023Version }}" update -y
+
+                        # Install GNOME Desktop
+                        dnf groupinstall "Desktop" -y
+
 # Add outputs
 Outputs:
   ConfigureLoginNodeforRES:
