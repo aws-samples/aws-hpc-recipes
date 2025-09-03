@@ -69,7 +69,7 @@ Resources:
       Description: "Dynamically generated password for Slurm Accounting DB in RDS"
       GenerateSecretString:
           PasswordLength: 30
-          ExcludeCharacters: '"@/\'
+          ExcludeCharacters: '"@/\!#$%&*()+=[]{}|;:<>?`~'
       Tags:
         - Key: environment
           Value: !Sub ${AWS::StackName}
