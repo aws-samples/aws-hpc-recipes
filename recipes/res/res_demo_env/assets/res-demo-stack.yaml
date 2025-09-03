@@ -149,6 +149,8 @@ Resources:
         NoProxy: ""
         IAMResourcePrefix: ""
         IAMResourcePath: ""
+        CognitoUserPoolId: ""
+        CognitoUserPoolDomainUrl: ""
       TemplateURL: https://research-engineering-studio-us-east-1.s3.amazonaws.com/releases/latest/ResearchAndEngineeringStudio.template.json
 
   RESSsoKeycloak:
