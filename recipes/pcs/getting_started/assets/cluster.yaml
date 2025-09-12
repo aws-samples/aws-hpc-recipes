@@ -289,7 +289,7 @@ Resources:
               ec2_client = boto3.client('ec2')
               filters = [
                   {'Name': 'name','Values': [f'{ami_name_prefix}*']},
-                  {'Name': 'owner-id', 'Values': ['amazon']}
+                  {'Name': 'owner-alias', 'Values': ['amazon']}
               ]
               response = ec2_client.describe_images(Filters=filters)
               ami_list = response['Images']
