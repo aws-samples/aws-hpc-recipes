@@ -287,7 +287,10 @@ Resources:
 
           def get_latest_ami(ami_name_prefix):
               ec2_client = boto3.client('ec2')
-              filters = [{'Name': 'name','Values': [f'{ami_name_prefix}*']}]
+              filters = [
+                  {'Name': 'name','Values': [f'{ami_name_prefix}*']},
+                  {'Name': 'owner-alias', 'Values': ['amazon']}
+              ]
               response = ec2_client.describe_images(Filters=filters)
               ami_list = response['Images']
               sorted_ami_list = sorted(ami_list, key=lambda x: x['CreationDate'], reverse=True)
