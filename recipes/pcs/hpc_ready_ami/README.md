@@ -276,16 +276,20 @@ Find names at https://docs.aws.amazon.com/dlami/latest/devguide/appendix-ami-rel
 Search String: Deep Learning Base OSS Nvidia Driver AMI (Amazon Linux 2) Version ${XX.X}
 
 ```shell
-aws ec2 describe-images --region us-east-2 --owners amazon \
---filters 'Name=name,Values=Deep Learning Base OSS Nvidia Driver AMI (Amazon Linux 2) Version ????' 'Name=state,Values=available' \
+aws ec2 describe-images --region us-east-2 \
+--filters 'Name=name,Values=Deep Learning Base OSS Nvidia Driver AMI (Amazon Linux 2) Version ????' \
+          'Name=owner-alias,Values=amazon' \
+          'Name=state,Values=available' \
 --query 'reverse(sort_by(Images, &CreationDate))[:1].ImageId' --output text
 ```
 
 Search String: Deep Learning Base OSS Nvidia Driver GPU AMI (Ubuntu 22.04) ${YYYY-MM-DD}
 
 ```shell
-aws ec2 describe-images --region us-east-2 --owners amazon \
---filters 'Name=name,Values=Deep Learning Base OSS Nvidia Driver GPU AMI (Ubuntu 22.04) ??????????' 'Name=state,Values=available' \
+aws ec2 describe-images --region us-east-2 \
+--filters 'Name=name,Values=Deep Learning Base OSS Nvidia Driver GPU AMI (Ubuntu 22.04) ??????????' \
+          'Name=owner-alias,Values=amazon' \
+          'Name=state,Values=available' \
 --query 'reverse(sort_by(Images, &CreationDate))[:1].ImageId' --output text
 ```
 
@@ -294,16 +298,20 @@ aws ec2 describe-images --region us-east-2 --owners amazon \
 Search String: Deep Learning ARM64 Base OSS Nvidia Driver GPU AMI (Amazon Linux 2) ${YYYY-MM-DD}
 
 ```shell
-aws ec2 describe-images --region us-east-2 --owners amazon \
---filters 'Name=name,Values=Deep Learning ARM64 Base OSS Nvidia Driver GPU AMI (Amazon Linux 2) ??????????' 'Name=state,Values=available' \
+aws ec2 describe-images --region us-east-2 \
+--filters 'Name=name,Values=Deep Learning ARM64 Base OSS Nvidia Driver GPU AMI (Amazon Linux 2) ??????????' \
+          'Name=owner-alias,Values=amazon' \
+          'Name=state,Values=available' \
 --query 'reverse(sort_by(Images, &CreationDate))[:1].ImageId' --output text
 ```
 
 Search String: Deep Learning ARM64 Base OSS Nvidia Driver GPU AMI (Ubuntu 22.04) ${YYYY-MM-DD}
 
 ```shell
-aws ec2 describe-images --region us-east-2 --owners amazon \
---filters 'Name=name,Values=Deep Learning ARM64 Base OSS Nvidia Driver GPU AMI (Ubuntu 22.04) ??????????' 'Name=state,Values=available' \
+aws ec2 describe-images --region us-east-2 \
+--filters 'Name=name,Values=Deep Learning ARM64 Base OSS Nvidia Driver GPU AMI (Ubuntu 22.04) ??????????' \
+          'Name=owner-alias,Values=amazon' \
+          'Name=state,Values=available' \
 --query 'reverse(sort_by(Images, &CreationDate))[:1].ImageId' --output text
 ```
 
