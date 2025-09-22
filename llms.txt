@@ -1,0 +1,34 @@
+# AWS HPC Recipes
+
+> A comprehensive collection of infrastructure-as-code recipes for building High Performance Computing (HPC) systems on AWS using services like AWS Parallel Computing Service (PCS), ParallelCluster, Research and Engineering Studio (RES), and AWS Batch.
+
+This repository contains 100+ tested recipes organized by HPC use case, from basic networking setups to advanced multi-user clusters with accounting. Each recipe includes CloudFormation templates, documentation, and quick-launch links for immediate deployment across all AWS regions including GovCloud.
+
+Key technologies covered: AWS PCS, ParallelCluster, Slurm, EFA networking, FSx storage systems, EFS, S3, Graviton processors, and specialized HPC instance types.
+
+## Getting Started
+
+- [Main README](README.md): Repository overview and quick start guide
+- [Recipes Index](recipes/README.md): Complete catalog of all 100+ recipes with descriptions and tags
+- [AWS PCS Getting Started](recipes/pcs/getting_started/README.md): Step-by-step tutorial for launching your first PCS cluster
+- [Contributing Guidelines](CONTRIBUTING.md): How to contribute new recipes and best practices
+
+## Core Services
+
+- [AWS Parallel Computing Service (PCS) Recipes](recipes/pcs/README.md): 15+ recipes for the newest AWS HPC service
+- [ParallelCluster Recipes](recipes/pcluster/README.md): 20+ recipes for traditional HPC clusters
+- [Research and Engineering Studio Recipes](recipes/res/README.md): Desktop and visualization environments
+- [Networking Recipes](recipes/net/README.md): HPC-optimized VPC configurations
+
+## Infrastructure Components
+
+- [Storage Solutions](recipes/storage/README.md): EFS, FSx Lustre, FSx ONTAP, and S3 configurations
+- [Database Management](recipes/db/README.md): Slurm accounting database setups
+- [Directory Services](recipes/dir/README.md): Active Directory and LDAP integration
+- [Security Configurations](recipes/security/README.md): Certificate management and compliance
+
+## Optional
+
+- [Training Materials](recipes/training/README.md): Educational recipes for learning HPC on AWS
+- [AWS Batch Recipes](recipes/batch/README.md): Container-based HPC workloads
+- [Development Documentation](docs/develop.md): Technical details for recipe development

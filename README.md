@@ -41,6 +41,13 @@ For more information, see the [ARN and Console URL Regionalization Scripts](scri
 
 See [CONTRIBUTING](CONTRIBUTING.md#security-issue-notifications) for more information.
 
+## AI and Agent Support
+
+This repository includes files designed to help AI systems and coding agents work effectively with the HPC recipes:
+
+- **[llms.txt](llms.txt)** - A structured overview of the repository following the [llms.txt standard](https://llmstxt.org/), designed to help Large Language Models understand and navigate the HPC recipes collection.
+- **[AGENTS.md](AGENTS.md)** - Development guidelines and context for AI coding agents following the [AGENTS.md format](https://agents.md/), including project structure, best practices, and troubleshooting guidance.
+
 ## Contributing
 
 We encourage your contributions to this collection. Read up on our [contribution process and guidelines](CONTRIBUTING.md). Then, head to **[Get Started](docs/start.md)** to begin. 
@@ -48,4 +55,3 @@ We encourage your contributions to this collection. Read up on our [contribution
 ## License
 
 This repository is licensed under the MIT-0 License. See the [LICENSE](LICENSE) file.
-
