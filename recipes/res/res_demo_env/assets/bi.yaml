@@ -52,14 +52,14 @@ Parameters:
     Type: String
     MinLength: 0
     MaxLength: 2048
-    AllowedPattern: ^$|(arn:(aws(-cn|-us-gov)?):secretsmanager:(us(-gov)?|ap|ca|cn|eu|il|sa)-(central|(north|south)?(east|west)?)-\d:\d{12}:secret:[a-zA-Z0-9/_+=.@-]+)|(?=^.{8,64}$)((?=.*\d)(?=.*[A-Z])(?=.*[a-z])|(?=.*\d)(?=.*[^A-Za-z0-9\s])(?=.*[a-z])|(?=.*[^A-Za-z0-9\s])(?=.*[A-Z])(?=.*[a-z])|(?=.*\d)(?=.*[A-Z])(?=.*[^A-Za-z0-9\s]))^.*
+    AllowedPattern: ^$|(arn:(aws(-cn|-us-gov)?):secretsmanager:(us(-gov)?|ap|ca|cn|eu|il|sa|me)-(central|(north|south)?(east|west)?)-\d:\d{12}:secret:[a-zA-Z0-9/_+=.@-]+)|(?=^.{8,64}$)((?=.*\d)(?=.*[A-Z])(?=.*[a-z])|(?=.*\d)(?=.*[^A-Za-z0-9\s])(?=.*[a-z])|(?=.*[^A-Za-z0-9\s])(?=.*[A-Z])(?=.*[a-z])|(?=.*\d)(?=.*[A-Z])(?=.*[^A-Za-z0-9\s]))^.*
     NoEcho: true
   ServiceAccountPassword:
     Description: (Optional) Provide the Active Directory Service Account Password Directly or Resource ARN to Secret Containing Password.
     Type: String
     MinLength: 0
     MaxLength: 2048
-    AllowedPattern: ^$|(arn:(aws(-cn|-us-gov)?):secretsmanager:(us(-gov)?|ap|ca|cn|eu|il|sa)-(central|(north|south)?(east|west)?)-\d:\d{12}:secret:[a-zA-Z0-9/_+=.@-]+)|(?=^.{8,64}$)((?=.*\d)(?=.*[A-Z])(?=.*[a-z])|(?=.*\d)(?=.*[^A-Za-z0-9\s])(?=.*[a-z])|(?=.*[^A-Za-z0-9\s])(?=.*[A-Z])(?=.*[a-z])|(?=.*\d)(?=.*[A-Z])(?=.*[^A-Za-z0-9\s]))^.*
+    AllowedPattern: ^$|(arn:(aws(-cn|-us-gov)?):secretsmanager:(us(-gov)?|ap|ca|cn|eu|il|sa|me)-(central|(north|south)?(east|west)?)-\d:\d{12}:secret:[a-zA-Z0-9/_+=.@-]+)|(?=^.{8,64}$)((?=.*\d)(?=.*[A-Z])(?=.*[a-z])|(?=.*\d)(?=.*[^A-Za-z0-9\s])(?=.*[a-z])|(?=.*[^A-Za-z0-9\s])(?=.*[A-Z])(?=.*[a-z])|(?=.*\d)(?=.*[A-Z])(?=.*[^A-Za-z0-9\s]))^.*
     NoEcho: true
   LDIFS3Path:
     Description: (Optional) An S3 Path (without the s3://) to an LDIF file that will be used during stack creation.
@@ -533,7 +533,7 @@ Resources:
                     response_data['Message'] = 'Resource creation successful!'
                     physical_resource_id = create_physical_resource_id()
 
-                    secretsmanager_arn_regex_pattern = r"(arn:(aws(-cn|-us-gov)?):secretsmanager:(us(-gov)?|ap|ca|cn|eu|il|sa)-(central|(north|south)?(east|west)?)-\d:\d{12}:secret:[a-zA-Z0-9/_+=.@-]+)"
+                    secretsmanager_arn_regex_pattern = r"(arn:(aws(-cn|-us-gov)?):secretsmanager:(us(-gov)?|ap|ca|cn|eu|il|sa|me)-(central|(north|south)?(east|west)?)-\d:\d{12}:secret:[a-zA-Z0-9/_+=.@-]+)"
                     admin_arn_match = re.search(secretsmanager_arn_regex_pattern, admin_password)
                     service_account_arn_match = re.search(secretsmanager_arn_regex_pattern, service_account_password)
 
