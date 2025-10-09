@@ -75,6 +75,12 @@ variable "pcs_cng_ami_id" {
   type        = string
 }
 
+variable "pcs_cluster_scaledown_idletime" {
+  description = "Delay in seconds before an idle dynamic node is terminated"
+  type        = number
+  default     = 300
+}
+
 variable "common_tags" {
   description = "Common tags to be applied to all resources"
   type        = map(string)

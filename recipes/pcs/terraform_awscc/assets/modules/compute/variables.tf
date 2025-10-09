@@ -81,6 +81,12 @@ variable "pcs_cluster_slurm_version" {
   default     = "24.11"
 }
 
+variable "pcs_cluster_scaledown_idletime" {
+  description = "Delay in seconds before an idle dynamic node is terminated"
+  type        = number
+  default     = 300
+}
+
 variable "tags" {
   description = "Additional tags for all resources"
   type        = map(string)
