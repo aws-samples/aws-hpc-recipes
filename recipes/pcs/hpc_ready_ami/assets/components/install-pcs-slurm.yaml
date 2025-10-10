@@ -19,11 +19,12 @@ Metadata:
 Parameters:
   SlurmVersion:
     Type: String
-    Default: '24.11'
+    Default: '25.05'
     Description: Major version of Slurm to install
     AllowedValues:
          - '24.05'
          - '24.11'
+         - '25.05'
   PcsSlurmInstallerVersion:
     Type: String
     Default: latest
