@@ -198,6 +198,7 @@ Resources:
             ComputeSettings:
               LocalStorage:
                 RootVolume:
+                  Size: 100
                   VolumeType: gp3
             Iam:
               AdditionalIamPolicies:
@@ -221,6 +222,7 @@ Resources:
             ComputeSettings:
               LocalStorage:
                 RootVolume:
+                  Size: 100
                   VolumeType: gp3
             Iam:
               AdditionalIamPolicies:
@@ -244,6 +246,7 @@ Resources:
             ComputeSettings:
               LocalStorage:
                 RootVolume:
+                  Size: 100
                   VolumeType: gp3
             Iam:
               AdditionalIamPolicies:
@@ -267,6 +270,7 @@ Resources:
             ComputeSettings:
               LocalStorage:
                 RootVolume:
+                  Size: 100
                   VolumeType: gp3
             Iam:
               AdditionalIamPolicies:

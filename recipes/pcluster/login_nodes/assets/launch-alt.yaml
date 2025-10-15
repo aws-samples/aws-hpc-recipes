@@ -154,7 +154,7 @@ Resources:
             Enabled: false
           LocalStorage:
             RootVolume:
-              Size: 40
+              Size: 100
           Iam:
             AdditionalIamPolicies:
               - Policy: !Sub arn:${AWS::Partition}:iam::aws:policy/AmazonSSMManagedInstanceCore
@@ -192,7 +192,7 @@ Resources:
             ComputeSettings:
               LocalStorage:
                 RootVolume:
-                  Size: 40
+                  Size: 100
         SharedStorage:
         - StorageType: Efs
           Name: shared
