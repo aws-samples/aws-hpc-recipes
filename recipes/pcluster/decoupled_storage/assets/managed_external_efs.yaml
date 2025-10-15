@@ -67,8 +67,8 @@ Parameters:
     Default: alinux2
     AllowedValues:
       - alinux2
-      - centos7
-      - ubuntu2004
+      - alinux2023
+      - ubuntu2404
       - ubuntu2204
       - rhel8
       - rhel9
@@ -86,7 +86,7 @@ Parameters:
 Mappings:
   ParallelCluster:
     Constants:
-      Version: 3.9.2
+      Version: 3.14.0
   Recipes:
     Constants:
       Version: main
@@ -176,4 +176,3 @@ Outputs:
   ValidationMessages:
     Description: Warnings from cluster create or update operations.
     Value: !GetAtt PclusterCluster.validationMessages
-

@@ -88,10 +88,10 @@ Parameters:
     AllowedValues:
       - alinux2
       - alinux2023
+      - ubuntu2404
       - ubuntu2204
       - rhel8
       - rhel9
-      - rocky8
     Description: Cluster operating system
 
   Architecture:
@@ -106,7 +106,7 @@ Parameters:
 Mappings:
   ParallelCluster:
     Constants:
-      Version: 3.10.1
+      Version: 3.14.0
   Recipes:
     Constants:
       Version: main
