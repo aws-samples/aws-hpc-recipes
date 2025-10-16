@@ -78,7 +78,7 @@ variable "pcs_cluster_size" {
 variable "pcs_cluster_slurm_version" {
   description = "Version of Slurm to use in the cluster"
   type        = string
-  default     = "24.11"
+  default     = "25.05"
 }
 
 variable "pcs_cluster_scaledown_idletime" {
