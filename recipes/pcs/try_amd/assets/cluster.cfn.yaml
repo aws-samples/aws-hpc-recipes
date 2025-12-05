@@ -31,7 +31,7 @@ Parameters:
   SlurmVersion:
     Type: String
     Default: 25.05
-    Description: Version of Slurm to use
+    Description: 'Slurm version (e.g. 25.05). See supported versions: https://docs.aws.amazon.com/pcs/latest/userguide/slurm-versions.html'
     AllowedValues:
          - 24.05
          - 24.11
