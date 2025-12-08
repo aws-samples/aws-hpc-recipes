@@ -289,7 +289,7 @@ Resources:
       Handler: index.handler
       MemorySize: 128
       Role: !GetAtt HostedZoneResolverRole.Arn
-      Runtime: python3.9
+      Runtime: python3.12
       Timeout: 300
       TracingConfig:
         Mode: Active
@@ -411,7 +411,7 @@ Resources:
       Handler: index.handler
       MemorySize: 128
       Role: !GetAtt EFSSecurityGroupRole.Arn
-      Runtime: python3.9
+      Runtime: python3.12
       Timeout: 300
       TracingConfig:
         Mode: Active
@@ -501,7 +501,7 @@ Resources:
       Handler: index.handler
       MemorySize: 128
       Role: !GetAtt PasswordResolverRole.Arn
-      Runtime: python3.9
+      Runtime: python3.12
       Timeout: 300
       TracingConfig:
         Mode: Active
