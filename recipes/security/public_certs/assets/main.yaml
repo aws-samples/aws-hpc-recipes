@@ -238,7 +238,7 @@ Resources:
       Description: !Sub "${AWS::StackName}: custom resource handler to launch EC2 instances to renew hosts."
       Handler: index.handler
       Role: !GetAtt CertificateRenewalLambdaRole.Arn
-      Runtime: python3.9
+      Runtime: python3.12
       TracingConfig:
         Mode: Active
       Code:
