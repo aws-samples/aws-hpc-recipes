@@ -56,7 +56,7 @@ Resources:
                           GroupNames=[event['ResourceProperties']['PlacementGroupName']]
                       )
                       placement_group_id = response['PlacementGroups'][0]['GroupId']
-                      responseData['PlacementGroupName'] = event['ResourceProperties']['PlacementGroupName'
+                      responseData['PlacementGroupName'] = event['ResourceProperties']['PlacementGroupName']
                       responseData['PlacementGroupId'] = placement_group_id
                       responseData['Message'] = f"Placement group {event['ResourceProperties']['PlacementGroupName']} created successfully"
                   elif event['RequestType'] == 'Delete':
@@ -69,7 +69,7 @@ Resources:
                   responseData['Error'] = str(e)
                   cfnresponse.send(event, context, cfnresponse.FAILED, responseData)
 
-      Runtime: python3.8
+      Runtime: python3.13
       Timeout: 30
 
   PlacementGroup:
