@@ -49,7 +49,8 @@ module "ssh_security_group" {
 
 # Login Launch Template
 resource "aws_launch_template" "login" {
-  name = "login-${var.project_name}"
+  name                   = "login-${var.project_name}"
+  update_default_version = true
 
   metadata_options {
     http_endpoint               = "enabled"
@@ -87,7 +88,8 @@ resource "aws_launch_template" "login" {
 
 # Compute Launch Template
 resource "aws_launch_template" "compute" {
-  name = "compute-${var.project_name}"
+  name                   = "compute-${var.project_name}"
+  update_default_version = true
 
   metadata_options {
     http_endpoint               = "enabled"
@@ -139,19 +141,19 @@ resource "awscc_pcs_cluster" "main" {
 
   slurm_configuration = {
     accounting = {
-      mode = "STANDARD"
+      mode                       = "STANDARD"
       default_purge_time_in_days = 7
     }
     scale_down_idle_time_in_seconds = var.pcs_cluster_scaledown_idletime
-    slurm_custom_settings = [ 
+    slurm_custom_settings = [
       {
-        parameter_name = "AccountingStorageEnforce"
+        parameter_name  = "AccountingStorageEnforce"
         parameter_value = "associations,limits,qos"
       },
       {
-        parameter_name = "OverTimeLimit"
+        parameter_name  = "OverTimeLimit"
         parameter_value = "60"
-      } 
+      }
     ]
   }
 
@@ -175,10 +177,10 @@ resource "awscc_pcs_compute_node_group" "login" {
   }]
   scaling_configuration = {
     min_instance_count = 1
-    max_instance_count  = 1
+    max_instance_count = 1
   }
   subnet_ids = [var.access_subnet_id]
-  ami_id    = var.pcs_cng_ami_id
+  ami_id     = var.pcs_cng_ami_id
 
   tags = merge(var.tags, {
     Project = var.project_name
@@ -200,15 +202,15 @@ resource "awscc_pcs_compute_node_group" "compute-st" {
   }]
   scaling_configuration = {
     min_instance_count = 4
-    max_instance_count  = 4
+    max_instance_count = 4
   }
   subnet_ids = [var.compute_subnet_id]
-  ami_id    = var.pcs_cng_ami_id
+  ami_id     = var.pcs_cng_ami_id
 
   slurm_configuration = {
-    slurm_custom_settings = [ 
+    slurm_custom_settings = [
       {
-        parameter_name = "Weight"
+        parameter_name  = "Weight"
         parameter_value = "10"
       }
     ]
@@ -234,15 +236,15 @@ resource "awscc_pcs_compute_node_group" "compute-dy" {
   }]
   scaling_configuration = {
     min_instance_count = 0
-    max_instance_count  = 4
+    max_instance_count = 4
   }
   subnet_ids = [var.compute_subnet_id]
-  ami_id    = var.pcs_cng_ami_id
+  ami_id     = var.pcs_cng_ami_id
 
   slurm_configuration = {
-    slurm_custom_settings = [ 
+    slurm_custom_settings = [
       {
-        parameter_name = "Weight"
+        parameter_name  = "Weight"
         parameter_value = "100"
       }
     ]
@@ -256,23 +258,23 @@ resource "awscc_pcs_compute_node_group" "compute-dy" {
 
 # Default 'normal' queue
 resource "awscc_pcs_queue" "normal" {
-  name = "normal"
+  name       = "normal"
   cluster_id = awscc_pcs_cluster.main.cluster_id
-  compute_node_group_configurations = [ 
-    { compute_node_group_id = awscc_pcs_compute_node_group.compute-st.compute_node_group_id},
-    { compute_node_group_id = awscc_pcs_compute_node_group.compute-dy.compute_node_group_id} 
+  compute_node_group_configurations = [
+    { compute_node_group_id = awscc_pcs_compute_node_group.compute-st.compute_node_group_id },
+    { compute_node_group_id = awscc_pcs_compute_node_group.compute-dy.compute_node_group_id }
   ]
 
   slurm_configuration = {
-    slurm_custom_settings = [ 
+    slurm_custom_settings = [
       {
-        parameter_name = "Default"
+        parameter_name  = "Default"
         parameter_value = "YES"
-      }, 
-     {
-        parameter_name = "MaxTime"
+      },
+      {
+        parameter_name  = "MaxTime"
         parameter_value = "48:00:00"
-      }, 
+      },
     ]
   }
 
@@ -283,22 +285,22 @@ resource "awscc_pcs_queue" "normal" {
 
 # Unlimited queue (long runtime)
 resource "awscc_pcs_queue" "long" {
-  name = "long"
+  name       = "long"
   cluster_id = awscc_pcs_cluster.main.cluster_id
-  compute_node_group_configurations = [ 
-    { compute_node_group_id = awscc_pcs_compute_node_group.compute-st.compute_node_group_id}
+  compute_node_group_configurations = [
+    { compute_node_group_id = awscc_pcs_compute_node_group.compute-st.compute_node_group_id }
   ]
 
   slurm_configuration = {
-    slurm_custom_settings = [ 
+    slurm_custom_settings = [
       {
-        parameter_name = "Default"
+        parameter_name  = "Default"
         parameter_value = "NO"
-      }, 
-     {
-        parameter_name = "MaxTime"
+      },
+      {
+        parameter_name  = "MaxTime"
         parameter_value = "UNLIMITED"
-      }, 
+      },
     ]
   }
 
