@@ -54,7 +54,7 @@ clobber: clean $(addsuffix .ph_clobber,$(PROJECTS))
 
 .PHONY: deploy
 deploy:
-	@aws s3 sync --delete --acl public-read \
+	@aws s3 sync --profile ${PROFILE} --delete --acl public-read \
 		--exclude "*" --include "*/assets/*" --exclude "*/.gitkeep" \
 		recipes s3://${S3_BUCKET}/${RELEASE_TAG}/recipes/;\
 
