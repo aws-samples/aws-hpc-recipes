@@ -1,0 +1,3 @@
+*.zip
+layer/python/*
+!layer/python/.gitkeep
