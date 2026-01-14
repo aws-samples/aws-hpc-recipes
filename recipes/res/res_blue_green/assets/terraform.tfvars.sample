@@ -1,0 +1,7 @@
+region = "us-east-1"
+domain_name = "someresdomain.com"
+additional_tags = {
+  "project" = "res-blue-green"
+}
+vpc_id                              = "vpc-XXXXXXXXXX"
+image_builder_infrastructure_subnet = "subnet-YYYYYYYYY"
