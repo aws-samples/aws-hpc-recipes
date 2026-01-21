@@ -320,9 +320,10 @@ Resources:
                         dnf install -y amazon-efs-utils
                       elif [ "$OS_ID" = "ubuntu" ]; then
                         # Ubuntu 24.04 - build from source
+                        # Requires: git, binutils, rustc, cargo, pkg-config, libssl-dev, golang-go (for FIPS)
                         echo "Building EFS utils from source..."
                         apt-get update
-                        apt-get -y install git binutils rustc cargo pkg-config libssl-dev
+                        apt-get -y install git binutils rustc cargo pkg-config libssl-dev golang-go
                         
                         TEMP_DIR=$(mktemp -d)
                         cd "$TEMP_DIR"
