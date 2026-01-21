@@ -1,0 +1,669 @@
+AWSTemplateFormatVersion: '2010-09-09'
+Transform: AWS::Serverless-2016-10-31
+Description: AWS PCS "Getting Started" cluster (Bring Your Own VPC).
+  This template deploys a small HPC cluster with 1 login node and up to 4 compute nodes. Optionally, Slurm accounting can be enabled.
+  It includes an EFS file system for shared storage and an FSx for Lustre file system for high-speed temporary storage.
+  Unlike the standard cluster.yaml, this template uses an existing VPC and subnets instead of creating new networking resources.
+  It can be accessed via the browser using AWS Systems Manager Session Manager or over the internet via SSH.
+  To access the cluster, check the Outputs tab of this stack for relevant links.
+
+# =============================================================================
+# IMPORTANT: Network Requirements
+# =============================================================================
+# 1. All resources (VPC, public subnet, private subnet) must be in the SAME VPC.
+#    The template validates this at deployment time and will fail fast if mismatched.
+#
+# 2. Public subnet requirements:
+#    - Must have an Internet Gateway attached
+#    - Used for login nodes (SSH access)
+#
+# 3. Private subnet requirements:
+#    - Must have a NAT Gateway for outbound internet access
+#    - Used for compute nodes, EFS, and FSx Lustre
+#
+# 4. The VPC must have DNS hostnames enabled (EnableDnsHostnames: true)
+# =============================================================================
+
+### Stack metadata
+Metadata:
+  AWS::CloudFormation::Interface:
+    ParameterGroups:
+      - Label:
+          default: Network configuration
+        Parameters:
+          - VpcId
+          - PublicSubnetId
+          - PrivateSubnetId
+      - Label:
+          default: PCS Cluster configuration
+        Parameters:
+          - SlurmVersion
+          - ManagedAccounting
+          - AccountingPolicyEnforcement
+      - Label:
+          default: PCS ComputeNodeGroups configuration
+        Parameters:
+          - NodeArchitecture
+          - KeyName
+          - ClientIpCidr
+      - Label:
+          default: HPC Recipes configuration
+        Parameters:
+          - HpcRecipesS3Bucket
+          - HpcRecipesBranch
+    ParameterLabels:
+      VpcId:
+        default: VPC ID
+      PublicSubnetId:
+        default: Public Subnet ID
+      PrivateSubnetId:
+        default: Private Subnet ID
+      SlurmVersion:
+        default: Slurm Version
+      ManagedAccounting:
+        default: Slurm Accounting
+      AccountingPolicyEnforcement:
+        default: Accounting Policy Enforcement
+      NodeArchitecture:
+        default: Node Architecture
+      KeyName:
+        default: SSH Key Pair
+      ClientIpCidr:
+        default: Allowed SSH CIDR
+      HpcRecipesS3Bucket:
+        default: HPC Recipes S3 Bucket
+      HpcRecipesBranch:
+        default: HPC Recipes Branch
+
+Parameters:
+
+  VpcId:
+    Type: AWS::EC2::VPC::Id
+    Description: VPC where the cluster will be deployed
+
+  PublicSubnetId:
+    Type: AWS::EC2::Subnet::Id
+    Description: Public subnet for the login node (must be in the same VPC and have internet access for SSH)
+
+  PrivateSubnetId:
+    Type: AWS::EC2::Subnet::Id
+    Description: Private subnet for compute nodes and storage (must be in the same VPC and have NAT gateway access)
+
+  NodeArchitecture:
+    Type: String
+    Default: x86
+    AllowedValues:
+      - x86
+      - Graviton
+    Description: Processor architecture for the login and compute node instances
+
+  SlurmVersion:
+    Type: String
+    Default: 25.05
+    Description: Version of Slurm to use
+    AllowedValues:
+         - 24.05
+         - 24.11
+         - 25.05
+
+  ManagedAccounting:
+    Type: String
+    Default: 'disabled'
+    AllowedValues:
+      - 'enabled'
+      - 'disabled'
+    Description: Monitor cluster usage, manage access control, and enforce resource limits with Slurm accounting. Requires Slurm 24.11 or newer.
+
+  AccountingPolicyEnforcement:
+    Description: Specify which Slurm accounting policies to enforce
+    Type: String
+    Default: none
+    AllowedValues:
+      - none
+      - 'associations,limits,safe'
+
+  KeyName:
+    Description: SSH keypair to connect to the login node (s)
+    Type: AWS::EC2::KeyPair::KeyName
+    AllowedPattern: ".+"  # Required
+
+  ClientIpCidr:
+    Description: IP(s) allowed to access the login node over SSH. We recommend that you restrict it with your own IP/subnet (x.x.x.x/32 for your own ip or x.x.x.x/24 for range. Replace x.x.x.x with your own PUBLIC IP. You can get your public IP using tools such as https://ifconfig.co/)
+    Default: 127.0.0.1/32
+    Type: String
+    AllowedPattern: (\d{1,3})\.(\d{1,3})\.(\d{1,3})\.(\d{1,3})/(\d{1,2})
+    ConstraintDescription: Value must be a valid IP or network range of the form x.x.x.x/x.
+
+  HpcRecipesS3Bucket:
+    Type: String
+    Default: aws-hpc-recipes
+    Description: HPC Recipes for AWS S3 bucket
+    AllowedValues:
+         - aws-hpc-recipes
+         - aws-hpc-recipes-dev
+
+  HpcRecipesBranch:
+    Type: String
+    Default: main
+    Description: HPC Recipes for AWS release branch
+    AllowedPattern: '^(?!.*/\.git$)(?!.*/\.)(?!.*\\.\.)[a-zA-Z0-9-_\./]+$'
+
+Conditions:
+  GovCloud: !Equals [!Ref AWS::Partition, 'aws-us-gov']
+  China: !Equals [!Ref AWS::Partition, 'aws-cn']
+  # Disabled for older Slurm versions and in GovCloud
+  HasAccountingSupport: !Not [!Or [!Equals [!Ref SlurmVersion, "23.11"], !Equals [!Ref SlurmVersion, "24.05"], !Equals [!Ref AWS::Partition, 'aws-us-gov']]]
+  IsAccountingEnabled: !Equals [!Ref ManagedAccounting, 'enabled']
+  IncludeAccountingConfig: !And [!Condition HasAccountingSupport, !Condition IsAccountingEnabled]
+  SetAccountingPolicy: !Not [!Equals [!Ref AccountingPolicyEnforcement, 'none']]
+
+Mappings:
+
+  Architecture:
+    AmiArchParameter:
+      Graviton: arm64
+      x86: x86_64
+    LoginNodeInstances:
+      Graviton: c7g.xlarge
+      x86: c6i.xlarge
+    ComputeNodeInstances:
+      Graviton: c7g.xlarge
+      x86: c6i.xlarge
+
+Resources:
+
+  # =============================================================================
+  # VALIDATION: Verify subnets belong to the specified VPC
+  # This runs first and fails fast with a clear error if there's a mismatch.
+  # =============================================================================
+  
+  NetworkValidationRole:
+    Type: AWS::IAM::Role
+    Properties:
+      AssumeRolePolicyDocument:
+        Version: '2012-10-17'
+        Statement:
+          - Effect: Allow
+            Principal:
+              Service: lambda.amazonaws.com
+            Action: sts:AssumeRole
+      ManagedPolicyArns:
+        - !Sub arn:${AWS::Partition}:iam::aws:policy/service-role/AWSLambdaBasicExecutionRole
+      Policies:
+        - PolicyName: EC2DescribeSubnets
+          PolicyDocument:
+            Version: '2012-10-17'
+            Statement:
+              - Effect: Allow
+                Action:
+                  - ec2:DescribeSubnets
+                Resource: '*'
+
+  NetworkValidationFn:
+    Type: AWS::Lambda::Function
+    Properties:
+      Description: Validates that provided subnets belong to the specified VPC
+      Runtime: python3.12
+      Handler: index.handler
+      Role: !GetAtt NetworkValidationRole.Arn
+      Code:
+        ZipFile: |
+          import boto3
+          import json
+          import logging
+          import urllib3
+
+          logger = logging.getLogger()
+          logger.setLevel(logging.INFO)
+
+          def send_response(event, context, response_status, response_data, physical_resource_id=None):
+              response_body = {
+                  'Status': response_status,
+                  'Reason': response_data.get('Error', f'See CloudWatch Log Stream: {context.log_stream_name}'),
+                  'PhysicalResourceId': physical_resource_id or context.log_stream_name,
+                  'StackId': event['StackId'],
+                  'RequestId': event['RequestId'],
+                  'LogicalResourceId': event['LogicalResourceId'],
+                  'NoEcho': False,
+                  'Data': response_data
+              }
+              logger.info(f'Response body: {json.dumps(response_body)}')
+              http = urllib3.PoolManager()
+              try:
+                  response = http.request(
+                      'PUT',
+                      event['ResponseURL'],
+                      headers={'Content-Type': 'application/json'},
+                      body=json.dumps(response_body).encode('utf-8')
+                  )
+                  logger.info(f'Status code: {response.status}')
+              except Exception as e:
+                  logger.error(f'Failed to send response: {str(e)}')
+                  raise
+
+          def handler(event, context):
+              logger.info(f'Received event: {json.dumps(event)}')
+              try:
+                  if event['RequestType'] == 'Delete':
+                      send_response(event, context, 'SUCCESS', {})
+                      return
+
+                  props = event['ResourceProperties']
+                  vpc_id = props['VpcId']
+                  public_subnet_id = props['PublicSubnetId']
+                  private_subnet_id = props['PrivateSubnetId']
+
+                  ec2 = boto3.client('ec2')
+                  response = ec2.describe_subnets(SubnetIds=[public_subnet_id, private_subnet_id])
+                  
+                  errors = []
+                  for subnet in response['Subnets']:
+                      subnet_id = subnet['SubnetId']
+                      subnet_vpc = subnet['VpcId']
+                      if subnet_vpc != vpc_id:
+                          subnet_type = 'Public' if subnet_id == public_subnet_id else 'Private'
+                          errors.append(f'{subnet_type} subnet {subnet_id} belongs to VPC {subnet_vpc}, not {vpc_id}')
+                  
+                  if errors:
+                      error_msg = 'VPC/Subnet mismatch: ' + '; '.join(errors)
+                      logger.error(error_msg)
+                      send_response(event, context, 'FAILED', {'Error': error_msg})
+                      return
+
+                  logger.info(f'Validation passed: both subnets belong to VPC {vpc_id}')
+                  send_response(event, context, 'SUCCESS', {'Validated': 'true'}, f'{vpc_id}-validated')
+
+              except Exception as e:
+                  logger.error(f'Exception: {str(e)}')
+                  send_response(event, context, 'FAILED', {'Error': str(e)})
+                  raise
+      Timeout: 30
+      MemorySize: 128
+
+  NetworkValidation:
+    Type: AWS::CloudFormation::CustomResource
+    Properties:
+      ServiceToken: !GetAtt NetworkValidationFn.Arn
+      VpcId: !Ref VpcId
+      PublicSubnetId: !Ref PublicSubnetId
+      PrivateSubnetId: !Ref PrivateSubnetId
+
+  # VPC Default Security Group lookup
+  VpcDefaultSecurityGroup:
+    Type: AWS::CloudFormation::CustomResource
+    DependsOn: NetworkValidation
+    Properties:
+      ServiceToken: !GetAtt VpcSecurityGroupLookupFn.Arn
+      VpcId: !Ref VpcId
+
+  VpcSecurityGroupLookupRole:
+    Type: AWS::IAM::Role
+    Properties:
+      AssumeRolePolicyDocument:
+        Version: '2012-10-17'
+        Statement:
+          - Effect: Allow
+            Principal:
+              Service: lambda.amazonaws.com
+            Action: sts:AssumeRole
+      ManagedPolicyArns:
+        - !Sub arn:${AWS::Partition}:iam::aws:policy/service-role/AWSLambdaBasicExecutionRole
+      Policies:
+        - PolicyName: EC2DescribeSecurityGroups
+          PolicyDocument:
+            Version: '2012-10-17'
+            Statement:
+              - Effect: Allow
+                Action:
+                  - ec2:DescribeSecurityGroups
+                Resource: '*'
+
+  VpcSecurityGroupLookupFn:
+    Type: AWS::Lambda::Function
+    Properties:
+      Runtime: python3.12
+      Handler: index.handler
+      Role: !GetAtt VpcSecurityGroupLookupRole.Arn
+      Code:
+        ZipFile: |
+          import boto3
+          import json
+          import logging
+          import urllib3
+
+          logger = logging.getLogger()
+          logger.setLevel(logging.INFO)
+
+          def send_response(event, context, response_status, response_data, physical_resource_id=None):
+              response_body = {
+                  'Status': response_status,
+                  'Reason': f'See CloudWatch Log Stream: {context.log_stream_name}',
+                  'PhysicalResourceId': physical_resource_id or context.log_stream_name,
+                  'StackId': event['StackId'],
+                  'RequestId': event['RequestId'],
+                  'LogicalResourceId': event['LogicalResourceId'],
+                  'NoEcho': False,
+                  'Data': response_data
+              }
+              logger.info(f'Response body: {json.dumps(response_body)}')
+              http = urllib3.PoolManager()
+              try:
+                  response = http.request(
+                      'PUT',
+                      event['ResponseURL'],
+                      headers={'Content-Type': 'application/json'},
+                      body=json.dumps(response_body).encode('utf-8')
+                  )
+                  logger.info(f'Status code: {response.status}')
+              except Exception as e:
+                  logger.error(f'Failed to send response: {str(e)}')
+                  raise
+
+          def handler(event, context):
+              logger.info(f'Received event: {json.dumps(event)}')
+              try:
+                  if event['RequestType'] == 'Delete':
+                      send_response(event, context, 'SUCCESS', {})
+                      return
+
+                  vpc_id = event['ResourceProperties']['VpcId']
+                  ec2 = boto3.client('ec2')
+                  response = ec2.describe_security_groups(
+                      Filters=[
+                          {'Name': 'vpc-id', 'Values': [vpc_id]},
+                          {'Name': 'group-name', 'Values': ['default']}
+                      ]
+                  )
+                  if not response['SecurityGroups']:
+                      raise ValueError(f'No default security group found for VPC {vpc_id}')
+                  sg_id = response['SecurityGroups'][0]['GroupId']
+                  send_response(event, context, 'SUCCESS', {'SecurityGroupId': sg_id}, sg_id)
+              except Exception as e:
+                  logger.error(f'Exception: {str(e)}')
+                  send_response(event, context, 'FAILED', {'Error': str(e)})
+                  raise
+      Timeout: 30
+      MemorySize: 128
+
+  EfsStorage:
+    Type: AWS::CloudFormation::Stack
+    DependsOn: NetworkValidation
+    Properties:
+      Parameters:
+        SubnetIds: !Ref PrivateSubnetId
+        SubnetCount: 1
+        VpcId: !Ref VpcId
+      TemplateURL: !Sub 'https://${HpcRecipesS3Bucket}.s3.amazonaws.com/${HpcRecipesBranch}/recipes/storage/efs_simple/assets/main.yaml'
+
+  FSxLStorage:
+    Type: AWS::CloudFormation::Stack
+    DependsOn: NetworkValidation
+    Properties:
+      Parameters:
+        PerUnitStorageThroughput: 125
+        SubnetId: !Ref PrivateSubnetId
+        VpcId: !Ref VpcId
+      TemplateURL: !Sub 'https://${HpcRecipesS3Bucket}.s3.amazonaws.com/${HpcRecipesBranch}/recipes/storage/fsx_lustre/assets/persistent.yaml'
+
+  PCSSecurityGroup:
+    Type: AWS::CloudFormation::Stack
+    DependsOn: NetworkValidation
+    Properties:
+      Parameters:
+        ClientIpCidr: !Ref ClientIpCidr
+        VpcId: !Ref VpcId
+      TemplateURL: !Sub 'https://${HpcRecipesS3Bucket}.s3.amazonaws.com/${HpcRecipesBranch}/recipes/pcs/getting_started/assets/pcs-cluster-sg.yaml'
+
+  # Cluster
+  PCSCluster:
+    Type: AWS::PCS::Cluster
+    Properties:
+      Name: !Sub '${AWS::StackName}'
+      Size: SMALL
+      Scheduler:
+        Type: SLURM
+        Version: !Ref SlurmVersion
+      Networking:
+        SubnetIds:
+          - !Ref PrivateSubnetId
+        SecurityGroupIds:
+          - !GetAtt [ PCSSecurityGroup, Outputs.ClusterSecurityGroupId ]
+      SlurmConfiguration: !If
+        - IncludeAccountingConfig
+        - Accounting:
+            Mode: STANDARD
+            DefaultPurgeTimeInDays: 30
+          SlurmCustomSettings: !If
+            - SetAccountingPolicy
+            - - ParameterName: AccountingStorageEnforce
+                ParameterValue: !Ref AccountingPolicyEnforcement
+            - []
+        - !Ref AWS::NoValue
+
+  # Compute Node groups
+  PCSInstanceProfile:
+    Type: AWS::CloudFormation::Stack
+    Properties:
+      Parameters:
+        RoleName: !Sub '${AWS::StackName}-${AWS::Region}'
+      TemplateURL: !Sub 'https://${HpcRecipesS3Bucket}.s3.amazonaws.com/${HpcRecipesBranch}/recipes/pcs/getting_started/assets/pcs-iip-minimal.yaml'
+
+  PCSLaunchTemplate:
+    Type: AWS::CloudFormation::Stack
+    Properties:
+      Parameters:
+        VpcDefaultSecurityGroupId: !GetAtt [ VpcDefaultSecurityGroup, SecurityGroupId ]
+        ClusterSecurityGroupId: !GetAtt [ PCSSecurityGroup, Outputs.ClusterSecurityGroupId ]
+        SshSecurityGroupId: !GetAtt [ PCSSecurityGroup, Outputs.InboundSshSecurityGroupId ]
+        EfsFilesystemSecurityGroupId: !GetAtt [ EfsStorage, Outputs.SecurityGroupId ]
+        FSxLustreFilesystemSecurityGroupId: !GetAtt [ FSxLStorage, Outputs.FSxLustreSecurityGroupId ]
+        SshKeyName: !Ref KeyName
+        EfsFilesystemId: !GetAtt [ EfsStorage, Outputs.EFSFilesystemId ]
+        FSxLustreFilesystemId: !GetAtt [ FSxLStorage, Outputs.FSxLustreFilesystemId ]
+        FSxLustreFilesystemMountName: !GetAtt [ FSxLStorage, Outputs.FSxLustreMountName ]
+      TemplateURL: !Sub 'https://${HpcRecipesS3Bucket}.s3.amazonaws.com/${HpcRecipesBranch}/recipes/pcs/getting_started/assets/cfn-pcs-lt-efs-fsxl.yaml'
+
+  # Compute Node groups - Login Nodes
+  PCSNodeGroupLogin:
+    Type: AWS::PCS::ComputeNodeGroup
+    Properties:
+      ClusterId: !GetAtt [PCSCluster, Id]
+      Name: login
+      ScalingConfiguration:
+        MinInstanceCount: 1
+        MaxInstanceCount: 1
+      IamInstanceProfileArn: !GetAtt [ PCSInstanceProfile, Outputs.InstanceProfileArn ]
+      CustomLaunchTemplate:
+        TemplateId: !GetAtt [ PCSLaunchTemplate, Outputs.LoginLaunchTemplateId ]
+        Version: 1
+      SubnetIds:
+        - !Ref PublicSubnetId
+      AmiId: !GetAtt [PcsSampleAmi, AmiId]
+      InstanceConfigs:
+        - InstanceType: !FindInMap [ Architecture, LoginNodeInstances, !Ref NodeArchitecture ]
+
+  # Compute Node groups - Compute Nodes
+  PCSNodeGroupCompute:
+    Type: AWS::PCS::ComputeNodeGroup
+    Properties:
+      ClusterId: !GetAtt [PCSCluster, Id]
+      Name: compute-1
+      ScalingConfiguration:
+        MinInstanceCount: 0
+        MaxInstanceCount: 4
+      IamInstanceProfileArn: !GetAtt [ PCSInstanceProfile, Outputs.InstanceProfileArn ]
+      CustomLaunchTemplate:
+        TemplateId: !GetAtt [ PCSLaunchTemplate, Outputs.ComputeLaunchTemplateId ]
+        Version: 1
+      SubnetIds:
+        - !Ref PrivateSubnetId
+      AmiId: !GetAtt [PcsSampleAmi, AmiId]
+      InstanceConfigs:
+        - InstanceType: !FindInMap [ Architecture, ComputeNodeInstances, !Ref NodeArchitecture ]
+
+  PCSQueueCompute:
+    Type: AWS::PCS::Queue
+    Properties:
+      ClusterId: !GetAtt [PCSCluster, Id]
+      Name: demo
+      ComputeNodeGroupConfigurations:
+        - ComputeNodeGroupId: !GetAtt [PCSNodeGroupCompute, Id]
+
+  PcsAMILookupRole:
+    Type: AWS::IAM::Role
+    Properties:
+      AssumeRolePolicyDocument:
+        Version: '2012-10-17'
+        Statement:
+          - Effect: Allow
+            Principal:
+              Service: lambda.amazonaws.com
+            Action: sts:AssumeRole
+      ManagedPolicyArns:
+        - !Sub arn:${AWS::Partition}:iam::aws:policy/service-role/AWSLambdaBasicExecutionRole
+      Policies:
+        - PolicyName: EC2DescribeImages
+          PolicyDocument:
+            Version: '2012-10-17'
+            Statement:
+              - Effect: Allow
+                Action:
+                  - ec2:DescribeImages
+                Resource: '*'
+
+  PcsAMILookupFn:
+    Type: AWS::Lambda::Function
+    Properties:
+      Runtime: python3.12
+      Handler: index.handler
+      Role: !GetAtt PcsAMILookupRole.Arn
+      Code:
+        ZipFile: |
+          import boto3
+          import json
+          import logging
+          import urllib3
+          from botocore.exceptions import ClientError
+
+          logger = logging.getLogger()
+          logger.setLevel(logging.INFO)
+
+          def construct_ami_prefix(os_name, architecture, slurm_version):
+              return f'aws-pcs-sample_ami-{os_name}-{architecture}-slurm-{slurm_version}'
+
+          def get_latest_ami(ami_name_prefix):
+              ec2_client = boto3.client('ec2')
+              filters = [
+                  {'Name': 'name','Values': [f'{ami_name_prefix}*']},
+                  {'Name': 'owner-alias', 'Values': ['amazon']}
+              ]
+              response = ec2_client.describe_images(Filters=filters)
+              ami_list = response['Images']
+              sorted_ami_list = sorted(ami_list, key=lambda x: x['CreationDate'], reverse=True)
+              return sorted_ami_list[0]['ImageId'] if sorted_ami_list else None
+
+          def send_response(event, context, response_status, response_data, physical_resource_id=None):
+              response_body = {
+                  'Status': response_status,
+                  'Reason': f'See CloudWatch Log Stream: {context.log_stream_name}',
+                  'PhysicalResourceId': physical_resource_id or context.log_stream_name,
+                  'StackId': event['StackId'],
+                  'RequestId': event['RequestId'],
+                  'LogicalResourceId': event['LogicalResourceId'],
+                  'NoEcho': False,
+                  'Data': response_data
+              }
+
+              logger.info(f'Response body: {json.dumps(response_body)}')
+
+              http = urllib3.PoolManager()
+              try:
+                  response = http.request(
+                      'PUT',
+                      event['ResponseURL'],
+                      headers={'Content-Type': 'application/json'},
+                      body=json.dumps(response_body).encode('utf-8')
+                  )
+                  logger.info(f'Status code: {response.status}')
+              except Exception as e:
+                  logger.error(f'Failed to send response: {str(e)}')
+                  raise
+
+          def handler(event, context):
+              logger.info(f'Received event: {json.dumps(event)}')
+              
+              try:
+                  properties = event['ResourceProperties']
+                  os_name = properties.get('OperatingSystem')
+                  architecture = properties.get('Architecture')
+                  slurm_version = properties.get('SlurmVersion')
+                  
+                  # Validate required properties
+                  if not all([os_name, architecture, slurm_version]):
+                      raise ValueError('OperatingSystem, Architecture, and SlurmVersion are required in ResourceProperties')
+
+                  # Skip actual work on delete
+                  if event['RequestType'] == 'Delete':
+                      send_response(event, context, 'SUCCESS', {})
+                      return
+
+                  ami_name_prefix = construct_ami_prefix(os_name, architecture, slurm_version)
+                  logger.info(f'Looking up AMI with prefix: {ami_name_prefix}')
+                  
+                  ami_id = get_latest_ami(ami_name_prefix)
+                  if not ami_id:
+                      raise ValueError(f'No AMI found matching prefix: {ami_name_prefix}')
+
+                  response_data = {
+                      'AmiId': ami_id,
+                      'AmiPrefix': ami_name_prefix
+                  }
+                  
+                  send_response(event, context, 'SUCCESS', response_data, ami_id)
+
+              except Exception as e:
+                  logger.error(f'Exception: {str(e)}')
+                  send_response(event, context, 'FAILED', {'Error': str(e)})
+                  raise
+      Timeout: 30
+      MemorySize: 128
+
+  PcsSampleAmi:
+    Type: Custom::AMILookup
+    Properties:
+      ServiceToken: !GetAtt PcsAMILookupFn.Arn
+      OperatingSystem: 'amzn2'
+      Architecture: !FindInMap [ Architecture, AmiArchParameter, !Ref NodeArchitecture ]
+      SlurmVersion: !Ref SlurmVersion
+
+Outputs:
+  VpcId:
+    Description: VPC where the cluster is deployed
+    Value: !Ref VpcId
+  PublicSubnetId:
+    Description: Public subnet used for login nodes
+    Value: !Ref PublicSubnetId
+  PrivateSubnetId:
+    Description: Private subnet used for compute nodes and storage
+    Value: !Ref PrivateSubnetId
+  ClusterId:
+    Description: The Id of the PCS cluster
+    Value: !GetAtt [ PCSCluster, Id ]
+  PcsConsoleUrl:
+    Description: URL to access the cluster in the PCS console
+    Value: !Sub
+      - https://${ConsoleDomain}/pcs/home?region=${AWS::Region}#/clusters/${ClusterId}
+      - { ConsoleDomain: !If [ GovCloud, 'console.amazonaws-us-gov.com', !If [ China, 'console.amazonaws.cn', !Sub '${AWS::Region}.console.aws.amazon.com']],
+          ClusterId: !GetAtt [ PCSCluster, Id ]
+        }
+    Export:
+      Name: !Sub ${AWS::StackName}-PcsConsoleUrl
+  Ec2ConsoleUrl:
+    Description: URL to access instance(s) in the login node group via Session Manager
+    Value: !Sub
+      - https://${ConsoleDomain}/ec2/home?region=${AWS::Region}#Instances:instanceState=running;tag:aws:pcs:compute-node-group-id=${NodeGroupLoginId}
+      - { ConsoleDomain: !If [ GovCloud, 'console.amazonaws-us-gov.com', !If [ China, 'console.amazonaws.cn', !Sub '${AWS::Region}.console.aws.amazon.com']],
+          NodeGroupLoginId: !GetAtt [ PCSNodeGroupLogin, Id ]
+        }
+    Export:
+      Name: !Sub ${AWS::StackName}-Ec2ConsoleUrl
