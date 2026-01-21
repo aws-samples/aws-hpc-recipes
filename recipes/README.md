@@ -189,6 +189,11 @@ You can use an HPC Recipe for AWS in several ways:
 * **About**: Enable CloudWatch Logs on PCS instances
 * **Usage**: [README.md](pcs/cloudwatch/README.md)
 
+#### dlami_for_pcs_imagebuilder ![tag](https://img.shields.io/badge/-al2023-%23AAB7B8) ![tag](https://img.shields.io/badge/-beta-%23800080) ![tag](https://img.shields.io/badge/-dlami-%23AAB7B8) ![tag](https://img.shields.io/badge/-ec2-%23FF9900) ![tag](https://img.shields.io/badge/-gpu-%23AAB7B8) ![tag](https://img.shields.io/badge/-imagebuilder-%23AAB7B8) ![tag](https://img.shields.io/badge/-pcs-%23FF9900) ![tag](https://img.shields.io/badge/-ubuntu-%2317202A) 
+
+* **About**: EC2 ImageBuilder template to produce PCS-ready AMIs from DLAMI Base GPU images
+* **Usage**: [README.md](pcs/dlami_for_pcs_imagebuilder/README.md)
+
 #### enable_efa ![tag](https://img.shields.io/badge/-core-%23146EB4) ![tag](https://img.shields.io/badge/-ec2-%23FF9900) ![tag](https://img.shields.io/badge/-efa-%23AAB7B8) ![tag](https://img.shields.io/badge/-hpc-%23AAB7B8) ![tag](https://img.shields.io/badge/-pcs-%23FF9900) 
 
 * **About**: Use EFA with AWS PCS compute node groups
@@ -281,6 +286,11 @@ You can use an HPC Recipe for AWS in several ways:
 
 * **About**: Demonstrates an FSx for Lustre filesystem with an S3 data repository association
 * **Usage**: [README.md](storage/fsx_lustre_s3_dra/README.md)
+
+#### fsx_lustre_scheduled_drt_release ![tag](https://img.shields.io/badge/-beta-%23800080) ![tag](https://img.shields.io/badge/-data_lifecycle-%23AAB7B8) ![tag](https://img.shields.io/badge/-dra-%23AAB7B8) ![tag](https://img.shields.io/badge/-drt-%23AAB7B8) ![tag](https://img.shields.io/badge/-fsx-%237DCEA0) ![tag](https://img.shields.io/badge/-lustre-%23AAB7B8) ![tag](https://img.shields.io/badge/-s3-%237DCEA0) ![tag](https://img.shields.io/badge/-schedule-%23AAB7B8) 
+
+* **About**: Schedule a Recurring Data Repository Task to Auto-Release Data from FSx for Lustre DRAs
+* **Usage**: [README.md](storage/fsx_lustre_scheduled_drt_release/README.md)
 
 #### fsx_ontap ![tag](https://img.shields.io/badge/-activedirectory-%23AAB7B8) ![tag](https://img.shields.io/badge/-core-%23146EB4) ![tag](https://img.shields.io/badge/-fsx-%237DCEA0) ![tag](https://img.shields.io/badge/-netapp-%23AAB7B8) ![tag](https://img.shields.io/badge/-nfs-%23AAB7B8) ![tag](https://img.shields.io/badge/-ontap-%23AAB7B8) ![tag](https://img.shields.io/badge/-smb-%23AAB7B8) 
 
