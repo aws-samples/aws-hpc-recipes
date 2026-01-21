@@ -6,3 +6,4 @@ env.rc
 *.pyc
 .DS_Store
 .NOTES
+.kiro
