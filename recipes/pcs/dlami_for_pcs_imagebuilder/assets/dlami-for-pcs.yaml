@@ -1,5 +1,5 @@
 AWSTemplateFormatVersion: '2010-09-09'
-Description: Build PCS-ready AMIs from DLAMI Base GPU images
+Description: Build PCS-ready AMIs from DLAMI Base GPU images using EC2 Image Builder pipelines
 
 ### Stack metadata
 Metadata:
@@ -9,9 +9,24 @@ Metadata:
           default: Image Configuration
         Parameters:
           - SemanticVersion
+      - Label:
+          default: Build Schedule
+        Parameters:
+          - BuildSchedule
+      - Label:
+          default: AMI Discovery (Optional)
+        Parameters:
+          - PublishToSsm
+          - SsmParameterPrefix
     ParameterLabels:
       SemanticVersion:
         default: Recipe Version
+      BuildSchedule:
+        default: Build Schedule
+      PublishToSsm:
+        default: Publish AMI IDs to SSM Parameter Store
+      SsmParameterPrefix:
+        default: SSM Parameter Prefix
 
 Parameters:
   SemanticVersion:
@@ -20,6 +35,38 @@ Parameters:
     Default: '1.0.0'
     AllowedPattern: '^[0-9]+\.[0-9]+\.[0-9]+$'
     ConstraintDescription: Must be a valid semantic version (e.g., 1.0.0)
+
+  BuildSchedule:
+    Type: String
+    Description: How often to build new AMIs. Manual requires triggering via console or CLI.
+    Default: Manual
+    AllowedValues:
+      - Manual
+      - Weekly
+      - Monthly
+
+  PublishToSsm:
+    Type: String
+    Description: Publish AMI IDs to SSM Parameter Store for easy discovery. Incurs SSM parameter storage costs.
+    Default: 'false'
+    AllowedValues:
+      - 'true'
+      - 'false'
+
+  SsmParameterPrefix:
+    Type: String
+    Description: Prefix for SSM parameters where AMI IDs will be published (only used if PublishToSsm is true)
+    Default: '/dlami-for-pcs'
+    AllowedPattern: '^/[a-zA-Z0-9/_-]+$'
+    ConstraintDescription: Must start with / and contain only alphanumeric characters, hyphens, underscores, and forward slashes
+
+Conditions:
+  IsWeeklySchedule: !Equals [!Ref BuildSchedule, 'Weekly']
+  IsMonthlySchedule: !Equals [!Ref BuildSchedule, 'Monthly']
+  HasSchedule: !Or
+    - !Condition IsWeeklySchedule
+    - !Condition IsMonthlySchedule
+  EnableSsmPublishing: !Equals [!Ref PublishToSsm, 'true']
 
 Mappings:
   # DLAMI Base GPU AMI SSM parameter paths
@@ -30,14 +77,19 @@ Mappings:
       x8664: /aws/service/deeplearning/ami/x86_64/base-oss-nvidia-driver-gpu-amazon-linux-2023/latest/ami-id
       arm64: /aws/service/deeplearning/ami/arm64/base-oss-nvidia-driver-gpu-amazon-linux-2023/latest/ami-id
       deviceName: /dev/xvda
-      size: 100
+      size: '100'
     ubuntu2404:
       x8664: /aws/service/deeplearning/ami/x86_64/base-oss-nvidia-driver-gpu-ubuntu-24.04/latest/ami-id
       arm64: /aws/service/deeplearning/ami/arm64/base-oss-nvidia-driver-gpu-ubuntu-24.04/latest/ami-id
       deviceName: /dev/sda1
-      size: 100
+      size: '100'
 
-
+  # Schedule expressions for pipeline builds
+  ScheduleExpressions:
+    Weekly:
+      expression: 'cron(0 0 ? * SUN *)'
+    Monthly:
+      expression: 'cron(0 0 1 * ? *)'
 
 Resources:
   #############################################################################
@@ -61,6 +113,23 @@ Resources:
         # Required for Image Builder operations
         - !Sub arn:${AWS::Partition}:iam::aws:policy/EC2InstanceProfileForImageBuilder
       Path: /
+
+  # Policy for SSM parameter publishing (only created if enabled)
+  SsmPublishingPolicy:
+    Type: AWS::IAM::Policy
+    Condition: EnableSsmPublishing
+    Properties:
+      PolicyName: SsmParameterPublishing
+      Roles:
+        - !Ref ImageBuilderRole
+      PolicyDocument:
+        Version: '2012-10-17'
+        Statement:
+          - Effect: Allow
+            Action:
+              - ssm:PutParameter
+              - ssm:AddTagsToResource
+            Resource: !Sub arn:${AWS::Partition}:ssm:*:${AWS::AccountId}:parameter${SsmParameterPrefix}/*
 
   ImageBuilderInstanceProfile:
     Type: AWS::IAM::InstanceProfile
@@ -122,7 +191,6 @@ Resources:
                         - echo "AWS PCS Agent installation complete"
           - Region: !Ref 'AWS::Region'
 
-
   # Component: Slurm 24.11 Installer
   # Downloads and installs Slurm 24.11 from the AWS PCS repository
   Slurm2411InstallerComponent:
@@ -179,7 +247,6 @@ Resources:
                         - echo "Slurm 24.11 installation complete"
           - Region: !Ref 'AWS::Region'
 
-
   # Component: Slurm 25.05 Installer
   # Downloads and installs Slurm 25.05 from the AWS PCS repository
   Slurm2505InstallerComponent:
@@ -235,7 +302,6 @@ Resources:
                           rm -rf "${!TEMP_DIR}"
                         - echo "Slurm 25.05 installation complete"
           - Region: !Ref 'AWS::Region'
-
 
   # Component: Slurm PATH Configuration
   # Configures PATH and MANPATH for both Slurm versions
@@ -319,21 +385,26 @@ Resources:
                         echo "Installing EFS utils from dnf repository..."
                         dnf install -y amazon-efs-utils
                       elif [ "$OS_ID" = "ubuntu" ]; then
-                        # Ubuntu 24.04 - build from source
-                        # Requires: git, binutils, rustc, cargo, pkg-config, libssl-dev, golang-go (for FIPS)
-                        echo "Building EFS utils from source..."
-                        apt-get update
-                        apt-get -y install git binutils rustc cargo pkg-config libssl-dev golang-go
-                        
-                        TEMP_DIR=$(mktemp -d)
-                        cd "$TEMP_DIR"
-                        git clone https://github.com/aws/efs-utils
-                        cd efs-utils
-                        ./build-deb.sh
-                        apt-get -y install ./build/amazon-efs-utils*deb
-                        
-                        cd /
-                        rm -rf "$TEMP_DIR"
+                        # Ubuntu 24.04 - check if already installed, otherwise build from source
+                        if dpkg -l amazon-efs-utils &>/dev/null; then
+                          echo "EFS utils already installed, skipping build"
+                        else
+                          # Build from source
+                          # Requires: git, binutils, rustc, cargo, pkg-config, libssl-dev, golang-go (for FIPS)
+                          echo "Building EFS utils from source..."
+                          apt-get update
+                          apt-get -y install git binutils rustc cargo pkg-config libssl-dev golang-go
+                          
+                          TEMP_DIR=$(mktemp -d)
+                          cd "$TEMP_DIR"
+                          git clone https://github.com/aws/efs-utils
+                          cd efs-utils
+                          ./build-deb.sh
+                          apt-get -y install ./build/amazon-efs-utils*deb
+                          
+                          cd /
+                          rm -rf "$TEMP_DIR"
+                        fi
                       else
                         echo "Unsupported OS: $OS_ID"
                         exit 1
@@ -345,7 +416,6 @@ Resources:
                         sed -i 's/^poll_interval_sec = 1$/poll_interval_sec = 10/' /etc/amazon/efs/efs-utils.conf
                       fi
                     - echo "EFS Utils installation complete"
-
 
   # Component: CloudWatch Agent Installer
   # Installs and enables the Amazon CloudWatch agent for metrics and log collection
@@ -393,21 +463,25 @@ Resources:
                         # Amazon Linux 2023 - install from repository
                         echo "Installing CloudWatch agent from dnf repository..."
                         dnf install -y amazon-cloudwatch-agent
+                        # Enable the systemd service
+                        systemctl enable amazon-cloudwatch-agent
                       elif [ "$OS_ID" = "ubuntu" ]; then
-                        # Ubuntu 24.04 - download and install deb package
-                        echo "Installing CloudWatch agent from AWS S3..."
-                        curl -fSsL "https://amazoncloudwatch-agent.s3.amazonaws.com/ubuntu/${TARGET}/latest/amazon-cloudwatch-agent.deb" -o "amazon-cloudwatch-agent.deb"
-                        dpkg -i -E ./amazon-cloudwatch-agent.deb
-                        rm -f amazon-cloudwatch-agent.deb
+                        # Ubuntu 24.04 - check if already installed
+                        if dpkg -l amazon-cloudwatch-agent &>/dev/null; then
+                          echo "CloudWatch agent already installed, skipping download"
+                        else
+                          echo "Installing CloudWatch agent from AWS S3..."
+                          curl -fSsL "https://amazoncloudwatch-agent.s3.amazonaws.com/ubuntu/${TARGET}/latest/amazon-cloudwatch-agent.deb" -o "amazon-cloudwatch-agent.deb"
+                          dpkg -i -E ./amazon-cloudwatch-agent.deb
+                          rm -f amazon-cloudwatch-agent.deb
+                        fi
+                        # Enable the systemd service
+                        systemctl enable amazon-cloudwatch-agent
                       else
                         echo "Unsupported OS: $OS_ID"
                         exit 1
                       fi
-                      
-                      # Enable the service to start on boot
-                      systemctl enable amazon-cloudwatch-agent
                     - echo "CloudWatch Agent installation complete"
-
 
   # Component: SSM Agent Installer
   # Ensures SSM agent is installed and enabled for remote management
@@ -458,18 +532,23 @@ Resources:
                         if ! dnf list installed amazon-ssm-agent &>/dev/null; then
                           dnf install -y "https://s3.amazonaws.com/ec2-downloads-windows/SSMAgent/latest/${TARGET}/amazon-ssm-agent.rpm"
                         fi
+                        # Enable the systemd service
+                        systemctl enable amazon-ssm-agent
                       elif [ "$OS_ID" = "ubuntu" ]; then
                         # Ubuntu 24.04 - install via snap (recommended method)
                         # Ref: https://docs.aws.amazon.com/systems-manager/latest/userguide/agent-install-ubuntu-64-snap.html
                         echo "Installing SSM agent via snap on Ubuntu..."
-                        snap install amazon-ssm-agent --classic
+                        if ! snap list amazon-ssm-agent &>/dev/null; then
+                          snap install amazon-ssm-agent --classic
+                        else
+                          echo "SSM agent snap already installed, skipping installation"
+                        fi
+                        # Snap services are managed differently - start and enable via snap
+                        snap start amazon-ssm-agent
                       else
                         echo "Unsupported OS: $OS_ID"
                         exit 1
                       fi
-                      
-                      # Enable the service to start on boot
-                      systemctl enable amazon-ssm-agent
                     - echo "SSM Agent installation complete"
 
   #############################################################################
@@ -478,7 +557,7 @@ Resources:
 
   # Infrastructure Configuration for x86_64 builds
   # Uses compute-optimized instances for faster builds
-  InfrastructureConfigurationX8664:
+  InfrastructureConfigX8664:
     Type: AWS::ImageBuilder::InfrastructureConfiguration
     Properties:
       Name: !Sub 'dlami-for-pcs-infra-x86-64-${AWS::StackName}'
@@ -491,7 +570,7 @@ Resources:
 
   # Infrastructure Configuration for arm64 builds
   # Uses Graviton compute-optimized instances for faster builds
-  InfrastructureConfigurationArm64:
+  InfrastructureConfigArm64:
     Type: AWS::ImageBuilder::InfrastructureConfiguration
     Properties:
       Name: !Sub 'dlami-for-pcs-infra-arm64-${AWS::StackName}'
@@ -501,6 +580,7 @@ Resources:
         - c7g.4xlarge
         - m7g.4xlarge
       TerminateInstanceOnFailure: true
+
 
   #############################################################################
   # ImageBuilder Image Recipes
@@ -613,7 +693,7 @@ Resources:
   #############################################################################
 
   # Distribution Configuration: Amazon Linux 2023 x86_64
-  DistributionConfigurationAl2023X8664:
+  DistributionConfigAl2023X8664:
     Type: AWS::ImageBuilder::DistributionConfiguration
     Properties:
       Name: !Sub 'dlami-for-pcs-dist-al2023-x86-64-${AWS::StackName}'
@@ -630,7 +710,7 @@ Resources:
               Architecture: x86_64
 
   # Distribution Configuration: Amazon Linux 2023 arm64
-  DistributionConfigurationAl2023Arm64:
+  DistributionConfigAl2023Arm64:
     Type: AWS::ImageBuilder::DistributionConfiguration
     Properties:
       Name: !Sub 'dlami-for-pcs-dist-al2023-arm64-${AWS::StackName}'
@@ -647,7 +727,7 @@ Resources:
               Architecture: arm64
 
   # Distribution Configuration: Ubuntu 24.04 x86_64
-  DistributionConfigurationUbuntu2404X8664:
+  DistributionConfigUbuntu2404X8664:
     Type: AWS::ImageBuilder::DistributionConfiguration
     Properties:
       Name: !Sub 'dlami-for-pcs-dist-ubuntu2404-x86-64-${AWS::StackName}'
@@ -664,7 +744,7 @@ Resources:
               Architecture: x86_64
 
   # Distribution Configuration: Ubuntu 24.04 arm64
-  DistributionConfigurationUbuntu2404Arm64:
+  DistributionConfigUbuntu2404Arm64:
     Type: AWS::ImageBuilder::DistributionConfiguration
     Properties:
       Name: !Sub 'dlami-for-pcs-dist-ubuntu2404-arm64-${AWS::StackName}'
@@ -680,69 +760,289 @@ Resources:
               OS: ubuntu2404
               Architecture: arm64
 
+
   #############################################################################
-  # ImageBuilder Image Resources
-  # Creates images for all 4 OS/architecture combinations
-  # Each image wires up the recipe, infrastructure config, and distribution config
+  # SSM Parameter Publishing Resources
+  # Lambda function and EventBridge rule to publish AMI IDs to SSM Parameter Store
   #############################################################################
 
-  # Image: Amazon Linux 2023 x86_64
-  ImageAl2023X8664:
-    Type: AWS::ImageBuilder::Image
+  # IAM Role for Lambda function
+  SsmUpdateLambdaRole:
+    Type: AWS::IAM::Role
+    Condition: EnableSsmPublishing
     Properties:
+      Description: IAM role for SSM parameter update Lambda function
+      AssumeRolePolicyDocument:
+        Version: '2012-10-17'
+        Statement:
+          - Effect: Allow
+            Principal:
+              Service: lambda.amazonaws.com
+            Action: sts:AssumeRole
+      ManagedPolicyArns:
+        - !Sub arn:${AWS::Partition}:iam::aws:policy/service-role/AWSLambdaBasicExecutionRole
+      Policies:
+        - PolicyName: SsmParameterAccess
+          PolicyDocument:
+            Version: '2012-10-17'
+            Statement:
+              - Effect: Allow
+                Action:
+                  - ssm:PutParameter
+                  - ssm:AddTagsToResource
+                Resource: !Sub arn:${AWS::Partition}:ssm:${AWS::Region}:${AWS::AccountId}:parameter${SsmParameterPrefix}/*
+              - Effect: Allow
+                Action:
+                  - imagebuilder:GetImage
+                Resource: '*'
+
+  # Lambda function to update SSM parameters after pipeline builds
+  SsmUpdateLambda:
+    Type: AWS::Lambda::Function
+    Condition: EnableSsmPublishing
+    Properties:
+      FunctionName: !Sub '${AWS::StackName}-ssm-update'
+      Description: Updates SSM parameters with AMI IDs after Image Builder pipeline execution
+      Runtime: python3.12
+      Handler: index.handler
+      Role: !GetAtt SsmUpdateLambdaRole.Arn
+      Timeout: 30
+      Environment:
+        Variables:
+          SSM_PREFIX: !Ref SsmParameterPrefix
+      Code:
+        ZipFile: |
+          import boto3
+          import os
+          import json
+
+          def handler(event, context):
+              print(f"Event: {json.dumps(event)}")
+              
+              ssm = boto3.client('ssm')
+              imagebuilder = boto3.client('imagebuilder')
+              prefix = os.environ['SSM_PREFIX']
+              
+              # Extract image ARN from the event
+              image_arn = event.get('detail', {}).get('image-arn')
+              if not image_arn:
+                  print("No image ARN in event")
+                  return {'statusCode': 400, 'body': 'No image ARN'}
+              
+              # Get image details
+              response = imagebuilder.get_image(imageBuildVersionArn=image_arn)
+              image = response['image']
+              
+              # Only process successful builds
+              state = image.get('state', {}).get('status')
+              if state != 'AVAILABLE':
+                  print(f"Image not available, state: {state}")
+                  return {'statusCode': 200, 'body': f'Image state: {state}'}
+              
+              # Get AMI ID from output resources
+              ami_id = None
+              for ami in image.get('outputResources', {}).get('amis', []):
+                  ami_id = ami.get('image')
+                  break
+              
+              if not ami_id:
+                  print("No AMI ID found")
+                  return {'statusCode': 400, 'body': 'No AMI ID'}
+              
+              # Determine parameter path from image name
+              image_name = image.get('name', '')
+              param_path = None
+              
+              if 'al2023-x86-64' in image_name:
+                  param_path = f"{prefix}/al2023/x86_64/latest"
+              elif 'al2023-arm64' in image_name:
+                  param_path = f"{prefix}/al2023/arm64/latest"
+              elif 'ubuntu2404-x86-64' in image_name:
+                  param_path = f"{prefix}/ubuntu2404/x86_64/latest"
+              elif 'ubuntu2404-arm64' in image_name:
+                  param_path = f"{prefix}/ubuntu2404/arm64/latest"
+              
+              if not param_path:
+                  print(f"Could not determine parameter path for: {image_name}")
+                  return {'statusCode': 400, 'body': 'Unknown image type'}
+              
+              # Update SSM parameter
+              ssm.put_parameter(
+                  Name=param_path,
+                  Value=ami_id,
+                  Type='String',
+                  Overwrite=True,
+                  Description=f'Latest DLAMI for PCS AMI ID - {image_name}'
+              )
+              
+              print(f"Updated {param_path} = {ami_id}")
+              return {'statusCode': 200, 'body': f'Updated {param_path}'}
+
+  # EventBridge rule to trigger Lambda on pipeline completion
+  SsmUpdateEventRule:
+    Type: AWS::Events::Rule
+    Condition: EnableSsmPublishing
+    Properties:
+      Name: !Sub '${AWS::StackName}-ssm-update-rule'
+      Description: Triggers SSM parameter update when Image Builder pipeline completes
+      EventPattern:
+        source:
+          - aws.imagebuilder
+        detail-type:
+          - EC2 Image Builder Image State Change
+        detail:
+          state:
+            status:
+              - AVAILABLE
+      State: ENABLED
+      Targets:
+        - Id: SsmUpdateLambda
+          Arn: !GetAtt SsmUpdateLambda.Arn
+
+  # Permission for EventBridge to invoke Lambda
+  SsmUpdateLambdaPermission:
+    Type: AWS::Lambda::Permission
+    Condition: EnableSsmPublishing
+    Properties:
+      FunctionName: !Ref SsmUpdateLambda
+      Action: lambda:InvokeFunction
+      Principal: events.amazonaws.com
+      SourceArn: !GetAtt SsmUpdateEventRule.Arn
+
+  #############################################################################
+  # Image Pipelines
+  #############################################################################
+
+  ImagePipelineAl2023X8664:
+    Type: AWS::ImageBuilder::ImagePipeline
+    Properties:
+      Name: !Sub 'dlami-for-pcs-al2023-x86-64-${AWS::StackName}'
+      Description: Pipeline for DLAMI for PCS - Amazon Linux 2023 x86_64
       ImageRecipeArn: !Ref ImageRecipeAl2023X8664
-      InfrastructureConfigurationArn: !Ref InfrastructureConfigurationX8664
-      DistributionConfigurationArn: !Ref DistributionConfigurationAl2023X8664
-      EnhancedImageMetadataEnabled: true
-      Tags:
-        Name: dlami-for-pcs-base-al2023-x86_64
-        SourceStack: !Ref 'AWS::StackName'
-        OS: al2023
-        Architecture: x86_64
+      InfrastructureConfigurationArn: !Ref InfrastructureConfigX8664
+      DistributionConfigurationArn: !Ref DistributionConfigAl2023X8664
+      Status: ENABLED
+      ImageTestsConfiguration:
+        ImageTestsEnabled: false
+      Schedule: !If
+        - HasSchedule
+        - ScheduleExpression: !If
+            - IsWeeklySchedule
+            - !FindInMap [ScheduleExpressions, Weekly, expression]
+            - !FindInMap [ScheduleExpressions, Monthly, expression]
+          PipelineExecutionStartCondition: EXPRESSION_MATCH_ONLY
+        - !Ref 'AWS::NoValue'
 
-  # Image: Amazon Linux 2023 arm64
-  ImageAl2023Arm64:
-    Type: AWS::ImageBuilder::Image
+  ImagePipelineAl2023Arm64:
+    Type: AWS::ImageBuilder::ImagePipeline
     Properties:
+      Name: !Sub 'dlami-for-pcs-al2023-arm64-${AWS::StackName}'
+      Description: Pipeline for DLAMI for PCS - Amazon Linux 2023 arm64
       ImageRecipeArn: !Ref ImageRecipeAl2023Arm64
-      InfrastructureConfigurationArn: !Ref InfrastructureConfigurationArm64
-      DistributionConfigurationArn: !Ref DistributionConfigurationAl2023Arm64
-      EnhancedImageMetadataEnabled: true
-      Tags:
-        Name: dlami-for-pcs-base-al2023-arm64
-        SourceStack: !Ref 'AWS::StackName'
-        OS: al2023
-        Architecture: arm64
+      InfrastructureConfigurationArn: !Ref InfrastructureConfigArm64
+      DistributionConfigurationArn: !Ref DistributionConfigAl2023Arm64
+      Status: ENABLED
+      ImageTestsConfiguration:
+        ImageTestsEnabled: false
+      Schedule: !If
+        - HasSchedule
+        - ScheduleExpression: !If
+            - IsWeeklySchedule
+            - !FindInMap [ScheduleExpressions, Weekly, expression]
+            - !FindInMap [ScheduleExpressions, Monthly, expression]
+          PipelineExecutionStartCondition: EXPRESSION_MATCH_ONLY
+        - !Ref 'AWS::NoValue'
 
-  # Image: Ubuntu 24.04 x86_64
-  ImageUbuntu2404X8664:
-    Type: AWS::ImageBuilder::Image
+  ImagePipelineUbuntu2404X8664:
+    Type: AWS::ImageBuilder::ImagePipeline
     Properties:
+      Name: !Sub 'dlami-for-pcs-ubuntu2404-x86-64-${AWS::StackName}'
+      Description: Pipeline for DLAMI for PCS - Ubuntu 24.04 x86_64
       ImageRecipeArn: !Ref ImageRecipeUbuntu2404X8664
-      InfrastructureConfigurationArn: !Ref InfrastructureConfigurationX8664
-      DistributionConfigurationArn: !Ref DistributionConfigurationUbuntu2404X8664
-      EnhancedImageMetadataEnabled: true
-      Tags:
-        Name: dlami-for-pcs-base-ubuntu2404-x86_64
-        SourceStack: !Ref 'AWS::StackName'
-        OS: ubuntu2404
-        Architecture: x86_64
+      InfrastructureConfigurationArn: !Ref InfrastructureConfigX8664
+      DistributionConfigurationArn: !Ref DistributionConfigUbuntu2404X8664
+      Status: ENABLED
+      ImageTestsConfiguration:
+        ImageTestsEnabled: false
+      Schedule: !If
+        - HasSchedule
+        - ScheduleExpression: !If
+            - IsWeeklySchedule
+            - !FindInMap [ScheduleExpressions, Weekly, expression]
+            - !FindInMap [ScheduleExpressions, Monthly, expression]
+          PipelineExecutionStartCondition: EXPRESSION_MATCH_ONLY
+        - !Ref 'AWS::NoValue'
 
-  # Image: Ubuntu 24.04 arm64
-  ImageUbuntu2404Arm64:
-    Type: AWS::ImageBuilder::Image
+  ImagePipelineUbuntu2404Arm64:
+    Type: AWS::ImageBuilder::ImagePipeline
     Properties:
+      Name: !Sub 'dlami-for-pcs-ubuntu2404-arm64-${AWS::StackName}'
+      Description: Pipeline for DLAMI for PCS - Ubuntu 24.04 arm64
       ImageRecipeArn: !Ref ImageRecipeUbuntu2404Arm64
-      InfrastructureConfigurationArn: !Ref InfrastructureConfigurationArm64
-      DistributionConfigurationArn: !Ref DistributionConfigurationUbuntu2404Arm64
-      EnhancedImageMetadataEnabled: true
-      Tags:
-        Name: dlami-for-pcs-base-ubuntu2404-arm64
-        SourceStack: !Ref 'AWS::StackName'
-        OS: ubuntu2404
-        Architecture: arm64
+      InfrastructureConfigurationArn: !Ref InfrastructureConfigArm64
+      DistributionConfigurationArn: !Ref DistributionConfigUbuntu2404Arm64
+      Status: ENABLED
+      ImageTestsConfiguration:
+        ImageTestsEnabled: false
+      Schedule: !If
+        - HasSchedule
+        - ScheduleExpression: !If
+            - IsWeeklySchedule
+            - !FindInMap [ScheduleExpressions, Weekly, expression]
+            - !FindInMap [ScheduleExpressions, Monthly, expression]
+          PipelineExecutionStartCondition: EXPRESSION_MATCH_ONLY
+        - !Ref 'AWS::NoValue'
+
 
 Outputs:
+  #############################################################################
+  # Pipeline ARNs
+  #############################################################################
+
+  PipelineAl2023X8664Arn:
+    Description: ARN of the Amazon Linux 2023 x86_64 Image Pipeline
+    Value: !Ref ImagePipelineAl2023X8664
+
+  PipelineAl2023Arm64Arn:
+    Description: ARN of the Amazon Linux 2023 arm64 Image Pipeline
+    Value: !Ref ImagePipelineAl2023Arm64
+
+  PipelineUbuntu2404X8664Arn:
+    Description: ARN of the Ubuntu 24.04 x86_64 Image Pipeline
+    Value: !Ref ImagePipelineUbuntu2404X8664
+
+  PipelineUbuntu2404Arm64Arn:
+    Description: ARN of the Ubuntu 24.04 arm64 Image Pipeline
+    Value: !Ref ImagePipelineUbuntu2404Arm64
+
+  #############################################################################
+  # SSM Parameter Paths (only shown when SSM publishing is enabled)
+  #############################################################################
+
+  SsmParameterAl2023X8664:
+    Condition: EnableSsmPublishing
+    Description: SSM Parameter path for Amazon Linux 2023 x86_64 AMI ID
+    Value: !Sub '${SsmParameterPrefix}/al2023/x86_64/latest'
+
+  SsmParameterAl2023Arm64:
+    Condition: EnableSsmPublishing
+    Description: SSM Parameter path for Amazon Linux 2023 arm64 AMI ID
+    Value: !Sub '${SsmParameterPrefix}/al2023/arm64/latest'
+
+  SsmParameterUbuntu2404X8664:
+    Condition: EnableSsmPublishing
+    Description: SSM Parameter path for Ubuntu 24.04 x86_64 AMI ID
+    Value: !Sub '${SsmParameterPrefix}/ubuntu2404/x86_64/latest'
+
+  SsmParameterUbuntu2404Arm64:
+    Condition: EnableSsmPublishing
+    Description: SSM Parameter path for Ubuntu 24.04 arm64 AMI ID
+    Value: !Sub '${SsmParameterPrefix}/ubuntu2404/arm64/latest'
+
+  #############################################################################
+  # IAM Resources
+  #############################################################################
+
   ImageBuilderRoleArn:
     Description: ARN of the IAM role for Image Builder
     Value: !GetAtt ImageBuilderRole.Arn
@@ -750,6 +1050,10 @@ Outputs:
   ImageBuilderInstanceProfileArn:
     Description: ARN of the Instance Profile for Image Builder
     Value: !GetAtt ImageBuilderInstanceProfile.Arn
+
+  #############################################################################
+  # Component ARNs
+  #############################################################################
 
   PcsAgentInstallerComponentArn:
     Description: ARN of the PCS Agent Installer component
@@ -778,37 +1082,3 @@ Outputs:
   SsmAgentInstallerComponentArn:
     Description: ARN of the SSM Agent Installer component
     Value: !Ref SsmAgentInstallerComponent
-
-  # Image ARNs for all 4 OS/architecture combinations
-  ImageAl2023X8664Arn:
-    Description: ARN of the Amazon Linux 2023 x86_64 Image
-    Value: !Ref ImageAl2023X8664
-
-  ImageAl2023Arm64Arn:
-    Description: ARN of the Amazon Linux 2023 arm64 Image
-    Value: !Ref ImageAl2023Arm64
-
-  ImageUbuntu2404X8664Arn:
-    Description: ARN of the Ubuntu 24.04 x86_64 Image
-    Value: !Ref ImageUbuntu2404X8664
-
-  ImageUbuntu2404Arm64Arn:
-    Description: ARN of the Ubuntu 24.04 arm64 Image
-    Value: !Ref ImageUbuntu2404Arm64
-
-  # AMI IDs for all 4 OS/architecture combinations
-  AmiIdAl2023X8664:
-    Description: AMI ID for Amazon Linux 2023 x86_64
-    Value: !GetAtt ImageAl2023X8664.ImageId
-
-  AmiIdAl2023Arm64:
-    Description: AMI ID for Amazon Linux 2023 arm64
-    Value: !GetAtt ImageAl2023Arm64.ImageId
-
-  AmiIdUbuntu2404X8664:
-    Description: AMI ID for Ubuntu 24.04 x86_64
-    Value: !GetAtt ImageUbuntu2404X8664.ImageId
-
-  AmiIdUbuntu2404Arm64:
-    Description: AMI ID for Ubuntu 24.04 arm64
-    Value: !GetAtt ImageUbuntu2404Arm64.ImageId

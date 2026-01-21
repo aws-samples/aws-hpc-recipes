@@ -2,9 +2,9 @@
 
 ## Info
 
-This recipe creates an EC2 ImageBuilder pipeline that produces AWS PCS-ready AMIs based on the Deep Learning AMI (DLAMI) Base GPU images. It targets users who want to run GPU-accelerated workloads (modeling, simulation, ML training, rendering, etc.) on AWS Parallel Computing Service.
+This recipe creates EC2 ImageBuilder pipelines that produce AWS PCS-ready AMIs based on the Deep Learning AMI (DLAMI) Base GPU images. It targets users who want to run GPU-accelerated workloads (modeling, simulation, ML training, rendering, etc.) on AWS Parallel Computing Service.
 
-The recipe takes a simplified, all-in-one approach: a single CloudFormation template that builds four AMIs in a single deployment:
+The recipe builds four AMIs covering two operating systems and two architectures:
 
 | AMI Name | Operating System | Architecture |
 |----------|------------------|--------------|
@@ -33,13 +33,7 @@ Both Slurm 24.11 and 25.05 are installed to ensure compatibility with any PCS cl
 PATH=/opt/aws/pcs/scheduler/slurm-24.11/bin:/opt/aws/pcs/scheduler/slurm-25.05/bin:$PATH
 ```
 
-If you need to use Slurm 25.05 client features with a 25.05 controller, you can either use the full path:
-
-```bash
-/opt/aws/pcs/scheduler/slurm-25.05/bin/srun your_job.sh
-```
-
-Or add the following to your shell profile (e.g., `~/.bashrc` or `~/.bash_profile`) to make 25.05 the default:
+If you need to use Slurm 25.05 client features with a 25.05 controller, you can either use the full path or add the following to your shell profile:
 
 ```bash
 # Use Slurm 25.05 as default
@@ -51,24 +45,27 @@ export MANPATH=/opt/aws/pcs/scheduler/slurm-25.05/share/man:$MANPATH
 
 ### Deploy via AWS CLI
 
-Download the CloudFormation template or reference it directly from the HPC Recipes S3 bucket:
+Deploy with default settings (manual builds, no SSM publishing):
 
 ```shell
 aws cloudformation create-stack \
     --region us-east-2 \
-    --capabilities CAPABILITY_NAMED_IAM \
+    --capabilities CAPABILITY_IAM \
     --stack-name dlami-for-pcs \
     --template-url https://aws-hpc-recipes.s3.us-east-1.amazonaws.com/main/recipes/pcs/dlami_for_pcs_imagebuilder/assets/dlami-for-pcs.yaml
 ```
 
-To specify a custom semantic version for the ImageBuilder recipes:
+Deploy with weekly automatic builds and SSM parameter publishing:
 
 ```shell
 aws cloudformation create-stack \
     --region us-east-2 \
-    --capabilities CAPABILITY_NAMED_IAM \
-    --parameters ParameterKey=SemanticVersion,ParameterValue=1.0.1 \
+    --capabilities CAPABILITY_IAM \
     --stack-name dlami-for-pcs \
+    --parameters \
+        ParameterKey=BuildSchedule,ParameterValue=Weekly \
+        ParameterKey=PublishToSsm,ParameterValue=true \
+        ParameterKey=SsmParameterPrefix,ParameterValue=/my-org/dlami-for-pcs \
     --template-url https://aws-hpc-recipes.s3.us-east-1.amazonaws.com/main/recipes/pcs/dlami_for_pcs_imagebuilder/assets/dlami-for-pcs.yaml
 ```
 
@@ -84,15 +81,37 @@ aws cloudformation create-stack \
 5. Enter a stack name (e.g., `dlami-for-pcs`)
 6. Configure parameters:
    - **SemanticVersion**: Version for ImageBuilder recipes (default: `1.0.0`)
+   - **BuildSchedule**: How often to build (Manual, Weekly, or Monthly)
+   - **PublishToSsm**: Enable SSM parameter publishing for AMI discovery
+   - **SsmParameterPrefix**: Prefix for SSM parameters (default: `/dlami-for-pcs`)
 7. Choose **Next**, then **Next** again
 8. Under **Capabilities**, check the box acknowledging IAM resource creation
 9. Choose **Submit**
 
+### Trigger a Manual Build
+
+After deploying the stack, trigger a pipeline execution:
+
+```shell
+# Get pipeline ARNs from stack outputs
+aws cloudformation describe-stacks \
+    --stack-name dlami-for-pcs \
+    --query 'Stacks[0].Outputs[?contains(OutputKey, `Pipeline`)].{Key:OutputKey,Value:OutputValue}' \
+    --output table
+
+# Start a pipeline execution (example for AL2023 x86_64)
+aws imagebuilder start-image-pipeline-execution \
+    --image-pipeline-arn <pipeline-arn-from-output>
+```
+
+Or use the EC2 Image Builder console:
+1. Navigate to [Image pipelines](https://console.aws.amazon.com/imagebuilder/home#/pipelines)
+2. Select a pipeline (e.g., `dlami-for-pcs-al2023-x86-64-*`)
+3. Choose **Actions** > **Run pipeline**
+
 ### Monitor Build Progress
 
-The stack creates EC2 ImageBuilder images that build all four AMIs. Building takes approximately 30-45 minutes per image.
-
-To monitor progress:
+Building takes approximately 30-45 minutes per image.
 
 1. Navigate to the [EC2 Image Builder console](https://console.aws.amazon.com/imagebuilder/home#/images)
 2. Look for images with names starting with `dlami-for-pcs-`
@@ -102,44 +121,58 @@ Build logs are available in CloudWatch Logs under `/aws/imagebuilder/`.
 
 ### Retrieve AMI IDs
 
-After the stack completes, retrieve the AMI IDs from the CloudFormation outputs:
+**From SSM Parameters** (if `PublishToSsm` is enabled):
 
 ```shell
-aws cloudformation describe-stacks \
-    --stack-name dlami-for-pcs \
-    --query 'Stacks[0].Outputs[?starts_with(OutputKey, `AmiId`)].{Key:OutputKey,Value:OutputValue}' \
-    --output table
+# Get the latest AL2023 x86_64 AMI
+aws ssm get-parameter \
+    --name /dlami-for-pcs/al2023/x86_64/latest \
+    --query 'Parameter.Value' \
+    --output text
+
+# Use in CloudFormation with dynamic references
+# {{resolve:ssm:/dlami-for-pcs/al2023/x86_64/latest}}
 ```
 
-Or view them in the CloudFormation console under the **Outputs** tab.
+**From EC2 Console**:
+
+```shell
+# List AMIs created by the pipelines
+aws ec2 describe-images \
+    --owners self \
+    --filters "Name=name,Values=dlami-for-pcs-*" \
+    --query 'Images[*].{Name:Name,ImageId:ImageId,Created:CreationDate}' \
+    --output table
+```
 
 ## Parameters
 
 | Parameter | Type | Default | Description |
 |-----------|------|---------|-------------|
 | `SemanticVersion` | String | `1.0.0` | Semantic version for ImageBuilder recipes (format: X.Y.Z) |
+| `BuildSchedule` | String | `Manual` | Build frequency: `Manual`, `Weekly` (Sundays at midnight UTC), or `Monthly` (1st of month at midnight UTC) |
+| `PublishToSsm` | String | `false` | Publish AMI IDs to SSM Parameter Store for easy discovery |
+| `SsmParameterPrefix` | String | `/dlami-for-pcs` | Prefix for SSM parameters (only used if `PublishToSsm` is `true`) |
 
 ## Outputs
 
-### AMI IDs
+### Pipeline ARNs
 
 | Output | Description |
 |--------|-------------|
-| `AmiIdAl2023X8664` | AMI ID for Amazon Linux 2023 x86_64 |
-| `AmiIdAl2023Arm64` | AMI ID for Amazon Linux 2023 arm64 |
-| `AmiIdUbuntu2404X8664` | AMI ID for Ubuntu 24.04 x86_64 |
-| `AmiIdUbuntu2404Arm64` | AMI ID for Ubuntu 24.04 arm64 |
+| `PipelineAl2023X8664Arn` | ARN of the Amazon Linux 2023 x86_64 pipeline |
+| `PipelineAl2023Arm64Arn` | ARN of the Amazon Linux 2023 arm64 pipeline |
+| `PipelineUbuntu2404X8664Arn` | ARN of the Ubuntu 24.04 x86_64 pipeline |
+| `PipelineUbuntu2404Arm64Arn` | ARN of the Ubuntu 24.04 arm64 pipeline |
 
-### ImageBuilder Resources
+### SSM Parameter Paths (when `PublishToSsm` is enabled)
 
 | Output | Description |
 |--------|-------------|
-| `ImageAl2023X8664Arn` | ARN of the Amazon Linux 2023 x86_64 Image |
-| `ImageAl2023Arm64Arn` | ARN of the Amazon Linux 2023 arm64 Image |
-| `ImageUbuntu2404X8664Arn` | ARN of the Ubuntu 24.04 x86_64 Image |
-| `ImageUbuntu2404Arm64Arn` | ARN of the Ubuntu 24.04 arm64 Image |
-| `ImageBuilderRoleArn` | ARN of the IAM role for Image Builder |
-| `ImageBuilderInstanceProfileArn` | ARN of the Instance Profile for Image Builder |
+| `SsmParameterAl2023X8664` | SSM parameter path for AL2023 x86_64 AMI ID |
+| `SsmParameterAl2023Arm64` | SSM parameter path for AL2023 arm64 AMI ID |
+| `SsmParameterUbuntu2404X8664` | SSM parameter path for Ubuntu 24.04 x86_64 AMI ID |
+| `SsmParameterUbuntu2404Arm64` | SSM parameter path for Ubuntu 24.04 arm64 AMI ID |
 
 ### Component ARNs
 
@@ -153,34 +186,47 @@ Or view them in the CloudFormation console under the **Outputs** tab.
 | `CloudWatchAgentInstallerComponentArn` | ARN of the CloudWatch Agent Installer component |
 | `SsmAgentInstallerComponentArn` | ARN of the SSM Agent Installer component |
 
+### IAM Resources
+
+| Output | Description |
+|--------|-------------|
+| `ImageBuilderRoleArn` | ARN of the IAM role for Image Builder |
+| `ImageBuilderInstanceProfileArn` | ARN of the Instance Profile for Image Builder |
+
 ## Cost Estimate
 
-Costs are incurred during the AMI build process and when using the resulting AMIs.
+### Build Costs (Per Build)
 
-### Build Costs (One-Time)
+- **EC2 Instance Hours**: c6i.4xlarge/m6i.4xlarge for x86_64, c7g.4xlarge/m7g.4xlarge for arm64. Each build takes ~30-45 minutes.
+- **EBS Storage**: 100 GB gp3 volumes during builds
 
-- **EC2 Instance Hours**: The template uses c6i.4xlarge/m6i.4xlarge for x86_64 builds and c7g.4xlarge/m7g.4xlarge for arm64 builds. Each build takes approximately 30-45 minutes.
-- **EBS Storage**: 100 GB gp3 volumes are used during builds
-- **Data Transfer**: Minimal, primarily for downloading packages
-
-Estimated one-time build cost: **$5-10 USD** for all four AMIs (varies by region)
+Estimated cost per full build (all 4 AMIs): **$5-10 USD** (varies by region)
 
 ### Ongoing Costs
 
-- **AMI Storage**: EBS snapshots for each AMI (~100 GB each)
-- **EC2 Instances**: Standard EC2 pricing when launching instances from the AMIs
+- **AMI Storage**: EBS snapshots (~100 GB each per AMI)
+- **SSM Parameters**: Minimal cost if `PublishToSsm` is enabled
+- **Lambda**: Minimal cost for SSM update function (invoked only on build completion)
 
 ### Cost Optimization Tips
 
-- Delete unused AMIs and their associated snapshots
-- Build only the OS/architecture combinations you need by modifying the template
-- Use Spot instances for non-production workloads
+- Use `Manual` build schedule and trigger builds only when needed
+- Delete old AMI versions and their snapshots regularly
+- Build only the OS/architecture combinations you need
 
 ## Notes
 
+### SSM Parameter Publishing
+
+When `PublishToSsm` is enabled, a Lambda function automatically updates SSM parameters after each successful build. This enables:
+
+- **Dynamic AMI references** in CloudFormation templates using `{{resolve:ssm:/dlami-for-pcs/al2023/x86_64/latest}}`
+- **Consistent AMI discovery** across your organization
+- **Automatic updates** when new AMIs are built
+
 ### Source AMI Selection
 
-The template uses SSM parameters to automatically resolve the latest DLAMI Base GPU AMIs. The SSM parameter format follows the pattern documented in [Finding the ID of a DLAMI](https://docs.aws.amazon.com/dlami/latest/devguide/find-dlami-id.html).
+The template uses SSM parameters to automatically resolve the latest DLAMI Base GPU AMIs:
 
 | OS | Architecture | SSM Parameter Path |
 |----|--------------|-------------------|
@@ -198,13 +244,9 @@ This recipe works in any AWS region where:
 
 ### Extending This Recipe
 
-This template builds AMIs in the current region only. For production use cases, you may want to extend it to:
+- **Distribute AMIs to multiple regions**: Modify the `DistributionConfig*` resources to include additional regions. See [Distribute AMIs to specific AWS Regions](https://docs.aws.amazon.com/imagebuilder/latest/userguide/distribute-ami-regions.html).
 
-- **Distribute AMIs to multiple regions**: Modify the `DistributionConfiguration` resources to include additional regions in the `Distributions` array. See [Distribute AMIs to specific AWS Regions](https://docs.aws.amazon.com/imagebuilder/latest/userguide/distribute-ami-regions.html).
-
-- **Share AMIs with other AWS accounts**: Add `LaunchPermissionConfiguration` with `UserIds` to share with specific accounts, or use `OrganizationArns`/`OrganizationalUnitArns` for AWS Organizations. See [Share AMIs with specific AWS accounts](https://docs.aws.amazon.com/imagebuilder/latest/userguide/cross-account-dist.html).
-
-Note that multi-region distribution increases storage costs (EBS snapshot charges apply per region) and build time.
+- **Share AMIs with other AWS accounts**: Add `LaunchPermissionConfiguration` to distribution configs. See [Share AMIs with specific AWS accounts](https://docs.aws.amazon.com/imagebuilder/latest/userguide/cross-account-dist.html).
 
 ### Troubleshooting
 
@@ -216,9 +258,13 @@ Note that multi-region distribution increases storage costs (EBS snapshot charge
 - Check CloudWatch Logs under `/aws/imagebuilder/` for detailed error messages
 - Verify network connectivity (NAT Gateway or Internet Gateway required)
 
+**SSM parameters not updating after build**
+- Verify `PublishToSsm` is set to `true`
+- Check Lambda function logs in CloudWatch under `/aws/lambda/<stack-name>-ssm-update`
+
 **Stack deletion fails**
-- Ensure all ImageBuilder images have completed building before deletion
-- Manually delete any AMIs created by the stack if needed
+- Cancel any in-progress pipeline executions first
+- Manually delete AMIs created by the pipelines if needed
 
 ## See Also
 
