@@ -1,4 +1,4 @@
-# DLAMI for PCS
+# DLAMI for PCS (ImageBuilder)
 
 ## Info
 
@@ -58,7 +58,7 @@ aws cloudformation create-stack \
     --region us-east-2 \
     --capabilities CAPABILITY_NAMED_IAM \
     --stack-name dlami-for-pcs \
-    --template-url https://aws-hpc-recipes.s3.us-east-1.amazonaws.com/main/recipes/pcs/dlami_for_pcs/assets/dlami-for-pcs.yaml
+    --template-url https://aws-hpc-recipes.s3.us-east-1.amazonaws.com/main/recipes/pcs/dlami_for_pcs_imagebuilder/assets/dlami-for-pcs.yaml
 ```
 
 To specify a custom semantic version for the ImageBuilder recipes:
@@ -69,7 +69,7 @@ aws cloudformation create-stack \
     --capabilities CAPABILITY_NAMED_IAM \
     --parameters ParameterKey=SemanticVersion,ParameterValue=1.0.1 \
     --stack-name dlami-for-pcs \
-    --template-url https://aws-hpc-recipes.s3.us-east-1.amazonaws.com/main/recipes/pcs/dlami_for_pcs/assets/dlami-for-pcs.yaml
+    --template-url https://aws-hpc-recipes.s3.us-east-1.amazonaws.com/main/recipes/pcs/dlami_for_pcs_imagebuilder/assets/dlami-for-pcs.yaml
 ```
 
 ### Deploy via AWS Console
@@ -78,7 +78,7 @@ aws cloudformation create-stack \
 2. Choose **Create stack** > **With new resources (standard)**
 3. Under **Specify template**, choose **Amazon S3 URL** and enter:
    ```
-   https://aws-hpc-recipes.s3.us-east-1.amazonaws.com/main/recipes/pcs/dlami_for_pcs/assets/dlami-for-pcs.yaml
+   https://aws-hpc-recipes.s3.us-east-1.amazonaws.com/main/recipes/pcs/dlami_for_pcs_imagebuilder/assets/dlami-for-pcs.yaml
    ```
 4. Choose **Next**
 5. Enter a stack name (e.g., `dlami-for-pcs`)
@@ -196,20 +196,15 @@ This recipe works in any AWS region where:
 - DLAMI Base GPU images are available via SSM parameters
 - EC2 Image Builder is available
 
-### Differences from HPC-Ready AMI Recipe
+### Extending This Recipe
 
-This recipe differs from the [HPC-Ready AMI recipe](../hpc_ready_ami/) in several ways:
+This template builds AMIs in the current region only. For production use cases, you may want to extend it to:
 
-| Feature | DLAMI for PCS | HPC-Ready AMI |
-|---------|---------------|---------------|
-| Source AMI | DLAMI Base GPU | Standard OS AMIs |
-| GPU Drivers | Pre-installed (NVIDIA) | Not included |
-| OS Updates | Not applied | Applied |
-| Build Method | CloudFormation only | CloudFormation + Packer |
-| Complexity | Single template | Multiple components |
-| Use Case | GPU workloads | General HPC |
+- **Distribute AMIs to multiple regions**: Modify the `DistributionConfiguration` resources to include additional regions in the `Distributions` array. See [Distribute AMIs to specific AWS Regions](https://docs.aws.amazon.com/imagebuilder/latest/userguide/distribute-ami-regions.html).
 
-Choose this recipe if you need GPU support with pre-installed NVIDIA drivers. Choose the HPC-Ready AMI recipe for general HPC workloads without GPU requirements.
+- **Share AMIs with other AWS accounts**: Add `LaunchPermissionConfiguration` with `UserIds` to share with specific accounts, or use `OrganizationArns`/`OrganizationalUnitArns` for AWS Organizations. See [Share AMIs with specific AWS accounts](https://docs.aws.amazon.com/imagebuilder/latest/userguide/cross-account-dist.html).
+
+Note that multi-region distribution increases storage costs (EBS snapshot charges apply per region) and build time.
 
 ### Troubleshooting
 
