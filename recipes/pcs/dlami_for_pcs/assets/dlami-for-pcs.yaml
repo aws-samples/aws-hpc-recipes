@@ -514,7 +514,7 @@ Resources:
       Description: DLAMI for PCS recipe - Amazon Linux 2023 x86_64
       Version: !Ref SemanticVersion
       ParentImage: !Sub 
-        - 'resolve:ssm:${SSMPath}'
+        - '{{resolve:ssm:${SSMPath}}}'
         - SSMPath: !FindInMap [DLAMIConfigs, al2023, x8664]
       BlockDeviceMappings:
         - DeviceName: !FindInMap [DLAMIConfigs, al2023, deviceName]
@@ -539,7 +539,7 @@ Resources:
       Description: DLAMI for PCS recipe - Amazon Linux 2023 arm64
       Version: !Ref SemanticVersion
       ParentImage: !Sub 
-        - 'resolve:ssm:${SSMPath}'
+        - '{{resolve:ssm:${SSMPath}}}'
         - SSMPath: !FindInMap [DLAMIConfigs, al2023, arm64]
       BlockDeviceMappings:
         - DeviceName: !FindInMap [DLAMIConfigs, al2023, deviceName]
@@ -564,7 +564,7 @@ Resources:
       Description: DLAMI for PCS recipe - Ubuntu 24.04 x86_64
       Version: !Ref SemanticVersion
       ParentImage: !Sub 
-        - 'resolve:ssm:${SSMPath}'
+        - '{{resolve:ssm:${SSMPath}}}'
         - SSMPath: !FindInMap [DLAMIConfigs, ubuntu2404, x8664]
       BlockDeviceMappings:
         - DeviceName: !FindInMap [DLAMIConfigs, ubuntu2404, deviceName]
@@ -589,7 +589,7 @@ Resources:
       Description: DLAMI for PCS recipe - Ubuntu 24.04 arm64
       Version: !Ref SemanticVersion
       ParentImage: !Sub 
-        - 'resolve:ssm:${SSMPath}'
+        - '{{resolve:ssm:${SSMPath}}}'
         - SSMPath: !FindInMap [DLAMIConfigs, ubuntu2404, arm64]
       BlockDeviceMappings:
         - DeviceName: !FindInMap [DLAMIConfigs, ubuntu2404, deviceName]
