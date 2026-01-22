@@ -824,10 +824,12 @@ Resources:
               prefix = os.environ['SSM_PREFIX']
               
               # Extract image ARN from the event
-              image_arn = event.get('detail', {}).get('image-arn')
-              if not image_arn:
-                  print("No image ARN in event")
-                  return {'statusCode': 400, 'body': 'No image ARN'}
+              # The ARN is in the resources array, not in detail
+              resources = event.get('resources', [])
+              if not resources:
+                  print("No resources in event")
+                  return {'statusCode': 400, 'body': 'No resources in event'}
+              image_arn = resources[0]
               
               # Get image details
               response = imagebuilder.get_image(imageBuildVersionArn=image_arn)
