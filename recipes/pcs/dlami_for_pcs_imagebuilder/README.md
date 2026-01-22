@@ -1,10 +1,10 @@
 # DLAMI for PCS (ImageBuilder)
 
-Build [AWS PCS](https://docs.aws.amazon.com/pcs/)-ready AMIs from [DLAMI Base GPU](https://docs.aws.amazon.com/dlami/) images using [EC2 Image Builder](https://docs.aws.amazon.com/imagebuilder/) pipelines.
+Build [AWS PCS](https://docs.aws.amazon.com/pcs/)-ready AMIs from [DLAMI Base GPU](https://docs.aws.amazon.com/dlami/latest/devguide/overview-base.html) images using [EC2 Image Builder](https://docs.aws.amazon.com/imagebuilder/) pipelines.
 
 ## Overview
 
-This recipe deploys Image Builder pipelines that create PCS-compatible AMIs based on the Deep Learning AMI (DLAMI). It's designed for users running GPU-accelerated workloads (ML training, simulation, rendering, etc.) on AWS Parallel Computing Service.
+This recipe deploys Image Builder pipelines that create PCS-compatible AMIs based on the [Deep Learning Base AMI](https://docs.aws.amazon.com/dlami/latest/devguide/overview-base.html). It's designed for users running GPU-accelerated workloads (ML training, simulation, rendering, etc.) on AWS Parallel Computing Service.
 
 **What you get:**
 
@@ -102,16 +102,25 @@ This configuration:
 - Publishes AMI IDs to SSM parameters for easy reference
 - Deprecates AMIs older than 4 weeks (they remain usable, just hidden from searches)
 
-### Using SSM Parameters
+## SSM Parameter Publishing
 
-When `PublishToSsm=true`, reference AMIs dynamically in CloudFormation:
+Enable `PublishToSsm=true` to automatically publish AMI IDs to [SSM Parameter Store](https://docs.aws.amazon.com/systems-manager/latest/userguide/systems-manager-parameter-store.html) after each successful build. This makes it easy to reference the latest AMIs in your infrastructure code.
 
+**SSM parameter paths:**
+- `/dlami-for-pcs/al2023/x86_64/latest`
+- `/dlami-for-pcs/al2023/arm64/latest`
+- `/dlami-for-pcs/ubuntu2404/x86_64/latest`
+- `/dlami-for-pcs/ubuntu2404/arm64/latest`
+
+(Customize the prefix with `SsmParameterPrefix`)
+
+**Use in CloudFormation:**
 ```yaml
-# Always uses the latest built AMI
+# Always resolves to the latest built AMI
 ImageId: '{{resolve:ssm:/dlami-for-pcs/al2023/x86_64/latest}}'
 ```
 
-Or retrieve via CLI:
+**Retrieve via CLI:**
 ```shell
 aws ssm get-parameter --name /dlami-for-pcs/al2023/x86_64/latest --query 'Parameter.Value' --output text
 ```
