@@ -242,6 +242,66 @@ This recipe works in any AWS region where:
 - DLAMI Base GPU images are available via SSM parameters
 - EC2 Image Builder is available
 
+### Automatic Rebuilds on DLAMI Updates (Optional)
+
+AWS publishes DLAMI updates approximately weekly to an SNS topic. You can optionally deploy a second stack that subscribes to this topic and automatically triggers your pipelines when new DLAMIs are released.
+
+**Architecture:**
+```
+DLAMI SNS Topic (us-west-2) → SQS Queue → Lambda → ImageBuilder Pipelines (your region)
+```
+
+**Deploy the trigger stack:**
+
+```shell
+# First, get pipeline ARNs from your main stack
+REGION=us-east-2  # Your pipeline region
+STACK_NAME=dlami-for-pcs
+
+# Deploy trigger stack in us-west-2 (required - SNS topic location)
+aws cloudformation create-stack \
+    --region us-west-2 \
+    --capabilities CAPABILITY_IAM \
+    --stack-name dlami-update-trigger \
+    --template-url https://aws-hpc-recipes.s3.us-east-1.amazonaws.com/main/recipes/pcs/dlami_for_pcs_imagebuilder/assets/dlami-update-trigger.yaml \
+    --parameters \
+        ParameterKey=TargetRegion,ParameterValue=${REGION} \
+        ParameterKey=PipelineAl2023X8664Arn,ParameterValue=$(aws cloudformation describe-stacks --region ${REGION} --stack-name ${STACK_NAME} --query "Stacks[0].Outputs[?OutputKey=='PipelineAl2023X8664Arn'].OutputValue" --output text) \
+        ParameterKey=PipelineAl2023Arm64Arn,ParameterValue=$(aws cloudformation describe-stacks --region ${REGION} --stack-name ${STACK_NAME} --query "Stacks[0].Outputs[?OutputKey=='PipelineAl2023Arm64Arn'].OutputValue" --output text) \
+        ParameterKey=PipelineUbuntu2404X8664Arn,ParameterValue=$(aws cloudformation describe-stacks --region ${REGION} --stack-name ${STACK_NAME} --query "Stacks[0].Outputs[?OutputKey=='PipelineUbuntu2404X8664Arn'].OutputValue" --output text) \
+        ParameterKey=PipelineUbuntu2404Arm64Arn,ParameterValue=$(aws cloudformation describe-stacks --region ${REGION} --stack-name ${STACK_NAME} --query "Stacks[0].Outputs[?OutputKey=='PipelineUbuntu2404Arm64Arn'].OutputValue" --output text)
+```
+
+**Trigger stack parameters:**
+
+| Parameter | Description |
+|-----------|-------------|
+| `TargetRegion` | AWS region where your ImageBuilder pipelines are deployed |
+| `PipelineAl2023X8664Arn` | ARN of the AL2023 x86_64 pipeline (from main stack outputs) |
+| `PipelineAl2023Arm64Arn` | ARN of the AL2023 arm64 pipeline (from main stack outputs) |
+| `PipelineUbuntu2404X8664Arn` | ARN of the Ubuntu 24.04 x86_64 pipeline (from main stack outputs) |
+| `PipelineUbuntu2404Arm64Arn` | ARN of the Ubuntu 24.04 arm64 pipeline (from main stack outputs) |
+
+**Test the trigger manually:**
+
+```shell
+# Send a test message to the SQS queue
+QUEUE_URL=$(aws cloudformation describe-stacks --region us-west-2 --stack-name dlami-update-trigger --query "Stacks[0].Outputs[?OutputKey=='QueueUrl'].OutputValue" --output text)
+
+aws sqs send-message \
+    --region us-west-2 \
+    --queue-url ${QUEUE_URL} \
+    --message-body '{"test": "manual trigger"}'
+
+# Check Lambda logs
+aws logs tail /aws/lambda/dlami-update-trigger-trigger --region us-west-2 --follow
+```
+
+**Cleanup:** Delete the trigger stack before deleting the main stack:
+```shell
+aws cloudformation delete-stack --region us-west-2 --stack-name dlami-update-trigger
+```
+
 ### Extending This Recipe
 
 - **Distribute AMIs to multiple regions**: Modify the `DistributionConfig*` resources to include additional regions. See [Distribute AMIs to specific AWS Regions](https://docs.aws.amazon.com/imagebuilder/latest/userguide/distribute-ami-regions.html).
@@ -265,6 +325,12 @@ This recipe works in any AWS region where:
 **Stack deletion fails**
 - Cancel any in-progress pipeline executions first
 - Manually delete AMIs created by the pipelines if needed
+
+**DLAMI update trigger not working**
+- Verify the trigger stack is deployed in us-west-2 (required)
+- Check Lambda logs in CloudWatch under `/aws/lambda/<trigger-stack-name>-trigger`
+- Verify pipeline ARNs in the trigger stack parameters match your main stack outputs
+- Check SQS queue for messages: `aws sqs get-queue-attributes --region us-west-2 --queue-url <queue-url> --attribute-names ApproximateNumberOfMessages`
 
 ## See Also
 
