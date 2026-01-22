@@ -1,0 +1,259 @@
+AWSTemplateFormatVersion: '2010-09-09'
+Description: >-
+  Subscribes to the AWS DLAMI update SNS topic and automatically triggers
+  ImageBuilder pipeline executions when new DLAMIs are released.
+  This stack must be deployed in us-west-2 (where the DLAMI SNS topic is located).
+
+### Stack metadata
+Metadata:
+  AWS::CloudFormation::Interface:
+    ParameterGroups:
+      - Label:
+          default: Target Pipeline Configuration
+        Parameters:
+          - TargetRegion
+          - PipelineAl2023X8664Arn
+          - PipelineAl2023Arm64Arn
+          - PipelineUbuntu2404X8664Arn
+          - PipelineUbuntu2404Arm64Arn
+    ParameterLabels:
+      TargetRegion:
+        default: Target Region
+      PipelineAl2023X8664Arn:
+        default: AL2023 x86_64 Pipeline ARN
+      PipelineAl2023Arm64Arn:
+        default: AL2023 arm64 Pipeline ARN
+      PipelineUbuntu2404X8664Arn:
+        default: Ubuntu 24.04 x86_64 Pipeline ARN
+      PipelineUbuntu2404Arm64Arn:
+        default: Ubuntu 24.04 arm64 Pipeline ARN
+
+Parameters:
+  TargetRegion:
+    Type: String
+    Description: AWS region where the ImageBuilder pipelines are deployed
+    AllowedPattern: '^[a-z]{2}-[a-z]+-\d{1}$'
+    ConstraintDescription: Must be a valid AWS region (e.g., us-east-1, eu-west-2)
+
+  PipelineAl2023X8664Arn:
+    Type: String
+    Description: ARN of the Amazon Linux 2023 x86_64 ImageBuilder pipeline
+    AllowedPattern: '^arn:aws[^:]*:imagebuilder:[a-z]{2}-[a-z]+-\d{1}:\d{12}:image-pipeline/.+$'
+    ConstraintDescription: Must be a valid ImageBuilder pipeline ARN
+
+  PipelineAl2023Arm64Arn:
+    Type: String
+    Description: ARN of the Amazon Linux 2023 arm64 ImageBuilder pipeline
+    AllowedPattern: '^arn:aws[^:]*:imagebuilder:[a-z]{2}-[a-z]+-\d{1}:\d{12}:image-pipeline/.+$'
+    ConstraintDescription: Must be a valid ImageBuilder pipeline ARN
+
+  PipelineUbuntu2404X8664Arn:
+    Type: String
+    Description: ARN of the Ubuntu 24.04 x86_64 ImageBuilder pipeline
+    AllowedPattern: '^arn:aws[^:]*:imagebuilder:[a-z]{2}-[a-z]+-\d{1}:\d{12}:image-pipeline/.+$'
+    ConstraintDescription: Must be a valid ImageBuilder pipeline ARN
+
+  PipelineUbuntu2404Arm64Arn:
+    Type: String
+    Description: ARN of the Ubuntu 24.04 arm64 ImageBuilder pipeline
+    AllowedPattern: '^arn:aws[^:]*:imagebuilder:[a-z]{2}-[a-z]+-\d{1}:\d{12}:image-pipeline/.+$'
+    ConstraintDescription: Must be a valid ImageBuilder pipeline ARN
+
+Resources:
+  #############################################################################
+  # SQS Queue for receiving DLAMI update notifications
+  #############################################################################
+
+  DlamiUpdateQueue:
+    Type: AWS::SQS::Queue
+    Properties:
+      QueueName: !Sub '${AWS::StackName}-dlami-updates'
+      # 4 days retention
+      MessageRetentionPeriod: 345600
+      # 5 minutes visibility timeout (6x Lambda timeout as recommended)
+      VisibilityTimeout: 300
+
+  # Policy allowing the DLAMI SNS topic to send messages to our queue
+  DlamiUpdateQueuePolicy:
+    Type: AWS::SQS::QueuePolicy
+    Properties:
+      Queues:
+        - !Ref DlamiUpdateQueue
+      PolicyDocument:
+        Version: '2012-10-17'
+        Statement:
+          - Sid: AllowDlamiSnsToSendMessage
+            Effect: Allow
+            Principal:
+              Service: sns.amazonaws.com
+            Action: sqs:SendMessage
+            Resource: !GetAtt DlamiUpdateQueue.Arn
+            Condition:
+              ArnEquals:
+                aws:SourceArn: arn:aws:sns:us-west-2:767397762724:dlami-updates
+
+  #############################################################################
+  # SNS Subscription to DLAMI updates topic
+  #############################################################################
+
+  DlamiSnsSubscription:
+    Type: AWS::SNS::Subscription
+    # Wait for queue policy to be applied before subscribing
+    DependsOn: DlamiUpdateQueuePolicy
+    Properties:
+      # AWS-owned DLAMI updates SNS topic (us-west-2 only)
+      TopicArn: arn:aws:sns:us-west-2:767397762724:dlami-updates
+      Protocol: sqs
+      Endpoint: !GetAtt DlamiUpdateQueue.Arn
+      # Deliver raw message body without SNS envelope for simpler parsing
+      RawMessageDelivery: true
+
+  #############################################################################
+  # Lambda function to trigger ImageBuilder pipelines
+  #############################################################################
+
+  TriggerLambdaRole:
+    Type: AWS::IAM::Role
+    Properties:
+      Description: IAM role for DLAMI update trigger Lambda function
+      AssumeRolePolicyDocument:
+        Version: '2012-10-17'
+        Statement:
+          - Effect: Allow
+            Principal:
+              Service: lambda.amazonaws.com
+            Action: sts:AssumeRole
+      ManagedPolicyArns:
+        - !Sub arn:${AWS::Partition}:iam::aws:policy/service-role/AWSLambdaBasicExecutionRole
+      Policies:
+        - PolicyName: SqsAndImageBuilderAccess
+          PolicyDocument:
+            Version: '2012-10-17'
+            Statement:
+              - Sid: SqsAccess
+                Effect: Allow
+                Action:
+                  - sqs:ReceiveMessage
+                  - sqs:DeleteMessage
+                  - sqs:GetQueueAttributes
+                Resource: !GetAtt DlamiUpdateQueue.Arn
+              - Sid: ImageBuilderAccess
+                Effect: Allow
+                Action:
+                  - imagebuilder:StartImagePipelineExecution
+                Resource:
+                  - !Ref PipelineAl2023X8664Arn
+                  - !Ref PipelineAl2023Arm64Arn
+                  - !Ref PipelineUbuntu2404X8664Arn
+                  - !Ref PipelineUbuntu2404Arm64Arn
+
+  TriggerLambda:
+    Type: AWS::Lambda::Function
+    Properties:
+      FunctionName: !Sub '${AWS::StackName}-trigger'
+      Description: Triggers ImageBuilder pipelines when DLAMI updates are published
+      Runtime: python3.12
+      Handler: index.handler
+      Role: !GetAtt TriggerLambdaRole.Arn
+      Timeout: 30
+      Environment:
+        Variables:
+          TARGET_REGION: !Ref TargetRegion
+          PIPELINE_AL2023_X8664: !Ref PipelineAl2023X8664Arn
+          PIPELINE_AL2023_ARM64: !Ref PipelineAl2023Arm64Arn
+          PIPELINE_UBUNTU2404_X8664: !Ref PipelineUbuntu2404X8664Arn
+          PIPELINE_UBUNTU2404_ARM64: !Ref PipelineUbuntu2404Arm64Arn
+      Code:
+        ZipFile: |
+          import boto3
+          import os
+          import json
+
+          def handler(event, context):
+              """
+              Triggered by SQS messages from DLAMI SNS topic.
+              Starts all 4 ImageBuilder pipelines to rebuild AMIs with latest DLAMI.
+              """
+              target_region = os.environ['TARGET_REGION']
+              imagebuilder = boto3.client('imagebuilder', region_name=target_region)
+              
+              pipelines = [
+                  os.environ['PIPELINE_AL2023_X8664'],
+                  os.environ['PIPELINE_AL2023_ARM64'],
+                  os.environ['PIPELINE_UBUNTU2404_X8664'],
+                  os.environ['PIPELINE_UBUNTU2404_ARM64'],
+              ]
+              
+              # Log the trigger event
+              print(f"Received {len(event.get('Records', []))} SQS message(s)")
+              for record in event.get('Records', []):
+                  body = record.get('body', 'N/A')
+                  # Truncate for logging
+                  print(f"Message body: {body[:1000]}...")
+              
+              # Start all pipelines
+              results = []
+              for pipeline_arn in pipelines:
+                  try:
+                      response = imagebuilder.start_image_pipeline_execution(
+                          imagePipelineArn=pipeline_arn
+                      )
+                      print(f"Started pipeline: {pipeline_arn}")
+                      print(f"  Image ARN: {response.get('imageBuildVersionArn', 'N/A')}")
+                      results.append({
+                          'pipeline': pipeline_arn,
+                          'status': 'started',
+                          'imageArn': response.get('imageBuildVersionArn')
+                      })
+                  except imagebuilder.exceptions.ResourceInUseException:
+                      print(f"Pipeline already running: {pipeline_arn}")
+                      results.append({
+                          'pipeline': pipeline_arn,
+                          'status': 'already_running'
+                      })
+                  except Exception as e:
+                      print(f"Failed to start {pipeline_arn}: {e}")
+                      results.append({
+                          'pipeline': pipeline_arn,
+                          'status': 'error',
+                          'error': str(e)
+                      })
+              
+              return {
+                  'statusCode': 200,
+                  'body': json.dumps(results)
+              }
+
+  #############################################################################
+  # Event Source Mapping - connects SQS to Lambda
+  #############################################################################
+
+  SqsEventSourceMapping:
+    Type: AWS::Lambda::EventSourceMapping
+    Properties:
+      EventSourceArn: !GetAtt DlamiUpdateQueue.Arn
+      FunctionName: !Ref TriggerLambda
+      # Process one message at a time to avoid duplicate pipeline triggers
+      BatchSize: 1
+      Enabled: true
+
+Outputs:
+  QueueArn:
+    Description: ARN of the SQS queue receiving DLAMI update notifications
+    Value: !GetAtt DlamiUpdateQueue.Arn
+
+  QueueUrl:
+    Description: URL of the SQS queue (use for manual testing)
+    Value: !Ref DlamiUpdateQueue
+
+  LambdaFunctionArn:
+    Description: ARN of the trigger Lambda function
+    Value: !GetAtt TriggerLambda.Arn
+
+  SubscriptionArn:
+    Description: ARN of the SNS subscription to DLAMI updates
+    Value: !Ref DlamiSnsSubscription
+
+  TargetRegion:
+    Description: Region where ImageBuilder pipelines will be triggered
+    Value: !Ref TargetRegion

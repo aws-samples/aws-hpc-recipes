@@ -18,6 +18,11 @@ Metadata:
         Parameters:
           - PublishToSsm
           - SsmParameterPrefix
+      - Label:
+          default: AMI Lifecycle Management (Optional)
+        Parameters:
+          - EnableLifecyclePolicy
+          - LifecycleDeprecateAfterWeeks
     ParameterLabels:
       SemanticVersion:
         default: Recipe Version
@@ -27,6 +32,10 @@ Metadata:
         default: Publish AMI IDs to SSM Parameter Store
       SsmParameterPrefix:
         default: SSM Parameter Prefix
+      EnableLifecyclePolicy:
+        default: Enable AMI Lifecycle Policy
+      LifecycleDeprecateAfterWeeks:
+        default: Deprecate AMIs After (Weeks)
 
 Parameters:
   SemanticVersion:
@@ -60,6 +69,21 @@ Parameters:
     AllowedPattern: '^/[a-zA-Z0-9/_-]+$'
     ConstraintDescription: Must start with / and contain only alphanumeric characters, hyphens, underscores, and forward slashes
 
+  EnableLifecyclePolicy:
+    Type: String
+    Description: Enable lifecycle policy to deprecate old AMIs. Deprecated AMIs remain usable but are hidden from EC2 console searches.
+    Default: 'false'
+    AllowedValues:
+      - 'true'
+      - 'false'
+
+  LifecycleDeprecateAfterWeeks:
+    Type: Number
+    Description: Deprecate AMIs older than this many weeks. At least 1 AMI is always kept visible regardless of age.
+    Default: 4
+    MinValue: 1
+    MaxValue: 52
+
 Conditions:
   IsWeeklySchedule: !Equals [!Ref BuildSchedule, 'Weekly']
   IsMonthlySchedule: !Equals [!Ref BuildSchedule, 'Monthly']
@@ -67,6 +91,7 @@ Conditions:
     - !Condition IsWeeklySchedule
     - !Condition IsMonthlySchedule
   EnableSsmPublishing: !Equals [!Ref PublishToSsm, 'true']
+  EnableLifecycle: !Equals [!Ref EnableLifecyclePolicy, 'true']
 
 Mappings:
   # DLAMI Base GPU AMI SSM parameter paths
@@ -996,6 +1021,54 @@ Resources:
         - !Ref 'AWS::NoValue'
 
 
+  #############################################################################
+  # AMI Lifecycle Policy Resources
+  # Deprecates old AMIs to keep EC2 console clean while preserving usability
+  #############################################################################
+
+  # IAM Role for lifecycle policy execution
+  LifecyclePolicyRole:
+    Type: AWS::IAM::Role
+    Condition: EnableLifecycle
+    Properties:
+      Description: IAM role for Image Builder lifecycle policy execution
+      AssumeRolePolicyDocument:
+        Version: '2012-10-17'
+        Statement:
+          - Effect: Allow
+            Principal:
+              Service: imagebuilder.amazonaws.com
+            Action: sts:AssumeRole
+      ManagedPolicyArns:
+        - !Sub arn:${AWS::Partition}:iam::aws:policy/service-role/EC2ImageBuilderLifecycleExecutionPolicy
+
+  # Lifecycle policy to deprecate old AMIs
+  # Deprecated AMIs remain usable by PCS but are hidden from EC2 console searches
+  AmiLifecyclePolicy:
+    Type: AWS::ImageBuilder::LifecyclePolicy
+    Condition: EnableLifecycle
+    Properties:
+      Name: !Sub 'dlami-for-pcs-lifecycle-${AWS::StackName}'
+      Description: Deprecates old DLAMI for PCS AMIs while keeping them usable
+      ExecutionRole: !GetAtt LifecyclePolicyRole.Arn
+      ResourceType: AMI_IMAGE
+      Status: ENABLED
+      # Select AMIs by the SourceStack tag applied during distribution
+      ResourceSelection:
+        TagMap:
+          SourceStack: !Ref 'AWS::StackName'
+      PolicyDetails:
+        - Action:
+            Type: DEPRECATE
+          Filter:
+            Type: AGE
+            Unit: WEEKS
+            # Deprecate AMIs older than this many weeks
+            Value: !Ref LifecycleDeprecateAfterWeeks
+            # Always keep at least 1 AMI visible even if older than threshold
+            RetainAtLeast: 1
+
+
 Outputs:
   #############################################################################
   # Pipeline ARNs
@@ -1084,3 +1157,12 @@ Outputs:
   SsmAgentInstallerComponentArn:
     Description: ARN of the SSM Agent Installer component
     Value: !Ref SsmAgentInstallerComponent
+
+  #############################################################################
+  # Lifecycle Policy (only shown when lifecycle policy is enabled)
+  #############################################################################
+
+  LifecyclePolicyArn:
+    Condition: EnableLifecycle
+    Description: ARN of the AMI lifecycle policy
+    Value: !GetAtt AmiLifecyclePolicy.Arn
