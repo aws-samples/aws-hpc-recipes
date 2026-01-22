@@ -23,6 +23,82 @@ This recipe deploys Image Builder pipelines that create PCS-compatible AMIs base
 | `dlami-for-pcs-base-ubuntu2404-x86_64` | Ubuntu 24.04 | x86_64 |
 | `dlami-for-pcs-base-ubuntu2404-arm64` | Ubuntu 24.04 | arm64 |
 
+## Architecture
+
+```mermaid
+flowchart TB
+    subgraph MainStack[Main Stack - Your PCS Region]
+        subgraph Components[ImageBuilder Components]
+            C1[PCS Agent]
+            C2[Slurm 24.11 + 25.05]
+            C3[EFS Utils]
+            C4[CloudWatch + SSM Agents]
+        end
+
+        subgraph Recipes[Image Recipes]
+            R1[AL2023 x86_64]
+            R2[AL2023 arm64]
+            R3[Ubuntu 24.04 x86_64]
+            R4[Ubuntu 24.04 arm64]
+        end
+
+        subgraph Pipelines[Image Pipelines]
+            P1[Pipeline 1: AL2023 x86]
+            P2[Pipeline 2: AL2023 arm64]
+            P3[Pipeline 3: Ubuntu x86]
+            P4[Pipeline 4: Ubuntu arm64]
+        end
+
+        Components --> Recipes
+        R1 --> P1
+        R2 --> P2
+        R3 --> P3
+        R4 --> P4
+
+        AMIs[(Built AMIs)]
+        P1 --> AMIs
+        P2 --> AMIs
+        P3 --> AMIs
+        P4 --> AMIs
+
+        subgraph Optional[Optional Features]
+            SSM_Lambda[Lambda: SSM Update]
+            SSM_Params[(SSM Parameters)]
+            Lifecycle[Lifecycle Policy]
+        end
+
+        AMIs --> SSM_Lambda
+        SSM_Lambda --> SSM_Params
+        Lifecycle -->|deprecates old| AMIs
+    end
+
+    subgraph TriggerStack[Trigger Stack - us-west-2]
+        SNS[AWS DLAMI SNS Topic]
+        SQS[SQS Queue]
+        TriggerLambda[Lambda: Trigger]
+        SNS --> SQS
+        SQS --> TriggerLambda
+    end
+
+    subgraph Inputs[Build Triggers]
+        User((Manual))
+        Schedule[Scheduled: Weekly/Monthly]
+        DLAMI_SSM[AWS DLAMI SSM Params]
+    end
+
+    DLAMI_SSM --> Recipes
+    User --> Pipelines
+    Schedule --> Pipelines
+    TriggerLambda -->|cross-region| Pipelines
+
+    subgraph PCS[PCS Cluster]
+        CNG[Compute Node Groups]
+    end
+
+    AMIs --> CNG
+    SSM_Params -.-> CNG
+```
+
 ## Quick Start
 
 ### 1. Deploy the Stack
