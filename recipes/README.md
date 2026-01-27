@@ -247,6 +247,11 @@ You can use an HPC Recipe for AWS in several ways:
 * **About**: Set up Entra ID with RES
 * **Usage**: [README.md](res/entra_id/README.md)
 
+#### res_blue_green ![tag](https://img.shields.io/badge/-res-%237DCEA0) 
+
+* **About**: RES Blue/Green Deployment
+* **Usage**: [README.md](res/res_blue_green/README.md)
+
 #### res_demo_env ![tag](https://img.shields.io/badge/-ad-%23AAB7B8) ![tag](https://img.shields.io/badge/-cognito-%237DCEA0) ![tag](https://img.shields.io/badge/-core-%23146EB4) ![tag](https://img.shields.io/badge/-dcv-%23AAB7B8) ![tag](https://img.shields.io/badge/-ec2-%23FF9900) ![tag](https://img.shields.io/badge/-efs-%237DCEA0) ![tag](https://img.shields.io/badge/-res-%237DCEA0) ![tag](https://img.shields.io/badge/-sso-%23AAB7B8) 
 
 * **About**: Research and Engineering Studio (RES) on AWS demo environment
@@ -256,6 +261,11 @@ You can use an HPC Recipe for AWS in several ways:
 
 * **About**: RES-ready AMIs
 * **Usage**: [README.md](res/res_ready_ami/README.md)
+
+#### res_ready_components ![tag](https://img.shields.io/badge/-ec2-%23FF9900) ![tag](https://img.shields.io/badge/-res-%237DCEA0) 
+
+* **About**: RES-Ready AMI EC2 image builder components for building out Software stacks
+* **Usage**: [README.md](res/res_ready_components/README.md)
 
 
 ### :arrow_right: security: Security configuration
