@@ -20,7 +20,7 @@ fi
 
 build_and_install_rpm() {
     logger "RPM install from source" "INFO"
-    sudo yum -y install git rpm-build make rust cargo openssl-devel golang
+    sudo yum -y install git rpm-build make rust cargo openssl-devel
     # Create a temporary directory
     local temp_dir=$(mktemp -d)
     cd "$temp_dir" || exit 1
