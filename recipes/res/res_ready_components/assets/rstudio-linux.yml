@@ -1,0 +1,90 @@
+name: InstallRStudio
+description: Installs RStudio Desktop
+schemaVersion: 1.0
+
+parameters:
+  - RStudioVersion:
+      type: string
+      default: "2026.01.0-392"
+      description: "The version of RStudio Desktop to install."
+
+phases:
+  - name: build
+    steps:
+      - name: DetectOS
+        action: ExecuteBash
+        inputs:
+          commands:
+            - |
+              #!/bin/bash
+              if [ -f /etc/os-release ]; then
+                . /etc/os-release
+                echo "export OS_NAME=$ID" >> /tmp/os_info.sh
+                echo "export OS_CODENAME=$VERSION_CODENAME" >> /tmp/os_info.sh
+              fi
+
+      - name: InstallRFromCRAN
+        action: ExecuteBash
+        inputs:
+          commands:
+            - |
+              #!/bin/bash
+              set -e
+              source /tmp/os_info.sh
+
+              case $OS_NAME in
+                ubuntu)
+                  add-apt-repository -y universe
+                  apt-get update
+                  apt-get install -y --no-install-recommends software-properties-common dirmngr gdebi-core
+
+                  # Add CRAN GPG Key
+                  wget -qO- https://cloud.r-project.org/bin/linux/ubuntu/marutter_pubkey.asc | tee -a /etc/apt/trusted.gpg.d/cran_ubuntu_key.asc
+
+                  # Verify the GPG key fingerprint
+                  gpg --show-keys /etc/apt/trusted.gpg.d/cran_ubuntu_key.asc
+
+                  # Add CRAN Repo
+                  add-apt-repository "deb https://cloud.r-project.org/bin/linux/ubuntu $(lsb_release -cs)-cran40/"
+
+                  apt-get update
+                  apt-get install -y r-base r-base-dev
+                  ;;
+
+                rocky|rhel)
+                  dnf install -y epel-release
+                  dnf config-manager --set-enabled crb
+                  dnf install -y R R-devel wget
+                  ;;
+
+                amzn)
+                  dnf install -y R R-devel wget
+                  ;;
+              esac
+
+      - name: InstallRStudio
+        action: ExecuteBash
+        inputs:
+          commands:
+            - |
+              #!/bin/bash
+              set -e
+              source /tmp/os_info.sh
+              VERSION="{{ RStudioVersion }}"
+
+              case $OS_NAME in
+                ubuntu)
+                  echo "Installing RStudio $VERSION via gdebi..."
+                  wget "https://download1.rstudio.org/electron/jammy/amd64/rstudio-${VERSION}-amd64.deb"
+                  # gdebi handles the libclang-dev and other dependencies automatically
+                  gdebi -n "rstudio-${VERSION}-amd64.deb"
+                  rm "rstudio-${VERSION}-amd64.deb"
+                  ;;
+
+                rocky|rhel|amzn)
+                  echo "Installing RStudio $VERSION via dnf..."
+                  wget "https://download1.rstudio.org/electron/rhel9/x86_64/rstudio-${VERSION}-x86_64.rpm"
+                  dnf install -y "./rstudio-${VERSION}-x86_64.rpm"
+                  rm "rstudio-${VERSION}-x86_64.rpm"
+                  ;;
+              esac
