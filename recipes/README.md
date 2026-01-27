@@ -18,6 +18,11 @@ You can use an HPC Recipe for AWS in several ways:
 
 ### :arrow_right: batch: AWS Batch
 
+#### parakeet_transcription_awsbatch_nvidia ![tag](https://img.shields.io/badge/-batch-%23FF9900) ![tag](https://img.shields.io/badge/-gpu-%23AAB7B8) ![tag](https://img.shields.io/badge/-nvidia-%23AAB7B8) ![tag](https://img.shields.io/badge/-transcription-%23AAB7B8) 
+
+* **About**: Parakeet Audio Transcription powered by AWS Batch and NVIDIA GPUs
+* **Usage**: [README.md](batch/parakeet_transcription_awsbatch_nvidia/README.md)
+
 #### whisper_transcription_awsbatch_inferentia ![tag](https://img.shields.io/badge/-batch-%23FF9900) ![tag](https://img.shields.io/badge/-inferentia-%237DCEA0) 
 
 * **About**: Whisper audio transcription powered by AWS Batch and AWS Inferentia
