@@ -101,7 +101,7 @@ flowchart TB
 
 ## Quick Start
 
-### 1. Deploy the Stack
+### 1. Deploy the Stack (~5-10 minutes)
 
 Deploy in the **same region where you run PCS** (pipelines build AMIs locally):
 
@@ -125,6 +125,7 @@ By default, builds are manual. Trigger a pipeline:
 ```shell
 # Get pipeline ARN (example: AL2023 x86_64)
 PIPELINE_ARN=$(aws cloudformation describe-stacks \
+    --region us-east-2 \
     --stack-name dlami-for-pcs \
     --query "Stacks[0].Outputs[?OutputKey=='PipelineAl2023X8664Arn'].OutputValue" \
     --output text)
