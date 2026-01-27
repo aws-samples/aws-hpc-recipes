@@ -20,7 +20,7 @@ fi
 
 build_and_install_rpm() {
     logger "RPM install from source" "INFO"
-    sudo yum -y install git rpm-build make rust cargo openssl-devel
+    sudo yum -y install git rpm-build make rust cargo openssl-devel golang
     # Create a temporary directory
     local temp_dir=$(mktemp -d)
     cd "$temp_dir" || exit 1
@@ -35,7 +35,7 @@ build_and_install_rpm() {
 build_and_install_deb() {
     logger "DEB install from source" "INFO"
     sudo apt-get update
-    sudo apt-get -y install git binutils rustc cargo pkg-config libssl-dev
+    sudo apt-get -y install git binutils rustc cargo pkg-config libssl-dev golang-go
     # Create a temporary directory
     local temp_dir=$(mktemp -d)
     cd "$temp_dir" || exit 1
