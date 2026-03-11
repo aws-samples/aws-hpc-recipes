@@ -1,0 +1,34 @@
+MIME-Version: 1.0
+Content-Type: multipart/mixed; boundary="==MYBOUNDARY=="
+
+--==MYBOUNDARY==
+Content-Type: text/cloud-config; charset="us-ascii"
+MIME-Version: 1.0
+
+packages:
+- amazon-efs-utils
+
+runcmd:
+# Mount EFS filesystem as /home
+- mkdir -p /tmp/home
+- rsync -aA /home/ /tmp/home
+- echo "fs-04fd9378f4d165787:/ /home efs tls,_netdev" >> /etc/fstab
+- mount -a -t efs defaults
+- rsync -aA --ignore-existing /tmp/home/ /home
+- rm -rf /tmp/home/
+# If provided, mount FSxL filesystem as /shared
+- if [ ! -z "fs-0d165c6f24ece76d2" ]; then amazon-linux-extras install -y lustre=latest; mkdir -p /shared; chmod a+rwx /shared; mount -t lustre fs-0d165c6f24ece76d2.fsx.us-east-1.amazonaws.com@tcp:/ldqypamv /shared; fi
+
+--==MYBOUNDARY==
+Content-Type: text/x-shellscript; charset="us-ascii"
+MIME-Version: 1.0
+
+#!/bin/bash
+# -------------------------------------------------------
+# 2. Add Slurm bin to PATH for ALL users (system-wide)
+# -------------------------------------------------------
+
+echo 'PATH=/usr/local/sbin:/usr/local/bin:/usr/sbin:/usr/bin:/sbin:/bin:/opt/aws/pcs/scheduler/slurm-25.05/bin' >> /etc/environment
+export CONDA_PLUGINS_AUTO_ACCEPT_TOS=yes
+
+--==MYBOUNDARY==--
