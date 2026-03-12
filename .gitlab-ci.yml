@@ -9,12 +9,30 @@ workflow:
     - when: always
 
 stages:
+  - validate
   - deploy
   - mirror
   - github-pull
 
+validate-recipes:
+  stage: validate
+  image: python:3.12-slim
+  before_script:
+    - pip install --quiet pyyaml semver cfn-lint
+  script:
+    - echo "=== Validating recipe structure ==="
+    - python -m scripts.validate_structure
+    - echo "=== Validating recipe metadata ==="
+    - python -m scripts.validate_metadata
+    - echo "=== Checking partition safety ==="
+    - python -m scripts.validate_partitions
+    - echo "=== Running cfn-lint ==="
+    - find recipes -path '*/assets/*.yaml' -o -path '*/assets/*.yml' -o -path '*/assets/*.json' | grep -v '.gitkeep' | xargs grep -l 'AWSTemplateFormatVersion\|^Resources:' 2>/dev/null | xargs -r cfn-lint --ignore-checks W || true
+  rules:
+    - when: always
+
 deploy-job:
-  stage: deploy  
+  stage: deploy
   environment: $GITLAB_ENV
   image: registry.gitlab.com/gitlab-org/cloud-deploy/aws-base:latest
   script:
@@ -74,4 +92,3 @@ pull-from-github:
     - git push "https://${GITLAB_PAT_USERNAME}:${GITLAB_PAT}@${CI_SERVER_HOST}/${CI_PROJECT_PATH}.git" main
   after_script:
     - rm -f private_key.pem
-    

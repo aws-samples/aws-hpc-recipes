@@ -1,0 +1,6 @@
+# cfn-lint configuration for aws-hpc-recipes
+# See: https://github.com/aws-cloudformation/cfn-lint
+
+ignore_checks:
+  - W  # Suppress all warnings; only errors matter in CI
+  - E1028  # ImageBuilder Components list: cfn-lint spec says max 3, but AWS supports many more

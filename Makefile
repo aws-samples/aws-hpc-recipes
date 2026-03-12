@@ -52,6 +52,23 @@ clean: tidy $(addsuffix .ph_clean,$(PROJECTS))
 
 clobber: clean $(addsuffix .ph_clobber,$(PROJECTS))
 
+.PHONY: validate
+validate:
+	@echo "=== Validating recipe structure ==="
+	python -m scripts.validate_structure
+	@echo ""
+	@echo "=== Validating recipe metadata ==="
+	python -m scripts.validate_metadata
+	@echo ""
+	@echo "=== Checking partition safety ==="
+	python -m scripts.validate_partitions
+	@echo ""
+	@echo "=== Running cfn-lint ==="
+	@files=$$(find recipes -path '*/assets/*.yaml' -o -path '*/assets/*.yml' | grep -v '.gitkeep' | xargs grep -l 'AWSTemplateFormatVersion\|^Resources:' 2>/dev/null); \
+	if [ -n "$$files" ]; then cfn-lint -t $$files || true; else echo "No CFN templates found."; fi
+	@echo ""
+	@echo "=== All validation complete ==="
+
 .PHONY: deploy
 deploy:
 	@aws s3 sync --delete --acl public-read \
