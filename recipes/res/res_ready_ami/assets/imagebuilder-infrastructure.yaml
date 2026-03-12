@@ -58,9 +58,9 @@ Resources:
             Service: ec2.amazonaws.com
           Action: "sts:AssumeRole"
       ManagedPolicyArns: 
-        - arn:aws:iam::aws:policy/AmazonS3ReadOnlyAccess
-        - arn:aws:iam::aws:policy/AmazonSSMManagedInstanceCore
-        - arn:aws:iam::aws:policy/EC2InstanceProfileForImageBuilder
+        - !Sub arn:${AWS::Partition}:iam::aws:policy/AmazonS3ReadOnlyAccess
+        - !Sub arn:${AWS::Partition}:iam::aws:policy/AmazonSSMManagedInstanceCore
+        - !Sub arn:${AWS::Partition}:iam::aws:policy/EC2InstanceProfileForImageBuilder
       Policies:
         - PolicyName: !Sub ${AWS::StackName}-RES-EnvironmentPolicy
           PolicyDocument:
@@ -89,14 +89,14 @@ Resources:
                 - s3:GetObject
                 - s3:ListBucket
               Resource:
-                - "arn:aws:s3:::dcv-license.us-east-1/*"
-                - "arn:aws:s3:::ec2-linux-nvidia-drivers/*"
-                - "arn:aws:s3:::ec2-linux-nvidia-drivers"
-                - "arn:aws:s3:::nvidia-gaming/*"
-                - "arn:aws:s3:::nvidia-gaming-drivers"
-                - "arn:aws:s3:::nvidia-gaming-drivers/*"
-                - "arn:aws:s3:::ec2-amd-linux-drivers/*"
-                - "arn:aws:s3:::ec2-amd-linux-drivers"
+                - "arn:aws:s3:::dcv-license.us-east-1/*" # partition-exception: AWS-owned S3 bucket for DCV license, standard partition only
+                - "arn:aws:s3:::ec2-linux-nvidia-drivers/*" # partition-exception: AWS-owned S3 bucket for NVIDIA drivers, standard partition only
+                - "arn:aws:s3:::ec2-linux-nvidia-drivers" # partition-exception: AWS-owned S3 bucket for NVIDIA drivers, standard partition only
+                - "arn:aws:s3:::nvidia-gaming/*" # partition-exception: AWS-owned S3 bucket for NVIDIA gaming drivers, standard partition only
+                - "arn:aws:s3:::nvidia-gaming-drivers" # partition-exception: AWS-owned S3 bucket for NVIDIA gaming drivers, standard partition only
+                - "arn:aws:s3:::nvidia-gaming-drivers/*" # partition-exception: AWS-owned S3 bucket for NVIDIA gaming drivers, standard partition only
+                - "arn:aws:s3:::ec2-amd-linux-drivers/*" # partition-exception: AWS-owned S3 bucket for AMD drivers, standard partition only
+                - "arn:aws:s3:::ec2-amd-linux-drivers" # partition-exception: AWS-owned S3 bucket for AMD drivers, standard partition only
       RoleName: !Sub "${EnvironmentName}-EC2InstanceProfileForImageBuilder"
 
   RESEC2InstanceProfileForImageBuilder:

@@ -27,7 +27,7 @@ Parameters:
 
 Resources:
 
- IntelConfiguration:
+  IntelConfiguration:
     Type: 'AWS::ImageBuilder::InfrastructureConfiguration'
     Properties:
       Name: 'intel'
@@ -41,7 +41,7 @@ Resources:
       ResourceTags:
         HPCRecipes: 'true'
 
- AmdConfiguration:
+  AmdConfiguration:
     Type: 'AWS::ImageBuilder::InfrastructureConfiguration'
     Properties:
       Name: 'amd'
@@ -55,7 +55,7 @@ Resources:
       ResourceTags:
         HPCRecipes: 'true'
 
- GravitonConfiguration:
+  GravitonConfiguration:
     Type: 'AWS::ImageBuilder::InfrastructureConfiguration'
     Properties:
       Name: 'graviton'

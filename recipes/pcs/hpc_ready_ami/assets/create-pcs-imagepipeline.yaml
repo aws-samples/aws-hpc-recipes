@@ -1,6 +1,12 @@
 AWSTemplateFormatVersion: '2010-09-09'
 Description: Build a PCS-compatible AMI
 
+Metadata:
+  cfn-lint:
+    config:
+      ignore_checks:
+        - E1028  # ImageBuilder Components list exceeds cfn-lint's stale max-3 spec; actual AWS limit is much higher
+
 Mappings:
   # AMI IDs are region-specific. These are for us-east-2. 
   # We use SSM to lookup AMIs across regions. See line 130. 
@@ -22,8 +28,8 @@ Mappings:
       name: RHEL 9
       deviceName: /dev/sda1
       size: 64
-      x86: arn:aws:imagebuilder:us-east-1:aws:image/red-hat-enterprise-linux-9-x86/x.x.x
-      arm64: arn:aws:imagebuilder:us-east-1:aws:image/red-hat-enterprise-linux-9-arm64/x.x.x
+      x86: arn:aws:imagebuilder:us-east-1:aws:image/red-hat-enterprise-linux-9-x86/x.x.x # partition-exception: AWS-owned ImageBuilder resource, standard partition only
+      arm64: arn:aws:imagebuilder:us-east-1:aws:image/red-hat-enterprise-linux-9-arm64/x.x.x # partition-exception: AWS-owned ImageBuilder resource, standard partition only
     ubuntu-22-04:
       name: Ubuntu 22.04
       deviceName: /dev/sda1

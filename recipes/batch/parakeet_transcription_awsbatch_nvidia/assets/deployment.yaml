@@ -208,11 +208,11 @@ Resources:
             Service: ec2.amazonaws.com
           Action: sts:AssumeRole
       ManagedPolicyArns:
-      - arn:aws:iam::aws:policy/service-role/AmazonEC2ContainerServiceforEC2Role
-      - arn:aws:iam::aws:policy/CloudWatchFullAccessV2
-      - arn:aws:iam::aws:policy/AmazonS3FullAccess
-      - arn:aws:iam::aws:policy/CloudWatchAgentServerPolicy
-      - arn:aws:iam::aws:policy/AmazonSSMManagedInstanceCore
+      - !Sub arn:${AWS::Partition}:iam::aws:policy/service-role/AmazonEC2ContainerServiceforEC2Role
+      - !Sub arn:${AWS::Partition}:iam::aws:policy/CloudWatchFullAccessV2
+      - !Sub arn:${AWS::Partition}:iam::aws:policy/AmazonS3FullAccess
+      - !Sub arn:${AWS::Partition}:iam::aws:policy/CloudWatchAgentServerPolicy
+      - !Sub arn:${AWS::Partition}:iam::aws:policy/AmazonSSMManagedInstanceCore
 
   ECSInstanceProfile:
     Type: AWS::IAM::InstanceProfile
@@ -394,8 +394,8 @@ Resources:
             Principal: "*"
             Action: "s3:*"
             Resource:
-              - !Sub "arn:aws:s3:::${InputBucket}/*"
-              - !Sub "arn:aws:s3:::${InputBucket}"
+              - !Sub "arn:${AWS::Partition}:s3:::${InputBucket}/*"
+              - !Sub "arn:${AWS::Partition}:s3:::${InputBucket}"
             Condition:
               Bool:
                 "aws:SecureTransport": false
@@ -411,8 +411,8 @@ Resources:
             Principal: "*"
             Action: "s3:*"
             Resource:
-              - !Sub "arn:aws:s3:::${OutputBucket}/*"
-              - !Sub "arn:aws:s3:::${OutputBucket}"
+              - !Sub "arn:${AWS::Partition}:s3:::${OutputBucket}/*"
+              - !Sub "arn:${AWS::Partition}:s3:::${OutputBucket}"
             Condition:
               Bool:
                 "aws:SecureTransport": false
@@ -428,8 +428,8 @@ Resources:
             Principal: "*"
             Action: "s3:*"
             Resource:
-              - !Sub "arn:aws:s3:::${S3BucketLogs}/*"
-              - !Sub "arn:aws:s3:::${S3BucketLogs}"
+              - !Sub "arn:${AWS::Partition}:s3:::${S3BucketLogs}/*"
+              - !Sub "arn:${AWS::Partition}:s3:::${S3BucketLogs}"
             Condition:
               Bool:
                 "aws:SecureTransport": false
@@ -437,7 +437,7 @@ Resources:
             Principal:
               Service: logging.s3.amazonaws.com
             Action: s3:PutObject
-            Resource: !Sub arn:aws:s3:::${S3BucketLogs}/*
+            Resource: !Sub arn:${AWS::Partition}:s3:::${S3BucketLogs}/*
             Condition:
               Bool:
                 aws:SecureTransport: true

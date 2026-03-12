@@ -66,7 +66,7 @@ Resources:
       ScheduleExpression: !Ref ReleaseSchedule
       ScheduleExpressionTimezone: 'UTC'
       Target:
-        Arn: arn:aws:scheduler:::aws-sdk:fsx:createDataRepositoryTask
+        Arn: arn:aws:scheduler:::aws-sdk:fsx:createDataRepositoryTask # partition-exception: EventBridge Scheduler SDK integration ARN format, not a resource ARN
         RoleArn: !GetAtt EventBridgeRoleFSxRelease.Arn
         # Release files not touched within 5 days
         Input: !Sub [ '{ "FileSystemId": "${FSxLustreFileSystem}", "Report": { "Enabled": "false" }, "Type": "RELEASE_DATA_FROM_FILESYSTEM", "Paths": ${ReleasePathString}, "ReleaseConfiguration": { "DurationSinceLastAccess": { "Unit": "DAYS", "Value": ${DropDataOlderThanXDays} } } }', { ReleasePathString: { Fn::ToJsonString: !Ref ReleasePaths }}]

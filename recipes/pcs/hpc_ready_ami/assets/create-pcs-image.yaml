@@ -22,8 +22,8 @@ Mappings:
       name: RHEL 9
       deviceName: /dev/sda1
       size: 64
-      x86: arn:aws:imagebuilder:us-east-1:aws:image/red-hat-enterprise-linux-9-x86/x.x.x
-      arm64: arn:aws:imagebuilder:us-east-1:aws:image/red-hat-enterprise-linux-9-arm64/x.x.x
+      x86: arn:aws:imagebuilder:us-east-1:aws:image/red-hat-enterprise-linux-9-x86/x.x.x # partition-exception: AWS-owned ImageBuilder resource, standard partition only
+      arm64: arn:aws:imagebuilder:us-east-1:aws:image/red-hat-enterprise-linux-9-arm64/x.x.x # partition-exception: AWS-owned ImageBuilder resource, standard partition only
     ubuntu-22-04:
       name: Ubuntu 22.04
       deviceName: /dev/sda1

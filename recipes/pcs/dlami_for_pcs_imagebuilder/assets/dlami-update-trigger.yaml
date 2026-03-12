@@ -90,7 +90,7 @@ Resources:
             Resource: !GetAtt DlamiUpdateQueue.Arn
             Condition:
               ArnEquals:
-                aws:SourceArn: arn:aws:sns:us-west-2:767397762724:dlami-updates
+                aws:SourceArn: arn:aws:sns:us-west-2:767397762724:dlami-updates # partition-exception: AWS-owned SNS topic, only exists in us-west-2 standard partition
 
   #############################################################################
   # SNS Subscription to DLAMI updates topic
@@ -102,7 +102,7 @@ Resources:
     DependsOn: DlamiUpdateQueuePolicy
     Properties:
       # AWS-owned DLAMI updates SNS topic (us-west-2 only)
-      TopicArn: arn:aws:sns:us-west-2:767397762724:dlami-updates
+      TopicArn: arn:aws:sns:us-west-2:767397762724:dlami-updates # partition-exception: AWS-owned SNS topic, only exists in us-west-2 standard partition
       Protocol: sqs
       Endpoint: !GetAtt DlamiUpdateQueue.Arn
       # Deliver raw message body without SNS envelope for simpler parsing

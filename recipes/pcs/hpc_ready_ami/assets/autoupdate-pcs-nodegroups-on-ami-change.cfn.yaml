@@ -14,7 +14,7 @@ Parameters:
   ImageSemanticVersion:
     Type: String
     Default: "0.0.1"
-    Description: 'Semantic version of the Image built by ImagePipeline Builder. This is used as a filter to track EventBridge events for one version of image. The actual image version is in format: ${ImageSemanticVersion}/${BuildNumber}, where BuildNumber is automatically incremented based on triggered pipeline builds (cron / manual / other). Do not specify the BuildNumber here.'
+    Description: 'Semantic version of the Image built by ImagePipeline Builder. This is used as a filter to track EventBridge events for one version of image. The actual image version is in format: <ImageSemanticVersion>/<BuildNumber>, where BuildNumber is automatically incremented based on triggered pipeline builds (cron / manual / other). Do not specify the BuildNumber here.'
 
 Resources:
   LambdaExecutionRole:

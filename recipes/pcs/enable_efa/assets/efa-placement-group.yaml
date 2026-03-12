@@ -69,7 +69,7 @@ Resources:
                   responseData['Error'] = str(e)
                   cfnresponse.send(event, context, cfnresponse.FAILED, responseData)
 
-      Runtime: python3.8
+      Runtime: python3.12
       Timeout: 30
 
   PlacementGroup:
