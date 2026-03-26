@@ -3,27 +3,7 @@
 
 This recipe provides a comprehensive monitoring solution for AWS Parallel Computing Service (PCS) clusters running Slurm workloads. By deploying Slurm Exporter and Prometheus, you gain deep visibility into your HPC cluster's performance, resource utilization, job queues, and scheduler operations.The monitoring stack consists of two critical services that work together to collect, store, and expose metrics from your Slurm environment:
 - *Slurm Exporter (v1.2.0)* - A specialized Prometheus exporter that interfaces directly with Slurm commands to collect cluster-specific metrics including job states, queue depths, node availability, partition information, and scheduler performance. It exposes these metrics on port 9341 for Prometheus to scrape.
-- *Prometheus (v3.10.0)* - A powerful time-series database and monitoring system that scrapes metrics from Slurm Exporter every 30 seconds, stores them with 15-day retention, and provides a query interface and web UI on port 9090. This enables you to track trends, set up alerts, and integrate with visualization tools like Grafana.Together, these services provide the foundation for understanding cluster utilization, identifying bottlenecks, optimizing job scheduling, and maintaining operational awareness of your HPC infrastructure.Architecture OverviewThe monitoring solution deploys on your PCS head node with the following infrastructure:
-┌─────────────────────────────────────────────────────┐
-│              PCS Head Node                          │
-│                                                     │
-│  ┌──────────────────┐         ┌─────────────────┐ │
-│  │  Slurm Scheduler │────────▶│ Slurm Exporter  │ │
-│  │  (slurmctld)     │         │   Port: 9341    │ │
-│  └──────────────────┘         └────────┬────────┘ │
-│                                         │          │
-│                                         │ Scrape   │
-│                                         ▼          │
-│                                ┌─────────────────┐ │
-│                                │   Prometheus    │ │
-│                                │   Port: 9090    │ │
-│                                │ Retention: 15d  │ │
-│                                └────────┬────────┘ │
-│                                         │          │
-│                                         ▼          │
-│                                   [Grafana]        │
-│                              (Optional Integration)│
-└─────────────────────────────────────────────────────┘
+- *Prometheus (v3.10.0)* - A powerful time-series database and monitoring system that scrapes metrics from Slurm Exporter every 30 seconds, stores them with 15-day retention, and provides a query interface and web UI on port 9090. This enables you to track trends, set up alerts, and integrate with visualization tools like Grafana.Together, these services provide the foundation for understanding cluster utilization, identifying bottlenecks, optimizing job scheduling, and maintaining operational awareness of your HPC infrastructure.Architecture
 
 Critical Services:
 - Slurm Exporter - Runs as slurm_exporter.service, collects metrics via Slurm CLI commands
@@ -75,18 +55,18 @@ The script will:
 ### Configuration
 #### Slurm Exporter Settings
 The exporter is configured with these parameters:
-    - Listen address: :9341 (all interfaces)
-    - Command timeout: 10 seconds
-    - Log level: infoPATH: Includes /opt/aws/pcs/scheduler/slurm-25.05/bin for Slurm commands
-    - Restart policy: Automatic restart on failure
+- Listen address: :9341 (all interfaces)
+- Command timeout: 10 seconds
+- Log level: infoPATH: Includes /opt/aws/pcs/scheduler/slurm-25.05/bin for Slurm commands
+- Restart policy: Automatic restart on failure
 #### Prometheus Configuration
 Default scrape configuration (/etc/prometheus/prometheus.yml):
-    - Global scrape interval: 30 seconds
-    - Evaluation interval: 30 seconds
-    - Retention period: 15 days
-    - Scrape targets:
-        - Prometheus self-monitoring on port 9090
-        - Slurm Exporter on port 9341 with 30-second scrape interval
+- Global scrape interval: 30 seconds
+- Evaluation interval: 30 seconds
+- Retention period: 15 days
+- Scrape targets:
+    - Prometheus self-monitoring on port 9090
+    - Slurm Exporter on port 9341 with 30-second scrape interval
 
 To modify the configuration, edit /etc/prometheus/prometheus.yml and reload
 
@@ -151,13 +131,6 @@ This dashboard provides comprehensive visualization of Slurm cluster metrics inc
 https://grafana.com/grafana/dashboards/4323-slurm-dashboard/
 ```
 Setup: Add your Prometheus instance as a data source (URL: http://<head-node-ip>:9090), then import the dashboard using the URL above.
-
-##### 2. FSx for Lustre Dashboard
-If your PCS cluster uses Amazon FSx for Lustre, this dashboard displays filesystem performance and capacity metrics.
-```
-https://grafana.com/grafana/dashboards/20906-fsx/
-```
-Setup: For this dashboard, you need to create an additional data source for Amazon CloudWatch in Grafana, then import the dashboard.
 
 ## Troubleshooting
 
