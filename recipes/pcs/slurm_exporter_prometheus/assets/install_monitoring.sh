@@ -35,7 +35,8 @@ BASE_PATH="/usr/local/sbin:/usr/local/bin:/usr/sbin:/usr/bin:/sbin:/bin"
 echo "[1/4] Installing slurm_exporter v${SLURM_EXPORTER_VERSION}..."
 
 curl -L -o /tmp/slurm_exporter.tar.gz \
-  "https://github.com/SckyzO/slurm_exporter/releases/download/v${SLURM_EXPORTER_VERSION}/slurm_exporter_${SLURM_EXPORTER_VERSION}_linux_amd64.tar.gz"
+  "https://github.com/SckyzO/slurm_exporter/releases/download/v${SLURM_EXPORTER_VERSION}/slurm_exporter-${SLURM_EXPORTER_VERSION}-linux_amd64.tar.gz"
+
 
 tar -xzf /tmp/slurm_exporter.tar.gz -C /tmp/
 install -m 0755 /tmp/slurm_exporter /usr/local/bin/slurm_exporter
