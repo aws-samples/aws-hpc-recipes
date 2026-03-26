@@ -19,7 +19,7 @@ set -euo pipefail
 # -------------------------------------------------------
 # Configuration
 # -------------------------------------------------------
-SLURM_EXPORTER_VERSION="1.2.0"
+SLURM_EXPORTER_VERSION="1.5.1"
 PROMETHEUS_VERSION="2.51.2"
 AWS_REGION="us-east-1"
 
