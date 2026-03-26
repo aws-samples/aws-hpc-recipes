@@ -159,7 +159,7 @@ EOF
 chown -R prometheus:prometheus /etc/prometheus /var/lib/prometheus
 
 # Validate the config
-promtool check-config /etc/prometheus/prometheus.yml
+promtool check config /etc/prometheus/prometheus.yml
 
 # -------------------------------------------------------
 # 4. Start Prometheus
