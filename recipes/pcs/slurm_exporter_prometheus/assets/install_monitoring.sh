@@ -88,7 +88,6 @@ install -m 0755 /tmp/prometheus-${PROMETHEUS_VERSION}.linux-amd64/promtool /usr/
 
 mkdir -p /etc/prometheus /var/lib/prometheus
 useradd --no-create-home --shell /bin/false prometheus || true
-chown -R prometheus:prometheus /etc/prometheus /var/lib/prometheus
 
 # -------------------------------------------------------
 # 3. Configure Prometheus with EC2 service discovery
@@ -157,7 +156,7 @@ scrape_configs:
         target_label: availability_zone
 EOF
 
-chown prometheus:prometheus /etc/prometheus/prometheus.yml
+chown -R prometheus:prometheus /etc/prometheus /var/lib/prometheus
 
 # Validate the config
 promtool check-config /etc/prometheus/prometheus.yml
