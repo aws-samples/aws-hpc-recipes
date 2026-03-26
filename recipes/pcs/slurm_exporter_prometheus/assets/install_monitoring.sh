@@ -95,7 +95,7 @@ useradd --no-create-home --shell /bin/false prometheus || true
 echo "[3/4] Writing Prometheus configuration..."
 
 # Detect the head node's private IP at runtime
-HEAD_NODE_IP=$(curl -s http://[IP_ADDRESS]/latest/meta-data/local-ipv4)
+HEAD_NODE_IP=localhost
 
 cat > /etc/prometheus/prometheus.yml << EOF
 global:
