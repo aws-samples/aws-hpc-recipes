@@ -295,7 +295,7 @@ Resources:
                   - mkdir -p /fsx 
                   - mount -t lustre -o relatime,flock ${FSxLustreDns}@tcp:/${FSxLustreMountName} /fsx
                   - chmod 777 /fsx
-                --==MYBOUNDARY==
+                --==MYBOUNDARY==--
               - EfsFilesystem: !GetAtt [ EfsStorage, Outputs.EFSFilesystemId ]
                 FSxLustreDns: !GetAtt FSxLustreLookup.DNSName
                 FSxLustreMountName: !GetAtt FSxLustreLookup.MountName
@@ -362,7 +362,7 @@ Resources:
                   - mkdir -p /fsx 
                   - mount -t lustre -o relatime,flock ${FSxLustreDns}@tcp:/${FSxLustreMountName} /fsx
                   - chmod 777 /fsx
-                --==MYBOUNDARY==
+                --==MYBOUNDARY==--
               - EfsFilesystem: !GetAtt [ EfsStorage, Outputs.EFSFilesystemId ]
                 FSxLustreDns: !GetAtt FSxLustreLookup.DNSName
                 FSxLustreMountName: !GetAtt FSxLustreLookup.MountName
@@ -412,7 +412,7 @@ Resources:
                   - mkdir -p /fsx 
                   - mount -t lustre -o relatime,flock ${FSxLustreDns}@tcp:/${FSxLustreMountName} /fsx
                   - chmod 777 /fsx
-                --==MYBOUNDARY==
+                --==MYBOUNDARY==--
               - EfsFilesystem: !GetAtt [ EfsStorage, Outputs.EFSFilesystemId ]
                 FSxLustreDns: !GetAtt FSxLustreLookup.DNSName
                 FSxLustreMountName: !GetAtt FSxLustreLookup.MountName

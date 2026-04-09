@@ -2,7 +2,7 @@
 
 > A comprehensive collection of infrastructure-as-code recipes for building High Performance Computing (HPC) systems on AWS using services like AWS Parallel Computing Service (PCS), ParallelCluster, Research and Engineering Studio (RES), and AWS Batch.
 
-This repository contains 100+ tested recipes organized by HPC use case, from basic networking setups to advanced multi-user clusters with accounting. Each recipe includes CloudFormation templates, documentation, and quick-launch links for immediate deployment across all AWS regions including GovCloud.
+This repository contains 100+ tested recipes organized by HPC use case, from basic networking setups to advanced multi-user clusters with accounting. Each recipe includes CloudFormation templates, documentation, and quick-launch links for immediate deployment across all AWS regions including GovCloud and China partitions.
 
 Key technologies covered: AWS PCS, ParallelCluster, Slurm, EFA networking, FSx storage systems, EFS, S3, Graviton processors, and specialized HPC instance types.
 
@@ -12,6 +12,32 @@ Key technologies covered: AWS PCS, ParallelCluster, Slurm, EFA networking, FSx s
 - [Recipes Index](recipes/README.md): Complete catalog of all 100+ recipes with descriptions and tags
 - [AWS PCS Getting Started](recipes/pcs/getting_started/README.md): Step-by-step tutorial for launching your first PCS cluster
 - [Contributing Guidelines](CONTRIBUTING.md): How to contribute new recipes and best practices
+- [Development Workflow](docs/develop.md): Local setup, branching, and release process
+
+## Repository Structure & Conventions
+
+- [Architecture](docs/ARCHITECTURE.md): Recipe directory structure, namespace definitions, metadata schema, and asset hosting
+- [CloudFormation Rules](docs/CLOUDFORMATION.md): Partition safety (GovCloud/China), ARN patterns, parameter and output best practices
+- [Testing & Validation](docs/TESTING.md): CI pipeline, local `make validate`, and manual testing checklist
+- [Security Practices](docs/SECURITY.md): IAM least-privilege, credential handling, scanning tools
+- [Code Style](docs/STYLE.md): YAML, CloudFormation, Python, Markdown, and PR conventions
+- [Linting Details](docs/linting.md): cfn-lint configuration and suppression patterns
+
+## Validation & CI
+
+All recipes are validated on every push via GitLab CI. Run locally with:
+
+```bash
+make validate
+```
+
+This runs four checks in sequence:
+1. `scripts/validate_structure.py` — every recipe has required files and directories
+2. `scripts/validate_metadata.py` — `metadata.yml` conforms to schema and uses valid semver
+3. `scripts/validate_partitions.py` — no hardcoded `arn:aws:` (must use `${AWS::Partition}`)
+4. `cfn-lint` — CloudFormation template linting (errors only; warnings suppressed via `.cfnlintrc`)
+
+Lines with `# partition-exception: <reason>` are excluded from partition checks for AWS-owned resources that are genuinely partition-specific.
 
 ## Core Services
 
@@ -31,4 +57,3 @@ Key technologies covered: AWS PCS, ParallelCluster, Slurm, EFA networking, FSx s
 
 - [Training Materials](recipes/training/README.md): Educational recipes for learning HPC on AWS
 - [AWS Batch Recipes](recipes/batch/README.md): Container-based HPC workloads
-- [Development Documentation](docs/develop.md): Technical details for recipe development

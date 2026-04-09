@@ -18,4 +18,4 @@ runcmd:
 - rm -rf /tmp/home/
 # If provided, mount FSxL filesystem as /shared
 - if [ ! -z "${fsx_filesystem_id}" ]; then amazon-linux-extras install -y lustre=latest; mkdir -p /shared; chmod a+rwx /shared; mount -t lustre ${fsx_dns_name}@tcp:/${fsx_mount_name} /shared; chmod 777 /shared; fi
---==MYBOUNDARY==
+--==MYBOUNDARY==--

@@ -76,7 +76,7 @@ Resources:
             - if [ "enabled" == "$(sestatus | awk '/^SELinux status:/{print $3}')" ]; then setsebool -P use_nfs_home_dirs 1; fi
             - chmod a+rwx ${HostMountPoint}
 
-            --==MYBOUNDARY==
+            --==MYBOUNDARY==--
 
 Outputs:
   LaunchTemplateId:
