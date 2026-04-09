@@ -101,7 +101,7 @@ Resources:
             # If provided, mount FSxL filesystem as /shared
             - if [ ! -z "${FSxLustreFilesystemId}" ]; then amazon-linux-extras install -y lustre=latest; mkdir -p /shared; chmod a+rwx /shared; mount -t lustre ${FSxLustreFilesystemId}.fsx.${AWS::Region}.amazonaws.com@tcp:/${FSxLustreFilesystemMountName} /shared; chmod 777 /shared; fi
 
-            --==MYBOUNDARY==
+            --==MYBOUNDARY==--
 
   ComputeLaunchTemplate:
     Type: AWS::EC2::LaunchTemplate
@@ -146,7 +146,7 @@ Resources:
             # If provided, mount FSxL filesystem as /shared
             - if [ ! -z "${FSxLustreFilesystemId}" ]; then amazon-linux-extras install -y lustre=latest; mkdir -p /shared; chmod a+rwx /shared; mount -t lustre ${FSxLustreFilesystemId}.fsx.${AWS::Region}.amazonaws.com@tcp:/${FSxLustreFilesystemMountName} /shared; fi
 
-            --==MYBOUNDARY==
+            --==MYBOUNDARY==--
 
 Outputs:
   LoginLaunchTemplateId:

@@ -90,7 +90,7 @@ Resources:
               - mount -t lustre ${FSxLustreDns}@tcp:/${FSxLustreMountName} /shared
               - chmod 777 /shared
 
-              --==MYBOUNDARY==
+              --==MYBOUNDARY==--
             - {EfsFilesystem: !Ref EfsFilesystemId, FSxLustreDns: !GetAtt FSxLustreLookup.DNSName, FSxLustreMountName: !GetAtt FSxLustreLookup.MountName, Region: !Ref AWS::Region}
 
   ComputeLaunchTemplate:
@@ -147,7 +147,7 @@ Resources:
                 - mount -t lustre ${FSxLustreDns}@tcp:/${FSxLustreMountName} /shared
                 - chmod 777 /shared
 
-                --==MYBOUNDARY==
+                --==MYBOUNDARY==--
               - {EfsFilesystem: !Ref EfsFilesystemId, FSxLustreDns: !GetAtt FSxLustreLookup.DNSName, FSxLustreMountName: !GetAtt FSxLustreLookup.MountName, Region: !Ref AWS::Region}
 
   # Retrieve the default security group for a given VPC
