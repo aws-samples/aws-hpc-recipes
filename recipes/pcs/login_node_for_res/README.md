@@ -47,12 +47,12 @@ The next step is to create the Image Builder **recipe** and **pipeline**. This w
    2. `PcsAgentInstaller` (Owned by me) - This component handles installation of the AWS PCS Agent
       1. **PcsAgentInstallerVersion**: latest
    3. `PcsSlurmInstaller` (Owned by me) - This component handles installation of the AWS PCS Slurm
-      1. **PcsSlurmVersion**: <Slurm version - e.g. 24.11>
+      1. **PcsSlurmVersion**: <Slurm version - e.g. 25.05>
       2. **PcsSlurmInstallerVersion**: latest
    4. `res-pcs-login-node-post-install` (Owned by me) - This component installs the services to connect to the PCS cluster
       1. **Region:** <AWS Region for deployment - e.g. us-east-1>
       2. **ClusterId:** <PCS cluster id - e.g. pcs_axhof4inf9>
-      3. **SlurmVersion:** <Slurm version - e.g. 24.11>
+      3. **SlurmVersion:** <Slurm version - e.g. 25.05>
    5. `RESVDILinuxInstaller` (Owned by me) - This component performs RES bootstrapping
       1. **AWSAccountID:** <AWS Account ID where RES is installed>
       2. **RESEnvName:** <RES environment name - e.g. res-demo>
