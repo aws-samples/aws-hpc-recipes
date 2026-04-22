@@ -124,7 +124,7 @@ Note: Find the AMI ID using the following command, subbing `region-code` for the
 export REGION_CODE=us-east-2
 
 aws ec2 describe-images --region ${REGION_CODE} \
---filters 'Name=name,Values=aws-pcs-sample_ami-amzn2-x86_64-slurm-25.05*' \
+--filters 'Name=name,Values=aws-pcs-sample_ami-al2023-x86_64-slurm-25.11*' \
           'Name=owner-alias,Values=amazon' \
           'Name=state,Values=available' \
 --query 'sort_by(Images, &CreationDate)[-1].[Name,ImageId]' --output text
