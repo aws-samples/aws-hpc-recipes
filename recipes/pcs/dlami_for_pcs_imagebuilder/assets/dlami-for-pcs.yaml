@@ -328,8 +328,64 @@ Resources:
                         - echo "Slurm 25.05 installation complete"
           - Region: !Ref 'AWS::Region'
 
+  # Component: Slurm 25.11 Installer
+  # Downloads and installs Slurm 25.11 from the AWS PCS repository
+  Slurm2511InstallerComponent:
+    Type: AWS::ImageBuilder::Component
+    Properties:
+      Name: !Sub 'Slurm2511Installer-${AWS::StackName}'
+      Description: Download and install Slurm 25.11 for AWS PCS
+      Version: !Ref SemanticVersion
+      Platform: Linux
+      SupportedOsVersions:
+        - 'Amazon Linux 2023'
+        - 'Ubuntu 24'
+      Data:
+        Fn::Sub:
+          - |
+            name: 'AWS PCS Slurm 25.11 Installer'
+            description: 'Downloads and installs Slurm 25.11 from AWS PCS repository'
+            schemaVersion: 1.0
+            phases:
+              - name: build
+                steps:
+                  - name: InstallSlurm2511
+                    action: ExecuteBash
+                    inputs:
+                      commands:
+                        - set -e
+                        - echo "Installing Slurm 25.11..."
+                        - |
+                          SLURM_VERSION="25.11"
+                          
+                          # Create a temporary directory
+                          TEMP_DIR=$(mktemp -d)
+                          cd "${!TEMP_DIR}"
+                          
+                          # Import AWS PCS public key
+                          curl -fsSL "https://aws-pcs-repo-public-keys-${Region}.s3.${Region}.amazonaws.com/aws-pcs-public-key.pub" -o aws-pcs-public-key.pub
+                          gpg --import aws-pcs-public-key.pub
+                          
+                          # Download and install Slurm
+                          curl -fsSL "https://aws-pcs-repo-${Region}.s3.${Region}.amazonaws.com/aws-pcs-slurm/aws-pcs-slurm-${!SLURM_VERSION}-installer-latest.tar.gz" -o "aws-pcs-slurm-${!SLURM_VERSION}-installer.tar.gz"
+                          tar zxf "aws-pcs-slurm-${!SLURM_VERSION}-installer.tar.gz"
+                          cd "aws-pcs-slurm-${!SLURM_VERSION}-installer"
+                          ./installer.sh -y
+                          
+                          # Configure library paths
+                          SLURM_INSTALL_PATH="/opt/aws/pcs/scheduler/slurm-${!SLURM_VERSION}"
+                          echo "${!SLURM_INSTALL_PATH}/lib" | tee /etc/ld.so.conf.d/slurm-${!SLURM_VERSION}.conf > /dev/null
+                          chmod 0644 /etc/ld.so.conf.d/slurm-${!SLURM_VERSION}.conf
+                          ldconfig
+                          
+                          # Cleanup
+                          cd /
+                          rm -rf "${!TEMP_DIR}"
+                        - echo "Slurm 25.11 installation complete"
+          - Region: !Ref 'AWS::Region'
+
   # Component: Slurm PATH Configuration
-  # Configures PATH and MANPATH for both Slurm versions
+  # Configures PATH and MANPATH for all installed Slurm versions
   # 24.11 is first in PATH for maximum compatibility (older clients work with newer servers)
   SlurmPathConfigComponent:
     Type: AWS::ImageBuilder::Component
@@ -343,7 +399,7 @@ Resources:
         - 'Ubuntu 24'
       Data: |
         name: 'Slurm PATH Configuration'
-        description: 'Configures PATH and MANPATH for both Slurm 24.11 and 25.05'
+        description: 'Configures PATH and MANPATH for Slurm 24.11, 25.05, and 25.11'
         schemaVersion: 1.0
         phases:
           - name: build
@@ -361,8 +417,8 @@ Resources:
                       cat > /etc/profile.d/slurm.sh << 'EOF'
                       # Slurm PATH configuration for AWS PCS
                       # 24.11 is first for maximum compatibility (older clients work with newer servers)
-                      PATH=/opt/aws/pcs/scheduler/slurm-24.11/bin:/opt/aws/pcs/scheduler/slurm-25.05/bin:$PATH
-                      MANPATH=/opt/aws/pcs/scheduler/slurm-24.11/share/man:/opt/aws/pcs/scheduler/slurm-25.05/share/man:$MANPATH
+                      PATH=/opt/aws/pcs/scheduler/slurm-24.11/bin:/opt/aws/pcs/scheduler/slurm-25.05/bin:/opt/aws/pcs/scheduler/slurm-25.11/bin:$PATH
+                      MANPATH=/opt/aws/pcs/scheduler/slurm-24.11/share/man:/opt/aws/pcs/scheduler/slurm-25.05/share/man:/opt/aws/pcs/scheduler/slurm-25.11/share/man:$MANPATH
                       export PATH MANPATH
                       EOF
                       chmod 0644 /etc/profile.d/slurm.sh
@@ -632,6 +688,7 @@ Resources:
         - ComponentArn: !Ref PcsAgentInstallerComponent
         - ComponentArn: !Ref Slurm2411InstallerComponent
         - ComponentArn: !Ref Slurm2505InstallerComponent
+        - ComponentArn: !Ref Slurm2511InstallerComponent
         - ComponentArn: !Ref SlurmPathConfigComponent
         - ComponentArn: !Ref EfsUtilsInstallerComponent
         - ComponentArn: !Ref CloudWatchAgentInstallerComponent
@@ -657,6 +714,7 @@ Resources:
         - ComponentArn: !Ref PcsAgentInstallerComponent
         - ComponentArn: !Ref Slurm2411InstallerComponent
         - ComponentArn: !Ref Slurm2505InstallerComponent
+        - ComponentArn: !Ref Slurm2511InstallerComponent
         - ComponentArn: !Ref SlurmPathConfigComponent
         - ComponentArn: !Ref EfsUtilsInstallerComponent
         - ComponentArn: !Ref CloudWatchAgentInstallerComponent
@@ -682,6 +740,7 @@ Resources:
         - ComponentArn: !Ref PcsAgentInstallerComponent
         - ComponentArn: !Ref Slurm2411InstallerComponent
         - ComponentArn: !Ref Slurm2505InstallerComponent
+        - ComponentArn: !Ref Slurm2511InstallerComponent
         - ComponentArn: !Ref SlurmPathConfigComponent
         - ComponentArn: !Ref EfsUtilsInstallerComponent
         - ComponentArn: !Ref CloudWatchAgentInstallerComponent
@@ -707,6 +766,7 @@ Resources:
         - ComponentArn: !Ref PcsAgentInstallerComponent
         - ComponentArn: !Ref Slurm2411InstallerComponent
         - ComponentArn: !Ref Slurm2505InstallerComponent
+        - ComponentArn: !Ref Slurm2511InstallerComponent
         - ComponentArn: !Ref SlurmPathConfigComponent
         - ComponentArn: !Ref EfsUtilsInstallerComponent
         - ComponentArn: !Ref CloudWatchAgentInstallerComponent
@@ -1141,6 +1201,10 @@ Outputs:
   Slurm2505InstallerComponentArn:
     Description: ARN of the Slurm 25.05 Installer component
     Value: !Ref Slurm2505InstallerComponent
+
+  Slurm2511InstallerComponentArn:
+    Description: ARN of the Slurm 25.11 Installer component
+    Value: !Ref Slurm2511InstallerComponent
 
   SlurmPathConfigComponentArn:
     Description: ARN of the Slurm PATH Configuration component

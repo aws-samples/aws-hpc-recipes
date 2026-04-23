@@ -9,7 +9,7 @@ This recipe deploys Image Builder pipelines that create PCS-compatible AMIs base
 **What you get:**
 
 - Four AMI pipelines covering Amazon Linux 2023 and Ubuntu 24.04 on both x86_64 and arm64
-- Each AMI pre-installed with: AWS PCS Agent, Slurm 24.11 & 25.05, EFS Utils, CloudWatch Agent, SSM Agent
+- Each AMI pre-installed with: AWS PCS Agent, Slurm 24.11, 25.05 & 25.11, EFS Utils, CloudWatch Agent, SSM Agent
 - Flexible build options: manual triggers, scheduled builds (weekly/monthly), or automatic rebuilds when AWS releases new DLAMIs
 - Optional SSM Parameter Store publishing for easy AMI discovery in your infrastructure code
 - Optional lifecycle policy to automatically deprecate old AMIs (keeps your console clean without breaking existing PCS clusters)
@@ -30,7 +30,7 @@ flowchart TB
     subgraph MainStack[Main Stack - Your PCS Region]
         subgraph Components[ImageBuilder Components]
             C1[PCS Agent]
-            C2[Slurm 24.11 + 25.05]
+            C2[Slurm 24.11 + 25.05 + 25.11]
             C3[EFS Utils]
             C4[CloudWatch + SSM Agents]
         end
@@ -294,13 +294,16 @@ With weekly or event-driven builds, AMIs accumulate quickly. Enable lifecycle ma
 
 ### Slurm Version Compatibility
 
-Both Slurm 24.11 and 25.05 are installed for compatibility with any PCS cluster version. The default PATH prioritizes 24.11 (forward-compatible with newer controllers):
+Slurm 24.11, 25.05, and 25.11 are installed for compatibility with any PCS cluster version. The default PATH prioritizes 24.11 (forward-compatible with newer controllers):
 
 ```bash
 # Default: /opt/aws/pcs/scheduler/slurm-24.11/bin is first in PATH
 
 # To use Slurm 25.05 instead:
 export PATH=/opt/aws/pcs/scheduler/slurm-25.05/bin:$PATH
+
+# To use Slurm 25.11 instead:
+export PATH=/opt/aws/pcs/scheduler/slurm-25.11/bin:$PATH
 ```
 
 ### Source AMIs
