@@ -7,3 +7,10 @@ env.rc
 .DS_Store
 .NOTES
 .kiro
+
+# Audit tool artifacts (scripts/audit_pcs_instance_availability.py)
+# Reports can contain lists of non-GA regions supplied via --extra-regions-file
+# and must not be committed.
+audit-reports/
+audit-pcs-instances.md
+audit-pcs-instances.csv

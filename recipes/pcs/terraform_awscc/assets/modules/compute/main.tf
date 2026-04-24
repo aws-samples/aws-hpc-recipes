@@ -1,5 +1,34 @@
 # modules/compute/main.tf
 
+# Per-region defaults for PCS login and compute node instance types.
+#
+# The primary defaults are c7i.xlarge (login) and c7i.2xlarge (compute). The
+# c7i family is offered in every PCS region except Europe (Milan) / eu-south-1,
+# which falls back to the previous-generation c6i family. Users can override
+# by setting pcs_cng_login_instance_type or pcs_cng_compute_instance_type
+# directly; the override is always honored.
+#
+# Data source: scripts/audit_pcs_instance_availability.py, which cross-checks
+# the EC2 instance families listed on the AWS public documentation page
+# at docs.aws.amazon.com/ec2/latest/instancetypes/ec2-instance-regions.html.
+locals {
+  default_login_instance_type_by_region = {
+    "eu-south-1" = "c6i.xlarge"
+  }
+  default_compute_instance_type_by_region = {
+    "eu-south-1" = "c6i.2xlarge"
+  }
+
+  resolved_login_instance_type = coalesce(
+    var.pcs_cng_login_instance_type,
+    lookup(local.default_login_instance_type_by_region, var.aws_region, "c7i.xlarge"),
+  )
+  resolved_compute_instance_type = coalesce(
+    var.pcs_cng_compute_instance_type,
+    lookup(local.default_compute_instance_type_by_region, var.aws_region, "c7i.2xlarge"),
+  )
+}
+
 # Permissive cluster security group
 module "cluster_security_group" {
   source  = "terraform-aws-modules/security-group/aws"
@@ -173,7 +202,7 @@ resource "awscc_pcs_compute_node_group" "login" {
   }
   iam_instance_profile_arn = var.instance_profile_arn
   instance_configs = [{
-    instance_type = var.pcs_cng_login_instance_type
+    instance_type = local.resolved_login_instance_type
   }]
   scaling_configuration = {
     min_instance_count = 1
@@ -198,7 +227,7 @@ resource "awscc_pcs_compute_node_group" "compute-st" {
   }
   iam_instance_profile_arn = var.instance_profile_arn
   instance_configs = [{
-    instance_type = var.pcs_cng_compute_instance_type
+    instance_type = local.resolved_compute_instance_type
   }]
   scaling_configuration = {
     min_instance_count = 4
@@ -232,7 +261,7 @@ resource "awscc_pcs_compute_node_group" "compute-dy" {
   }
   iam_instance_profile_arn = var.instance_profile_arn
   instance_configs = [{
-    instance_type = var.pcs_cng_compute_instance_type
+    instance_type = local.resolved_compute_instance_type
   }]
   scaling_configuration = {
     min_instance_count = 0
