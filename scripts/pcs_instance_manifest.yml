@@ -1,0 +1,183 @@
+# Inventory of EC2 instance types used in recipes/pcs/ recipes.
+#
+# Scope: cluster login/compute nodes and ImageBuilder infrastructure,
+# excluding recipes/pcs/login_node_for_res (out of audit scope).
+#
+# Roles:
+#   login        - PCS login/head node
+#   compute      - PCS compute node group (Slurm partition worker)
+#   compute-efa  - PCS compute node group that REQUIRES EFA (hpcX, p5*, trn*)
+#   imagebuilder - EC2 Image Builder infrastructure config (AMI bake host)
+#   dcv          - Amazon DCV remote desktop node (cfd_cluster only)
+#
+# Used by: scripts/audit_pcs_instance_availability.py
+
+recipes:
+  - name: getting_started
+    path: recipes/pcs/getting_started
+    files:
+      - assets/cluster.yaml
+      - assets/cluster-byovpc.yaml
+    instances:
+      - type: c6i.xlarge
+        role: login
+        arch: x86_64
+      - type: c7g.xlarge
+        role: login
+        arch: arm64
+      - type: c6i.xlarge
+        role: compute
+        arch: x86_64
+      - type: c7g.xlarge
+        role: compute
+        arch: arm64
+
+  - name: try_amd
+    path: recipes/pcs/try_amd
+    files:
+      - assets/cluster.cfn.yaml
+    instances:
+      - type: c7a.xlarge
+        role: login
+        arch: x86_64
+      - type: c7a.xlarge
+        role: compute
+        arch: x86_64
+      - type: hpc7a.48xlarge
+        role: compute-efa
+        arch: x86_64
+
+  - name: try_graviton
+    path: recipes/pcs/try_graviton
+    files:
+      - assets/cluster.cfn.yaml
+    instances:
+      - type: c7a.xlarge
+        role: login
+        arch: x86_64
+      - type: c7g.2xlarge
+        role: login
+        arch: arm64
+      - type: c7a.xlarge
+        role: compute
+        arch: x86_64
+      - type: c7g.2xlarge
+        role: compute
+        arch: arm64
+      - type: hpc7a.48xlarge
+        role: compute-efa
+        arch: x86_64
+      - type: hpc7g.16xlarge
+        role: compute-efa
+        arch: arm64
+
+  - name: terraform_awscc
+    path: recipes/pcs/terraform_awscc
+    files:
+      - assets/modules/compute/variables.tf
+    instances:
+      - type: c6a.xlarge
+        role: login
+        arch: x86_64
+      - type: c6a.2xlarge
+        role: compute
+        arch: x86_64
+
+  - name: enable_efa
+    path: recipes/pcs/enable_efa
+    files:
+      - assets/pcs-lt-efa-p5.yaml
+    instances:
+      - type: p5.48xlarge
+        role: compute-efa
+        arch: x86_64
+      - type: p5e.48xlarge
+        role: compute-efa
+        arch: x86_64
+      - type: p5en.48xlarge
+        role: compute-efa
+        arch: x86_64
+
+  - name: cfd_cluster
+    path: recipes/pcs/cfd_cluster
+    files:
+      - assets/dcv-linux-node.yaml
+    instances:
+      - type: t2.medium
+        role: dcv
+        arch: x86_64
+      - type: g4dn.xlarge
+        role: dcv
+        arch: x86_64
+
+  - name: hpc_ready_ami
+    path: recipes/pcs/hpc_ready_ami
+    files:
+      - assets/create-pcs-imagepipeline.yaml
+      - assets/create-pcs-image.yaml
+      - assets/infrastructure-configurations.yaml
+    instances:
+      # x86 default (first preference)
+      - type: c6i.8xlarge
+        role: imagebuilder
+        arch: x86_64
+      - type: m6i.8xlarge
+        role: imagebuilder
+        arch: x86_64
+      - type: c6i.12xlarge
+        role: imagebuilder
+        arch: x86_64
+      - type: m6i.12xlarge
+        role: imagebuilder
+        arch: x86_64
+      # x86 alternate (AMD)
+      - type: c6a.8xlarge
+        role: imagebuilder
+        arch: x86_64
+      - type: m6a.8xlarge
+        role: imagebuilder
+        arch: x86_64
+      - type: c6a.12xlarge
+        role: imagebuilder
+        arch: x86_64
+      - type: m6a.12xlarge
+        role: imagebuilder
+        arch: x86_64
+      # arm64 default (Graviton3)
+      - type: c7g.8xlarge
+        role: imagebuilder
+        arch: arm64
+      - type: m7g.8xlarge
+        role: imagebuilder
+        arch: arm64
+      - type: c7g.12xlarge
+        role: imagebuilder
+        arch: arm64
+      - type: m7g.12xlarge
+        role: imagebuilder
+        arch: arm64
+      # arm64 alternate (Graviton2)
+      - type: c6g.8xlarge
+        role: imagebuilder
+        arch: arm64
+      - type: m6g.8xlarge
+        role: imagebuilder
+        arch: arm64
+
+  - name: dlami_for_pcs_imagebuilder
+    path: recipes/pcs/dlami_for_pcs_imagebuilder
+    files:
+      - assets/dlami-for-pcs.yaml
+    instances:
+      - type: c6i.4xlarge
+        role: imagebuilder
+        arch: x86_64
+      - type: m6i.4xlarge
+        role: imagebuilder
+        arch: x86_64
+      - type: c7g.4xlarge
+        role: imagebuilder
+        arch: arm64
+      - type: m7g.4xlarge
+        role: imagebuilder
+        arch: arm64

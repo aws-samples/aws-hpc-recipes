@@ -164,12 +164,30 @@ Mappings:
     AmiArchParameter:
       Graviton: arm64
       x86: x86_64
+    # Default instance types per architecture. Used in every region that
+    # offers the family. Regions where the family is not offered are
+    # overridden in InstanceRegionOverrides below.
     LoginNodeInstances:
       Graviton: c7g.xlarge
-      x86: c6i.xlarge
+      x86: c7i.xlarge
     ComputeNodeInstances:
       Graviton: c7g.xlarge
+      x86: c7i.xlarge
+
+  # Region-specific fallbacks where the default family is not offered.
+  # Only list regions/architectures that need an override. Everything else
+  # uses the Architecture mapping above via FindInMap DefaultValue.
+  #
+  # Source: scripts/audit_pcs_instance_availability.py, which cross-checks
+  # the EC2 instance families listed on the AWS public documentation page
+  # at docs.aws.amazon.com/ec2/latest/instancetypes/ec2-instance-regions.html.
+  InstanceRegionOverrides:
+    eu-south-1:
+      # c7i not offered in Milan; fall back to Intel gen-6.
       x86: c6i.xlarge
+    ap-southeast-4:
+      # c7g not offered in Melbourne; fall back to Graviton2.
+      Graviton: c6g.xlarge
 
 Resources:
 
@@ -481,7 +499,11 @@ Resources:
         - !Ref PublicSubnetId
       AmiId: !GetAtt [PcsSampleAmi, AmiId]
       InstanceConfigs:
-        - InstanceType: !FindInMap [ Architecture, LoginNodeInstances, !Ref NodeArchitecture ]
+        - InstanceType: !FindInMap
+            - InstanceRegionOverrides
+            - !Ref AWS::Region
+            - !Ref NodeArchitecture
+            - DefaultValue: !FindInMap [ Architecture, LoginNodeInstances, !Ref NodeArchitecture ]
 
   # Compute Node groups - Compute Nodes
   PCSNodeGroupCompute:
@@ -500,7 +522,11 @@ Resources:
         - !Ref PrivateSubnetId
       AmiId: !GetAtt [PcsSampleAmi, AmiId]
       InstanceConfigs:
-        - InstanceType: !FindInMap [ Architecture, ComputeNodeInstances, !Ref NodeArchitecture ]
+        - InstanceType: !FindInMap
+            - InstanceRegionOverrides
+            - !Ref AWS::Region
+            - !Ref NodeArchitecture
+            - DefaultValue: !FindInMap [ Architecture, ComputeNodeInstances, !Ref NodeArchitecture ]
 
   PCSQueueCompute:
     Type: AWS::PCS::Queue
