@@ -4,3 +4,4 @@
 ignore_checks:
   - W  # Suppress all warnings; only errors matter in CI
   - E1028  # ImageBuilder Components list: cfn-lint spec says max 3, but AWS supports many more
+  - E1011  # Fn::FindInMap: cfn-lint spec says max 3 items, but CFN supports a 4th DefaultValue element (added 2024)

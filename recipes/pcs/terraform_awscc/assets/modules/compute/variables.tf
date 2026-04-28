@@ -108,15 +108,15 @@ variable "cluster_security_group_rules" {
 }
 
 variable "pcs_cng_login_instance_type" {
-  description = "Instance type or login node(s)"
+  description = "Instance type for login node(s). When null, a region-appropriate default is selected (c7i.xlarge, falling back to c6i.xlarge in regions that do not offer c7i)."
   type        = string
-  default     = "c6a.xlarge"
+  default     = null
 }
 
 variable "pcs_cng_compute_instance_type" {
-  description = "Instance type or login node(s)"
+  description = "Instance type for compute node(s). When null, a region-appropriate default is selected (c7i.2xlarge, falling back to c6i.2xlarge in regions that do not offer c7i)."
   type        = string
-  default     = "c6a.2xlarge"
+  default     = null
 }
 
 variable "pcs_cng_ami_id" {

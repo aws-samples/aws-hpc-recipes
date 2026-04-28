@@ -15,9 +15,9 @@ This repository demonstrates how to use the `aws` and `awscc` providers to launc
 - **FSx Lustre**: Mounted as `/shared` for high-performance scratch workloads
 
 ### Compute Node Groups
-- **Login**: 1x c6a.xlarge for user access and job submission
-- **Static Compute**: 4x c6a.2xlarge always-on nodes (Slurm weight=10)
-- **Dynamic Compute**: 0-4x c6a.2xlarge elastic nodes (Slurm weight=100, 5min idle timeout)
+- **Login**: 1x c7i.xlarge for user access and job submission (c6i.xlarge in eu-south-1)
+- **Static Compute**: 4x c7i.2xlarge always-on nodes (Slurm weight=10; c6i.2xlarge in eu-south-1)
+- **Dynamic Compute**: 0-4x c7i.2xlarge elastic nodes (Slurm weight=100, 5min idle timeout; c6i.2xlarge in eu-south-1)
 
 ### Slurm Configuration
 - **Scheduler**: Slurm 25.05 with AWS PCS managed accounting enabled
@@ -114,8 +114,8 @@ The following variables need to be configured when using this repository:
 | `pcs_cluster_size`                | Size of PCS cluster (SMALL/MEDIUM/LARGE) | string | SMALL     |
 | `pcs_cluster_slurm_version`       | Slurm version                         | string | 25.05        |
 | `pcs_cluster_scaledown_idletime`  | Idle timeout for dynamic nodes (seconds) | number | 300       |
-| `pcs_cng_login_instance_type`     | Instance type for login nodes         | string | c6a.xlarge   |
-| `pcs_cng_compute_instance_type`   | Instance type for compute nodes       | string | c6a.2xlarge  |
+| `pcs_cng_login_instance_type`     | Instance type for login nodes         | string | auto (c7i.xlarge; c6i.xlarge in eu-south-1)   |
+| `pcs_cng_compute_instance_type`   | Instance type for compute nodes       | string | auto (c7i.2xlarge; c6i.2xlarge in eu-south-1) |
 
 Note: Find the AMI ID using the following command, subbing `region-code` for the value of `aws_region`: 
 
@@ -124,7 +124,7 @@ Note: Find the AMI ID using the following command, subbing `region-code` for the
 export REGION_CODE=us-east-2
 
 aws ec2 describe-images --region ${REGION_CODE} \
---filters 'Name=name,Values=aws-pcs-sample_ami-amzn2-x86_64-slurm-25.05*' \
+--filters 'Name=name,Values=aws-pcs-sample_ami-al2023-x86_64-slurm-25.11*' \
           'Name=owner-alias,Values=amazon' \
           'Name=state,Values=available' \
 --query 'sort_by(Images, &CreationDate)[-1].[Name,ImageId]' --output text

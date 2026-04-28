@@ -102,6 +102,9 @@ Parameters:
     Default: 25.11
     Description: Version of Slurm to use
     AllowedValues:
+         - 24.05
+         - 24.11
+         - 25.05
          - 25.11
 
   ManagedAccounting:
@@ -161,12 +164,30 @@ Mappings:
     AmiArchParameter:
       Graviton: arm64
       x86: x86_64
+    # Default instance types per architecture. Used in every region that
+    # offers the family. Regions where the family is not offered are
+    # overridden in InstanceRegionOverrides below.
     LoginNodeInstances:
       Graviton: c7g.xlarge
-      x86: c6i.xlarge
+      x86: c7i.xlarge
     ComputeNodeInstances:
       Graviton: c7g.xlarge
+      x86: c7i.xlarge
+
+  # Region-specific fallbacks where the default family is not offered.
+  # Only list regions/architectures that need an override. Everything else
+  # uses the Architecture mapping above via FindInMap DefaultValue.
+  #
+  # Source: scripts/audit_pcs_instance_availability.py, which cross-checks
+  # the EC2 instance families listed on the AWS public documentation page
+  # at docs.aws.amazon.com/ec2/latest/instancetypes/ec2-instance-regions.html.
+  InstanceRegionOverrides:
+    eu-south-1:
+      # c7i not offered in Milan; fall back to Intel gen-6.
       x86: c6i.xlarge
+    ap-southeast-4:
+      # c7g not offered in Melbourne; fall back to Graviton2.
+      Graviton: c6g.xlarge
 
 Resources:
 
@@ -478,7 +499,11 @@ Resources:
         - !Ref PublicSubnetId
       AmiId: !GetAtt [PcsSampleAmi, AmiId]
       InstanceConfigs:
-        - InstanceType: !FindInMap [ Architecture, LoginNodeInstances, !Ref NodeArchitecture ]
+        - InstanceType: !FindInMap
+            - InstanceRegionOverrides
+            - !Ref AWS::Region
+            - !Ref NodeArchitecture
+            - DefaultValue: !FindInMap [ Architecture, LoginNodeInstances, !Ref NodeArchitecture ]
 
   # Compute Node groups - Compute Nodes
   PCSNodeGroupCompute:
@@ -497,7 +522,11 @@ Resources:
         - !Ref PrivateSubnetId
       AmiId: !GetAtt [PcsSampleAmi, AmiId]
       InstanceConfigs:
-        - InstanceType: !FindInMap [ Architecture, ComputeNodeInstances, !Ref NodeArchitecture ]
+        - InstanceType: !FindInMap
+            - InstanceRegionOverrides
+            - !Ref AWS::Region
+            - !Ref NodeArchitecture
+            - DefaultValue: !FindInMap [ Architecture, ComputeNodeInstances, !Ref NodeArchitecture ]
 
   PCSQueueCompute:
     Type: AWS::PCS::Queue
@@ -545,6 +574,17 @@ Resources:
 
           logger = logging.getLogger()
           logger.setLevel(logging.INFO)
+
+          # Slurm 25.11 and later sample AMIs are only published for Amazon Linux 2023.
+          # Older versions (24.05, 24.11, 25.05) remain on Amazon Linux 2.
+          def resolve_os_for_slurm(requested_os, slurm_version):
+              try:
+                  major, minor = [int(p) for p in slurm_version.split('.')[:2]]
+              except (ValueError, AttributeError):
+                  return requested_os
+              if (major, minor) >= (25, 11):
+                  return 'al2023'
+              return requested_os
 
           def construct_ami_prefix(os_name, architecture, slurm_version):
               return f'aws-pcs-sample_ami-{os_name}-{architecture}-slurm-{slurm_version}'
@@ -605,7 +645,7 @@ Resources:
                       send_response(event, context, 'SUCCESS', {})
                       return
 
-                  ami_name_prefix = construct_ami_prefix(os_name, architecture, slurm_version)
+                  ami_name_prefix = construct_ami_prefix(resolve_os_for_slurm(os_name, slurm_version), architecture, slurm_version)
                   logger.info(f'Looking up AMI with prefix: {ami_name_prefix}')
                   
                   ami_id = get_latest_ami(ami_name_prefix)

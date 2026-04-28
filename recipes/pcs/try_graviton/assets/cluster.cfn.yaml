@@ -31,12 +31,13 @@ Parameters:
 
   SlurmVersion:
     Type: String
-    Default: 25.05
+    Default: 25.11
     Description: Version of Slurm to use
     AllowedValues:
          - 24.05
          - 24.11
          - 25.05
+         - 25.11
 
   ClientIpCidr:
     Description: IP(s) allowed to directly access the login nodes. We recommend that you restrict it with your own IP/subnet (x.x.x.x/32 for your own ip or x.x.x.x/24 for range. Replace x.x.x.x with your own PUBLIC IP. You can get your public IP using tools such as https://ifconfig.co/)
@@ -307,7 +308,7 @@ Resources:
                   - mkdir -p /fsx 
                   - mount -t lustre -o relatime,flock ${FSxLustreDns}@tcp:/${FSxLustreMountName} /fsx
                   - chmod 777 /fsx
-                --==MYBOUNDARY==
+                --==MYBOUNDARY==--
               - EfsFilesystem: !GetAtt [ EfsStorage, Outputs.EFSFilesystemId ]
                 FSxLustreDns: !GetAtt FSxLustreLookup.DNSName
                 FSxLustreMountName: !GetAtt FSxLustreLookup.MountName
@@ -367,7 +368,7 @@ Resources:
                   - mkdir -p /fsx 
                   - mount -t lustre -o relatime,flock ${FSxLustreDns}@tcp:/${FSxLustreMountName} /fsx
                   - chmod 777 /fsx
-                --==MYBOUNDARY==
+                --==MYBOUNDARY==--
               - EfsFilesystem: !GetAtt [ EfsStorage, Outputs.EFSFilesystemId ]
                 FSxLustreDns: !GetAtt FSxLustreLookup.DNSName
                 FSxLustreMountName: !GetAtt FSxLustreLookup.MountName
@@ -517,6 +518,17 @@ Resources:
           logger = logging.getLogger()
           logger.setLevel(logging.INFO)
 
+          # Slurm 25.11 and later sample AMIs are only published for Amazon Linux 2023.
+          # Older versions (24.05, 24.11, 25.05) remain on Amazon Linux 2.
+          def resolve_os_for_slurm(requested_os, slurm_version):
+              try:
+                  major, minor = [int(p) for p in slurm_version.split('.')[:2]]
+              except (ValueError, AttributeError):
+                  return requested_os
+              if (major, minor) >= (25, 11):
+                  return 'al2023'
+              return requested_os
+
           def construct_ami_prefix(os_name, architecture, slurm_version):
               return f'aws-pcs-sample_ami-{os_name}-{architecture}-slurm-{slurm_version}'
 
@@ -576,7 +588,7 @@ Resources:
                       send_response(event, context, 'SUCCESS', {})
                       return
 
-                  ami_name_prefix = construct_ami_prefix(os_name, architecture, slurm_version)
+                  ami_name_prefix = construct_ami_prefix(resolve_os_for_slurm(os_name, slurm_version), architecture, slurm_version)
                   logger.info(f'Looking up AMI with prefix: {ami_name_prefix}')
                   
                   ami_id = get_latest_ami(ami_name_prefix)
