@@ -39,8 +39,8 @@ To create a demonstration PCS cluster with its own VPC and networking:
 3. Follow the instructions in the AWS CloudFormation console:
     * (Optional) Customize the stack name.
     * Under **Parameters**
-        * For **SlurmVersion** choose any available version of Slurm.
-        * For **ManagedAccounting** choose whether to enable accounting. Note that accounting is only supported for Slurm version 24.11 or newer.
+        * For **SlurmVersion** select the Slurm version.
+        * For **ManagedAccounting** choose whether to enable accounting.
         * For **AccountingPolicyEnforcement** choose whether to turn on enforcement of associations, limits, and safe job launching. Note that this requires accounting to be enabled. 
         * For **NodeArchitecture** choose either `x86` or `Graviton` for your login and compute node groups.
         * For **KeyName** choose an SSH key for connecting to the login nodes
@@ -80,8 +80,8 @@ To create a PCS cluster in your existing VPC:
         * For **VPC ID** choose your existing VPC.
         * For **Public Subnet ID** choose a public subnet in that VPC (must have Internet Gateway access).
         * For **Private Subnet ID** choose a private subnet in that VPC (must have NAT Gateway access).
-        * For **SlurmVersion** choose any available version of Slurm.
-        * For **ManagedAccounting** choose whether to enable accounting. Note that accounting is only supported for Slurm version 24.11 or newer.
+        * For **SlurmVersion** select the Slurm version.
+        * For **ManagedAccounting** choose whether to enable accounting.
         * For **AccountingPolicyEnforcement** choose whether to turn on enforcement of associations, limits, and safe job launching. Note that this requires accounting to be enabled.
         * For **NodeArchitecture** choose either `x86` or `Graviton` for your login and compute node groups.
         * For **KeyName** choose an SSH key for connecting to the login nodes.
