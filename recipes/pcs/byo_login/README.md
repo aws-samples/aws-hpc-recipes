@@ -11,3 +11,4 @@ Several files in the [`assets`](assets/) directory will be of use.
 * `slurm-24.05-sackd.service` - You can use this template file to create the required `sackd` systemd service for Slurm 24.05. 
 * `slurm-24.11-sackd.service` - You can use this template file to create the required `sackd` systemd service for Slurm 24.11.
 * `slurm-25.05-sackd.service` - You can use this template file to create the required `sackd` systemd service for Slurm 25.05.
+* `slurm-25.11-sackd.service` - You can use this template file to create the required `sackd` systemd service for Slurm 25.11.
