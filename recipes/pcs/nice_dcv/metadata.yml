@@ -1,0 +1,16 @@
+---
+name: nice_dcv
+version: "1.0.0"
+description: "NICE DCV visualization workstation with Relion for cryo-EM, configured as a PCS BYO login node"
+readme: README.md
+authors:
+  - AWS HPC Engineering
+tags:
+  - pcs
+  - nice-dcv
+  - visualization
+  - gpu
+  - relion
+  - cryo-em
+  - community
+type: other
