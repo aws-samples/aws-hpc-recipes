@@ -135,13 +135,11 @@ Shared filesystem access works without `chmod 777` workarounds, and Slurm comman
 
 In this step, you configure the DCV workstation as a PCS login node so you can run Slurm commands directly from your DCV session.
 
-### Connect to the instance
+### Open a terminal in the DCV session
 
-SSH into the DCV workstation using your key pair, or use AWS Systems Manager Session Manager:
+Right-click on the desktop and select **Open Terminal**, or use the **Activities** menu to launch a terminal application.
 
-```bash
-ssh -i your-key.pem ec2-user@<instance-public-ip>
-```
+![Opening a terminal in the DCV session](docs/open-terminal.png)
 
 ### Verify prerequisites
 

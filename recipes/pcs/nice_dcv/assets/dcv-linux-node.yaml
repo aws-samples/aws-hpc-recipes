@@ -338,13 +338,34 @@ Resources:
                 sed -i "/^\[connectivity\]/a web-port=$3" /etc/dcv/dcv.conf
                 sed -i "/^\[connectivity\]/a quick-port=$3" /etc/dcv/dcv.conf
                 sed -i '/^\[session-management]/a create-session = true' /etc/dcv/dcv.conf
+                # Remove any existing owner line in the automatic-console-session section
+                # before setting the correct owner (AMI default may have owner = "dcvuser")
+                sed -i '/^\[session-management\/automatic-console-session]/,/^\[/{/^owner[[:space:]]*=/d}' /etc/dcv/dcv.conf
                 sed -i "/^\[session-management\/automatic-console-session]/a owner = \"$1\"" /etc/dcv/dcv.conf
                 sed -i "/^\[session-management\/automatic-console-session]/a storage-root = \"%home%/session-storage\"" /etc/dcv/dcv.conf
+
+                # Update GDM autologin to use the correct user (AMI default may have dcvuser)
+                # (Handled below after user creation)
 
                 systemctl restart dcvserver
 
                 # Create session storage dir for all users
                 mkdir /etc/skel/session-storage
+
+                # Remove the AMI default dcvuser if a different username is configured
+                if [ "$1" != "dcvuser" ] && id -u "dcvuser" &>/dev/null; then
+                  userdel -r dcvuser 2>/dev/null || true
+                  rm -f /var/lib/AccountsService/users/dcvuser
+                fi
+
+                # Configure GDM to auto-login the correct user (no password prompt)
+                GDM_CUSTOM="/etc/gdm/custom.conf"
+                if [ -f "$GDM_CUSTOM" ]; then
+                  sed -i '/^\[daemon\]/,/^\[/{/^AutomaticLogin=/d}' "$GDM_CUSTOM"
+                  sed -i '/^\[daemon\]/,/^\[/{/^AutomaticLoginEnable=/d}' "$GDM_CUSTOM"
+                  sed -i "/^\[daemon\]/a AutomaticLoginEnable=true" "$GDM_CUSTOM"
+                  sed -i "/^\[daemon\]/a AutomaticLogin=$1" "$GDM_CUSTOM"
+                fi
 
                 # Create user if it doesn't already exist, then set password and add to sudoers
                 if ! id -u "$1" &>/dev/null; then
