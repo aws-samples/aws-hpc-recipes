@@ -104,10 +104,20 @@ cleanup() {
 trap cleanup EXIT
 
 ###############################################################################
-# Phase 1/7: Verify Spack installation
+# Phase 1/7: Verify Spack installation and system prerequisites
 ###############################################################################
-CURRENT_PHASE="Phase 1/7: Verifying Spack installation"
+CURRENT_PHASE="Phase 1/7: Verifying Spack installation and system prerequisites"
 echo "${CURRENT_PHASE}..."
+
+# Install Fortran compiler (required by OpenMPI)
+if ! command -v gfortran &>/dev/null; then
+    echo "  Installing gcc-gfortran (required by OpenMPI)..."
+    if command -v dnf &>/dev/null; then
+        dnf install -y gcc-gfortran >/dev/null 2>&1
+    else
+        yum install -y gcc-gfortran >/dev/null 2>&1
+    fi
+fi
 
 SPACK_SETUP="${SPACK_PREFIX}/spack/share/spack/setup-env.sh"
 if [[ ! -f "${SPACK_SETUP}" ]]; then
@@ -119,6 +129,11 @@ if [[ ! -f "${SPACK_SETUP}" ]]; then
     exit 1
 fi
 echo "  Spack found at: ${SPACK_SETUP}"
+
+# Ensure Spack detects the Fortran compiler
+# shellcheck disable=SC1090
+source "${SPACK_SETUP}"
+spack compiler find >/dev/null 2>&1
 
 ###############################################################################
 # Phase 2/7: Install dependencies via Spack
