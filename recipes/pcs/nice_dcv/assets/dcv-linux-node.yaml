@@ -301,6 +301,7 @@ Resources:
             - Fn::GetAtt:
               - VpcDefaultSecurityGroup
               - GroupId
+            - !GetAtt FSxLustreLookup.ClientSecurityGroupId
       IamInstanceProfile:
         Ref: DcvHostInstanceProfile
       Tags:
@@ -521,6 +522,8 @@ Resources:
               - Effect: Allow
                 Action:
                   - fsx:DescribeFileSystems
+                  - ec2:DescribeNetworkInterfaces
+                  - ec2:DescribeSecurityGroupRules
                 Resource: '*'
       ManagedPolicyArns:
         - !Sub arn:${AWS::Partition}:iam::aws:policy/service-role/AWSLambdaBasicExecutionRole
@@ -539,6 +542,7 @@ Resources:
 
           def lambda_handler(event, context):
               fsx_client = boto3.client('fsx')
+              ec2_client = boto3.client('ec2')
               
               try:
                   filesystem_id = event['ResourceProperties']['FilesystemId']
@@ -550,9 +554,41 @@ Resources:
                       dns_name = filesystem['DNSName']
                       mount_name = filesystem['LustreConfiguration']['MountName']
                       
+                      # Get security groups from FSx network interfaces
+                      # Identify the client SG (has self-referencing inbound rule on port 988)
+                      client_sg_id = ''
+                      eni_ids = filesystem.get('NetworkInterfaceIds', [])
+                      if eni_ids:
+                          eni_response = ec2_client.describe_network_interfaces(
+                              NetworkInterfaceIds=eni_ids
+                          )
+                          sg_ids = set()
+                          for eni in eni_response.get('NetworkInterfaces', []):
+                              for group in eni.get('Groups', []):
+                                  sg_ids.add(group['GroupId'])
+                          
+                          # Check each SG for a self-referencing rule on port 988 (Lustre client SG pattern)
+                          for sg_id in sg_ids:
+                              sg_response = ec2_client.describe_security_group_rules(
+                                  Filters=[{'Name': 'group-id', 'Values': [sg_id]}]
+                              )
+                              for rule in sg_response.get('SecurityGroupRules', []):
+                                  if (not rule.get('IsEgress', True) and
+                                      rule.get('FromPort') == 988 and
+                                      rule.get('ReferencedGroupInfo', {}).get('GroupId') == sg_id):
+                                      client_sg_id = sg_id
+                                      break
+                              if client_sg_id:
+                                  break
+                          
+                          # Fallback: use the first SG if no self-referencing rule found
+                          if not client_sg_id and sg_ids:
+                              client_sg_id = sorted(sg_ids)[0]
+                      
                       cfnresponse.send(event, context, cfnresponse.SUCCESS, {
                           'DNSName': dns_name,
-                          'MountName': mount_name
+                          'MountName': mount_name,
+                          'ClientSecurityGroupId': client_sg_id
                       })
                   else:
                       cfnresponse.send(event, context, cfnresponse.FAILED, {

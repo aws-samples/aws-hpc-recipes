@@ -162,7 +162,7 @@ EOF
 export PATH="${SLURM_INSTALL_PATH}/bin:\$PATH"
 export MANPATH="${SLURM_INSTALL_PATH}/share/man:\$MANPATH"
 export LD_LIBRARY_PATH="${SLURM_INSTALL_PATH}/lib:\$LD_LIBRARY_PATH"
-ldconfig
+[ "\$(id -u)" -eq 0 ] && ldconfig
 
 # Set Slurm configuration
 export SLURM_CONF="/run/slurm-${CLUSTER_NAME}/conf/slurm.conf"
@@ -182,7 +182,7 @@ function deactivate-pcs-${CLUSTER_NAME}() {
     unset PCS_CLUSTER_IDENTIFIER
     unset PCS_CLUSTER_ID
     unset -f deactivate-pcs-${CLUSTER_NAME}
-    ldconfig
+    [ "\$(id -u)" -eq 0 ] && ldconfig
     echo "Deactivated PCS cluster environment: ${CLUSTER_NAME}"
 }
 

@@ -16,23 +16,6 @@ Options for integrating DCV with PCS for visualization:
 
 This guidance covers **Option 2: Standalone DCV + BYO login node**. We will leverage existing recipes in this repo (getting_started and cfd_cluster) to set up a cluster with a standalone visualization node. We will then use the byo_login guidance to add that visualization node to the cluster.
 
-## Overview
-
-This recipe is a walkthrough that composes existing recipes to create a NICE DCV remote visualization workstation configured as a bring-your-own (BYO) login node for AWS Parallel Computing Service (PCS).
-
-For our visualization workload we'll use Relion (REgularised LIkelihood OptimisatioN), an open-source cryo-EM image processing application that uses GPUs for accelerated visualization and computation. 
-
-With Relion, users both visualize 3D molecules and submit batch jobs to the cluster, all from a single UI running in the DCV session.
-
-Rather than creating net-new infrastructure, this recipe guides you through composing:
-
-1. [**pcs/getting_started**](../getting_started/) — PCS cluster with networking, storage, and compute nodes
-2. **Modified DCV workstation template** (included in this recipe at [`assets/dcv-linux-node.yaml`](assets/dcv-linux-node.yaml)) — GPU instance with NICE DCV and configurable username
-3. [**Official AWS PCS multi-cluster login script**](https://github.com/aws-samples/aws-hpc-recipes/tree/main/recipes/pcs/byo_login) — sackd configuration for BYO login node connectivity
-4. [**pcs/spack_for_pcs**](../spack_for_pcs/) — Spack package manager for HPC dependency management
-
-We will deploy a PCS cluster, launch a DCV workstation, configure it as a login node, and install Relion for interactive cryo-EM processing with GPU acceleration.
-
 ## Prerequisites
 
 Before starting this walkthrough, ensure you have:
@@ -185,7 +168,7 @@ sudo ./installer.sh -y
 cd ..
 
 # Verify installation
-cat /opt/aws/pcs/scheduler/slurm-${SLURM_VERSION}/version
+ls /opt/aws/pcs/scheduler/slurm-${SLURM_VERSION}/bin/sinfo
 ```
 
 The installer takes several minutes as it compiles Slurm and its dependencies.
@@ -256,11 +239,19 @@ This follows the [pcs/spack_for_pcs](../spack_for_pcs/) recipe pattern:
 curl -O https://raw.githubusercontent.com/spack/spack-configs/main/AWS/parallelcluster/postinstall.sh
 chmod +x postinstall.sh
 
-# Install Spack to the shared filesystem
-sudo ./postinstall.sh --prefix /shared
+# Install Spack to the shared filesystem (runs in foreground with log output)
+sudo bash postinstall.sh --prefix /shared 2>&1 | tee /tmp/spack-install.log
 
 # Load Spack into your environment
 source /shared/spack/share/spack/setup-env.sh
+```
+
+The install takes 5–10 minutes. If you prefer to run it in the background:
+
+```bash
+sudo ./postinstall.sh --prefix /shared &> /tmp/spack-install.log &
+# Monitor progress:
+tail -f /tmp/spack-install.log
 ```
 
 ### Run the Relion install script
@@ -468,3 +459,68 @@ Delete resources in reverse order to avoid orphaned dependencies:
 3. **If you created filesystems separately**, delete those last after confirming no instances reference them.
 
 **Note:** If you created additional PCS resources (extra node groups, queues) beyond what the CloudFormation stack manages, delete those in the PCS console before deleting the CloudFormation stack.
+
+## Appendix: Adding GPU Compute Node Groups
+
+The PCS sample AMI (`aws-pcs-sample_ami-al2023-x86_64-slurm-25.11`) includes NVIDIA drivers out of the box. When launched on GPU instance types (g4dn, g5, g6, g6e), `nvidia-smi` works without any additional driver installation. No custom AMI is required.
+
+### Create GPU node groups
+
+You'll need values from your existing compute node group. Retrieve them with:
+
+```bash
+aws pcs get-compute-node-group --cluster-identifier <your-cluster-id> \
+  --compute-node-group-identifier compute-1
+```
+
+Then create the GPU node groups:
+
+```bash
+# Single-GPU node group (g4dn.2xlarge — 1x NVIDIA T4)
+aws pcs create-compute-node-group \
+  --cluster-identifier <your-cluster-id> \
+  --compute-node-group-name gpu-single \
+  --ami-id <your-pcs-ami-id> \
+  --subnet-ids <your-subnet-id> \
+  --instance-configs '[{"instanceType":"g4dn.2xlarge"}]' \
+  --scaling-configuration '{"minInstanceCount":0,"maxInstanceCount":4}' \
+  --iam-instance-profile-arn "<your-instance-profile-arn>" \
+  --custom-launch-template '{"id":"<your-launch-template-id>","version":"1"}' \
+  --purchase-option ONDEMAND
+
+# Multi-GPU node group (g6e.4xlarge)
+aws pcs create-compute-node-group \
+  --cluster-identifier <your-cluster-id> \
+  --compute-node-group-name gpu-multi \
+  --ami-id <your-pcs-ami-id> \
+  --subnet-ids <your-subnet-id> \
+  --instance-configs '[{"instanceType":"g6e.4xlarge"}]' \
+  --scaling-configuration '{"minInstanceCount":0,"maxInstanceCount":4}' \
+  --iam-instance-profile-arn "<your-instance-profile-arn>" \
+  --custom-launch-template '{"id":"<your-launch-template-id>","version":"1"}' \
+  --purchase-option ONDEMAND
+```
+
+### Verify GPU node groups
+
+From the DCV workstation (after sourcing the activate script):
+
+```bash
+sinfo  # Should show gpu-single and gpu-multi partitions
+
+# Submit a test GPU job
+sbatch --partition=gpu-single --wrap="nvidia-smi" -o /shared/gpu-test.out
+cat /shared/gpu-test.out  # Verify GPU output after job completes
+```
+
+### Notes
+
+- Both node groups scale to zero when idle — you only pay for GPU instances when jobs are running.
+- The `--ami-id` parameter is required because the launch template does not specify an AMI.
+- You can reuse the same launch template and IAM instance profile as your CPU node group.
+- If you need a custom AMI (e.g., for additional pre-installed software), launch a temporary GPU instance from the PCS sample AMI, customize it, then create an AMI with `aws ec2 create-image`.
+- To find your existing node group configuration (subnet, IAM profile, launch template), run:
+  ```bash
+  aws pcs get-compute-node-group --cluster-identifier <cluster-id> \
+    --compute-node-group-identifier compute-1
+  ```
