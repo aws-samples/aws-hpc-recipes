@@ -196,6 +196,12 @@ Resources:
       SecurityGroupIngress:
       - CidrIp: 
           Ref: AllowList
+        Description: Allow SSH inbound
+        FromPort: 22
+        IpProtocol: tcp
+        ToPort: 22
+      - CidrIp: 
+          Ref: AllowList
         Description: Allow DCV TCP inbound
         FromPort: 
           Ref: StreamingPort
