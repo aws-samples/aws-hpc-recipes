@@ -1,0 +1,330 @@
+AWSTemplateFormatVersion: '2010-09-09'
+# Copyright Amazon.com, Inc. or its affiliates. All Rights Reserved.
+# SPDX-License-Identifier: MIT-0
+Description: >
+  Amazon Managed Service for Prometheus and Amazon Managed Grafana workspace for PCS observability.
+  This template creates an AMP workspace for metrics collection and an AMG workspace with IAM Identity Center
+  authentication, configured with AMP and CloudWatch data sources.
+
+Metadata:
+  AWS::CloudFormation::Interface:
+    ParameterGroups:
+      - Label:
+          default: Grafana Configuration
+        Parameters:
+          - GrafanaWorkspaceName
+          - IdentityCenterInstanceArn
+      - Label:
+          default: Prometheus Configuration
+        Parameters:
+          - PrometheusWorkspaceAlias
+    ParameterLabels:
+      GrafanaWorkspaceName:
+        default: Grafana Workspace Name
+      IdentityCenterInstanceArn:
+        default: IAM Identity Center Instance ARN
+      PrometheusWorkspaceAlias:
+        default: Prometheus Workspace Alias
+
+Parameters:
+  GrafanaWorkspaceName:
+    Type: String
+    Description: Name for the Amazon Managed Grafana workspace
+    Default: pcs-observability-grafana
+    MinLength: 1
+    MaxLength: 255
+    AllowedPattern: ^[a-zA-Z0-9-_]+$
+    ConstraintDescription: Must contain only alphanumeric characters, hyphens, and underscores
+
+  IdentityCenterInstanceArn:
+    Type: String
+    Description: >
+      ARN of your IAM Identity Center instance (format: arn:${AWS::Partition}:sso:::instance/ssoins-xxxxxxxxxx).
+      Find this in the IAM Identity Center console under Settings.
+    AllowedPattern: ^arn:(aws|aws-us-gov|aws-cn):sso:::instance/ssoins-[a-zA-Z0-9-]+$
+    ConstraintDescription: Must be a valid IAM Identity Center instance ARN
+
+  PrometheusWorkspaceAlias:
+    Type: String
+    Description: Alias for the Amazon Managed Service for Prometheus workspace
+    Default: pcs-observability-amp
+    MinLength: 1
+    MaxLength: 100
+    AllowedPattern: ^[a-zA-Z0-9-_]+$
+    ConstraintDescription: Must contain only alphanumeric characters, hyphens, and underscores
+
+Resources:
+  # Amazon Managed Service for Prometheus Workspace
+  PrometheusWorkspace:
+    Type: AWS::APS::Workspace
+    Properties:
+      Alias: !Ref PrometheusWorkspaceAlias
+      Tags:
+        - Key: Name
+          Value: !Ref PrometheusWorkspaceAlias
+        - Key: Purpose
+          Value: PCS Observability
+
+  # IAM Role for Grafana to access Prometheus and CloudWatch
+  # aps:ListWorkspaces requires '*' permissions because it is an account-level action
+  GrafanaServiceRole:
+    Type: AWS::IAM::Role
+    Properties:
+      RoleName: !Sub '${GrafanaWorkspaceName}-service-role'
+      Description: Service role for Amazon Managed Grafana to access data sources
+      AssumeRolePolicyDocument:
+        Version: '2012-10-17'
+        Statement:
+          - Effect: Allow
+            Principal:
+              Service: grafana.amazonaws.com
+            Action: sts:AssumeRole
+            Condition:
+              StringEquals:
+                aws:SourceAccount: !Ref AWS::AccountId
+      ManagedPolicyArns:
+        - !Sub 'arn:${AWS::Partition}:iam::aws:policy/CloudWatchReadOnlyAccess'
+      Policies:
+        - PolicyName: PrometheusQueryAccess
+          PolicyDocument:
+            Version: '2012-10-17'
+            Statement:
+              - Effect: Allow
+                Action:
+                  - aps:QueryMetrics
+                  - aps:GetSeries
+                  - aps:GetLabels
+                  - aps:GetMetricMetadata
+                Resource: !GetAtt PrometheusWorkspace.Arn
+              - Effect: Allow
+                Action:
+                  - aps:DescribeWorkspace
+                Resource: !GetAtt PrometheusWorkspace.Arn
+              - Effect: Allow
+                Action:
+                  - aps:ListWorkspaces
+                Resource: '*'
+        - PolicyName: CloudWatchLogsAccess
+          PolicyDocument:
+            Version: '2012-10-17'
+            Statement:
+              - Effect: Allow
+                Action:
+                  - logs:DescribeLogGroups
+                  - logs:GetLogGroupFields
+                  - logs:StartQuery
+                  - logs:StopQuery
+                  - logs:GetQueryResults
+                  - logs:GetLogEvents
+                Resource: !Sub 'arn:${AWS::Partition}:logs:${AWS::Region}:${AWS::AccountId}:log-group:*'
+      Tags:
+        - Key: Name
+          Value: !Sub '${GrafanaWorkspaceName}-service-role'
+
+  # Amazon Managed Grafana Workspace
+  GrafanaWorkspace:
+    Type: AWS::Grafana::Workspace
+    Properties:
+      Name: !Ref GrafanaWorkspaceName
+      Description: Grafana workspace for PCS observability with Prometheus and CloudWatch data sources
+      AccountAccessType: CURRENT_ACCOUNT
+      AuthenticationProviders:
+        - AWS_SSO
+      PermissionType: SERVICE_MANAGED
+      RoleArn: !GetAtt GrafanaServiceRole.Arn
+      DataSources:
+        - PROMETHEUS
+        - CLOUDWATCH
+      NotificationDestinations:
+        - SNS
+      OrganizationRoleName: ADMIN
+      StackSetName: !Sub '${GrafanaWorkspaceName}-stackset'
+      GrafanaVersion: '10.4'
+
+  # S3 Bucket for observability userdata scripts
+  ScriptsBucket:
+    Type: AWS::S3::Bucket
+    Properties:
+      BucketEncryption:
+        ServerSideEncryptionConfiguration:
+          - ServerSideEncryptionByDefault:
+              SSEAlgorithm: AES256
+      PublicAccessBlockConfiguration:
+        BlockPublicAcls: true
+        BlockPublicPolicy: true
+        IgnorePublicAcls: true
+        RestrictPublicBuckets: true
+      Tags:
+        - Key: Name
+          Value: !Sub '${AWS::StackName}-scripts'
+        - Key: Purpose
+          Value: PCS Observability
+
+  # Bucket policy to enforce SSL-only access
+  ScriptsBucketPolicy:
+    Type: AWS::S3::BucketPolicy
+    Properties:
+      Bucket: !Ref ScriptsBucket
+      PolicyDocument:
+        Version: '2012-10-17'
+        Statement:
+          - Sid: DenyInsecureTransport
+            Effect: Deny
+            Principal: '*'
+            Action: s3:*
+            Resource:
+              - !GetAtt ScriptsBucket.Arn
+              - !Sub '${ScriptsBucket.Arn}/*'
+            Condition:
+              Bool:
+                aws:SecureTransport: 'false'
+
+  # IAM Managed Policy for EC2 instances to write metrics to Prometheus and read scripts
+  # ecr:GetAuthorizationToken requires Resource: * per AWS service design'.
+  PrometheusWritePolicy:
+    Type: AWS::IAM::ManagedPolicy
+    Properties:
+      ManagedPolicyName: !Sub '${PrometheusWorkspaceAlias}-write-policy'
+      Description: IAM policy for EC2 instances to write metrics to Prometheus, read SSM parameters, and download scripts from S3
+      PolicyDocument:
+        Version: '2012-10-17'
+        Statement:
+          - Effect: Allow
+            Action:
+              - aps:RemoteWrite
+              - aps:GetSeries
+              - aps:GetLabels
+              - aps:GetMetricMetadata
+            Resource: !GetAtt PrometheusWorkspace.Arn
+          - Effect: Allow
+            Action:
+              - ssm:GetParameter
+            Resource: !Sub 'arn:${AWS::Partition}:ssm:${AWS::Region}:${AWS::AccountId}:parameter/observability/${PrometheusWorkspaceAlias}/remote-write-url'
+          - Effect: Allow
+            Action:
+              - s3:GetObject
+            Resource: !Sub '${ScriptsBucket.Arn}/*'
+          - Effect: Allow
+            Action:
+              - s3:ListBucket
+            Resource: !GetAtt ScriptsBucket.Arn
+          - Effect: Allow
+            Action:
+              - ecr:GetDownloadUrlForLayer
+              - ecr:BatchGetImage
+              - ecr:DescribeImages
+              - ecr:ListImages
+            Resource:
+              - !Sub 'arn:${AWS::Partition}:ecr:${AWS::Region}:602401143452:repository/hyperpod/node_exporter'
+              - !Sub 'arn:${AWS::Partition}:ecr:${AWS::Region}:602401143452:repository/hyperpod/efa_exporter'
+              - !Sub 'arn:${AWS::Partition}:ecr:${AWS::Region}:602401143452:repository/hyperpod/dcgm_exporter'
+              - !Sub 'arn:${AWS::Partition}:ecr:${AWS::Region}:602401143452:repository/hyperpod/otel_collector'
+          - Effect: Allow
+            Action:
+              - ecr:GetAuthorizationToken
+            Resource: '*'
+
+  # Systems Manager Parameter for Prometheus Remote Write URL
+  PrometheusRemoteWriteUrlParameter:
+    Type: AWS::SSM::Parameter
+    Properties:
+      Name: !Sub '/observability/${PrometheusWorkspaceAlias}/remote-write-url'
+      Description: Prometheus remote write endpoint URL for sending metrics
+      Type: String
+      Value: !Sub '${PrometheusWorkspace.PrometheusEndpoint}api/v1/remote_write'
+      Tags:
+        Name: !Sub '${PrometheusWorkspaceAlias}-remote-write-url'
+        Purpose: PCS Observability
+
+Outputs:
+  PrometheusWorkspaceId:
+    Description: Amazon Managed Service for Prometheus workspace ID
+    Value: !Ref PrometheusWorkspace
+    Export:
+      Name: !Sub '${AWS::StackName}-PrometheusWorkspaceId'
+
+  PrometheusWorkspaceArn:
+    Description: Amazon Managed Service for Prometheus workspace ARN
+    Value: !GetAtt PrometheusWorkspace.Arn
+    Export:
+      Name: !Sub '${AWS::StackName}-PrometheusWorkspaceArn'
+
+  PrometheusRemoteWriteUrl:
+    Description: Prometheus remote write endpoint URL for sending metrics
+    Value: !Sub '${PrometheusWorkspace.PrometheusEndpoint}api/v1/remote_write'
+    Export:
+      Name: !Sub '${AWS::StackName}-PrometheusRemoteWriteUrl'
+
+  PrometheusRemoteWriteUrlParameterName:
+    Description: SSM Parameter Store name containing the Prometheus remote write URL
+    Value: !Ref PrometheusRemoteWriteUrlParameter
+    Export:
+      Name: !Sub '${AWS::StackName}-PrometheusRemoteWriteUrlParameterName'
+
+  PrometheusQueryUrl:
+    Description: Prometheus query endpoint URL
+    Value: !Sub '${PrometheusWorkspace.PrometheusEndpoint}api/v1/query'
+    Export:
+      Name: !Sub '${AWS::StackName}-PrometheusQueryUrl'
+
+  PrometheusConsoleUrl:
+    Description: AWS Console URL for the Prometheus workspace
+    Value: !Sub 'https://console.${AWS::URLSuffix}/prometheus/home?region=${AWS::Region}#/workspaces/${PrometheusWorkspace}'
+
+  GrafanaWorkspaceId:
+    Description: Amazon Managed Grafana workspace ID
+    Value: !Ref GrafanaWorkspace
+    Export:
+      Name: !Sub '${AWS::StackName}-GrafanaWorkspaceId'
+
+  GrafanaWorkspaceUrl:
+    Description: Amazon Managed Grafana workspace URL for accessing dashboards
+    Value: !GetAtt GrafanaWorkspace.Endpoint
+    Export:
+      Name: !Sub '${AWS::StackName}-GrafanaWorkspaceUrl'
+
+  GrafanaConsoleUrl:
+    Description: AWS Console URL for the Grafana workspace
+    Value: !Sub 'https://console.${AWS::URLSuffix}/grafana/home?region=${AWS::Region}#/workspaces/${GrafanaWorkspace}'
+
+  PrometheusWritePolicyArn:
+    Description: IAM managed policy ARN for EC2 instances to write metrics to Prometheus (attach to existing roles)
+    Value: !Ref PrometheusWritePolicy
+    Export:
+      Name: !Sub '${AWS::StackName}-PrometheusWritePolicyArn'
+
+  PrometheusWritePolicyName:
+    Description: IAM managed policy name for attaching to existing roles
+    Value: !Sub '${PrometheusWorkspaceAlias}-write-policy'
+    Export:
+      Name: !Sub '${AWS::StackName}-PrometheusWritePolicyName'
+
+  GrafanaServiceRoleArn:
+    Description: IAM role ARN used by Grafana to access data sources
+    Value: !GetAtt GrafanaServiceRole.Arn
+    Export:
+      Name: !Sub '${AWS::StackName}-GrafanaServiceRoleArn'
+
+  ScriptsBucketName:
+    Description: S3 bucket name for uploading observability userdata scripts
+    Value: !Ref ScriptsBucket
+    Export:
+      Name: !Sub '${AWS::StackName}-ScriptsBucketName'
+
+  ScriptsBucketArn:
+    Description: S3 bucket ARN for observability userdata scripts
+    Value: !GetAtt ScriptsBucket.Arn
+    Export:
+      Name: !Sub '${AWS::StackName}-ScriptsBucketArn'
+
+  PostDeploymentInstructions:
+    Description: Next steps after stack creation
+    Value: !Sub |
+      1. Upload userdata scripts to S3:
+         aws s3 cp observability-userdata-controller.sh s3://${ScriptsBucket}/
+         aws s3 cp observability-userdata-compute.sh s3://${ScriptsBucket}/
+      2. Attach the Prometheus write policy to your existing EC2 instance role:
+         aws iam attach-role-policy --role-name <your-role-name> --policy-arn ${PrometheusWritePolicy}
+      3. Assign users or groups to the Grafana workspace via the console:
+         https://console.${AWS::URLSuffix}/grafana/home?region=${AWS::Region}#/workspaces/${GrafanaWorkspace}
+      4. Configure Prometheus remote write to: ${PrometheusWorkspace.PrometheusEndpoint}api/v1/remote_write

@@ -1,0 +1,1984 @@
+{
+  "__inputs": [
+    {
+      "name": "DS_PROMETHEUS_WS-D5855651-4ACC-4B19-B8E3-11BABC88CCA9",
+      "label": "Prometheus ws-d5855651-4acc-4b19-b8e3-11babc88cca9",
+      "description": "",
+      "type": "datasource",
+      "pluginId": "prometheus",
+      "pluginName": "Prometheus"
+    }
+  ],
+  "__elements": {},
+  "__requires": [
+    {
+      "type": "grafana",
+      "id": "grafana",
+      "name": "Grafana",
+      "version": "10.4.1"
+    },
+    {
+      "type": "datasource",
+      "id": "prometheus",
+      "name": "Prometheus",
+      "version": "1.0.0"
+    },
+    {
+      "type": "panel",
+      "id": "stat",
+      "name": "Stat",
+      "version": ""
+    },
+    {
+      "type": "panel",
+      "id": "table",
+      "name": "Table",
+      "version": ""
+    },
+    {
+      "type": "panel",
+      "id": "timeseries",
+      "name": "Time series",
+      "version": ""
+    }
+  ],
+  "annotations": {
+    "list": [
+      {
+        "builtIn": 1,
+        "datasource": {
+          "type": "grafana",
+          "uid": "-- Grafana --"
+        },
+        "enable": true,
+        "hide": true,
+        "iconColor": "rgba(0, 211, 255, 1)",
+        "name": "Annotations & Alerts",
+        "type": "dashboard"
+      }
+    ]
+  },
+  "editable": true,
+  "fiscalYearStartMonth": 0,
+  "graphTooltip": 0,
+  "id": null,
+  "links": [
+    {
+      "asDropdown": true,
+      "icon": "external link",
+      "includeVars": false,
+      "keepTime": false,
+      "tags": [
+        "sc25"
+      ],
+      "targetBlank": false,
+      "title": "Dashboards List",
+      "tooltip": "",
+      "type": "dashboards",
+      "url": ""
+    }
+  ],
+  "panels": [
+    {
+      "collapsed": false,
+      "gridPos": {
+        "h": 1,
+        "w": 24,
+        "x": 0,
+        "y": 0
+      },
+      "id": 7,
+      "panels": [],
+      "title": "Jobs Dashboard",
+      "type": "row"
+    },
+    {
+      "datasource": {
+        "type": "prometheus",
+        "uid": "${DS_PROMETHEUS_WS-D5855651-4ACC-4B19-B8E3-11BABC88CCA9}"
+      },
+      "description": "",
+      "fieldConfig": {
+        "defaults": {
+          "color": {
+            "mode": "thresholds"
+          },
+          "mappings": [
+            {
+              "options": {
+                "match": "null",
+                "result": {
+                  "text": "N/A"
+                }
+              },
+              "type": "special"
+            }
+          ],
+          "thresholds": {
+            "mode": "absolute",
+            "steps": [
+              {
+                "color": "green",
+                "value": null
+              }
+            ]
+          },
+          "unit": "short"
+        },
+        "overrides": []
+      },
+      "gridPos": {
+        "h": 8,
+        "w": 8,
+        "x": 0,
+        "y": 1
+      },
+      "id": 8,
+      "maxDataPoints": 1000,
+      "options": {
+        "colorMode": "background_solid",
+        "graphMode": "area",
+        "justifyMode": "auto",
+        "orientation": "auto",
+        "reduceOptions": {
+          "calcs": [
+            "lastNotNull"
+          ],
+          "fields": "",
+          "values": false
+        },
+        "showPercentChange": false,
+        "textMode": "auto",
+        "wideLayout": true
+      },
+      "pluginVersion": "10.4.1",
+      "targets": [
+        {
+          "datasource": {
+            "type": "prometheus",
+            "uid": "${DS_PROMETHEUS_WS-D5855651-4ACC-4B19-B8E3-11BABC88CCA9}"
+          },
+          "editorMode": "code",
+          "exemplar": false,
+          "expr": "count(slurm_job_node_info{job_id=\"$job_id\"})",
+          "instant": false,
+          "legendFormat": "Node Count",
+          "range": true,
+          "refId": "A"
+        }
+      ],
+      "title": "Nodes Allocated to Job",
+      "type": "stat"
+    },
+    {
+      "datasource": {
+        "type": "prometheus",
+        "uid": "${DS_PROMETHEUS_WS-D5855651-4ACC-4B19-B8E3-11BABC88CCA9}"
+      },
+      "fieldConfig": {
+        "defaults": {
+          "color": {
+            "fixedColor": "green",
+            "mode": "fixed"
+          },
+          "custom": {
+            "align": "center",
+            "cellOptions": {
+              "type": "auto"
+            },
+            "inspect": false
+          },
+          "mappings": [],
+          "thresholds": {
+            "mode": "absolute",
+            "steps": [
+              {
+                "color": "green",
+                "value": null
+              },
+              {
+                "color": "red",
+                "value": 80
+              }
+            ]
+          }
+        },
+        "overrides": [
+          {
+            "matcher": {
+              "id": "byName",
+              "options": "instance_id"
+            },
+            "properties": [
+              {
+                "id": "links",
+                "value": [
+                  {
+                    "targetBlank": true,
+                    "title": "Node Exporter Full",
+                    "url": "/d/rYdddlPWk/node-exporter-full?orgId=1&refresh=1m&var-instance_id=${__value.raw}"
+                  }
+                ]
+              }
+            ]
+          }
+        ]
+      },
+      "gridPos": {
+        "h": 8,
+        "w": 16,
+        "x": 8,
+        "y": 1
+      },
+      "id": 9,
+      "options": {
+        "cellHeight": "sm",
+        "footer": {
+          "countRows": false,
+          "enablePagination": false,
+          "fields": "",
+          "reducer": [
+            "sum"
+          ],
+          "show": false
+        },
+        "showHeader": true
+      },
+      "pluginVersion": "10.4.1",
+      "targets": [
+        {
+          "datasource": {
+            "type": "prometheus",
+            "uid": "${DS_PROMETHEUS_WS-D5855651-4ACC-4B19-B8E3-11BABC88CCA9}"
+          },
+          "editorMode": "code",
+          "exemplar": false,
+          "expr": "group by (instance, instance_id, instance_type, slurm_node) (\n    (\n      node_uname_info{job=\"node_exporter\"}\n        * on(slurm_node) group_left(job_id, job_name)\n        label_replace(slurm_job_node_info{job_id=\"$job_id\", job=\"slurm_exporter\"}, \"slurm_node\", \"$1\", \"node_name\", \"(.*)\")\n    \n \n  )\n)",
+          "format": "table",
+          "instant": false,
+          "legendFormat": "__auto",
+          "range": true,
+          "refId": "A"
+        }
+      ],
+      "title": "Allocated Nodes",
+      "transformations": [
+        {
+          "id": "organize",
+          "options": {
+            "excludeByName": {
+              "Time": false,
+              "Value": true
+            },
+            "includeByName": {},
+            "indexByName": {},
+            "renameByName": {}
+          }
+        },
+        {
+          "id": "groupBy",
+          "options": {
+            "fields": {
+              "Time": {
+                "aggregations": [
+                  "range"
+                ],
+                "operation": "aggregate"
+              },
+              "instance": {
+                "aggregations": [],
+                "operation": "groupby"
+              },
+              "instance_id": {
+                "aggregations": [],
+                "operation": "groupby"
+              },
+              "instance_type": {
+                "aggregations": [],
+                "operation": "groupby"
+              },
+              "slurm_node": {
+                "aggregations": [],
+                "operation": "groupby"
+              }
+            }
+          }
+        },
+        {
+          "id": "calculateField",
+          "options": {
+            "binary": {
+              "left": "Time (range)",
+              "operator": "/",
+              "right": "1000"
+            },
+            "mode": "binary",
+            "reduce": {
+              "reducer": "sum"
+            },
+            "replaceFields": false
+          }
+        },
+        {
+          "id": "organize",
+          "options": {
+            "excludeByName": {
+              "Time (range)": true
+            },
+            "includeByName": {},
+            "indexByName": {
+              "Time (range)": 4,
+              "Time (range) / 1000": 5,
+              "instance": 1,
+              "instance_id": 0,
+              "instance_type": 2,
+              "slurm_node": 3
+            },
+            "renameByName": {
+              "Time (range) / 1000": "Duration (seconds)"
+            }
+          }
+        }
+      ],
+      "type": "table"
+    },
+    {
+      "collapsed": false,
+      "gridPos": {
+        "h": 1,
+        "w": 24,
+        "x": 0,
+        "y": 9
+      },
+      "id": 2,
+      "panels": [],
+      "title": "CPU / Memory",
+      "type": "row"
+    },
+    {
+      "datasource": {
+        "type": "prometheus",
+        "uid": "${DS_PROMETHEUS_WS-D5855651-4ACC-4B19-B8E3-11BABC88CCA9}"
+      },
+      "description": "CPU time spent busy vs idle, split by activity type",
+      "fieldConfig": {
+        "defaults": {
+          "color": {
+            "mode": "palette-classic"
+          },
+          "custom": {
+            "axisBorderShow": false,
+            "axisCenteredZero": false,
+            "axisColorMode": "text",
+            "axisLabel": "",
+            "axisPlacement": "auto",
+            "barAlignment": 0,
+            "drawStyle": "line",
+            "fillOpacity": 40,
+            "gradientMode": "none",
+            "hideFrom": {
+              "legend": false,
+              "tooltip": false,
+              "viz": false
+            },
+            "insertNulls": false,
+            "lineInterpolation": "smooth",
+            "lineWidth": 1,
+            "pointSize": 5,
+            "scaleDistribution": {
+              "type": "linear"
+            },
+            "showPoints": "never",
+            "spanNulls": false,
+            "stacking": {
+              "group": "A",
+              "mode": "percent"
+            },
+            "thresholdsStyle": {
+              "mode": "off"
+            }
+          },
+          "links": [],
+          "mappings": [],
+          "min": 0,
+          "thresholds": {
+            "mode": "absolute",
+            "steps": [
+              {
+                "color": "green",
+                "value": null
+              }
+            ]
+          },
+          "unit": "percentunit"
+        },
+        "overrides": [
+          {
+            "matcher": {
+              "id": "byName",
+              "options": "Busy Iowait"
+            },
+            "properties": [
+              {
+                "id": "color",
+                "value": {
+                  "fixedColor": "#890F02",
+                  "mode": "fixed"
+                }
+              }
+            ]
+          },
+          {
+            "matcher": {
+              "id": "byName",
+              "options": "Idle"
+            },
+            "properties": [
+              {
+                "id": "color",
+                "value": {
+                  "fixedColor": "#052B51",
+                  "mode": "fixed"
+                }
+              }
+            ]
+          },
+          {
+            "matcher": {
+              "id": "byName",
+              "options": "Busy System"
+            },
+            "properties": [
+              {
+                "id": "color",
+                "value": {
+                  "fixedColor": "#EAB839",
+                  "mode": "fixed"
+                }
+              }
+            ]
+          },
+          {
+            "matcher": {
+              "id": "byName",
+              "options": "Busy User"
+            },
+            "properties": [
+              {
+                "id": "color",
+                "value": {
+                  "fixedColor": "#0A437C",
+                  "mode": "fixed"
+                }
+              }
+            ]
+          },
+          {
+            "matcher": {
+              "id": "byName",
+              "options": "Busy Other"
+            },
+            "properties": [
+              {
+                "id": "color",
+                "value": {
+                  "fixedColor": "#6D1F62",
+                  "mode": "fixed"
+                }
+              }
+            ]
+          }
+        ]
+      },
+      "gridPos": {
+        "h": 10,
+        "w": 12,
+        "x": 0,
+        "y": 10
+      },
+      "id": 3,
+      "options": {
+        "legend": {
+          "calcs": [],
+          "displayMode": "list",
+          "placement": "bottom",
+          "showLegend": true,
+          "width": 250
+        },
+        "tooltip": {
+          "hideZeros": false,
+          "mode": "multi",
+          "sort": "desc"
+        }
+      },
+      "pluginVersion": "11.6.1",
+      "targets": [
+        {
+          "datasource": {
+            "type": "prometheus",
+            "uid": "${DS_PROMETHEUS_WS-D5855651-4ACC-4B19-B8E3-11BABC88CCA9}"
+          },
+          "editorMode": "code",
+          "exemplar": false,
+          "expr": "sum(\n  irate(node_cpu_seconds_total{mode=\"system\", job=\"node_exporter\"}[$__rate_interval])\n  * on(slurm_node) group_left(job_id, job_name)\n  label_replace(slurm_job_node_info{job_id=\"$job_id\"}, \"slurm_node\", \"$1\", \"node_name\", \"(.*)\")\n) / scalar(\n  count(\n    count(\n      node_cpu_seconds_total\n      * on(slurm_node) group_left(job_id, job_name)\n      label_replace(slurm_job_node_info{job_id=\"$job_id\"}, \"slurm_node\", \"$1\", \"node_name\", \"(.*)\")\n    ) by (cpu, slurm_node)\n  )\n)",
+          "format": "time_series",
+          "hide": false,
+          "instant": false,
+          "intervalFactor": 1,
+          "legendFormat": "Busy System",
+          "range": true,
+          "refId": "A",
+          "step": 240
+        },
+        {
+          "datasource": {
+            "type": "prometheus",
+            "uid": "${DS_PROMETHEUS_WS-D5855651-4ACC-4B19-B8E3-11BABC88CCA9}"
+          },
+          "editorMode": "code",
+          "expr": "sum(\n  irate(node_cpu_seconds_total{mode=\"user\", job=\"node_exporter\"}[$__rate_interval])\n  * on(slurm_node) group_left(job_id, job_name)\n  label_replace(slurm_job_node_info{job_id=\"$job_id\"}, \"slurm_node\", \"$1\", \"node_name\", \"(.*)\")\n) / scalar(\n  count(\n    count(\n      node_cpu_seconds_total\n      * on(slurm_node) group_left(job_id, job_name)\n      label_replace(slurm_job_node_info{job_id=\"$job_id\"}, \"slurm_node\", \"$1\", \"node_name\", \"(.*)\")\n    ) by (cpu, slurm_node)\n  )\n)",
+          "format": "time_series",
+          "hide": false,
+          "intervalFactor": 1,
+          "legendFormat": "Busy User",
+          "range": true,
+          "refId": "B",
+          "step": 240
+        },
+        {
+          "datasource": {
+            "type": "prometheus",
+            "uid": "${DS_PROMETHEUS_WS-D5855651-4ACC-4B19-B8E3-11BABC88CCA9}"
+          },
+          "editorMode": "code",
+          "expr": "sum(\n  irate(node_cpu_seconds_total{mode=\"iowait\", job=\"node_exporter\"}[$__rate_interval])\n  * on(slurm_node) group_left(job_id, job_name)\n  label_replace(slurm_job_node_info{job_id=\"$job_id\"}, \"slurm_node\", \"$1\", \"node_name\", \"(.*)\")\n) / scalar(\n  count(\n    count(\n      node_cpu_seconds_total\n      * on(slurm_node) group_left(job_id, job_name)\n      label_replace(slurm_job_node_info{job_id=\"$job_id\"}, \"slurm_node\", \"$1\", \"node_name\", \"(.*)\")\n    ) by (cpu, slurm_node)\n  )\n)",
+          "format": "time_series",
+          "intervalFactor": 1,
+          "legendFormat": "Busy Iowait",
+          "range": true,
+          "refId": "C",
+          "step": 240
+        },
+        {
+          "datasource": {
+            "type": "prometheus",
+            "uid": "${DS_PROMETHEUS_WS-D5855651-4ACC-4B19-B8E3-11BABC88CCA9}"
+          },
+          "editorMode": "code",
+          "expr": "sum(\n  irate(node_cpu_seconds_total{mode=\".*irq\", job=\"node_exporter\"}[$__rate_interval])\n  * on(slurm_node) group_left(job_id, job_name)\n  label_replace(slurm_job_node_info{job_id=\"$job_id\"}, \"slurm_node\", \"$1\", \"node_name\", \"(.*)\")\n) / scalar(\n  count(\n    count(\n      node_cpu_seconds_total\n      * on(slurm_node) group_left(job_id, job_name)\n      label_replace(slurm_job_node_info{job_id=\"$job_id\"}, \"slurm_node\", \"$1\", \"node_name\", \"(.*)\")\n    ) by (cpu, slurm_node)\n  )\n)",
+          "format": "time_series",
+          "intervalFactor": 1,
+          "legendFormat": "Busy IRQs",
+          "range": true,
+          "refId": "D",
+          "step": 240
+        },
+        {
+          "datasource": {
+            "type": "prometheus",
+            "uid": "${DS_PROMETHEUS_WS-D5855651-4ACC-4B19-B8E3-11BABC88CCA9}"
+          },
+          "editorMode": "code",
+          "expr": "sum(\n  irate(node_cpu_seconds_total{mode!='idle',mode!='user',mode!='system',mode!='iowait',mode!='irq',mode!='softirq', job=\"node_exporter\"}[$__rate_interval])\n  * on(slurm_node) group_left(job_id, job_name)\n  label_replace(slurm_job_node_info{job_id=\"$job_id\"}, \"slurm_node\", \"$1\", \"node_name\", \"(.*)\")\n) / scalar(\n  count(\n    count(\n      node_cpu_seconds_total\n      * on(slurm_node) group_left(job_id, job_name)\n      label_replace(slurm_job_node_info{job_id=\"$job_id\"}, \"slurm_node\", \"$1\", \"node_name\", \"(.*)\")\n    ) by (cpu, slurm_node)\n  )\n)",
+          "format": "time_series",
+          "intervalFactor": 1,
+          "legendFormat": "Busy Other",
+          "range": true,
+          "refId": "E",
+          "step": 240
+        },
+        {
+          "datasource": {
+            "type": "prometheus",
+            "uid": "${DS_PROMETHEUS_WS-D5855651-4ACC-4B19-B8E3-11BABC88CCA9}"
+          },
+          "editorMode": "code",
+          "expr": "sum(\n  irate(node_cpu_seconds_total{mode=\"idle\", job=\"node_exporter\"}[$__rate_interval])\n  * on(slurm_node) group_left(job_id, job_name)\n  label_replace(slurm_job_node_info{job_id=\"$job_id\"}, \"slurm_node\", \"$1\", \"node_name\", \"(.*)\")\n) / scalar(\n  count(\n    count(\n      node_cpu_seconds_total\n      * on(slurm_node) group_left(job_id, job_name)\n      label_replace(slurm_job_node_info{job_id=\"$job_id\"}, \"slurm_node\", \"$1\", \"node_name\", \"(.*)\")\n    ) by (cpu, slurm_node)\n  )\n)",
+          "format": "time_series",
+          "intervalFactor": 1,
+          "legendFormat": "Idle",
+          "range": true,
+          "refId": "F",
+          "step": 240
+        }
+      ],
+      "title": "CPU Basic (Aggregate)",
+      "type": "timeseries"
+    },
+    {
+      "datasource": {
+        "type": "prometheus",
+        "uid": "${DS_PROMETHEUS_WS-D5855651-4ACC-4B19-B8E3-11BABC88CCA9}"
+      },
+      "description": "Shows CPU saturation per core, calculated as the proportion of time spent waiting to run relative to total time demanded (running + waiting).",
+      "fieldConfig": {
+        "defaults": {
+          "color": {
+            "mode": "palette-classic"
+          },
+          "custom": {
+            "axisBorderShow": false,
+            "axisCenteredZero": false,
+            "axisColorMode": "text",
+            "axisLabel": "",
+            "axisPlacement": "auto",
+            "barAlignment": 0,
+            "drawStyle": "line",
+            "fillOpacity": 20,
+            "gradientMode": "none",
+            "hideFrom": {
+              "legend": false,
+              "tooltip": false,
+              "viz": false
+            },
+            "insertNulls": false,
+            "lineInterpolation": "linear",
+            "lineWidth": 1,
+            "pointSize": 5,
+            "scaleDistribution": {
+              "type": "linear"
+            },
+            "showPoints": "never",
+            "spanNulls": false,
+            "stacking": {
+              "group": "A",
+              "mode": "none"
+            },
+            "thresholdsStyle": {
+              "mode": "off"
+            }
+          },
+          "links": [],
+          "mappings": [],
+          "thresholds": {
+            "mode": "absolute",
+            "steps": [
+              {
+                "color": "green",
+                "value": null
+              },
+              {
+                "color": "red",
+                "value": 80
+              }
+            ]
+          },
+          "unit": "percentunit"
+        },
+        "overrides": [
+          {
+            "matcher": {
+              "id": "byRegexp",
+              "options": "/.*waiting.*/"
+            },
+            "properties": [
+              {
+                "id": "custom.transform",
+                "value": "negative-Y"
+              }
+            ]
+          }
+        ]
+      },
+      "gridPos": {
+        "h": 10,
+        "w": 12,
+        "x": 12,
+        "y": 10
+      },
+      "id": 10,
+      "options": {
+        "legend": {
+          "calcs": [
+            "min",
+            "mean",
+            "max"
+          ],
+          "displayMode": "table",
+          "placement": "bottom",
+          "showLegend": true
+        },
+        "tooltip": {
+          "hideZeros": false,
+          "mode": "multi",
+          "sort": "none"
+        }
+      },
+      "pluginVersion": "11.6.1",
+      "targets": [
+        {
+          "datasource": {
+            "type": "prometheus",
+            "uid": "${DS_PROMETHEUS_WS-D5855651-4ACC-4B19-B8E3-11BABC88CCA9}"
+          },
+          "editorMode": "code",
+          "expr": "irate(node_schedstat_running_seconds_total{job=\"node_exporter\"}[$__rate_interval]) * on(slurm_node) group_left(job_id, job_name)\n  label_replace(slurm_job_node_info{job_id=\"$job_id\"}, \"slurm_node\", \"$1\", \"node_name\", \"(.*)\")",
+          "format": "time_series",
+          "hide": true,
+          "interval": "",
+          "intervalFactor": 1,
+          "legendFormat": "{{slurm_node}}: CPU {{cpu}} - Running",
+          "range": true,
+          "refId": "A",
+          "step": 240
+        },
+        {
+          "datasource": {
+            "type": "prometheus",
+            "uid": "${DS_PROMETHEUS_WS-D5855651-4ACC-4B19-B8E3-11BABC88CCA9}"
+          },
+          "editorMode": "code",
+          "expr": "irate(node_schedstat_waiting_seconds_total{job=\"node_exporter\"}[$__rate_interval]) * on(slurm_node) group_left(job_id, job_name)\n  label_replace(slurm_job_node_info{job_id=\"$job_id\"}, \"slurm_node\", \"$1\", \"node_name\", \"(.*)\")",
+          "format": "time_series",
+          "hide": true,
+          "interval": "",
+          "intervalFactor": 1,
+          "legendFormat": "{{slurm_node}}: CPU {{cpu}} - Waiting Queue",
+          "range": true,
+          "refId": "B",
+          "step": 240
+        },
+        {
+          "datasource": {
+            "type": "prometheus",
+            "uid": "${DS_PROMETHEUS_WS-D5855651-4ACC-4B19-B8E3-11BABC88CCA9}"
+          },
+          "editorMode": "code",
+          "expr": "(irate(node_schedstat_waiting_seconds_total{job=\"node_exporter\"}[$__rate_interval]) * on(slurm_node) group_left(job_id, job_name)\n  label_replace(slurm_job_node_info{job_id=\"$job_id\"}, \"slurm_node\", \"$1\", \"node_name\", \"(.*)\"))\n/\n(irate(node_schedstat_running_seconds_total{job=\"node_exporter\"}[$__rate_interval]) * on(slurm_node) group_left(job_id, job_name)\n  label_replace(slurm_job_node_info{job_id=\"$job_id\"}, \"slurm_node\", \"$1\", \"node_name\", \"(.*)\") + irate(node_schedstat_waiting_seconds_total{job=\"node_exporter\"}[$__rate_interval]) * on(slurm_node) group_left(job_id, job_name)\n  label_replace(slurm_job_node_info{job_id=\"$job_id\"}, \"slurm_node\", \"$1\", \"node_name\", \"(.*)\"))\n",
+          "format": "time_series",
+          "hide": false,
+          "interval": "",
+          "intervalFactor": 1,
+          "legendFormat": "{{slurm_node}}: CPU {{cpu}}",
+          "range": true,
+          "refId": "C",
+          "step": 240
+        }
+      ],
+      "title": "CPU Saturation per Core",
+      "type": "timeseries"
+    },
+    {
+      "datasource": {
+        "type": "prometheus",
+        "uid": "${DS_PROMETHEUS_WS-D5855651-4ACC-4B19-B8E3-11BABC88CCA9}"
+      },
+      "description": "Breakdown of physical memory and swap usage. Hardware-detected memory errors are also displayed",
+      "fieldConfig": {
+        "defaults": {
+          "color": {
+            "mode": "palette-classic"
+          },
+          "custom": {
+            "axisBorderShow": false,
+            "axisCenteredZero": false,
+            "axisColorMode": "text",
+            "axisLabel": "",
+            "axisPlacement": "auto",
+            "barAlignment": 0,
+            "drawStyle": "line",
+            "fillOpacity": 40,
+            "gradientMode": "none",
+            "hideFrom": {
+              "legend": false,
+              "tooltip": false,
+              "viz": false
+            },
+            "insertNulls": false,
+            "lineInterpolation": "linear",
+            "lineWidth": 1,
+            "pointSize": 5,
+            "scaleDistribution": {
+              "type": "linear"
+            },
+            "showPoints": "never",
+            "spanNulls": false,
+            "stacking": {
+              "group": "A",
+              "mode": "normal"
+            },
+            "thresholdsStyle": {
+              "mode": "off"
+            }
+          },
+          "links": [],
+          "mappings": [],
+          "min": 0,
+          "thresholds": {
+            "mode": "absolute",
+            "steps": [
+              {
+                "color": "green",
+                "value": null
+              }
+            ]
+          },
+          "unit": "bytes"
+        },
+        "overrides": [
+          {
+            "matcher": {
+              "id": "byName",
+              "options": "Apps"
+            },
+            "properties": [
+              {
+                "id": "color",
+                "value": {
+                  "fixedColor": "#629E51",
+                  "mode": "fixed"
+                }
+              }
+            ]
+          },
+          {
+            "matcher": {
+              "id": "byName",
+              "options": "Buffers"
+            },
+            "properties": [
+              {
+                "id": "color",
+                "value": {
+                  "fixedColor": "#614D93",
+                  "mode": "fixed"
+                }
+              }
+            ]
+          },
+          {
+            "matcher": {
+              "id": "byName",
+              "options": "Cache"
+            },
+            "properties": [
+              {
+                "id": "color",
+                "value": {
+                  "fixedColor": "#6D1F62",
+                  "mode": "fixed"
+                }
+              }
+            ]
+          },
+          {
+            "matcher": {
+              "id": "byName",
+              "options": "Cached"
+            },
+            "properties": [
+              {
+                "id": "color",
+                "value": {
+                  "fixedColor": "#511749",
+                  "mode": "fixed"
+                }
+              }
+            ]
+          },
+          {
+            "matcher": {
+              "id": "byName",
+              "options": "Committed"
+            },
+            "properties": [
+              {
+                "id": "color",
+                "value": {
+                  "fixedColor": "#508642",
+                  "mode": "fixed"
+                }
+              }
+            ]
+          },
+          {
+            "matcher": {
+              "id": "byName",
+              "options": "Free"
+            },
+            "properties": [
+              {
+                "id": "color",
+                "value": {
+                  "fixedColor": "#0A437C",
+                  "mode": "fixed"
+                }
+              }
+            ]
+          },
+          {
+            "matcher": {
+              "id": "byName",
+              "options": "Hardware Corrupted - Amount of RAM that the kernel identified as corrupted / not working"
+            },
+            "properties": [
+              {
+                "id": "color",
+                "value": {
+                  "fixedColor": "#CFFAFF",
+                  "mode": "fixed"
+                }
+              }
+            ]
+          },
+          {
+            "matcher": {
+              "id": "byName",
+              "options": "Inactive"
+            },
+            "properties": [
+              {
+                "id": "color",
+                "value": {
+                  "fixedColor": "#584477",
+                  "mode": "fixed"
+                }
+              }
+            ]
+          },
+          {
+            "matcher": {
+              "id": "byName",
+              "options": "PageTables"
+            },
+            "properties": [
+              {
+                "id": "color",
+                "value": {
+                  "fixedColor": "#0A50A1",
+                  "mode": "fixed"
+                }
+              }
+            ]
+          },
+          {
+            "matcher": {
+              "id": "byName",
+              "options": "Page_Tables"
+            },
+            "properties": [
+              {
+                "id": "color",
+                "value": {
+                  "fixedColor": "#0A50A1",
+                  "mode": "fixed"
+                }
+              }
+            ]
+          },
+          {
+            "matcher": {
+              "id": "byName",
+              "options": "RAM_Free"
+            },
+            "properties": [
+              {
+                "id": "color",
+                "value": {
+                  "fixedColor": "#E0F9D7",
+                  "mode": "fixed"
+                }
+              }
+            ]
+          },
+          {
+            "matcher": {
+              "id": "byName",
+              "options": "Slab"
+            },
+            "properties": [
+              {
+                "id": "color",
+                "value": {
+                  "fixedColor": "#806EB7",
+                  "mode": "fixed"
+                }
+              }
+            ]
+          },
+          {
+            "matcher": {
+              "id": "byName",
+              "options": "Slab_Cache"
+            },
+            "properties": [
+              {
+                "id": "color",
+                "value": {
+                  "fixedColor": "#E0752D",
+                  "mode": "fixed"
+                }
+              }
+            ]
+          },
+          {
+            "matcher": {
+              "id": "byName",
+              "options": "Swap"
+            },
+            "properties": [
+              {
+                "id": "color",
+                "value": {
+                  "fixedColor": "#BF1B00",
+                  "mode": "fixed"
+                }
+              }
+            ]
+          },
+          {
+            "matcher": {
+              "id": "byName",
+              "options": "Swap - Swap memory usage"
+            },
+            "properties": [
+              {
+                "id": "color",
+                "value": {
+                  "fixedColor": "#BF1B00",
+                  "mode": "fixed"
+                }
+              }
+            ]
+          },
+          {
+            "matcher": {
+              "id": "byName",
+              "options": "Swap_Cache"
+            },
+            "properties": [
+              {
+                "id": "color",
+                "value": {
+                  "fixedColor": "#C15C17",
+                  "mode": "fixed"
+                }
+              }
+            ]
+          },
+          {
+            "matcher": {
+              "id": "byName",
+              "options": "Swap_Free"
+            },
+            "properties": [
+              {
+                "id": "color",
+                "value": {
+                  "fixedColor": "#2F575E",
+                  "mode": "fixed"
+                }
+              }
+            ]
+          },
+          {
+            "matcher": {
+              "id": "byName",
+              "options": "Unused"
+            },
+            "properties": [
+              {
+                "id": "color",
+                "value": {
+                  "fixedColor": "#EAB839",
+                  "mode": "fixed"
+                }
+              }
+            ]
+          },
+          {
+            "matcher": {
+              "id": "byName",
+              "options": "Unused - Free memory unassigned"
+            },
+            "properties": [
+              {
+                "id": "color",
+                "value": {
+                  "fixedColor": "#052B51",
+                  "mode": "fixed"
+                }
+              }
+            ]
+          },
+          {
+            "matcher": {
+              "id": "byRegexp",
+              "options": "/.*Hardware Corrupted - *./"
+            },
+            "properties": [
+              {
+                "id": "custom.stacking",
+                "value": {
+                  "group": false,
+                  "mode": "normal"
+                }
+              }
+            ]
+          }
+        ]
+      },
+      "gridPos": {
+        "h": 15,
+        "w": 8,
+        "x": 0,
+        "y": 20
+      },
+      "id": 11,
+      "options": {
+        "legend": {
+          "calcs": [
+            "min",
+            "mean",
+            "max"
+          ],
+          "displayMode": "table",
+          "placement": "bottom",
+          "showLegend": true,
+          "width": 350
+        },
+        "tooltip": {
+          "hideZeros": false,
+          "mode": "multi",
+          "sort": "none"
+        }
+      },
+      "pluginVersion": "11.6.1",
+      "targets": [
+        {
+          "datasource": {
+            "type": "prometheus",
+            "uid": "${DS_PROMETHEUS_WS-D5855651-4ACC-4B19-B8E3-11BABC88CCA9}"
+          },
+          "editorMode": "code",
+          "expr": "sum(\n  (\n    node_memory_MemTotal_bytes{job=\"node_exporter\"} - node_memory_MemFree_bytes{job=\"node_exporter\"} - node_memory_Buffers_bytes{job=\"node_exporter\"} - node_memory_Cached_bytes{job=\"node_exporter\"} - node_memory_Slab_bytes{job=\"node_exporter\"} - node_memory_PageTables_bytes{job=\"node_exporter\"} - node_memory_SwapCached_bytes{instance=\"$node\",job=\"$job\"}\n  )\n  * on(slurm_node) group_left(job_id, job_name)\n  label_replace(slurm_job_node_info{job_id=\"$job_id\", job=\"slurm_exporter\"}, \"slurm_node\", \"$1\", \"node_name\", \"(.*)\")\n)",
+          "format": "time_series",
+          "hide": false,
+          "intervalFactor": 1,
+          "legendFormat": "Apps - Memory used by user-space applications",
+          "range": true,
+          "refId": "A",
+          "step": 240
+        },
+        {
+          "datasource": {
+            "type": "prometheus",
+            "uid": "${DS_PROMETHEUS_WS-D5855651-4ACC-4B19-B8E3-11BABC88CCA9}"
+          },
+          "editorMode": "code",
+          "expr": "sum(\n  node_memory_PageTables_bytes{job=\"node_exporter\"}\n  * on(slurm_node) group_left(job_id, job_name)\n  label_replace(slurm_job_node_info{job_id=\"$job_id\", job=\"slurm_exporter\"}, \"slurm_node\", \"$1\", \"node_name\", \"(.*)\")\n)",
+          "format": "time_series",
+          "hide": false,
+          "intervalFactor": 1,
+          "legendFormat": "PageTables - Memory used to map between virtual and physical memory addresses",
+          "range": true,
+          "refId": "B",
+          "step": 240
+        },
+        {
+          "datasource": {
+            "type": "prometheus",
+            "uid": "${DS_PROMETHEUS_WS-D5855651-4ACC-4B19-B8E3-11BABC88CCA9}"
+          },
+          "editorMode": "code",
+          "expr": "sum(\n  node_memory_SwapCached_bytes{job=\"node_exporter\"}\n  * on(slurm_node) group_left(job_id, job_name)\n  label_replace(slurm_job_node_info{job_id=\"$job_id\", job=\"slurm_exporter\"}, \"slurm_node\", \"$1\", \"node_name\", \"(.*)\")\n)",
+          "format": "time_series",
+          "intervalFactor": 1,
+          "legendFormat": "SwapCache - Memory that keeps track of pages that have been fetched from swap but not yet been modified",
+          "range": true,
+          "refId": "C",
+          "step": 240
+        },
+        {
+          "datasource": {
+            "type": "prometheus",
+            "uid": "${DS_PROMETHEUS_WS-D5855651-4ACC-4B19-B8E3-11BABC88CCA9}"
+          },
+          "editorMode": "code",
+          "expr": "sum(\n  node_memory_Slab_bytes{job=\"node_exporter\"}\n  * on(slurm_node) group_left(job_id, job_name)\n  label_replace(slurm_job_node_info{job_id=\"$job_id\", job=\"slurm_exporter\"}, \"slurm_node\", \"$1\", \"node_name\", \"(.*)\")\n)",
+          "format": "time_series",
+          "hide": false,
+          "intervalFactor": 1,
+          "legendFormat": "Slab - Memory used by the kernel to cache data structures for its own use (caches like inode, dentry, etc)",
+          "range": true,
+          "refId": "D",
+          "step": 240
+        },
+        {
+          "datasource": {
+            "type": "prometheus",
+            "uid": "${DS_PROMETHEUS_WS-D5855651-4ACC-4B19-B8E3-11BABC88CCA9}"
+          },
+          "editorMode": "code",
+          "expr": "sum(\n  node_memory_Cached_bytes{job=\"node_exporter\"}\n  * on(slurm_node) group_left(job_id, job_name)\n  label_replace(slurm_job_node_info{job_id=\"$job_id\", job=\"slurm_exporter\"}, \"slurm_node\", \"$1\", \"node_name\", \"(.*)\")\n)",
+          "format": "time_series",
+          "hide": false,
+          "intervalFactor": 1,
+          "legendFormat": "Cache - Parked file data (file content) cache",
+          "range": true,
+          "refId": "E",
+          "step": 240
+        },
+        {
+          "datasource": {
+            "type": "prometheus",
+            "uid": "${DS_PROMETHEUS_WS-D5855651-4ACC-4B19-B8E3-11BABC88CCA9}"
+          },
+          "editorMode": "code",
+          "expr": "sum(\n  node_memory_Buffers_bytes{job=\"node_exporter\"}\n  * on(slurm_node) group_left(job_id, job_name)\n  label_replace(slurm_job_node_info{job_id=\"$job_id\", job=\"slurm_exporter\"}, \"slurm_node\", \"$1\", \"node_name\", \"(.*)\")\n)",
+          "format": "time_series",
+          "hide": false,
+          "intervalFactor": 1,
+          "legendFormat": "Buffers - Block device (e.g. harddisk) cache",
+          "range": true,
+          "refId": "F",
+          "step": 240
+        },
+        {
+          "datasource": {
+            "type": "prometheus",
+            "uid": "${DS_PROMETHEUS_WS-D5855651-4ACC-4B19-B8E3-11BABC88CCA9}"
+          },
+          "editorMode": "code",
+          "expr": "sum(\n  node_memory_MemFree_bytes{job=\"node_exporter\"}\n  * on(slurm_node) group_left(job_id, job_name)\n  label_replace(slurm_job_node_info{job_id=\"$job_id\", job=\"slurm_exporter\"}, \"slurm_node\", \"$1\", \"node_name\", \"(.*)\")\n)",
+          "format": "time_series",
+          "hide": false,
+          "intervalFactor": 1,
+          "legendFormat": "Unused - Free memory unassigned",
+          "range": true,
+          "refId": "G",
+          "step": 240
+        },
+        {
+          "datasource": {
+            "type": "prometheus",
+            "uid": "${DS_PROMETHEUS_WS-D5855651-4ACC-4B19-B8E3-11BABC88CCA9}"
+          },
+          "editorMode": "code",
+          "expr": "sum(\n  (\n    node_memory_SwapTotal_bytes{job=\"node_exporter\"} - node_memory_SwapFree_bytes{job=\"node_exporter\"}\n  )\n  * on(slurm_node) group_left(job_id, job_name)\n  label_replace(slurm_job_node_info{job_id=\"$job_id\", job=\"slurm_exporter\"}, \"slurm_node\", \"$1\", \"node_name\", \"(.*)\")\n)",
+          "format": "time_series",
+          "hide": false,
+          "intervalFactor": 1,
+          "legendFormat": "Swap - Swap space used",
+          "range": true,
+          "refId": "H",
+          "step": 240
+        },
+        {
+          "datasource": {
+            "type": "prometheus",
+            "uid": "${DS_PROMETHEUS_WS-D5855651-4ACC-4B19-B8E3-11BABC88CCA9}"
+          },
+          "editorMode": "code",
+          "expr": "sum(\n  node_memory_HardwareCorrupted_bytes{job=\"node_exporter\"}\n  * on(slurm_node) group_left(job_id, job_name)\n  label_replace(slurm_job_node_info{job_id=\"$job_id\", job=\"slurm_exporter\"}, \"slurm_node\", \"$1\", \"node_name\", \"(.*)\")\n)",
+          "format": "time_series",
+          "hide": false,
+          "intervalFactor": 1,
+          "legendFormat": "Hardware Corrupted - Amount of RAM that the kernel identified as corrupted / not working",
+          "range": true,
+          "refId": "I",
+          "step": 240
+        }
+      ],
+      "title": "Memory (Aggregate)",
+      "type": "timeseries"
+    },
+    {
+      "datasource": {
+        "type": "prometheus",
+        "uid": "${DS_PROMETHEUS_WS-D5855651-4ACC-4B19-B8E3-11BABC88CCA9}"
+      },
+      "description": "Rate of memory page faults, split into total, major (disk-backed), and derived minor (non-disk) faults. High major fault rates may indicate memory pressure or insufficient RAM",
+      "fieldConfig": {
+        "defaults": {
+          "color": {
+            "mode": "palette-classic"
+          },
+          "custom": {
+            "axisBorderShow": false,
+            "axisCenteredZero": false,
+            "axisColorMode": "text",
+            "axisLabel": "",
+            "axisPlacement": "auto",
+            "barAlignment": 0,
+            "drawStyle": "line",
+            "fillOpacity": 20,
+            "gradientMode": "none",
+            "hideFrom": {
+              "legend": false,
+              "tooltip": false,
+              "viz": false
+            },
+            "insertNulls": false,
+            "lineInterpolation": "linear",
+            "lineWidth": 1,
+            "pointSize": 5,
+            "scaleDistribution": {
+              "type": "linear"
+            },
+            "showPoints": "never",
+            "spanNulls": false,
+            "stacking": {
+              "group": "A",
+              "mode": "normal"
+            },
+            "thresholdsStyle": {
+              "mode": "off"
+            }
+          },
+          "links": [],
+          "mappings": [],
+          "min": 0,
+          "thresholds": {
+            "mode": "absolute",
+            "steps": [
+              {
+                "color": "green",
+                "value": null
+              }
+            ]
+          },
+          "unit": "ops"
+        },
+        "overrides": [
+          {
+            "matcher": {
+              "id": "byName",
+              "options": "Pgfault - Page major and minor fault ops"
+            },
+            "properties": [
+              {
+                "id": "custom.fillOpacity",
+                "value": 0
+              },
+              {
+                "id": "custom.stacking",
+                "value": {
+                  "group": false,
+                  "mode": "none"
+                }
+              },
+              {
+                "id": "custom.lineStyle",
+                "value": {
+                  "dash": [
+                    10,
+                    10
+                  ],
+                  "fill": "dash"
+                }
+              },
+              {
+                "id": "color",
+                "value": {
+                  "fixedColor": "dark-red",
+                  "mode": "fixed"
+                }
+              }
+            ]
+          }
+        ]
+      },
+      "gridPos": {
+        "h": 15,
+        "w": 8,
+        "x": 8,
+        "y": 20
+      },
+      "id": 13,
+      "options": {
+        "legend": {
+          "calcs": [
+            "min",
+            "mean",
+            "max"
+          ],
+          "displayMode": "table",
+          "placement": "bottom",
+          "showLegend": true,
+          "width": 350
+        },
+        "tooltip": {
+          "hideZeros": false,
+          "mode": "multi",
+          "sort": "none"
+        }
+      },
+      "pluginVersion": "11.6.1",
+      "targets": [
+        {
+          "datasource": {
+            "type": "prometheus",
+            "uid": "${DS_PROMETHEUS_WS-D5855651-4ACC-4B19-B8E3-11BABC88CCA9}"
+          },
+          "editorMode": "code",
+          "expr": "irate(node_vmstat_pgfault{job=\"node_exporter\"}[$__rate_interval]) * on(slurm_node) group_left(job_id, job_name)\n  label_replace(slurm_job_node_info{job_id=\"$job_id\"}, \"slurm_node\", \"$1\", \"node_name\", \"(.*)\")",
+          "format": "time_series",
+          "hide": false,
+          "intervalFactor": 1,
+          "legendFormat": "Pgfault - Page major and minor fault ops",
+          "range": true,
+          "refId": "A",
+          "step": 240
+        },
+        {
+          "datasource": {
+            "type": "prometheus",
+            "uid": "${DS_PROMETHEUS_WS-D5855651-4ACC-4B19-B8E3-11BABC88CCA9}"
+          },
+          "editorMode": "code",
+          "expr": "irate(node_vmstat_pgmajfault{job=\"node_exporter\"}[$__rate_interval]) * on(slurm_node) group_left(job_id, job_name)\n  label_replace(slurm_job_node_info{job_id=\"$job_id\"}, \"slurm_node\", \"$1\", \"node_name\", \"(.*)\")",
+          "format": "time_series",
+          "hide": false,
+          "intervalFactor": 1,
+          "legendFormat": "Pgmajfault - Major page fault ops",
+          "range": true,
+          "refId": "B",
+          "step": 240
+        },
+        {
+          "datasource": {
+            "type": "prometheus",
+            "uid": "${DS_PROMETHEUS_WS-D5855651-4ACC-4B19-B8E3-11BABC88CCA9}"
+          },
+          "editorMode": "code",
+          "expr": "irate(node_vmstat_pgfault{job=\"node_exporter\"}[$__rate_interval]) * on(slurm_node) group_left(job_id, job_name)\n  label_replace(slurm_job_node_info{job_id=\"$job_id\"}, \"slurm_node\", \"$1\", \"node_name\", \"(.*)\")",
+          "format": "time_series",
+          "hide": false,
+          "intervalFactor": 1,
+          "legendFormat": "Pgminfault - Minor page fault ops",
+          "range": true,
+          "refId": "C",
+          "step": 240
+        }
+      ],
+      "title": "Memory Page Faults (Aggregate)",
+      "type": "timeseries"
+    },
+    {
+      "datasource": {
+        "type": "prometheus",
+        "uid": "${DS_PROMETHEUS_WS-D5855651-4ACC-4B19-B8E3-11BABC88CCA9}"
+      },
+      "description": "Percentage of filesystem space used for each mounted device",
+      "fieldConfig": {
+        "defaults": {
+          "color": {
+            "mode": "palette-classic"
+          },
+          "custom": {
+            "axisBorderShow": false,
+            "axisCenteredZero": false,
+            "axisColorMode": "text",
+            "axisLabel": "",
+            "axisPlacement": "auto",
+            "barAlignment": 0,
+            "drawStyle": "line",
+            "fillOpacity": 0,
+            "gradientMode": "none",
+            "hideFrom": {
+              "legend": false,
+              "tooltip": false,
+              "viz": false
+            },
+            "insertNulls": false,
+            "lineInterpolation": "linear",
+            "lineWidth": 1,
+            "pointSize": 5,
+            "scaleDistribution": {
+              "type": "linear"
+            },
+            "showPoints": "auto",
+            "spanNulls": false,
+            "stacking": {
+              "group": "A",
+              "mode": "none"
+            },
+            "thresholdsStyle": {
+              "mode": "off"
+            }
+          },
+          "decimals": 0,
+          "links": [],
+          "mappings": [],
+          "max": 100,
+          "min": 0,
+          "thresholds": {
+            "mode": "absolute",
+            "steps": [
+              {
+                "color": "green",
+                "value": null
+              }
+            ]
+          },
+          "unit": "percent"
+        },
+        "overrides": []
+      },
+      "gridPos": {
+        "h": 15,
+        "w": 8,
+        "x": 16,
+        "y": 20
+      },
+      "id": 6,
+      "options": {
+        "legend": {
+          "calcs": [],
+          "displayMode": "list",
+          "placement": "bottom",
+          "showLegend": true
+        },
+        "tooltip": {
+          "mode": "single",
+          "sort": "none"
+        }
+      },
+      "pluginVersion": "10.4.1",
+      "targets": [
+        {
+          "datasource": {
+            "type": "prometheus",
+            "uid": "${DS_PROMETHEUS_WS-D5855651-4ACC-4B19-B8E3-11BABC88CCA9}"
+          },
+          "editorMode": "code",
+          "expr": "(\n  (\n    sum(\n      node_filesystem_size_bytes{device!~\"rootfs\", job=\"node_exporter\"}\n      * on(slurm_node) group_left(job_id, job_name)\n      label_replace(slurm_job_node_info{job_id=\"$job_id\"}, \"slurm_node\", \"$1\", \"node_name\", \"(.*)\")\n    ) by (mountpoint)\n    - \n    sum(\n      node_filesystem_avail_bytes{device!~\"rootfs\", job=\"node_exporter\"}\n      * on(slurm_node) group_left(job_id, job_name)\n      label_replace(slurm_job_node_info{job_id=\"$job_id\"}, \"slurm_node\", \"$1\", \"node_name\", \"(.*)\")\n    ) by (mountpoint)\n  ) \n  / \n  sum(\n    node_filesystem_size_bytes{device!~\"rootfs\", job=\"node_exporter\"}\n    * on(slurm_node) group_left(job_id, job_name)\n    label_replace(slurm_job_node_info{job_id=\"$job_id\"}, \"slurm_node\", \"$1\", \"node_name\", \"(.*)\")\n  ) by (mountpoint)\n) * 100",
+          "format": "time_series",
+          "intervalFactor": 1,
+          "legendFormat": "{{mountpoint}}",
+          "range": true,
+          "refId": "A",
+          "step": 240
+        }
+      ],
+      "title": "Disk Space Used Basic (Aggregate)",
+      "type": "timeseries"
+    },
+    {
+      "collapsed": false,
+      "gridPos": {
+        "h": 1,
+        "w": 24,
+        "x": 0,
+        "y": 35
+      },
+      "id": 18,
+      "panels": [],
+      "title": "Network",
+      "type": "row"
+    },
+    {
+      "datasource": {
+        "type": "prometheus",
+        "uid": "${DS_PROMETHEUS_WS-D5855651-4ACC-4B19-B8E3-11BABC88CCA9}"
+      },
+      "description": "Incoming and outgoing network traffic per interface",
+      "fieldConfig": {
+        "defaults": {
+          "color": {
+            "mode": "palette-classic"
+          },
+          "custom": {
+            "axisBorderShow": false,
+            "axisCenteredZero": false,
+            "axisColorMode": "text",
+            "axisLabel": "out (-) / in (+)",
+            "axisPlacement": "auto",
+            "barAlignment": 0,
+            "drawStyle": "line",
+            "fillOpacity": 40,
+            "gradientMode": "none",
+            "hideFrom": {
+              "legend": false,
+              "tooltip": false,
+              "viz": false
+            },
+            "insertNulls": false,
+            "lineInterpolation": "linear",
+            "lineWidth": 1,
+            "pointSize": 5,
+            "scaleDistribution": {
+              "type": "linear"
+            },
+            "showPoints": "never",
+            "spanNulls": false,
+            "stacking": {
+              "group": "A",
+              "mode": "none"
+            },
+            "thresholdsStyle": {
+              "mode": "off"
+            }
+          },
+          "links": [],
+          "mappings": [],
+          "thresholds": {
+            "mode": "absolute",
+            "steps": [
+              {
+                "color": "green"
+              }
+            ]
+          },
+          "unit": "bps"
+        },
+        "overrides": [
+          {
+            "matcher": {
+              "id": "byRegexp",
+              "options": "/.*out.*/"
+            },
+            "properties": [
+              {
+                "id": "custom.transform",
+                "value": "negative-Y"
+              }
+            ]
+          }
+        ]
+      },
+      "gridPos": {
+        "h": 14,
+        "w": 16,
+        "x": 0,
+        "y": 36
+      },
+      "id": 12,
+      "options": {
+        "legend": {
+          "calcs": [
+            "min",
+            "mean",
+            "max"
+          ],
+          "displayMode": "table",
+          "placement": "bottom",
+          "showLegend": true
+        },
+        "tooltip": {
+          "hideZeros": false,
+          "mode": "multi",
+          "sort": "none"
+        }
+      },
+      "pluginVersion": "11.6.1",
+      "targets": [
+        {
+          "datasource": {
+            "type": "prometheus",
+            "uid": "${DS_PROMETHEUS_WS-D5855651-4ACC-4B19-B8E3-11BABC88CCA9}"
+          },
+          "editorMode": "code",
+          "expr": "sum(\n  rate(node_network_receive_bytes_total{job=\"node_exporter\"}[$__rate_interval]) * 8\n  * on(slurm_node) group_left(job_id, job_name)\n  label_replace(slurm_job_node_info{job_id=\"$job_id\", job=\"slurm_exporter\"}, \"slurm_node\", \"$1\", \"node_name\", \"(.*)\")\n)  by (device)",
+          "format": "time_series",
+          "intervalFactor": 1,
+          "legendFormat": "{{device}} - Rx in",
+          "range": true,
+          "refId": "A",
+          "step": 240
+        },
+        {
+          "datasource": {
+            "type": "prometheus",
+            "uid": "${DS_PROMETHEUS_WS-D5855651-4ACC-4B19-B8E3-11BABC88CCA9}"
+          },
+          "editorMode": "code",
+          "expr": "sum(\n  rate(node_network_transmit_bytes_total{job=\"node_exporter\"}[$__rate_interval]) * 8\n  * on(slurm_node) group_left(job_id, job_name)\n  label_replace(slurm_job_node_info{job_id=\"$job_id\", job=\"slurm_exporter\"}, \"slurm_node\", \"$1\", \"node_name\", \"(.*)\")\n) by (device)",
+          "format": "time_series",
+          "intervalFactor": 1,
+          "legendFormat": "{{device}} - Tx out",
+          "range": true,
+          "refId": "B",
+          "step": 240
+        }
+      ],
+      "title": "Network Traffic (Aggregate)",
+      "type": "timeseries"
+    },
+    {
+      "datasource": {
+        "type": "prometheus",
+        "uid": "${DS_PROMETHEUS_WS-D5855651-4ACC-4B19-B8E3-11BABC88CCA9}"
+      },
+      "description": "Rate of packet-level errors for each network interface. Receive errors may indicate physical or driver issues; transmit errors may reflect collisions or hardware faults",
+      "fieldConfig": {
+        "defaults": {
+          "color": {
+            "mode": "palette-classic"
+          },
+          "custom": {
+            "axisBorderShow": false,
+            "axisCenteredZero": false,
+            "axisColorMode": "text",
+            "axisLabel": "out (-) / in (+)",
+            "axisPlacement": "auto",
+            "barAlignment": 0,
+            "drawStyle": "line",
+            "fillOpacity": 20,
+            "gradientMode": "none",
+            "hideFrom": {
+              "legend": false,
+              "tooltip": false,
+              "viz": false
+            },
+            "insertNulls": false,
+            "lineInterpolation": "linear",
+            "lineWidth": 1,
+            "pointSize": 5,
+            "scaleDistribution": {
+              "type": "linear"
+            },
+            "showPoints": "never",
+            "spanNulls": false,
+            "stacking": {
+              "group": "A",
+              "mode": "none"
+            },
+            "thresholdsStyle": {
+              "mode": "off"
+            }
+          },
+          "links": [],
+          "mappings": [],
+          "thresholds": {
+            "mode": "absolute",
+            "steps": [
+              {
+                "color": "green"
+              }
+            ]
+          },
+          "unit": "pps"
+        },
+        "overrides": [
+          {
+            "matcher": {
+              "id": "byRegexp",
+              "options": "/.*out.*/"
+            },
+            "properties": [
+              {
+                "id": "custom.transform",
+                "value": "negative-Y"
+              }
+            ]
+          }
+        ]
+      },
+      "gridPos": {
+        "h": 7,
+        "w": 8,
+        "x": 16,
+        "y": 36
+      },
+      "id": 14,
+      "options": {
+        "legend": {
+          "calcs": [
+            "min",
+            "mean",
+            "max"
+          ],
+          "displayMode": "table",
+          "placement": "bottom",
+          "showLegend": true,
+          "width": 300
+        },
+        "tooltip": {
+          "hideZeros": false,
+          "mode": "multi",
+          "sort": "none"
+        }
+      },
+      "pluginVersion": "11.6.1",
+      "targets": [
+        {
+          "datasource": {
+            "type": "prometheus",
+            "uid": "${DS_PROMETHEUS_WS-D5855651-4ACC-4B19-B8E3-11BABC88CCA9}"
+          },
+          "editorMode": "code",
+          "expr": "sum(\n  rate(node_network_receive_errs_total{job=\"node_exporter\"}[$__rate_interval])\n  * on(slurm_node) group_left(job_id, job_name)\n  label_replace(slurm_job_node_info{job_id=\"$job_id\", job=\"slurm_exporter\"}, \"slurm_node\", \"$1\", \"node_name\", \"(.*)\")\n) by (device)\n",
+          "format": "time_series",
+          "intervalFactor": 1,
+          "legendFormat": "{{device}} - Rx in",
+          "range": true,
+          "refId": "A",
+          "step": 240
+        },
+        {
+          "datasource": {
+            "type": "prometheus",
+            "uid": "${DS_PROMETHEUS_WS-D5855651-4ACC-4B19-B8E3-11BABC88CCA9}"
+          },
+          "editorMode": "code",
+          "expr": "sum(\n  rate(node_network_transmit_errs_total{job=\"node_exporter\"}[$__rate_interval])\n  * on(slurm_node) group_left(job_id, job_name)\n  label_replace(slurm_job_node_info{job_id=\"$job_id\", job=\"slurm_exporter\"}, \"slurm_node\", \"$1\", \"node_name\", \"(.*)\")\n) by (device)\n",
+          "format": "time_series",
+          "intervalFactor": 1,
+          "legendFormat": "{{device}} - Tx out",
+          "range": true,
+          "refId": "B",
+          "step": 240
+        }
+      ],
+      "title": "Network Traffic Errors",
+      "type": "timeseries"
+    },
+    {
+      "datasource": {
+        "type": "prometheus",
+        "uid": "${DS_PROMETHEUS_WS-D5855651-4ACC-4B19-B8E3-11BABC88CCA9}"
+      },
+      "fieldConfig": {
+        "defaults": {
+          "color": {
+            "mode": "palette-classic"
+          },
+          "custom": {
+            "axisBorderShow": false,
+            "axisCenteredZero": false,
+            "axisColorMode": "text",
+            "axisLabel": "",
+            "axisPlacement": "auto",
+            "barAlignment": 0,
+            "drawStyle": "line",
+            "fillOpacity": 7,
+            "gradientMode": "none",
+            "hideFrom": {
+              "legend": false,
+              "tooltip": false,
+              "viz": false
+            },
+            "insertNulls": false,
+            "lineInterpolation": "linear",
+            "lineWidth": 2,
+            "pointSize": 5,
+            "scaleDistribution": {
+              "type": "linear"
+            },
+            "showPoints": "auto",
+            "spanNulls": false,
+            "stacking": {
+              "group": "A",
+              "mode": "none"
+            },
+            "thresholdsStyle": {
+              "mode": "off"
+            }
+          },
+          "mappings": [],
+          "thresholds": {
+            "mode": "absolute",
+            "steps": [
+              {
+                "color": "green"
+              },
+              {
+                "color": "red",
+                "value": 80
+              }
+            ]
+          }
+        },
+        "overrides": []
+      },
+      "gridPos": {
+        "h": 7,
+        "w": 8,
+        "x": 16,
+        "y": 43
+      },
+      "id": 17,
+      "options": {
+        "legend": {
+          "calcs": [],
+          "displayMode": "list",
+          "placement": "bottom",
+          "showLegend": true
+        },
+        "tooltip": {
+          "mode": "multi",
+          "sort": "asc"
+        }
+      },
+      "targets": [
+        {
+          "datasource": {
+            "type": "prometheus",
+            "uid": "${DS_PROMETHEUS_WS-D5855651-4ACC-4B19-B8E3-11BABC88CCA9}"
+          },
+          "editorMode": "code",
+          "expr": "sum(\n  rate(node_amazonefa_tx_bytes_total{job=\"efa_exporter\"}[$__rate_interval]) * 8\n  * on(slurm_node) group_left(job_id, job_name)\n  label_replace(slurm_job_node_info{job_id=\"$job_id\", job=\"slurm_exporter\"}, \"slurm_node\", \"$1\", \"node_name\", \"(.*)\")\n) by (slurm_node)",
+          "legendFormat": "__auto",
+          "range": true,
+          "refId": "A"
+        }
+      ],
+      "title": "EFA Total Bytes",
+      "type": "timeseries"
+    }
+  ],
+  "refresh": "",
+  "schemaVersion": 39,
+  "templating": {
+    "list": [
+      {
+        "current": {},
+        "datasource": {
+          "type": "prometheus",
+          "uid": "${DS_PROMETHEUS_WS-D5855651-4ACC-4B19-B8E3-11BABC88CCA9}"
+        },
+        "definition": "label_values(slurm_job_node_info{job=\"slurm_exporter\"},job_id)",
+        "hide": 0,
+        "includeAll": false,
+        "multi": false,
+        "name": "job_id",
+        "options": [],
+        "query": {
+          "qryType": 1,
+          "query": "label_values(slurm_job_node_info{job=\"slurm_exporter\"},job_id)",
+          "refId": "PrometheusVariableQueryEditor-VariableQuery"
+        },
+        "refresh": 1,
+        "regex": "",
+        "skipUrlSync": false,
+        "sort": 4,
+        "type": "query"
+      },
+      {
+        "current": {},
+        "datasource": {
+          "type": "prometheus",
+          "uid": "${DS_PROMETHEUS_WS-D5855651-4ACC-4B19-B8E3-11BABC88CCA9}"
+        },
+        "definition": "label_values(slurm_job_node_info{job=\"slurm_exporter\", job_id=\"$job_id\"},node_name)",
+        "hide": 0,
+        "includeAll": true,
+        "multi": false,
+        "name": "slurm_node",
+        "options": [],
+        "query": {
+          "qryType": 1,
+          "query": "label_values(slurm_job_node_info{job=\"slurm_exporter\", job_id=\"$job_id\"},node_name)",
+          "refId": "PrometheusVariableQueryEditor-VariableQuery"
+        },
+        "refresh": 1,
+        "regex": "",
+        "skipUrlSync": false,
+        "sort": 0,
+        "type": "query"
+      }
+    ]
+  },
+  "time": {
+    "from": "now-6h",
+    "to": "now"
+  },
+  "timepicker": {},
+  "timezone": "browser",
+  "title": "Jobs Dashboard",
+  "uid": "feznzj1gq9fcwa",
+  "version": 43,
+  "weekStart": ""
+}
