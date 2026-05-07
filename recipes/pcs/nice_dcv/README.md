@@ -1,9 +1,28 @@
 # NICE DCV Visualization Workstation for PCS with Relion
 
+## Introduction
+
+[NICE DCV](https://aws.amazon.com/hpc/dcv/) is a high-performance remote display protocol that lets users access graphical desktops and applications hosted on AWS. When paired with AWS Parallel Computing Service (PCS), DCV enables interactive visualization workflows — such as pre/post-processing for CFD, molecular visualization, or CAE — directly alongside HPC job submission. 
+
+There are a few different options for integrating visualization with PCS on NICE DCV. Figure 1 provides an overview.
+
+![NICE DCV and PCS Architecture](docs/NICE%20DCV%20and%20PCS.png)
+
+Options for integrating DCV with PCS for visualization:
+1. **Standalone DCV workstation** — A customer-managed EC2 instance running DCV, connected to shared storage (EFS/FSx) but with no Slurm connectivity. Users visualize results only; job submission happens separately via SSH to a PCS login node. This is the simplest deployment model.
+2. **Standalone DCV + BYO login node** — Same as above, but with `sackd` installed on the DCV instance, turning it into a Slurm client. Users get both visualization and job submission from a single session.
+3. **DCV on a PCS login node** — DCV baked into the custom AMI for the PCS login compute node group. Slurm (`sackd`) is pre-configured by PCS. This couples the remote desktop with the cluster's login experience.
+4. **DCV on a dedicated visualization compute node group** — A separate PCS compute node group (its own Slurm partition) with GPU instances and DCV pre-installed. Users submit an interactive Slurm job to get an on-demand DCV session. The node group can scale to zero when not in use, mirroring the "elastic visualization queues" concept from ParallelCluster.
+
+This guidance covers **Option 2: Standalone DCV + BYO login node**. We will leverage existing recipes in this repo (getting_started and cfd_cluster) to set up a cluster with a standalone visualization node. We will then use the byo_login guidance to add that visualization node to the cluster.
+
 ## Overview
 
 This recipe is a walkthrough that composes existing recipes to create a NICE DCV remote visualization workstation configured as a bring-your-own (BYO) login node for AWS Parallel Computing Service (PCS).
-The workstation runs Relion (REgularised LIkelihood OptimisatioN), an open-source cryo-EM image processing application that uses GPUs for accelerated visualization and computation.
+
+For our visualization workload we'll use Relion (REgularised LIkelihood OptimisatioN), an open-source cryo-EM image processing application that uses GPUs for accelerated visualization and computation. 
+
+With Relion, users both visualize 3D molecules and submit batch jobs to the cluster, all from a single UI running in the DCV session.
 
 Rather than creating net-new infrastructure, this recipe guides you through composing:
 
@@ -12,43 +31,7 @@ Rather than creating net-new infrastructure, this recipe guides you through comp
 3. [**Official AWS PCS multi-cluster login script**](https://github.com/aws-samples/aws-hpc-recipes/tree/main/recipes/pcs/byo_login) — sackd configuration for BYO login node connectivity
 4. [**pcs/spack_for_pcs**](../spack_for_pcs/) — Spack package manager for HPC dependency management
 
-You will deploy a PCS cluster, launch a DCV workstation, configure it as a login node, and install Relion for interactive cryo-EM processing with GPU acceleration.
-
-## Architecture
-
-```mermaid
-graph TB
-    subgraph "User Workstation"
-        Browser["Web Browser / DCV Client"]
-    end
-    subgraph "AWS Cloud"
-        subgraph "VPC"
-            subgraph "Public Subnet"
-                DCV["DCV Workstation<br/>(GPU Instance)<br/>ec2-user + sackd + Relion"]
-            end
-            subgraph "Private Subnet"
-                PCS["PCS Cluster<br/>(Slurm Controller)"]
-                CN["Compute Node Group<br/>(GPU Instances)"]
-            end
-            subgraph "Storage"
-                FSx["FSx for Lustre<br/>(Shared Data + Relion Install)"]
-            end
-        end
-    end
-    Browser -->|"HTTPS :8443"| DCV
-    DCV -->|"sackd (port 6817)"| PCS
-    PCS -->|"schedules jobs"| CN
-    DCV -->|"mount /shared"| FSx
-    CN -->|"mount /shared"| FSx
-```
-
-**Data flow:**
-
-1. User connects to the DCV workstation via web browser (port 8443) or native DCV client.
-2. The DCV workstation runs sackd to communicate with the PCS cluster as a login node.
-3. User launches the Relion GUI within the DCV session.
-4. Relion submits jobs via Slurm (`sbatch`/`srun`) to PCS compute nodes.
-5. Both the DCV workstation and compute nodes access shared datasets on FSx for Lustre.
+We will deploy a PCS cluster, launch a DCV workstation, configure it as a login node, and install Relion for interactive cryo-EM processing with GPU acceleration.
 
 ## Prerequisites
 
