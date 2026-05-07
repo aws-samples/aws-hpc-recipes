@@ -135,11 +135,15 @@ Shared filesystem access works without `chmod 777` workarounds, and Slurm comman
 
 In this step, you configure the DCV workstation as a PCS login node so you can run Slurm commands directly from your DCV session.
 
-### Open a terminal in the DCV session
+### Connect to the instance
 
-Right-click on the desktop and select **Open Terminal**, or use the **Activities** menu to launch a terminal application.
+SSH into the DCV workstation using your key pair:
 
-![Opening a terminal in the DCV session](docs/open-terminal.png)
+```bash
+ssh -i your-key.pem ec2-user@<instance-public-ip>
+```
+
+Alternatively, use AWS Systems Manager Session Manager from the EC2 console.
 
 ### Verify prerequisites
 
@@ -152,30 +156,53 @@ which jq curl
 # Verify the slurm user exists
 id slurm
 
+# If the slurm user does not exist, create it:
+sudo groupadd -r slurm
+sudo useradd -r -g slurm -s /sbin/nologin slurm
+
 # Verify network connectivity to the PCS cluster endpoint (port 6817)
-nc -zv <cluster-endpoint-ip> 6817
+CLUSTER_ID=$(aws pcs list-clusters --query 'clusters[0].id' --output text)
+ENDPOINT_IP=$(aws pcs get-cluster --cluster-identifier $CLUSTER_ID \
+  --query 'cluster.endpoints[?type==`SLURMCTLD`].privateIpAddress' --output text)
+timeout 5 bash -c "echo >/dev/tcp/$ENDPOINT_IP/6817" && echo "Connection successful" || echo "Connection failed"
 ```
 
-### Add IAM permissions
+### Install Slurm
 
-The instance role needs permissions to retrieve cluster information and secrets.
-Add an inline policy to the DcvHostRole (created by the DCV stack) or attach the `AmazonPCSReadOnlyAccess` managed policy.
+The DCV AMI does not include Slurm. You must install it using the AWS PCS Slurm installer before configuring sackd.
+The Slurm version must match your cluster's version (check with `aws pcs get-cluster --cluster-identifier $CLUSTER_ID --query 'cluster.scheduler.version' --output text`).
 
-The script requires these permissions:
+```bash
+# Download the Slurm installer (replace 25.11 if your cluster uses a different version)
+SLURM_VERSION=25.11
+curl https://aws-pcs-repo-us-east-1.s3.us-east-1.amazonaws.com/aws-pcs-slurm/aws-pcs-slurm-${SLURM_VERSION}-installer-latest.tar.gz \
+  -o aws-pcs-slurm-installer.tar.gz
 
-- `pcs:GetCluster`
-- `secretsmanager:GetSecretValue`
+# Extract and install
+tar -xf aws-pcs-slurm-installer.tar.gz
+cd aws-pcs-slurm-${SLURM_VERSION}-installer
+sudo ./installer.sh -y
+cd ..
+
+# Verify installation
+cat /opt/aws/pcs/scheduler/slurm-${SLURM_VERSION}/version
+```
+
+The installer takes several minutes as it compiles Slurm and its dependencies.
 
 ### Download and run the official script
 
 ```bash
-# Download the official AWS PCS multi-cluster login configuration script
-curl -O https://raw.githubusercontent.com/aws-samples/aws-hpc-recipes/main/recipes/pcs/byo_login/assets/pcs-multi-cluster-login-configure.sh
+# Download the AWS PCS multi-cluster login configuration script
+curl -O https://aws-hpc-recipes.s3.us-east-1.amazonaws.com/main/recipes/pcs/nice_dcv/assets/pcs-multi-cluster-login-configure.sh
 chmod +x pcs-multi-cluster-login-configure.sh
 
-# Run with your cluster identifier
-sudo ./pcs-multi-cluster-login-configure.sh --cluster-identifier <your-cluster-id>
+# Run with your cluster identifier (uses CLUSTER_ID from the prerequisite check above)
+export ALTERNATE_SECRET_RETRIEVAL=true
+sudo -E ./pcs-multi-cluster-login-configure.sh --cluster-identifier <cluster-id>
 ```
+
+> **Note:** If the script fails or you encounter version compatibility issues, check the [AWS documentation](https://docs.aws.amazon.com/pcs/latest/userguide/multi-cluster-login-script-code.html) for an updated version of the script.
 
 The script automatically:
 

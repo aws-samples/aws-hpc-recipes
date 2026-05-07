@@ -112,8 +112,8 @@ echo "Check 6: README structure"
 
 README="${RECIPE_DIR}/README.md"
 EXPECTED_HEADINGS=(
+    "## Introduction"
     "## Overview"
-    "## Architecture"
     "## Prerequisites"
     "## Step 1"
     "## Step 2"

@@ -254,6 +254,15 @@ Resources:
           Effect: Allow
           Resource:
             Ref: AWS::StackId
+        - Action:
+          - pcs:GetCluster
+          - pcs:ListClusters
+          Effect: Allow
+          Resource: '*'
+        - Action:
+          - secretsmanager:GetSecretValue
+          Effect: Allow
+          Resource: !Sub 'arn:${AWS::Partition}:secretsmanager:${AWS::Region}:${AWS::AccountId}:secret:pcs!slurm-secret-*'
         Version: '2012-10-17'
       PolicyName: DcvHostRoleDefaultPolicy
       Roles:
@@ -331,6 +340,21 @@ Resources:
                 if [ -z "$3" ]; then
                   echo "Missing streaming port as 3rd parameter"
                   exit
+                fi
+
+                # Install AWS CLI v2 (required for aws pcs commands)
+                if ! aws --version 2>&1 | grep -q "aws-cli/2"; then
+                  curl -s "https://awscli.amazonaws.com/awscli-exe-linux-x86_64.zip" -o "/tmp/awscliv2.zip"
+                  unzip -q /tmp/awscliv2.zip -d /tmp
+                  /tmp/aws/install --update
+                  rm -rf /tmp/aws /tmp/awscliv2.zip
+                fi
+                # Ensure aws v2 is the default for all users (including root via sudo)
+                ln -sf /usr/local/bin/aws /usr/bin/aws
+
+                # Install jq (required for pcs-multi-cluster-login-configure.sh)
+                if ! command -v jq &>/dev/null; then
+                  yum install -y jq
                 fi
 
                 # Enable Quick & automatic-console-session
