@@ -231,8 +231,7 @@ Relion requires Spack for dependency management and is built from source with GP
 
 ### Install Spack
 
-First, install Spack on the shared filesystem.
-This follows the [pcs/spack_for_pcs](../spack_for_pcs/) recipe pattern:
+First, install Spack on the shared filesystem following the [pcs/spack_for_pcs](../spack_for_pcs/) recipe pattern.
 
 ```bash
 # Download the Spack installer
@@ -254,7 +253,7 @@ sudo ./postinstall.sh --prefix /shared &> /tmp/spack-install.log &
 tail -f /tmp/spack-install.log
 ```
 
-### Run the Relion install script
+### Download the Relion install script
 
 Download and run the Relion installation script included in this recipe:
 
@@ -262,14 +261,12 @@ Download and run the Relion installation script included in this recipe:
 # Download the install script (from this recipe's assets)
 curl -O https://aws-hpc-recipes.s3.us-east-1.amazonaws.com/main/recipes/pcs/nice_dcv/assets/install-relion.sh
 chmod +x install-relion.sh
-
-# Run the installer (uses Spack for deps, builds Relion from source)
-sudo ./install-relion.sh
 ```
 
-### CUDA architecture selection
+### Run the installer
 
-The `--cuda-arch` flag should match your GPU instance type.
+Before running the installer, check for the best CUDA version to use. The `--cuda-arch` flag should match your GPU instance type.
+
 If omitted, the script attempts auto-detection.
 
 | Instance Family | GPU | CUDA Architecture |
@@ -284,10 +281,13 @@ Example with explicit architecture:
 sudo ./install-relion.sh --cuda-arch 86
 ```
 
-### Installation time
+Example without:
 
-Installation takes 30–60 minutes depending on instance type (Spack dependency resolution + Relion compilation).
-The script prints status messages for each phase so you can monitor progress.
+```bash
+sudo ./install-relion.sh
+```
+
+Installation takes 30–60 minutes depending on instance type (Spack dependency resolution + Relion compilation). The script prints status messages for each phase so you can monitor progress.
 
 ### Verify Relion installation
 
@@ -306,7 +306,11 @@ Open `https://<instance-ip>:8443` in your browser and log in with `ec2-user`. �
 
 ### 2. Slurm connectivity from DCV session
 
-Open a terminal in the DCV desktop session and run:
+Open a terminal in the DCV desktop session:
+
+![Open terminal in DCV](docs/open-terminal.png)
+
+Run:
 
 ```bash
 sinfo    # Should show cluster partitions
@@ -315,7 +319,11 @@ sinfo    # Should show cluster partitions
 ### 3. Submit a test job
 
 ```bash
-sbatch --wrap="hostname && nvidia-smi" -o /shared/test-job.out --gres=gpu:1
+# Check available partitions
+sinfo -o "%P"
+
+# Submit a test job (replace 'compute' with your partition name from sinfo)
+sbatch --wrap="hostname && date" -o /shared/test-job.out -p <partition-name>
 squeue   # Watch job status
 cat /shared/test-job.out  # Verify output after job completes
 ```
@@ -334,6 +342,18 @@ The Relion GUI should appear in your DCV session.
 
 Confirm that Relion can read and write files on the FSx for Lustre mount at `/shared`.
 Any data placed in `/shared` is accessible from both the DCV workstation and compute nodes.
+
+## Step 6. [Optional]: Submit a Relion GPU job to PCS
+
+At this point we have a DCV workstation added as a BYO login node to PCS. Relion is installed, and the GUI is running in the DCV session. We've also validated we can submit slurm jobs to the cluster from the DCV session running on the workstation.
+
+To submit a Relion GPU job to PCS, we need to add node groups and queues to the cluster for GPU jobs. This repository includes CloudFormation templates for adding one node group for single GPU instances, and another for multi-GPU instances. 
+
+Instructions on how to add these node groups are in [Appendix: Adding GPU Compute Node Groups](#appendix-adding-gpu-compute-node-groups).
+
+Once the compute nodes are added, jobs can be submitted from the Relion GUI. The Relion documentation offers a Single Particle tutorial including a test dataset.
+
+The tutorial can be found here: https://relion.readthedocs.io/en/latest/SPA_tutorial/Introduction.html
 
 ## Operational Guidance
 
@@ -450,6 +470,27 @@ Compute nodes are only charged when jobs are running (PCS scales the node group 
 - Verify PATH includes Slurm binaries: `which sinfo`.
 - Check `sinfo` output for error messages.
 
+### Slurm commands fail with "Parsing error at unrecognized key" after installing Relion
+
+Spack's OpenMPI package may pull in an older Slurm version as a dependency.
+When you run `spack load openmpi`, the older Slurm binaries can override the PCS Slurm 25.11 binaries in your PATH.
+Symptoms include errors like `_parse_next_key: Parsing error at unrecognized key: HashPlugin` or `Invalid DebugFlag: AuditRPCs`.
+
+Fix by ensuring the PCS Slurm path takes priority:
+
+```bash
+export PATH="/opt/aws/pcs/scheduler/slurm-25.11/bin:$PATH"
+sinfo
+```
+
+Or re-source the activate script (which sets the correct PATH order):
+
+```bash
+source /home/ec2-user/activate-pcs-<cluster-name>
+```
+
+The `install-relion.sh` script's profile script (`/etc/profile.d/relion.sh`) automatically restores PCS Slurm to the front of PATH on new shell sessions.
+
 ## Cleanup
 
 Delete resources in reverse order to avoid orphaned dependencies:
@@ -499,6 +540,28 @@ aws pcs create-compute-node-group \
   --iam-instance-profile-arn "<your-instance-profile-arn>" \
   --custom-launch-template '{"id":"<your-launch-template-id>","version":"1"}' \
   --purchase-option ONDEMAND
+```
+
+### Create queues for GPU node groups
+
+PCS requires queues (Slurm partitions) mapped to compute node groups before you can submit jobs. Get the node group IDs from the previous step, then create the queues:
+
+```bash
+# Get GPU node group IDs
+aws pcs list-compute-node-groups --cluster-identifier <your-cluster-id> \
+  --query 'computeNodeGroups[?name==`gpu-single` || name==`gpu-multi`].[name,id]' --output table
+
+# Create queue for single-GPU jobs
+aws pcs create-queue \
+  --cluster-identifier <your-cluster-id> \
+  --queue-name gpu-single \
+  --compute-node-group-configurations '[{"computeNodeGroupId":"<gpu-single-cng-id>"}]'
+
+# Create queue for multi-GPU jobs
+aws pcs create-queue \
+  --cluster-identifier <your-cluster-id> \
+  --queue-name gpu-multi \
+  --compute-node-group-configurations '[{"computeNodeGroupId":"<gpu-multi-cng-id>"}]'
 ```
 
 ### Verify GPU node groups

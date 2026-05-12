@@ -119,6 +119,18 @@ if ! command -v gfortran &>/dev/null; then
     fi
 fi
 
+# Install CUDA toolkit (required for GPU-accelerated Relion build)
+if [[ ! -x /usr/local/cuda/bin/nvcc ]]; then
+    echo "  Installing CUDA toolkit (for compilation only)..."
+    if command -v dnf &>/dev/null; then
+        dnf config-manager --add-repo https://developer.download.nvidia.com/compute/cuda/repos/amzn2023/x86_64/cuda-amzn2023.repo
+        dnf install -y cuda-toolkit-12-4 >/dev/null 2>&1
+    else
+        yum-config-manager --add-repo https://developer.download.nvidia.com/compute/cuda/repos/rhel7/x86_64/cuda-rhel7.repo
+        yum install -y cuda-toolkit-12-4 >/dev/null 2>&1
+    fi
+fi
+
 SPACK_SETUP="${SPACK_PREFIX}/spack/share/spack/setup-env.sh"
 if [[ ! -f "${SPACK_SETUP}" ]]; then
     echo "ERROR: Spack not found at ${SPACK_SETUP}"
@@ -136,17 +148,32 @@ source "${SPACK_SETUP}"
 spack compiler find >/dev/null 2>&1
 
 ###############################################################################
-# Phase 2/7: Install dependencies via Spack
+# Phase 2/7: Install dependencies
 ###############################################################################
-CURRENT_PHASE="Phase 2/7: Installing Spack dependencies"
+CURRENT_PHASE="Phase 2/7: Installing dependencies"
 echo "${CURRENT_PHASE}..."
 
+# Install system packages for runtime libraries (avoids Spack LD_LIBRARY_PATH issues in DCV sessions)
+echo "  Installing system runtime libraries..."
+if command -v dnf &>/dev/null; then
+    dnf install -y fftw-devel fftw-libs-single fftw-libs-double \
+        libtiff-devel libpng-devel libX11-devel libXft-devel >/dev/null 2>&1
+elif command -v yum &>/dev/null; then
+    yum install -y fftw-devel fftw-libs-single fftw-libs-double \
+        libtiff-devel libpng-devel libX11-devel libXft-devel >/dev/null 2>&1
+else
+    echo "ERROR: Neither dnf nor yum found. Cannot install system packages."
+    exit 1
+fi
+echo "  System runtime libraries installed."
+
+# Install build tools via Spack (openmpi, cmake)
 # shellcheck source=/dev/null
 source "${SPACK_SETUP}"
 
-SPACK_PACKAGES=(openmpi fftw cmake libtiff libpng)
+SPACK_PACKAGES=(openmpi cmake)
 for pkg in "${SPACK_PACKAGES[@]}"; do
-    echo "  Installing ${pkg}..."
+    echo "  Installing ${pkg} via Spack..."
     if ! spack install "${pkg}"; then
         echo "ERROR: Failed to install Spack package: ${pkg}"
         echo ""
@@ -163,9 +190,16 @@ echo "  All Spack dependencies installed successfully."
 CURRENT_PHASE="Phase 3/7: Loading Spack dependencies"
 echo "${CURRENT_PHASE}..."
 
-for pkg in "${SPACK_PACKAGES[@]}"; do
+for pkg in openmpi cmake; do
     echo "  Loading ${pkg}..."
-    spack load "${pkg}"
+    # If multiple variants exist, pick the one built with the newest compiler
+    HASH=$(spack find --format '{hash}' "${pkg}" 2>/dev/null | tail -1)
+    if [[ -n "${HASH}" ]]; then
+        spack load "/${HASH}"
+    else
+        echo "ERROR: Package ${pkg} not found in Spack."
+        exit 1
+    fi
 done
 echo "  All dependencies loaded into environment."
 
@@ -288,6 +322,14 @@ cat > /etc/profile.d/relion.sh <<PROFILE
 # Relion environment setup — installed by install-relion.sh
 export PATH="${INSTALL_DIR}/bin:\${PATH}"
 export LD_LIBRARY_PATH="${INSTALL_DIR}/lib:\${LD_LIBRARY_PATH:-}"
+
+# Restore PCS Slurm binaries to front of PATH (Spack may override with older Slurm)
+if [[ -d /opt/aws/pcs/scheduler ]]; then
+    PCS_SLURM_DIR=\$(ls -d /opt/aws/pcs/scheduler/slurm-* 2>/dev/null | sort -V | tail -1)
+    if [[ -n "\${PCS_SLURM_DIR}" ]]; then
+        export PATH="\${PCS_SLURM_DIR}/bin:\${PATH}"
+    fi
+fi
 PROFILE
 
 chmod 644 /etc/profile.d/relion.sh
