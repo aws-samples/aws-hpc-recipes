@@ -116,8 +116,6 @@ Shared filesystem access works without `chmod 777` workarounds, and Slurm comman
 
 ![DCV Login](docs/dcv-login.png)
 
-![alt text](image.png)
-
 ## Step 3: Configure BYO Login Node
 
 In this step, you configure the DCV workstation as a PCS login node so you can run Slurm commands directly from your DCV session. It's possible to open a terminal in the DCV session and complete setup from there. SSH'ing into the instance from a local terminal however will provide a better user experience. We'll do that next.
@@ -333,12 +331,9 @@ relion &
 
 The Relion GUI should appear in your DCV session.
 
-### 5. Verify shared data access
+![Relion GUI](docs/relion-gui.png)
 
-Confirm that Relion can read and write files on the FSx for Lustre mount at `/shared`.
-Any data placed in `/shared` is accessible from both the DCV workstation and compute nodes.
-
-## Step 6. [Optional]: Submit a Relion GPU job to PCS
+## Step 5. [Optional]: Submit a Relion GPU job to PCS
 
 At this point we have a DCV workstation added as a BYO login node to PCS. Relion is installed, and the GUI is running in the DCV session. We've also validated we can submit slurm jobs to the cluster from the DCV session running on the workstation.
 
