@@ -114,9 +114,13 @@ Shared filesystem access works without `chmod 777` workarounds, and Slurm comman
 4. You will see a self-signed certificate warning — accept it and proceed.
 5. Log in with username `ec2-user` and the password you specified during stack creation.
 
+![DCV Login](docs/dcv-login.png)
+
+![alt text](image.png)
+
 ## Step 3: Configure BYO Login Node
 
-In this step, you configure the DCV workstation as a PCS login node so you can run Slurm commands directly from your DCV session.
+In this step, you configure the DCV workstation as a PCS login node so you can run Slurm commands directly from your DCV session. It's possible to open a terminal in the DCV session and complete setup from there. SSH'ing into the instance from a local terminal however will provide a better user experience. We'll do that next.
 
 ### Connect to the instance
 
