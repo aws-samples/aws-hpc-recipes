@@ -227,35 +227,10 @@ If `sinfo` times out or the sackd service fails to start:
 
 ## Step 4: Install Relion
 
-Relion requires Spack for dependency management and is built from source with GPU support.
-
-### Install Spack
-
-First, install Spack on the shared filesystem following the [pcs/spack_for_pcs](../spack_for_pcs/) recipe pattern.
-
-```bash
-# Download the Spack installer
-curl -O https://raw.githubusercontent.com/spack/spack-configs/main/AWS/parallelcluster/postinstall.sh
-chmod +x postinstall.sh
-
-# Install Spack to the shared filesystem (runs in foreground with log output)
-sudo bash postinstall.sh --prefix /shared 2>&1 | tee /tmp/spack-install.log
-
-# Load Spack into your environment
-source /shared/spack/share/spack/setup-env.sh
-```
-
-The install takes 5–10 minutes. If you prefer to run it in the background:
-
-```bash
-sudo ./postinstall.sh --prefix /shared &> /tmp/spack-install.log &
-# Monitor progress:
-tail -f /tmp/spack-install.log
-```
+Relion is built from source with GPU support using system packages for all dependencies.
+No Spack installation is required.
 
 ### Download the Relion install script
-
-Download and run the Relion installation script included in this recipe:
 
 ```bash
 # Download the install script (from this recipe's assets)
@@ -265,8 +240,8 @@ chmod +x install-relion.sh
 
 ### Run the installer
 
-Before running the installer, check for the best CUDA version to use. The `--cuda-arch` flag should match your GPU instance type.
-
+The script installs all dependencies via system packages (OpenMPI, FFTW, libtiff, libpng, X11) and builds Relion from source.
+The `--cuda-arch` flag should match your GPU instance type.
 If omitted, the script attempts auto-detection.
 
 | Instance Family | GPU | CUDA Architecture |
@@ -278,16 +253,17 @@ If omitted, the script attempts auto-detection.
 Example with explicit architecture:
 
 ```bash
-sudo ./install-relion.sh --cuda-arch 86
+sudo ./install-relion.sh --cuda-arch 75
 ```
 
-Example without:
+Example with auto-detection:
 
 ```bash
 sudo ./install-relion.sh
 ```
 
-Installation takes 30–60 minutes depending on instance type (Spack dependency resolution + Relion compilation). The script prints status messages for each phase so you can monitor progress.
+Installation takes 20–40 minutes depending on instance type.
+The script prints status messages for each phase so you can monitor progress.
 
 ### Verify Relion installation
 
@@ -325,6 +301,21 @@ sinfo -o "%P"
 # Submit a test job (replace 'compute' with your partition name from sinfo)
 sbatch --wrap="hostname && date" -o /shared/test-job.out -p <partition-name>
 squeue   # Watch job status
+```
+
+The output should look like this:
+
+```
+             JOBID PARTITION     NAME     USER ST       TIME  NODES NODELIST(REASON)
+                 1      demo     wrap ec2-user CF       3:32      1 compute-1-1
+
+```
+
+Note that we configured the cluster to have a minimum number of nodes to zero, meaning when no jobs are running, there are zero EC2 instances deployed. This job is in a `CF` or Configuring state while an EC2 instance is dynamically provisioned. You can check the EC2 console to see the instance beign provisioned in your account.
+
+When the job completes, the instance will terminate after writing data back to shared filesystem. To view the output files, run:
+
+```bash
 cat /shared/test-job.out  # Verify output after job completes
 ```
 
@@ -416,6 +407,12 @@ This enables shared infrastructure with per-user isolation.
 In production, avoid passing the DCV password as a CloudFormation parameter.
 Use AWS Secrets Manager or AD authentication instead for credential management.
 
+### EFA for Multi-Node MPI at Scale
+
+This walkthrough uses system OpenMPI, which communicates over TCP.
+For production multi-node MPI workloads that require low-latency networking, install the [AWS EFA software](https://docs.aws.amazon.com/AWSEC2/latest/UserGuide/efa-start.html) and use the EFA-optimized OpenMPI at `/opt/amazon/openmpi/`.
+EFA is supported on instance types like p4d, p5, hpc6a, and g5 (in cluster placement groups).
+
 ## Cost Estimation
 
 Primary cost drivers for this architecture:
@@ -472,8 +469,7 @@ Compute nodes are only charged when jobs are running (PCS scales the node group 
 
 ### Slurm commands fail with "Parsing error at unrecognized key" after installing Relion
 
-Spack's OpenMPI package may pull in an older Slurm version as a dependency.
-When you run `spack load openmpi`, the older Slurm binaries can override the PCS Slurm 25.11 binaries in your PATH.
+If you have Spack installed separately and load OpenMPI from Spack, it may pull in an older Slurm version that overrides the PCS Slurm 25.11 binaries in your PATH.
 Symptoms include errors like `_parse_next_key: Parsing error at unrecognized key: HashPlugin` or `Invalid DebugFlag: AuditRPCs`.
 
 Fix by ensuring the PCS Slurm path takes priority:

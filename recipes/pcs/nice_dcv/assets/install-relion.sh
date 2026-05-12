@@ -1,14 +1,14 @@
 #!/bin/bash
-# install-relion.sh — Spack-based Relion installation script
+# install-relion.sh — Relion installation script for PCS DCV workstation
 #
-# Installs Relion and its dependencies on a shared filesystem using Spack
-# for dependency management and building Relion from source.
+# Installs Relion and its dependencies on a shared filesystem using system
+# packages for all runtime libraries and building Relion from source.
 #
 # Usage: sudo ./install-relion.sh [OPTIONS]
 #
 # Exit codes:
 #   0 = success
-#   1 = dependency/environment failure (Spack not found, package install failed)
+#   1 = dependency/environment failure (package install failed, CUDA not found)
 #   2 = build failure (clone, cmake, make)
 
 set -euo pipefail
@@ -16,7 +16,6 @@ set -euo pipefail
 ###############################################################################
 # Defaults
 ###############################################################################
-SPACK_PREFIX="/shared"
 INSTALL_DIR="/shared/relion"
 RELION_VERSION="ver5.0"
 CUDA_ARCH=""
@@ -30,20 +29,24 @@ usage() {
     cat <<EOF
 Usage: $(basename "$0") [OPTIONS]
 
-Install Relion with GPU/MPI support using Spack for dependency management.
+Install Relion with GPU/MPI support on a shared filesystem.
 
 Options:
-  --spack-prefix DIR      Spack installation prefix (default: /shared)
   --install-dir DIR       Relion installation directory (default: /shared/relion)
   --relion-version TAG    Git branch/tag to checkout (default: ver5.0)
   --cuda-arch ARCH        CUDA compute capability (default: auto-detect from nvidia-smi)
   --jobs N                Parallel build jobs (default: \$(nproc))
   -h, --help              Show this help message
 
+CUDA architecture values by instance type:
+  g4dn (T4):   75
+  g5 (A10G):   86
+  g6 (L4):     89
+
 Examples:
   sudo ./install-relion.sh
-  sudo ./install-relion.sh --cuda-arch 89 --relion-version ver5.0
-  sudo ./install-relion.sh --spack-prefix /opt/spack --install-dir /opt/relion
+  sudo ./install-relion.sh --cuda-arch 75 --relion-version ver5.0
+  sudo ./install-relion.sh --install-dir /opt/relion --jobs 8
 EOF
     exit 0
 }
@@ -53,10 +56,6 @@ EOF
 ###############################################################################
 while [[ $# -gt 0 ]]; do
     case "$1" in
-        --spack-prefix)
-            SPACK_PREFIX="$2"
-            shift 2
-            ;;
         --install-dir)
             INSTALL_DIR="$2"
             shift 2
@@ -104,109 +103,49 @@ cleanup() {
 trap cleanup EXIT
 
 ###############################################################################
-# Phase 1/7: Verify Spack installation and system prerequisites
+# Phase 1/5: Install system dependencies
 ###############################################################################
-CURRENT_PHASE="Phase 1/7: Verifying Spack installation and system prerequisites"
+CURRENT_PHASE="Phase 1/5: Installing system dependencies"
 echo "${CURRENT_PHASE}..."
 
-# Install Fortran compiler (required by OpenMPI)
-if ! command -v gfortran &>/dev/null; then
-    echo "  Installing gcc-gfortran (required by OpenMPI)..."
-    if command -v dnf &>/dev/null; then
-        dnf install -y gcc-gfortran >/dev/null 2>&1
-    else
-        yum install -y gcc-gfortran >/dev/null 2>&1
-    fi
-fi
-
-# Install CUDA toolkit (required for GPU-accelerated Relion build)
-if [[ ! -x /usr/local/cuda/bin/nvcc ]]; then
-    echo "  Installing CUDA toolkit (for compilation only)..."
-    if command -v dnf &>/dev/null; then
-        dnf config-manager --add-repo https://developer.download.nvidia.com/compute/cuda/repos/amzn2023/x86_64/cuda-amzn2023.repo
-        dnf install -y cuda-toolkit-12-4 >/dev/null 2>&1
-    else
-        yum-config-manager --add-repo https://developer.download.nvidia.com/compute/cuda/repos/rhel7/x86_64/cuda-rhel7.repo
-        yum install -y cuda-toolkit-12-4 >/dev/null 2>&1
-    fi
-fi
-
-SPACK_SETUP="${SPACK_PREFIX}/spack/share/spack/setup-env.sh"
-if [[ ! -f "${SPACK_SETUP}" ]]; then
-    echo "ERROR: Spack not found at ${SPACK_SETUP}"
-    echo ""
-    echo "Spack must be installed before running this script."
-    echo "Use the pcs/spack_for_pcs recipe to install Spack:"
-    echo "  https://github.com/aws-samples/aws-hpc-recipes/tree/main/recipes/pcs/spack_for_pcs"
-    exit 1
-fi
-echo "  Spack found at: ${SPACK_SETUP}"
-
-# Ensure Spack detects the Fortran compiler
-# shellcheck disable=SC1090
-source "${SPACK_SETUP}"
-spack compiler find >/dev/null 2>&1
-
-###############################################################################
-# Phase 2/7: Install dependencies
-###############################################################################
-CURRENT_PHASE="Phase 2/7: Installing dependencies"
-echo "${CURRENT_PHASE}..."
-
-# Install system packages for runtime libraries (avoids Spack LD_LIBRARY_PATH issues in DCV sessions)
-echo "  Installing system runtime libraries..."
+# Detect package manager
 if command -v dnf &>/dev/null; then
-    dnf install -y fftw-devel fftw-libs-single fftw-libs-double \
-        libtiff-devel libpng-devel libX11-devel libXft-devel >/dev/null 2>&1
+    PKG_MGR="dnf"
 elif command -v yum &>/dev/null; then
-    yum install -y fftw-devel fftw-libs-single fftw-libs-double \
-        libtiff-devel libpng-devel libX11-devel libXft-devel >/dev/null 2>&1
+    PKG_MGR="yum"
 else
     echo "ERROR: Neither dnf nor yum found. Cannot install system packages."
     exit 1
 fi
-echo "  System runtime libraries installed."
 
-# Install build tools via Spack (openmpi, cmake)
-# shellcheck source=/dev/null
-source "${SPACK_SETUP}"
+# Install all build and runtime dependencies via system packages
+echo "  Installing build tools and libraries..."
+$PKG_MGR install -y \
+    gcc gcc-c++ gcc-gfortran \
+    cmake3 git \
+    openmpi openmpi-devel \
+    fftw-devel fftw-libs-single fftw-libs-double \
+    libtiff-devel libpng-devel libjpeg-turbo-devel \
+    libX11-devel libXft-devel \
+    2>&1 | tail -5
 
-SPACK_PACKAGES=(openmpi cmake)
-for pkg in "${SPACK_PACKAGES[@]}"; do
-    echo "  Installing ${pkg} via Spack..."
-    if ! spack install "${pkg}"; then
-        echo "ERROR: Failed to install Spack package: ${pkg}"
-        echo ""
-        echo "Try running with verbose output for more details:"
-        echo "  spack install --verbose ${pkg}"
-        exit 1
-    fi
-done
-echo "  All Spack dependencies installed successfully."
+# Ensure cmake3 is available as 'cmake' if needed
+if ! command -v cmake &>/dev/null && command -v cmake3 &>/dev/null; then
+    ln -sf "$(command -v cmake3)" /usr/local/bin/cmake
+fi
 
-###############################################################################
-# Phase 3/7: Load Spack dependencies
-###############################################################################
-CURRENT_PHASE="Phase 3/7: Loading Spack dependencies"
-echo "${CURRENT_PHASE}..."
+# Load OpenMPI into environment
+if [[ -d /usr/lib64/openmpi/bin ]]; then
+    export PATH="/usr/lib64/openmpi/bin:${PATH}"
+    export LD_LIBRARY_PATH="/usr/lib64/openmpi/lib:${LD_LIBRARY_PATH:-}"
+fi
 
-for pkg in openmpi cmake; do
-    echo "  Loading ${pkg}..."
-    # If multiple variants exist, pick the one built with the newest compiler
-    HASH=$(spack find --format '{hash}' "${pkg}" 2>/dev/null | tail -1)
-    if [[ -n "${HASH}" ]]; then
-        spack load "/${HASH}"
-    else
-        echo "ERROR: Package ${pkg} not found in Spack."
-        exit 1
-    fi
-done
-echo "  All dependencies loaded into environment."
+echo "  System dependencies installed."
 
 ###############################################################################
-# Phase 4/7: Clone Relion
+# Phase 2/5: Clone Relion
 ###############################################################################
-CURRENT_PHASE="Phase 4/7: Cloning Relion repository"
+CURRENT_PHASE="Phase 2/5: Cloning Relion repository"
 echo "${CURRENT_PHASE}..."
 
 RELION_SRC="${INSTALL_DIR}/src"
@@ -229,9 +168,9 @@ fi
 echo "  Relion source cloned (branch: ${RELION_VERSION})."
 
 ###############################################################################
-# Phase 5/7: Configure with cmake
+# Phase 3/5: Configure with cmake
 ###############################################################################
-CURRENT_PHASE="Phase 5/7: Configuring Relion with cmake"
+CURRENT_PHASE="Phase 3/5: Configuring Relion with cmake"
 echo "${CURRENT_PHASE}..."
 
 # Auto-detect CUDA compute capability from GPU if not specified
@@ -250,18 +189,11 @@ fi
 CUDA_ROOT=""
 if [[ -d "/usr/local/cuda" ]]; then
     CUDA_ROOT="/usr/local/cuda"
-elif command -v nvidia-smi &>/dev/null; then
-    # Try to find CUDA from nvidia-smi driver path
-    CUDA_ROOT=$(dirname "$(dirname "$(command -v nvidia-smi)")")/cuda
-    if [[ ! -d "${CUDA_ROOT}" ]]; then
-        CUDA_ROOT="/usr/local/cuda"
-    fi
 fi
 
 if [[ ! -d "${CUDA_ROOT}" ]]; then
-    echo "ERROR: CUDA installation not found."
-    echo "Expected at /usr/local/cuda or detected via nvidia-smi."
-    echo "Ensure the GPU drivers and CUDA toolkit are installed."
+    echo "ERROR: CUDA installation not found at /usr/local/cuda."
+    echo "Ensure the CUDA toolkit is installed."
     exit 2
 fi
 echo "  Using CUDA at: ${CUDA_ROOT}"
@@ -282,23 +214,22 @@ if ! cmake \
     echo "ERROR: cmake configuration failed."
     echo ""
     echo "Check the cmake output above for details."
-    echo "Verify that Spack-provided libraries are loaded (openmpi, fftw, cmake, libtiff, libpng)."
     exit 2
 fi
 echo "  Relion configured successfully."
 
 ###############################################################################
-# Phase 6/7: Build and install
+# Phase 4/5: Build and install
 ###############################################################################
-CURRENT_PHASE="Phase 6/7: Building and installing Relion"
+CURRENT_PHASE="Phase 4/5: Building and installing Relion"
 echo "${CURRENT_PHASE}..."
-echo "  Building with ${JOBS} parallel jobs..."
+echo "  Building with ${JOBS} parallel jobs (this may take 20-40 minutes)..."
 
 if ! make -C "${BUILD_DIR}" -j "${JOBS}"; then
     echo "ERROR: Relion build failed."
     echo ""
     echo "Common causes:"
-    echo "  - Insufficient disk space"
+    echo "  - Insufficient disk space (need ~5 GB free)"
     echo "  - Insufficient memory (try reducing --jobs)"
     echo "  - Missing dependencies"
     echo "Build directory: ${BUILD_DIR}"
@@ -313,21 +244,29 @@ fi
 echo "  Relion installed to: ${INSTALL_DIR}"
 
 ###############################################################################
-# Phase 7/7: Create profile script
+# Phase 5/5: Create profile script
 ###############################################################################
-CURRENT_PHASE="Phase 7/7: Creating profile script"
+CURRENT_PHASE="Phase 5/5: Creating profile script"
 echo "${CURRENT_PHASE}..."
 
-cat > /etc/profile.d/relion.sh <<PROFILE
+cat > /etc/profile.d/relion.sh <<'PROFILE'
 # Relion environment setup — installed by install-relion.sh
-export PATH="${INSTALL_DIR}/bin:\${PATH}"
-export LD_LIBRARY_PATH="${INSTALL_DIR}/lib:\${LD_LIBRARY_PATH:-}"
 
-# Restore PCS Slurm binaries to front of PATH (Spack may override with older Slurm)
+# Add Relion binaries to PATH
+export PATH="/shared/relion/bin:${PATH}"
+export LD_LIBRARY_PATH="/shared/relion/lib:${LD_LIBRARY_PATH:-}"
+
+# Add system OpenMPI to PATH
+if [[ -d /usr/lib64/openmpi/bin ]]; then
+    export PATH="/usr/lib64/openmpi/bin:${PATH}"
+    export LD_LIBRARY_PATH="/usr/lib64/openmpi/lib:${LD_LIBRARY_PATH:-}"
+fi
+
+# Ensure PCS Slurm binaries take priority
 if [[ -d /opt/aws/pcs/scheduler ]]; then
-    PCS_SLURM_DIR=\$(ls -d /opt/aws/pcs/scheduler/slurm-* 2>/dev/null | sort -V | tail -1)
-    if [[ -n "\${PCS_SLURM_DIR}" ]]; then
-        export PATH="\${PCS_SLURM_DIR}/bin:\${PATH}"
+    PCS_SLURM_DIR=$(ls -d /opt/aws/pcs/scheduler/slurm-* 2>/dev/null | sort -V | tail -1)
+    if [[ -n "${PCS_SLURM_DIR}" ]]; then
+        export PATH="${PCS_SLURM_DIR}/bin:${PATH}"
     fi
 fi
 PROFILE
@@ -353,3 +292,8 @@ echo "  - Start a new shell session (profile.d script will set PATH)"
 echo "  - Or run: source /etc/profile.d/relion.sh"
 echo ""
 echo "Launch the Relion GUI with: relion"
+echo ""
+echo "NOTE: For multi-node MPI jobs at scale with EFA networking,"
+echo "consider installing the AWS EFA software and using"
+echo "/opt/amazon/openmpi/ instead of system OpenMPI."
+echo "See: https://docs.aws.amazon.com/AWSEC2/latest/UserGuide/efa-start.html"
