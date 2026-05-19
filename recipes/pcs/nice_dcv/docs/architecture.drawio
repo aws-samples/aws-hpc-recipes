@@ -1,0 +1,87 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<mxfile host="app.diagrams.net" modified="2024-01-01T00:00:00.000Z" agent="draw.io" version="22.1.0" type="device">
+  <diagram id="pcs-nice-dcv-architecture" name="Architecture">
+    <mxGraphModel dx="1422" dy="762" grid="1" gridSize="10" guides="1" tooltips="1" connect="1" arrows="1" fold="1" page="1" pageScale="1" pageWidth="1100" pageHeight="850" math="0" shadow="0">
+      <root>
+        <mxCell id="0" />
+        <mxCell id="1" parent="0" />
+
+        <!-- User/Client -->
+        <mxCell id="user" value="User / Client" style="shape=mxgraph.aws4.users;labelPosition=center;verticalLabelPosition=bottom;align=center;verticalAlign=top;fillColor=#D45B07;fontColor=#232F3E;strokeColor=none;fontStyle=1;fontSize=12;" vertex="1" parent="1">
+          <mxGeometry x="40" y="220" width="60" height="60" as="geometry" />
+        </mxCell>
+
+        <!-- AWS Cloud Container -->
+        <mxCell id="aws-cloud" value="AWS Cloud" style="points=[[0,0],[0.25,0],[0.5,0],[0.75,0],[1,0],[1,0.25],[1,0.5],[1,0.75],[1,1],[0.75,1],[0.5,1],[0.25,1],[0,1],[0,0.75],[0,0.5],[0,0.25]];outlineConnect=0;gradientColor=none;html=1;whiteSpace=wrap;fontSize=12;fontStyle=1;shape=mxgraph.aws4.group;grIcon=mxgraph.aws4.group_aws_cloud;strokeColor=#232F3E;fillColor=none;verticalAlign=top;align=left;spacingLeft=30;fontColor=#232F3E;dashed=0;" vertex="1" parent="1">
+          <mxGeometry x="180" y="30" width="820" height="520" as="geometry" />
+        </mxCell>
+
+        <!-- VPC Container -->
+        <mxCell id="vpc" value="VPC" style="points=[[0,0],[0.25,0],[0.5,0],[0.75,0],[1,0],[1,0.25],[1,0.5],[1,0.75],[1,1],[0.75,1],[0.5,1],[0.25,1],[0,1],[0,0.75],[0,0.5],[0,0.25]];outlineConnect=0;gradientColor=none;html=1;whiteSpace=wrap;fontSize=12;fontStyle=1;shape=mxgraph.aws4.group;grIcon=mxgraph.aws4.group_vpc;strokeColor=#248814;fillColor=none;verticalAlign=top;align=left;spacingLeft=30;fontColor=#248814;dashed=0;" vertex="1" parent="1">
+          <mxGeometry x="210" y="70" width="760" height="460" as="geometry" />
+        </mxCell>
+
+        <!-- Public Subnet -->
+        <mxCell id="public-subnet" value="Public Subnet" style="points=[[0,0],[0.25,0],[0.5,0],[0.75,0],[1,0],[1,0.25],[1,0.5],[1,0.75],[1,1],[0.75,1],[0.5,1],[0.25,1],[0,1],[0,0.75],[0,0.5],[0,0.25]];outlineConnect=0;gradientColor=none;html=1;whiteSpace=wrap;fontSize=11;fontStyle=1;shape=mxgraph.aws4.group;grIcon=mxgraph.aws4.group_public_subnet;strokeColor=#248814;fillColor=none;verticalAlign=top;align=left;spacingLeft=30;fontColor=#248814;dashed=0;" vertex="1" parent="1">
+          <mxGeometry x="230" y="110" width="280" height="200" as="geometry" />
+        </mxCell>
+
+        <!-- DCV Workstation -->
+        <mxCell id="dcv-workstation" value="DCV Workstation (GPU)&lt;br&gt;&lt;font style=&quot;font-size:10px;font-weight:normal&quot;&gt;ec2-user | sackd | Relion&lt;/font&gt;" style="shape=mxgraph.aws4.resourceIcon;resIcon=mxgraph.aws4.ec2;labelPosition=center;verticalLabelPosition=bottom;align=center;verticalAlign=top;fillColor=#ED7100;fontColor=#232F3E;strokeColor=none;fontStyle=1;fontSize=11;" vertex="1" parent="1">
+          <mxGeometry x="330" y="160" width="48" height="48" as="geometry" />
+        </mxCell>
+
+        <!-- Private Subnet -->
+        <mxCell id="private-subnet" value="Private Subnet" style="points=[[0,0],[0.25,0],[0.5,0],[0.75,0],[1,0],[1,0.25],[1,0.5],[1,0.75],[1,1],[0.75,1],[0.5,1],[0.25,1],[0,1],[0,0.75],[0,0.5],[0,0.25]];outlineConnect=0;gradientColor=none;html=1;whiteSpace=wrap;fontSize=11;fontStyle=1;shape=mxgraph.aws4.group;grIcon=mxgraph.aws4.group_private_subnet;strokeColor=#147EBA;fillColor=none;verticalAlign=top;align=left;spacingLeft=30;fontColor=#147EBA;dashed=0;" vertex="1" parent="1">
+          <mxGeometry x="550" y="110" width="400" height="200" as="geometry" />
+        </mxCell>
+
+        <!-- PCS Cluster -->
+        <mxCell id="pcs-cluster" value="PCS Cluster&lt;br&gt;&lt;font style=&quot;font-size:10px;font-weight:normal&quot;&gt;(Slurm Controller)&lt;/font&gt;" style="shape=mxgraph.aws4.resourceIcon;resIcon=mxgraph.aws4.batch;labelPosition=center;verticalLabelPosition=bottom;align=center;verticalAlign=top;fillColor=#ED7100;fontColor=#232F3E;strokeColor=none;fontStyle=1;fontSize=11;" vertex="1" parent="1">
+          <mxGeometry x="630" y="160" width="48" height="48" as="geometry" />
+        </mxCell>
+
+        <!-- Compute Node Group -->
+        <mxCell id="compute-nodes" value="GPU Compute Nodes" style="shape=mxgraph.aws4.resourceIcon;resIcon=mxgraph.aws4.ec2;labelPosition=center;verticalLabelPosition=bottom;align=center;verticalAlign=top;fillColor=#ED7100;fontColor=#232F3E;strokeColor=none;fontStyle=1;fontSize=11;" vertex="1" parent="1">
+          <mxGeometry x="830" y="160" width="48" height="48" as="geometry" />
+        </mxCell>
+
+        <!-- Storage Area - FSx for Lustre -->
+        <mxCell id="storage-area" value="Storage" style="points=[[0,0],[0.25,0],[0.5,0],[0.75,0],[1,0],[1,0.25],[1,0.5],[1,0.75],[1,1],[0.75,1],[0.5,1],[0.25,1],[0,1],[0,0.75],[0,0.5],[0,0.25]];outlineConnect=0;gradientColor=none;html=1;whiteSpace=wrap;fontSize=11;fontStyle=1;shape=mxgraph.aws4.group;grIcon=mxgraph.aws4.group_security_group;strokeColor=#147EBA;fillColor=none;verticalAlign=top;align=left;spacingLeft=30;fontColor=#147EBA;dashed=1;" vertex="1" parent="1">
+          <mxGeometry x="380" y="360" width="350" height="150" as="geometry" />
+        </mxCell>
+
+        <!-- FSx for Lustre -->
+        <mxCell id="fsx-lustre" value="FSx for Lustre&lt;br&gt;&lt;font style=&quot;font-size:10px;font-weight:normal&quot;&gt;(/shared)&lt;/font&gt;" style="shape=mxgraph.aws4.resourceIcon;resIcon=mxgraph.aws4.fsx;labelPosition=center;verticalLabelPosition=bottom;align=center;verticalAlign=top;fillColor=#3F8624;fontColor=#232F3E;strokeColor=none;fontStyle=1;fontSize=11;" vertex="1" parent="1">
+          <mxGeometry x="525" y="395" width="48" height="48" as="geometry" />
+        </mxCell>
+
+        <!-- Connection: User to DCV Workstation -->
+        <mxCell id="conn-user-dcv" value="HTTPS :8443 (DCV)" style="edgeStyle=orthogonalEdgeStyle;rounded=1;orthogonalLoop=1;jettySize=auto;exitX=1;exitY=0.5;exitDx=0;exitDy=0;entryX=0;entryY=0.5;entryDx=0;entryDy=0;strokeColor=#232F3E;fontSize=10;fontColor=#232F3E;" edge="1" source="user" target="dcv-workstation" parent="1">
+          <mxGeometry relative="1" as="geometry" />
+        </mxCell>
+
+        <!-- Connection: DCV Workstation to PCS Cluster -->
+        <mxCell id="conn-dcv-pcs" value="sackd (port 6817)" style="edgeStyle=orthogonalEdgeStyle;rounded=1;orthogonalLoop=1;jettySize=auto;exitX=1;exitY=0.5;exitDx=0;exitDy=0;entryX=0;entryY=0.5;entryDx=0;entryDy=0;strokeColor=#232F3E;fontSize=10;fontColor=#232F3E;" edge="1" source="dcv-workstation" target="pcs-cluster" parent="1">
+          <mxGeometry relative="1" as="geometry" />
+        </mxCell>
+
+        <!-- Connection: PCS Cluster to Compute Nodes -->
+        <mxCell id="conn-pcs-compute" value="Slurm job scheduling" style="edgeStyle=orthogonalEdgeStyle;rounded=1;orthogonalLoop=1;jettySize=auto;exitX=1;exitY=0.5;exitDx=0;exitDy=0;entryX=0;entryY=0.5;entryDx=0;entryDy=0;strokeColor=#232F3E;fontSize=10;fontColor=#232F3E;" edge="1" source="pcs-cluster" target="compute-nodes" parent="1">
+          <mxGeometry relative="1" as="geometry" />
+        </mxCell>
+
+        <!-- Connection: DCV Workstation to FSx -->
+        <mxCell id="conn-dcv-fsx" value="mount /shared" style="edgeStyle=orthogonalEdgeStyle;rounded=1;orthogonalLoop=1;jettySize=auto;exitX=0.5;exitY=1;exitDx=0;exitDy=0;entryX=0;entryY=0.5;entryDx=0;entryDy=0;strokeColor=#3F8624;fontSize=10;fontColor=#3F8624;dashed=1;" edge="1" source="dcv-workstation" target="fsx-lustre" parent="1">
+          <mxGeometry relative="1" as="geometry" />
+        </mxCell>
+
+        <!-- Connection: Compute Nodes to FSx -->
+        <mxCell id="conn-compute-fsx" value="mount /shared" style="edgeStyle=orthogonalEdgeStyle;rounded=1;orthogonalLoop=1;jettySize=auto;exitX=0.5;exitY=1;exitDx=0;exitDy=0;entryX=1;entryY=0.5;entryDx=0;entryDy=0;strokeColor=#3F8624;fontSize=10;fontColor=#3F8624;dashed=1;" edge="1" source="compute-nodes" target="fsx-lustre" parent="1">
+          <mxGeometry relative="1" as="geometry" />
+        </mxCell>
+
+      </root>
+    </mxGraphModel>
+  </diagram>
+</mxfile>
