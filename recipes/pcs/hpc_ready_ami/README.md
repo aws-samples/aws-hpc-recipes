@@ -15,7 +15,7 @@ They are designed to:
 * Install the AWS PCS Agent and Slurm software
 * Install EFA, Lustre, and EFS software
 * Install CloudWatch and SSM agents
-* Install Spack to support complex userland software installations
+* Install Spack and EESSI to support complex userland software installations
 
 They support the Amazon Linux 2, RHEL9, Rocky Linux 9, and Ubuntu 22.04 operating system distributions on x86_64 and arm64 processors.
 
