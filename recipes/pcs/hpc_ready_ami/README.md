@@ -50,7 +50,7 @@ The ImageBuilder components are available as individual templates that deploy a 
     * For **HpcRecipesBranch**, enter the release branch for the HPC Recipes bucket. Unless you are working with a pre-release version of HPC Recipes for AWS, this will be `main`.
 4. Finish creating the stack. 
 5. When the stack's status reaches `CREATE_COMPLETE`, navigate to the [EC2 Image Builder console](https://console.aws.amazon.com/imagebuilder/home#/components).
-    * On the **Components** page, choose **Onwed by me**. Your new ImageBuilder components should be available there. 
+    * On the **Components** page, choose **Owned by me**. Your new ImageBuilder components should be available there. 
 
 #### Deploy a single ImageBuilder component
 
