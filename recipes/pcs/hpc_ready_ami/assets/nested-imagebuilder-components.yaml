@@ -195,6 +195,11 @@ Outputs:
     Value: !GetAtt [ SpackInstallerStack, Outputs.ImageBuilderComponent ]
     Export:
       Name: !Sub "${AWS::StackName}-SpackInstallerComponent"
+  EessiInstallerComponent:
+    Description: EessiInstallerComponent
+    Value: !GetAtt [ EessiInstallerStack, Outputs.ImageBuilderComponent ]
+    Export:
+      Name: !Sub "${AWS::StackName}-EessiInstallerComponent"
   SsmAgentComponent:
     Description: SsmAgentComponent
     Value: !GetAtt [ SsmAgentStack, Outputs.ImageBuilderComponent ]
