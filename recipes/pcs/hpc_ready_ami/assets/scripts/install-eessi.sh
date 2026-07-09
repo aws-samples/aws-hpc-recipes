@@ -84,7 +84,7 @@ main() {
     parse_args "$@"
     detect_os_version
     handle_${OS}_${VERSION}
-    eessi
+    download_and_install_eessi
 }
 
 # Call the main function
