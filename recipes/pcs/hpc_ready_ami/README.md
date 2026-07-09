@@ -15,7 +15,7 @@ They are designed to:
 * Install the AWS PCS Agent and Slurm software
 * Install EFA, Lustre, and EFS software
 * Install CloudWatch and SSM agents
-* Install Spack to support complex userland software installations
+* Install Spack and EESSI to support complex userland software installations
 
 They support the Amazon Linux 2, RHEL9, Rocky Linux 9, and Ubuntu 22.04 operating system distributions on x86_64 and arm64 processors.
 
@@ -50,7 +50,7 @@ The ImageBuilder components are available as individual templates that deploy a 
     * For **HpcRecipesBranch**, enter the release branch for the HPC Recipes bucket. Unless you are working with a pre-release version of HPC Recipes for AWS, this will be `main`.
 4. Finish creating the stack. 
 5. When the stack's status reaches `CREATE_COMPLETE`, navigate to the [EC2 Image Builder console](https://console.aws.amazon.com/imagebuilder/home#/components).
-    * On the **Components** page, choose **Onwed by me**. Your new ImageBuilder components should be available there. 
+    * On the **Components** page, choose **Owned by me**. Your new ImageBuilder components should be available there. 
 
 #### Deploy a single ImageBuilder component
 
