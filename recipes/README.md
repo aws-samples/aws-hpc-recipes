@@ -52,7 +52,16 @@ You can use an HPC Recipe for AWS in several ways:
 
 ### :arrow_right: env: User environment
 
-*There are currently no recipes in this namespace.*
+#### eessi ![tag](https://img.shields.io/badge/-beta-%23800080) 
+
+* **About**: Install EESSI software stack
+* **Usage**: [README.md](env/eessi/README.md)
+
+#### spack ![tag](https://img.shields.io/badge/-community-%2317202A) 
+
+* **About**: Install and configure Spack + Spack configs on shared storage
+* **Usage**: [README.md](env/spack/README.md)
+
 
 ### :arrow_right: iam: Identity Access and Management
 
@@ -280,6 +289,11 @@ You can use an HPC Recipe for AWS in several ways:
 
 * **About**: RES-Ready AMI EC2 image builder components for building out Software stacks
 * **Usage**: [README.md](res/res_ready_components/README.md)
+
+#### res_user_tag ![tag](https://img.shields.io/badge/-billing-%23AAB7B8) ![tag](https://img.shields.io/badge/-cost-allocation-%23AAB7B8) ![tag](https://img.shields.io/badge/-ec2-%23FF9900) ![tag](https://img.shields.io/badge/-res-%237DCEA0) 
+
+* **About**: Adds a res:User cost-allocation tag (session owner) to RES VDI desktop instances at launch, with no RES code change.
+* **Usage**: [README.md](res/res_user_tag/README.md)
 
 
 ### :arrow_right: security: Security configuration
