@@ -63,6 +63,9 @@ validate:
 	@echo "=== Checking partition safety ==="
 	python -m scripts.validate_partitions
 	@echo ""
+	@echo "=== Running ShellCheck (strict: pcs-scripts, advisory: others) ==="
+	SHELLCHECK_OPTIONAL=1 python -m scripts.validate_shellcheck
+	@echo ""
 	@echo "=== Running cfn-lint ==="
 	@files=$$(find recipes -path '*/assets/*.yaml' -o -path '*/assets/*.yml' | grep -v '.gitkeep' | xargs grep -l 'AWSTemplateFormatVersion\|^Resources:' 2>/dev/null); \
 	if [ -n "$$files" ]; then cfn-lint -t $$files || true; else echo "No CFN templates found."; fi

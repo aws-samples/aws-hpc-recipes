@@ -19,6 +19,7 @@ validate-recipes:
   image: python:3.12-slim
   before_script:
     - pip install --quiet pyyaml semver cfn-lint
+    - apt-get update -qq && apt-get install -y -qq shellcheck
   script:
     - echo "=== Validating recipe structure ==="
     - python -m scripts.validate_structure
@@ -26,6 +27,8 @@ validate-recipes:
     - python -m scripts.validate_metadata
     - echo "=== Checking partition safety ==="
     - python -m scripts.validate_partitions
+    - echo "=== Running ShellCheck (strict for pcs-scripts, advisory elsewhere) ==="
+    - python -m scripts.validate_shellcheck
     - echo "=== Running cfn-lint ==="
     - find recipes -path '*/assets/*.yaml' -o -path '*/assets/*.yml' -o -path '*/assets/*.json' | grep -v '.gitkeep' | xargs grep -l 'AWSTemplateFormatVersion\|^Resources:' 2>/dev/null | xargs -r cfn-lint --ignore-checks W || true
   rules:
