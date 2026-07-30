@@ -52,16 +52,7 @@ You can use an HPC Recipe for AWS in several ways:
 
 ### :arrow_right: env: User environment
 
-#### eessi ![tag](https://img.shields.io/badge/-beta-%23800080) 
-
-* **About**: Install EESSI software stack
-* **Usage**: [README.md](env/eessi/README.md)
-
-#### spack ![tag](https://img.shields.io/badge/-community-%2317202A) 
-
-* **About**: Install and configure Spack + Spack configs on shared storage
-* **Usage**: [README.md](env/spack/README.md)
-
+*There are currently no recipes in this namespace.*
 
 ### :arrow_right: iam: Identity Access and Management
 
@@ -253,6 +244,14 @@ You can use an HPC Recipe for AWS in several ways:
 
 * **About**: Get started with Graviton-powered instances on AWS PCS
 * **Usage**: [README.md](pcs/try_graviton/README.md)
+
+
+### :arrow_right: pcs-scripts: PCS node lifecycle action scripts (community)
+
+#### node_lifecycle_demo ![tag](https://img.shields.io/badge/-community-%2317202A) ![tag](https://img.shields.io/badge/-lifecycle-%237DCEA0) ![tag](https://img.shields.io/badge/-pcs-%23FF9900) 
+
+* **About**: Exemplar community scripts for AWS PCS node lifecycle actions, demonstrating use of lifecycle context, portable and idempotent design, and the publish/reference/run/log pattern.
+* **Usage**: [README.md](pcs-scripts/node_lifecycle_demo/README.md)
 
 
 ### :arrow_right: res: Research and Engineering Studio on AWS
