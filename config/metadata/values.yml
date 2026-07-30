@@ -11,6 +11,7 @@ namespace:
   net: Networking
   pcluster: AWS ParallelCluster
   pcs: AWS Parallel Computing Service
+  pcs-scripts: PCS node lifecycle action scripts (community)
   res: Research and Engineering Studio on AWS
   security: Security configuration
   scheduler: HPC scheduler
@@ -43,6 +44,7 @@ tags:
   inferentia: green
   trainium: green
   pcs: orange
+  lifecycle: green
   ec2: orange
   100: blue
   200: blue
