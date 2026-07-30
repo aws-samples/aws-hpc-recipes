@@ -18,6 +18,10 @@ def main():
         data["namespaces"][dir] = { "description": desc, "recipes": []}
         # List directories in each namespace
         ns = Path(Path.joinpath(utils.RECIPES, dir))
+        # A namespace may be registered in the config without a directory on
+        # disk (the two are allowed to drift). Skip it rather than crashing.
+        if not ns.is_dir():
+            continue
         for entry in ns.iterdir():
             if entry.is_dir():
                 try:
