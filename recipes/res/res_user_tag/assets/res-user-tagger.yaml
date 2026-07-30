@@ -1,0 +1,151 @@
+AWSTemplateFormatVersion: "2010-09-09"
+Description: >
+  Interim res:User cost-allocation tagger for RES VDI desktops. On EC2 "running"
+  state change, derives the RES environment from the instance's res:EnvironmentName
+  tag, resolves the session owner from that environment's user-sessions DynamoDB
+  GSI, and applies res:User=<owner>. Environment- and version-agnostic: one
+  deployment serves every RES environment (blue/green and future) in the account.
+  No RES code change required.
+
+Resources:
+  TaggerRole:
+    Type: AWS::IAM::Role
+    Metadata:
+      guard:
+        SuppressedRules:
+          # Inline policy is intentional: tightly scoped, least-privilege, and
+          # co-located with the only role that uses it. A managed policy adds a
+          # resource with no security benefit.
+          - IAM_NO_INLINE_POLICY_CHECK
+    Properties:
+      AssumeRolePolicyDocument:
+        Version: "2012-10-17"
+        Statement:
+          - Effect: Allow
+            Principal: { Service: lambda.amazonaws.com }
+            Action: sts:AssumeRole
+      ManagedPolicyArns:
+        - !Sub "arn:${AWS::Partition}:iam::aws:policy/service-role/AWSLambdaBasicExecutionRole"
+      Policies:
+        - PolicyName: res-user-tagger
+          PolicyDocument:
+            Version: "2012-10-17"
+            Statement:
+              - Effect: Allow
+                Action: ec2:DescribeInstances
+                Resource: "*"
+              - Effect: Allow
+                Action: ec2:CreateTags
+                Resource: !Sub arn:${AWS::Partition}:ec2:${AWS::Region}:${AWS::AccountId}:instance/*
+              - Effect: Allow
+                Action: dynamodb:Query
+                Resource:
+                  - !Sub arn:${AWS::Partition}:dynamodb:${AWS::Region}:${AWS::AccountId}:table/*.vdc.controller.user-sessions
+                  - !Sub arn:${AWS::Partition}:dynamodb:${AWS::Region}:${AWS::AccountId}:table/*.vdc.controller.user-sessions/index/*
+
+  TaggerFunction:
+    Type: AWS::Lambda::Function
+    Metadata:
+      guard:
+        SuppressedRules:
+          # Control-plane only: the function calls the public EC2 and DynamoDB
+          # API endpoints and needs no VPC. A VPC would add ENIs/NAT cost and
+          # attack surface with no security benefit.
+          - LAMBDA_INSIDE_VPC
+          # Best-effort, idempotent tagging. A dropped event is re-driven by the
+          # next running-state change, so a DLQ is not required for correctness.
+          - LAMBDA_DLQ_CHECK
+    Properties:
+      Runtime: python3.12
+      Handler: index.lambda_handler
+      Timeout: 30
+      ReservedConcurrentExecutions: 5
+      Role: !GetAtt TaggerRole.Arn
+      Code:
+        ZipFile: |
+          import boto3
+
+          TAG_KEY = "res:User"
+          NODE_TYPE_TAG = "res:NodeType"
+          ENV_NAME_TAG = "res:EnvironmentName"
+          DCV_HOST_NODE_TYPE = "virtual-desktop-dcv-host"
+          GSI_NAME = "server-instance-id-index"
+          GSI_KEY = "server_instance_id"
+          OWNER_ATTR = "owner"
+
+          def _table_name(env_name):
+              return f"{env_name}.vdc.controller.user-sessions"
+
+          def is_res_dcv_host(tags):
+              return tags.get(NODE_TYPE_TAG) == DCV_HOST_NODE_TYPE
+
+          def env_name_from_tags(tags):
+              return tags.get(ENV_NAME_TAG)
+
+          def resolve_owner(instance_id, ddb_client, env_name):
+              resp = ddb_client.query(
+                  TableName=_table_name(env_name), IndexName=GSI_NAME,
+                  KeyConditionExpression="#k = :v",
+                  ExpressionAttributeNames={"#k": GSI_KEY},
+                  ExpressionAttributeValues={":v": {"S": instance_id}}, Limit=1)
+              items = resp.get("Items", [])
+              return items[0].get(OWNER_ATTR, {}).get("S") if items else None
+
+          def _instance_tags(instance_id, ec2_client):
+              resp = ec2_client.describe_instances(InstanceIds=[instance_id])
+              for r in resp.get("Reservations", []):
+                  for inst in r.get("Instances", []):
+                      return {t["Key"]: t["Value"] for t in inst.get("Tags", [])}
+              return {}
+
+          def lambda_handler(event, context, ec2_client=None, ddb_client=None):
+              ec2_client = ec2_client or boto3.client("ec2")
+              ddb_client = ddb_client or boto3.client("dynamodb")
+              detail = event.get("detail", {})
+              instance_id = detail.get("instance-id")
+              if not instance_id:
+                  print("[res-user-tagger] no instance-id in event; skipping.")
+                  return
+              tags = _instance_tags(instance_id, ec2_client)
+              if not is_res_dcv_host(tags):
+                  print(f"[res-user-tagger] {instance_id} not a RES DCV host; skipping.")
+                  return
+              env_name = env_name_from_tags(tags)
+              if not env_name:
+                  print(f"[res-user-tagger] {instance_id} has no res:EnvironmentName tag; skipping.")
+                  return
+              owner = resolve_owner(instance_id, ddb_client, env_name)
+              if not owner:
+                  print(f"[res-user-tagger] no owner found for {instance_id} in {env_name}; skipping.")
+                  return
+              ec2_client.create_tags(Resources=[instance_id],
+                                     Tags=[{"Key": TAG_KEY, "Value": owner}])
+              print(f"[res-user-tagger] applied {TAG_KEY}={owner} to {instance_id} ({env_name}).")
+
+  RunningRule:
+    Type: AWS::Events::Rule
+    Properties:
+      Description: Fire on EC2 instances entering the running state.
+      EventPattern:
+        source: [aws.ec2]
+        detail-type: ["EC2 Instance State-change Notification"]
+        detail:
+          state: [running]
+      State: ENABLED
+      Targets:
+        - Id: res-user-tagger
+          Arn: !GetAtt TaggerFunction.Arn
+
+  AllowEventInvoke:
+    Type: AWS::Lambda::Permission
+    Properties:
+      FunctionName: !Ref TaggerFunction
+      Action: lambda:InvokeFunction
+      Principal: events.amazonaws.com
+      SourceArn: !GetAtt RunningRule.Arn
+
+Outputs:
+  FunctionName:
+    Value: !Ref TaggerFunction
+  RuleName:
+    Value: !Ref RunningRule

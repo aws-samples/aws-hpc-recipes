@@ -14,3 +14,4 @@ env.rc
 audit-reports/
 audit-pcs-instances.md
 audit-pcs-instances.csv
+recipes/res/res_user_tag/.venv/
