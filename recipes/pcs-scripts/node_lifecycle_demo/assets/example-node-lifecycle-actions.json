@@ -5,7 +5,7 @@
       {
         "name": "Set cluster MOTD",
         "scriptSource": {
-          "scriptLocation": "s3://aws-hpc-recipes/main/recipes/pcs-scripts/node_lifecycle_demo/assets/set-cluster-motd-v1.0.0.sh"
+          "scriptLocation": "https://aws-hpc-recipes.s3.us-east-1.amazonaws.com/main/recipes/pcs-scripts/node_lifecycle_demo/assets/set-cluster-motd-v1.0.0.sh"
         },
         "arguments": ["--message", "Welcome to the research cluster"],
         "onError": "CONTINUE",
@@ -14,7 +14,7 @@
       {
         "name": "Apply node Name tag",
         "scriptSource": {
-          "scriptLocation": "s3://aws-hpc-recipes/main/recipes/pcs-scripts/node_lifecycle_demo/assets/apply-node-name-tag-v1.0.0.sh"
+          "scriptLocation": "https://aws-hpc-recipes.s3.us-east-1.amazonaws.com/main/recipes/pcs-scripts/node_lifecycle_demo/assets/apply-node-name-tag-v1.0.0.sh"
         },
         "arguments": [],
         "onError": "CONTINUE",
@@ -23,7 +23,7 @@
       {
         "name": "Prepare HPC node",
         "scriptSource": {
-          "scriptLocation": "s3://aws-hpc-recipes/main/recipes/pcs-scripts/node_lifecycle_demo/assets/prepare-hpc-node-v1.0.0.sh"
+          "scriptLocation": "https://aws-hpc-recipes.s3.us-east-1.amazonaws.com/main/recipes/pcs-scripts/node_lifecycle_demo/assets/prepare-hpc-node-v1.0.0.sh"
         },
         "arguments": ["--nofile", "131072", "--memlock", "unlimited", "--disable-thp"],
         "onError": "TERMINATE",
@@ -32,7 +32,7 @@
       {
         "name": "Set up local scratch",
         "scriptSource": {
-          "scriptLocation": "s3://aws-hpc-recipes/main/recipes/pcs-scripts/node_lifecycle_demo/assets/setup-local-scratch-v1.0.0.sh"
+          "scriptLocation": "https://aws-hpc-recipes.s3.us-east-1.amazonaws.com/main/recipes/pcs-scripts/node_lifecycle_demo/assets/setup-local-scratch-v1.0.0.sh"
         },
         "arguments": ["--mount-point", "/scratch", "--fstype", "ext4"],
         "onError": "CONTINUE",
