@@ -8,21 +8,31 @@
 # that AWS PCS injects into every lifecycle action script, combined with
 # instance metadata retrieved from IMDSv2.
 #
+# /etc/motd is only rendered by pam_motd on a true SSH login. Sessions opened
+# via SSM Session Manager or `sudo -i` do not run that PAM stack, so the banner
+# would be invisible there. To cover those paths the script also installs a
+# small /etc/profile.d dispatcher that prints the banner in interactive login
+# shells while staying quiet on SSH (where pam_motd already printed it).
+#
 # Context variables used (exported by the PCS agent):
 #   PCS_CLUSTER_NAME, PCS_CLUSTER_ID, PCS_COMPUTE_NODE_GROUP_NAME, PCS_NODE_ID
 #
 # Prerequisites: none (coreutils only).
 # IAM: none.
-# Suggested execution policy: EVERY_BOOT (idempotent — rewrites /etc/motd).
+# Suggested execution policy: EVERY_BOOT (idempotent — rewrites its files).
 # Suggested onError: CONTINUE (a cosmetic banner should never fail a node).
 #
 # Usage:
 #   set-cluster-motd-v1.0.0.sh [--message TEXT] [--motd-file PATH]
+#                              [--profile-dropin PATH | --no-profile-dropin]
 #
 # Flags:
-#   --message TEXT     Optional welcome line shown at the top of the banner.
-#   --motd-file PATH   File to write (default: /etc/motd).
-#   -h, --help         Show this help and exit.
+#   --message TEXT       Optional welcome line shown at the top of the banner.
+#   --motd-file PATH     File to write (default: /etc/motd).
+#   --profile-dropin PATH  Login-shell dispatcher to install
+#                          (default: /etc/profile.d/zz-pcs-motd.sh).
+#   --no-profile-dropin  Do not install the login-shell dispatcher.
+#   -h, --help           Show this help and exit.
 
 set -o errexit -o pipefail -o nounset
 
@@ -31,19 +41,22 @@ warn() { echo "[set-cluster-motd] WARNING: $*" >&2; }
 die()  { echo "[set-cluster-motd] ERROR: $*" >&2; exit 1; }
 
 usage() {
-    sed -n '3,30p' "$0" | sed 's/^#\{0,1\} \{0,1\}//'
+    sed -n '3,35p' "$0" | sed 's/^#\{0,1\} \{0,1\}//'
     exit "${1:-0}"
 }
 
 MESSAGE=""
 MOTD_FILE="/etc/motd"
+PROFILE_DROPIN="/etc/profile.d/zz-pcs-motd.sh"
 
 while [[ $# -gt 0 ]]; do
     case "$1" in
-        --message)   MESSAGE="${2:-}"; shift 2 ;;
-        --motd-file) MOTD_FILE="${2:-}"; shift 2 ;;
-        -h|--help)   usage 0 ;;
-        *)           warn "Unknown argument: $1"; usage 1 ;;
+        --message)         MESSAGE="${2:-}"; shift 2 ;;
+        --motd-file)       MOTD_FILE="${2:-}"; shift 2 ;;
+        --profile-dropin)  PROFILE_DROPIN="${2:-}"; shift 2 ;;
+        --no-profile-dropin) PROFILE_DROPIN=""; shift ;;
+        -h|--help)         usage 0 ;;
+        *)                 warn "Unknown argument: $1"; usage 1 ;;
     esac
 done
 
@@ -102,4 +115,33 @@ mv "${tmp_file}" "${MOTD_FILE}"
 trap - EXIT
 chmod 0644 "${MOTD_FILE}"
 
-log "MOTD written successfully."
+log "MOTD written to ${MOTD_FILE}."
+
+# --- Install a login-shell dispatcher (covers SSM and sudo -i) ---------------
+# pam_motd renders ${MOTD_FILE} only on a true SSH login. SSM Session Manager
+# and `sudo -i` open interactive login shells that skip that PAM stack, so the
+# banner would be invisible there. A /etc/profile.d drop-in is sourced by any
+# interactive login shell and fills that gap. It re-reads ${MOTD_FILE} (one
+# source of truth) and stays quiet on SSH, where pam_motd already printed it.
+if [[ -n "${PROFILE_DROPIN}" ]]; then
+    dropin_dir="$(dirname "${PROFILE_DROPIN}")"
+    if [[ -d "${dropin_dir}" ]]; then
+        tmp_dropin="$(mktemp)"
+        trap 'rm -f "${tmp_dropin}"' EXIT
+        cat > "${tmp_dropin}" <<EOF
+# Managed by set-cluster-motd (PCS node lifecycle action). Do not edit.
+# Print the cluster MOTD for interactive login shells that pam_motd misses
+# (SSM Session Manager, sudo -i). SSH already prints it, so stay quiet there
+# to avoid a double banner.
+if [ -n "\${PS1:-}" ] && [ -z "\${SSH_CONNECTION:-}" ] && [ -r "${MOTD_FILE}" ]; then
+    cat "${MOTD_FILE}"
+fi
+EOF
+        mv "${tmp_dropin}" "${PROFILE_DROPIN}"
+        trap - EXIT
+        chmod 0644 "${PROFILE_DROPIN}"
+        log "Login-shell dispatcher installed at ${PROFILE_DROPIN}."
+    else
+        warn "Profile drop-in directory ${dropin_dir} not found; skipping dispatcher."
+    fi
+fi

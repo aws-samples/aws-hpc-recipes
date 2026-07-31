@@ -41,8 +41,16 @@ It combines those with instance facts from IMDSv2 (instance ID, type, and
 Availability Zone). No prerequisites, no IAM. Suggested `EVERY_BOOT`, `onError:
 CONTINUE`.
 
+On Ubuntu, `/etc/motd` is only rendered by `pam_motd` on a true SSH login;
+sessions opened with **SSM Session Manager** or `sudo -i` skip that PAM stack and
+never see it. So the script also installs a small `/etc/profile.d` drop-in that
+prints the banner for interactive login shells that `pam_motd` misses, while
+staying quiet on SSH (where it was already shown) to avoid a double banner. Pass
+`--no-profile-dropin` to write only `/etc/motd`.
+
 Flags: `--message TEXT` (optional welcome line), `--motd-file PATH` (default
-`/etc/motd`).
+`/etc/motd`), `--profile-dropin PATH` (default `/etc/profile.d/zz-pcs-motd.sh`),
+`--no-profile-dropin` (skip the login-shell dispatcher).
 
 ### 2. `apply-node-name-tag-v1.0.0.sh` — context + IMDS + IAM
 
