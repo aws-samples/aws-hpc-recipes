@@ -4,31 +4,28 @@
 
 ## Introduction
 
-This recipe is a worked example of **community-contributed scripts for
-[AWS PCS node lifecycle actions](https://docs.aws.amazon.com/pcs/latest/userguide/cng-node-lifecycle-actions.html)**.
-Node lifecycle actions run custom scripts at defined points in a compute node's
-lifecycle so nodes are ready for work. This recipe ships four small, portable,
-idempotent scripts and shows how to reference them from a compute node group.
+This recipe is a worked example of community-contributed scripts for
+[AWS PCS node lifecycle actions](https://docs.aws.amazon.com/pcs/latest/userguide/cng-node-lifecycle-actions.html).
+A node lifecycle action runs a script at a defined point in a compute node's
+lifecycle to get the node ready for work. The recipe ships four small scripts and
+walks through how you'd reference them from a compute node group.
 
-It also demonstrates the conventions we ask community contributors to follow —
-see the [namespace README](../README.md) for the full quality checklist. For
-common tasks, also check the
-[AWS-maintained scripts](https://docs.aws.amazon.com/pcs/latest/userguide/cng-node-lifecycle-actions-vetted-scripts.html).
-
-> **These scripts are examples.** They are reviewed for general security but are
-> not tested or maintained by AWS. Validate them in your own environment before
-> production use.
+It's also a demonstration of the conventions we ask community contributors to
+follow; the [namespace README](../README.md) has the full quality checklist. For
+common tasks, it's worth checking the
+[AWS-maintained scripts](https://docs.aws.amazon.com/pcs/latest/userguide/cng-node-lifecycle-actions-vetted-scripts.html)
+first — these examples are here to learn from and adapt.
 
 ## The scripts
 
-The scripts are ordered from simplest to richest. All accept `--help`, use
-named-flag arguments, run as `root`, and are safe to run repeatedly.
+The four scripts run from simplest to richest. Each one accepts `--help`, takes
+named-flag arguments, runs as `root`, and is safe to run more than once.
 
 ### 1. `set-cluster-motd-v1.0.0.sh` — reading lifecycle context
 
-Writes a `/etc/motd` banner describing the cluster and node. This is the simplest
-demonstration of the **lifecycle context** that the PCS agent injects into every
-script as environment variables:
+Writes a `/etc/motd` banner describing the cluster and node. It's the simplest way
+to see the lifecycle context that the PCS agent injects into every script as
+environment variables:
 
 | Variable | Contains |
 | --- | --- |
@@ -37,8 +34,8 @@ script as environment variables:
 | `PCS_NODE_ID` | Node identifier |
 | `PCS_IS_FIRST_BOOT` | `1` on first boot, `0` on subsequent reboots |
 
-It combines those with instance facts from IMDSv2 (instance ID, type, and
-Availability Zone). No prerequisites, no IAM. Suggested `EVERY_BOOT`, `onError:
+It pairs those with instance facts pulled from IMDSv2 — instance ID, type, and
+Availability Zone. No prerequisites, no IAM. Suggested `EVERY_BOOT`, `onError:
 CONTINUE`.
 
 On Ubuntu, `/etc/motd` is only rendered by `pam_motd` on a true SSH login;
@@ -54,23 +51,24 @@ Flags: `--message TEXT` (optional welcome line), `--motd-file PATH` (default
 
 ### 2. `apply-node-name-tag-v1.0.0.sh` — context + IMDS + IAM
 
-Tags the EC2 instance `Name=<PCS_NODE_ID>` so instances are easy to correlate with
-PCS nodes. It shows three things working together:
+Tags the EC2 instance `Name=<PCS_NODE_ID>` so you can line instances up against PCS
+nodes at a glance. It shows three things working together:
 
-1. **Context** — `PCS_NODE_ID` supplies the tag value.
-2. **Instance metadata** — the EC2 instance ID (needed for the API call) and the
-   Region come from **IMDSv2** (token-based).
-3. **IAM** — the call needs `ec2:CreateTags` on the node's instance.
+1. Context — `PCS_NODE_ID` supplies the tag value.
+2. Instance metadata — the EC2 instance ID (needed for the API call) and the Region
+   come from IMDSv2, using token-based requests.
+3. IAM — the call needs `ec2:CreateTags` on the node's instance.
 
-Tagging is **best-effort**: if the AWS CLI is not installed on the AMI, or the
-`CreateTags` call is denied, the script logs a warning and exits `0`. Pair it with
-`onError: CONTINUE`. Suggested `FIRST_BOOT_ONLY` (the Name tag does not change).
+Tagging here is best-effort. If the AWS CLI isn't on the AMI, or the `CreateTags`
+call is denied, the script logs a warning and exits `0` rather than failing the
+node. Pair it with `onError: CONTINUE`. Suggested `FIRST_BOOT_ONLY`, since the Name
+tag doesn't change.
 
 Flags: `--tag-key KEY` (default `Name`), `--tag-value VALUE` (default
 `$PCS_NODE_ID`), `--region REGION` (default from IMDSv2).
 
-The node instance role needs a policy like the following. Scope `Resource` more
-tightly if you can.
+The node instance role needs a policy along these lines. Scope `Resource` down
+further wherever you can.
 
 ```json
 {
@@ -88,11 +86,12 @@ tightly if you can.
 
 ### 3. `prepare-hpc-node-v1.0.0.sh` — idempotent system tuning
 
-Raises resource limits (open files, processes, locked memory) via a drop-in under
-`/etc/security/limits.d/`, applies network sysctls via `/etc/sysctl.d/`, and can
-disable Transparent Huge Pages. It rewrites its drop-in files each run rather than
-appending, so it is safe on `EVERY_BOOT`. No prerequisites, no IAM. Suggested
-`EVERY_BOOT`, `onError: TERMINATE` (an untuned node may fail jobs).
+Raises resource limits — open files, processes, locked memory — through a drop-in
+under `/etc/security/limits.d/`, applies a couple of network sysctls via
+`/etc/sysctl.d/`, and can disable Transparent Huge Pages. It rewrites its drop-in
+files on each run instead of appending to them, which is what keeps it safe on
+`EVERY_BOOT`. No prerequisites, no IAM. Suggested `EVERY_BOOT`, `onError: TERMINATE`,
+on the reasoning that an untuned node may fail jobs.
 
 Flags: `--nofile N` (default `131072`), `--nproc N` (default `65536`),
 `--memlock VALUE` (default `unlimited`), `--somaxconn N` (default `65535`),
@@ -100,19 +99,19 @@ Flags: `--nofile N` (default `131072`), `--nproc N` (default `65536`),
 
 ### 4. `setup-local-scratch-v1.0.0.sh` — idempotent storage
 
-Finds an instance-store (local NVMe) device, creates a filesystem only if none is
-present, mounts it, and sets permissions. It never reformats a device that already
-has a filesystem and is a no-op if the mount point is already mounted, so it is
-safe on `EVERY_BOOT`. Suggested `onError: CONTINUE` (nodes without local NVMe
-should still start). It uses `lsblk` (util-linux) to identify the instance-store
-device, so `nvme-cli` is not required.
+Finds an instance-store (local NVMe) device, creates a filesystem only if there
+isn't one already, mounts it, and sets permissions. It won't reformat a device that
+already has a filesystem, and it's a no-op when the mount point is already mounted,
+so it's safe on `EVERY_BOOT`. Suggested `onError: CONTINUE`, so that nodes without
+local NVMe still start. It identifies the device with `lsblk` (util-linux), so
+`nvme-cli` isn't required.
 
 If the AMI has already prepared the instance-store volume, the script leaves it
-alone and exits 0. For example, the AWS Deep Learning AMI (DLAMI) mounts the
-instance store at `/opt/dlami/nvme` via LVM; the script detects that the device is
-already claimed (mounted elsewhere, or part of an LVM/RAID set) and does not
-reformat storage that is in use. On such AMIs, use the volume the AMI provides
-(e.g. `/opt/dlami/nvme`) rather than expecting a fresh `/scratch`.
+alone and exits 0. The AWS Deep Learning AMI (DLAMI), for example, mounts the
+instance store at `/opt/dlami/nvme` via LVM; the script sees that the device is
+already claimed (mounted elsewhere, or part of an LVM/RAID set) and won't reformat
+storage that's in use. On those AMIs, use the volume the AMI provides
+(such as `/opt/dlami/nvme`) rather than expecting a fresh `/scratch`.
 
 Flags: `--mount-point PATH` (default `/scratch`), `--fstype FS` (default `ext4`),
 `--mode MODE` (default `1777`).
@@ -130,9 +129,10 @@ Flags: `--mount-point PATH` (default `/scratch`), `--fstype FS` (default `ext4`)
 
 ## Referencing the scripts
 
-Every asset in this recipe is published to the public AWS HPC Recipes bucket and is
-reachable by S3 URI or HTTPS URL. Replace `<script>` with a versioned filename. The
-bucket lives in `us-east-1`; use these hosts as-is regardless of your cluster's Region.
+Every asset in this recipe is published to the public AWS HPC Recipes bucket, and
+you can reach it by S3 URI or HTTPS URL. Replace `<script>` with a versioned
+filename. The bucket lives in `us-east-1`; use these hosts as-is no matter which
+Region your cluster is in.
 
 ```
 # S3 URI
@@ -142,10 +142,10 @@ s3://aws-hpc-recipes/main/recipes/pcs-scripts/node_lifecycle_demo/assets/<script
 https://aws-hpc-recipes.s3.us-east-1.amazonaws.com/main/recipes/pcs-scripts/node_lifecycle_demo/assets/<script>
 ```
 
-### Verify integrity with a checksum (recommended for production)
+### Verify integrity with a checksum
 
 Each script ships a companion `.sha256` file. Read its hash and set it as the
-script's `checksum` so the PCS agent verifies integrity on download:
+script's `checksum`, and the PCS agent will verify the download against it:
 
 ```bash
 curl -fsSL https://aws-hpc-recipes.s3.us-east-1.amazonaws.com/main/recipes/pcs-scripts/node_lifecycle_demo/assets/set-cluster-motd-v1.0.0.sh.sha256
@@ -165,7 +165,7 @@ Add the hash to the script's `scriptSource`:
 
 [`assets/example-node-lifecycle-actions.json`](assets/example-node-lifecycle-actions.json)
 is a ready-to-edit payload that wires all four scripts into the `nodeBootstrapped`
-stage. Apply it with:
+stage. Apply it like this:
 
 ```bash
 aws pcs update-compute-node-group \
@@ -188,8 +188,8 @@ Key per-script settings (see
 - `scriptCachingPolicy` (applies to all scripts) — `CACHE_ONCE` (default) or
   `REFRESH_ON_REBOOT`.
 
-Changing a node group's lifecycle configuration affects only **new** instances and
-triggers the `DRAIN` strategy so running jobs finish before nodes are replaced.
+Changing a node group's lifecycle configuration only affects new instances, and it
+triggers the `DRAIN` strategy so running jobs finish before nodes get replaced.
 
 ## Reading the logs
 
@@ -199,11 +199,11 @@ The agent captures each script's stdout/stderr to a per-script log on the node:
 /var/log/amazon/pcs/lifecycle/actions/nodeBootstrapped/<script-name>.log
 ```
 
-The agent's own operational log (download, checksum, orchestration) is at
-`/var/log/amazon/pcs/lifecycle/actions/executor.log`. Because nodes that fail with
-`TERMINATE` are replaced, forward these logs off-instance (for example with the
-AWS-maintained `configure-cloudwatch-logs.sh` script) if you need them for
-post-mortem debugging.
+The agent's own operational log — downloads, checksums, orchestration — is at
+`/var/log/amazon/pcs/lifecycle/actions/executor.log`. A node that fails with
+`TERMINATE` gets replaced, and its logs go with it, so if you'll want them for a
+post-mortem, forward them off-instance first (the AWS-maintained
+`configure-cloudwatch-logs.sh` script is one way to do that).
 
 ## Testing this recipe
 
@@ -222,8 +222,8 @@ make checksums
 
 ## Adapting or contributing
 
-Use these scripts as templates. If you contribute a new community script to the
-`pcs-scripts` namespace, follow the quality checklist in the
-[namespace README](../README.md): idempotent and portable, named-flag arguments,
-clean stdout/stderr logging, no package installation, documented least-privilege
-IAM, and a companion `.sha256`.
+Use these scripts as templates for your own. And if you go on to contribute a new
+community script to the `pcs-scripts` namespace, work through the quality checklist
+in the [namespace README](../README.md): idempotent and portable, named-flag
+arguments, clean stdout/stderr logging, no package installation, documented
+least-privilege IAM, and a companion `.sha256`.
