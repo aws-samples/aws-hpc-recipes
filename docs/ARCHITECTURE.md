@@ -28,9 +28,10 @@ Recipes are organized into namespaces defined in `config/metadata/values.yml`:
 | `iam` | Identity and Access Management |
 | `ide` | IDEs and GUIs |
 | `net` | Networking |
-| `pcluster` | AWS ParallelCluster |
 | `pcs` | AWS Parallel Computing Service |
-| `res` | Research and Engineering Studio |
+| `pcs-scripts` | PCS node lifecycle action scripts (community) |
+| `pcluster` | AWS ParallelCluster |
+| `res` | Research and Engineering Studio on AWS |
 | `security` | Security configuration |
 | `scheduler` | HPC scheduler |
 | `storage` | Storage |
@@ -66,7 +67,7 @@ Recipe assets under `assets/` are synced to S3 on merge to main. They are access
 Recipes should be composable. Complex recipes can reference simpler ones via CloudFormation nested stacks or imports. The general dependency direction is:
 
 ```
-net/ → storage/ → db/dir/ → pcluster/pcs/res/batch/ → training/
+net/ → storage/ → db/dir/ → pcs/pcluster/res/batch/ → training/
 ```
 
 Networking and storage recipes are foundational. Service-specific recipes build on top of them.
