@@ -1,4 +1,4 @@
-# pcs-scripts: Community node lifecycle action scripts for AWS PCS
+# pcs-scripts: Community lifecycle action scripts for AWS PCS
 
 This namespace collects community-contributed scripts for [AWS PCS node lifecycle
 actions](https://docs.aws.amazon.com/pcs/latest/userguide/cng-node-lifecycle-actions.html).

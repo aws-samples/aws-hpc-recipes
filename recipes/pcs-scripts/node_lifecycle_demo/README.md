@@ -1,14 +1,14 @@
-# node_lifecycle_demo: Community node lifecycle action scripts for AWS PCS
+# node_lifecycle_demo: A worked example of PCS node lifecycle actions
 
 ![Tags: pcs, lifecycle, community](https://img.shields.io/badge/tags-pcs%20%7C%20lifecycle%20%7C%20community-lightgrey)
 
 ## Introduction
 
-This recipe is a worked example of community-contributed scripts for
-[AWS PCS node lifecycle actions](https://docs.aws.amazon.com/pcs/latest/userguide/cng-node-lifecycle-actions.html).
-A node lifecycle action runs a script at a defined point in a compute node's
-lifecycle to get the node ready for work. The recipe ships four small scripts and
-walks through how you'd reference them from a compute node group.
+This recipe shows how community-contributed scripts for
+[AWS PCS node lifecycle actions](https://docs.aws.amazon.com/pcs/latest/userguide/cng-node-lifecycle-actions.html)
+fit together. A node lifecycle action runs a script at a defined point in a compute
+node's lifecycle to get the node ready for work. The recipe ships four small scripts
+and walks through how you'd reference them from a compute node group.
 
 It's also a demonstration of the conventions we ask community contributors to
 follow; the [namespace README](../README.md) has the full quality checklist. For
