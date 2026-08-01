@@ -104,7 +104,15 @@ Finds an instance-store (local NVMe) device, creates a filesystem only if none i
 present, mounts it, and sets permissions. It never reformats a device that already
 has a filesystem and is a no-op if the mount point is already mounted, so it is
 safe on `EVERY_BOOT`. Suggested `onError: CONTINUE` (nodes without local NVMe
-should still start).
+should still start). It uses `lsblk` (util-linux) to identify the instance-store
+device, so `nvme-cli` is not required.
+
+If the AMI has already prepared the instance-store volume, the script leaves it
+alone and exits 0. For example, the AWS Deep Learning AMI (DLAMI) mounts the
+instance store at `/opt/dlami/nvme` via LVM; the script detects that the device is
+already claimed (mounted elsewhere, or part of an LVM/RAID set) and does not
+reformat storage that is in use. On such AMIs, use the volume the AMI provides
+(e.g. `/opt/dlami/nvme`) rather than expecting a fresh `/scratch`.
 
 Flags: `--mount-point PATH` (default `/scratch`), `--fstype FS` (default `ext4`),
 `--mode MODE` (default `1777`).
