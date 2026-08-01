@@ -18,9 +18,9 @@ You can use an HPC Recipe for AWS in several ways:
 
 You can access recipe assets using HTTPS or S3 protocols. They are mirrored to an S3 bucket so they can used with AWS CloudFormation. 
 
-Here are example URLs for the CloudFormation launch template for the "latest" ParallelCluster recipe (**recipes/pcluster/latest**):
-* **HTTPS Template**: https://{{_internal.s3_bucket}}.s3.{{_internal.region}}.amazonaws.com/main/recipes/pcluster/latest/assets/launch.yaml
-* **S3 Template**: s3://{{_internal.s3_bucket}}/main/recipes/pcluster/latest/assets/launch.yaml
+Here are example URLs for the CloudFormation template from the "getting_started" PCS recipe (**recipes/pcs/getting_started**):
+* **HTTPS Template**: https://{{_internal.s3_bucket}}.s3.{{_internal.region}}.amazonaws.com/main/recipes/pcs/getting_started/assets/cluster.yaml
+* **S3 Template**: s3://{{_internal.s3_bucket}}/main/recipes/pcs/getting_started/assets/cluster.yaml
 
 In both URLs, `/main/` is the HPC Recipes on AWS version. At present, the only supported version is **main**. 
 
