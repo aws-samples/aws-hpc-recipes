@@ -201,7 +201,7 @@ The agent captures each script's stdout/stderr to a per-script log on the node:
 
 The agent's own operational log, covering downloads, checksums, and orchestration,
 is at `/var/log/amazon/pcs/lifecycle/actions/executor.log`. A node that fails with
-`TERMINATE` gets replaced, and its logs go with it, so if you'll want them for a
+`TERMINATE` gets replaced, and its logs go with it, so if you'll need them for a
 post-mortem, forward them off-instance first (the AWS-maintained
 `configure-cloudwatch-logs.sh` script is one way to do that).
 
@@ -222,7 +222,7 @@ make checksums
 
 ## Adapting or contributing
 
-Use these scripts as templates for your own. And if you go on to contribute a new
+Use these scripts as templates for your own. If you go on to contribute a new
 community script to the `pcs-scripts` namespace, work through the quality checklist
 in the [namespace README](../README.md): idempotent and portable, named-flag
 arguments, clean stdout/stderr logging, no package installation, documented

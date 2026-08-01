@@ -38,7 +38,7 @@ An S3 reference needs `s3:GetObject` on the object in the node's instance role, 
 a path to Amazon S3. Nodes in a private subnet reach it through an S3 gateway VPC
 endpoint. An HTTPS reference needs outbound internet access instead.
 
-Once referenced, a script goes through four steps:
+From the bucket to a running node, a script goes through four steps:
 
 1. **Publish.** The script lands in the bucket under the path above. (For
    contributors, that's any file under a recipe's `assets/` directory.)
@@ -64,9 +64,9 @@ implementations. Most of these are review guidance; the ShellCheck requirement i
 enforced by CI.
 
 - **Idempotent and reboot-safe.** A script set to `EVERY_BOOT` has to be safe to run
-  again and again and land in the same place each time. If it's inherently one-time,
-  say so and mark it `FIRST_BOOT_ONLY`. The `PCS_IS_FIRST_BOOT` context variable is
-  there when you need to branch on first boot.
+  repeatedly and produce the same result each time. If it's inherently one-time, say
+  so and mark it `FIRST_BOOT_ONLY`. The `PCS_IS_FIRST_BOOT` context variable is there
+  when you need to branch on first boot.
 - **Portable across the supported operating systems**: Amazon Linux 2, Amazon Linux
   2023, RHEL, Ubuntu, and Rocky Linux. Read `/etc/os-release` rather than assuming a
   distribution.
