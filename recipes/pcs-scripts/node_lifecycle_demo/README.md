@@ -14,14 +14,14 @@ It's also a demonstration of the conventions we ask community contributors to
 follow; the [namespace README](../README.md) has the full quality checklist. For
 common tasks, it's worth checking the
 [AWS-maintained scripts](https://docs.aws.amazon.com/pcs/latest/userguide/cng-node-lifecycle-actions-vetted-scripts.html)
-first — these examples are here to learn from and adapt.
+first. These examples are here to learn from and adapt.
 
 ## The scripts
 
 The four scripts run from simplest to richest. Each one accepts `--help`, takes
 named-flag arguments, runs as `root`, and is safe to run more than once.
 
-### 1. `set-cluster-motd-v1.0.0.sh` — reading lifecycle context
+### 1. `set-cluster-motd-v1.0.0.sh`: reading lifecycle context
 
 Writes a `/etc/motd` banner describing the cluster and node. It's the simplest way
 to see the lifecycle context that the PCS agent injects into every script as
@@ -34,7 +34,7 @@ environment variables:
 | `PCS_NODE_ID` | Node identifier |
 | `PCS_IS_FIRST_BOOT` | `1` on first boot, `0` on subsequent reboots |
 
-It pairs those with instance facts pulled from IMDSv2 — instance ID, type, and
+It pairs those with instance facts pulled from IMDSv2: instance ID, type, and
 Availability Zone. No prerequisites, no IAM. Suggested `EVERY_BOOT`, `onError:
 CONTINUE`.
 
@@ -49,15 +49,15 @@ Flags: `--message TEXT` (optional welcome line), `--motd-file PATH` (default
 `/etc/motd`), `--profile-dropin PATH` (default `/etc/profile.d/zz-pcs-motd.sh`),
 `--no-profile-dropin` (skip the login-shell dispatcher).
 
-### 2. `apply-node-name-tag-v1.0.0.sh` — context + IMDS + IAM
+### 2. `apply-node-name-tag-v1.0.0.sh`: context + IMDS + IAM
 
 Tags the EC2 instance `Name=<PCS_NODE_ID>` so you can line instances up against PCS
 nodes at a glance. It shows three things working together:
 
-1. Context — `PCS_NODE_ID` supplies the tag value.
-2. Instance metadata — the EC2 instance ID (needed for the API call) and the Region
+1. Context: `PCS_NODE_ID` supplies the tag value.
+2. Instance metadata: the EC2 instance ID (needed for the API call) and the Region
    come from IMDSv2, using token-based requests.
-3. IAM — the call needs `ec2:CreateTags` on the node's instance.
+3. IAM: the call needs `ec2:CreateTags` on the node's instance.
 
 Tagging here is best-effort. If the AWS CLI isn't on the AMI, or the `CreateTags`
 call is denied, the script logs a warning and exits `0` rather than failing the
@@ -84,9 +84,9 @@ further wherever you can.
 }
 ```
 
-### 3. `prepare-hpc-node-v1.0.0.sh` — idempotent system tuning
+### 3. `prepare-hpc-node-v1.0.0.sh`: idempotent system tuning
 
-Raises resource limits — open files, processes, locked memory — through a drop-in
+Raises resource limits (open files, processes, locked memory) through a drop-in
 under `/etc/security/limits.d/`, applies a couple of network sysctls via
 `/etc/sysctl.d/`, and can disable Transparent Huge Pages. It rewrites its drop-in
 files on each run instead of appending to them, which is what keeps it safe on
@@ -97,7 +97,7 @@ Flags: `--nofile N` (default `131072`), `--nproc N` (default `65536`),
 `--memlock VALUE` (default `unlimited`), `--somaxconn N` (default `65535`),
 `--disable-thp`.
 
-### 4. `setup-local-scratch-v1.0.0.sh` — idempotent storage
+### 4. `setup-local-scratch-v1.0.0.sh`: idempotent storage
 
 Finds an instance-store (local NVMe) device, creates a filesystem only if there
 isn't one already, mounts it, and sets permissions. It won't reformat a device that
@@ -183,9 +183,9 @@ To reference a script over an **S3 URI** instead of HTTPS, swap the `scriptLocat
 Key per-script settings (see
 [Configure node lifecycle actions](https://docs.aws.amazon.com/pcs/latest/userguide/cng-node-lifecycle-actions-configure.html)):
 
-- `executionPolicy` — `FIRST_BOOT_ONLY` (default) or `EVERY_BOOT`.
-- `onError` — `TERMINATE` (default), `STOP_SEQUENCE`, or `CONTINUE`.
-- `scriptCachingPolicy` (applies to all scripts) — `CACHE_ONCE` (default) or
+- `executionPolicy`: `FIRST_BOOT_ONLY` (default) or `EVERY_BOOT`.
+- `onError`: `TERMINATE` (default), `STOP_SEQUENCE`, or `CONTINUE`.
+- `scriptCachingPolicy` (applies to all scripts): `CACHE_ONCE` (default) or
   `REFRESH_ON_REBOOT`.
 
 Changing a node group's lifecycle configuration only affects new instances, and it
@@ -199,8 +199,8 @@ The agent captures each script's stdout/stderr to a per-script log on the node:
 /var/log/amazon/pcs/lifecycle/actions/nodeBootstrapped/<script-name>.log
 ```
 
-The agent's own operational log — downloads, checksums, orchestration — is at
-`/var/log/amazon/pcs/lifecycle/actions/executor.log`. A node that fails with
+The agent's own operational log, covering downloads, checksums, and orchestration,
+is at `/var/log/amazon/pcs/lifecycle/actions/executor.log`. A node that fails with
 `TERMINATE` gets replaced, and its logs go with it, so if you'll want them for a
 post-mortem, forward them off-instance first (the AWS-maintained
 `configure-cloudwatch-logs.sh` script is one way to do that).
