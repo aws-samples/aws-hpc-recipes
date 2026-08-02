@@ -56,7 +56,7 @@ There are two Slurm partitions on the system `small` and `large`. The `small` pa
 
 Find the queues by running `sinfo` and inspect the nodes with `scontrol show nodes`. 
 
-The `/home` and `/fsx` directories are network file systems. The `home` directory is provided by [Amazon Elastic Filesystem](https://aws.amazon.com/efs/), while the `fsx` directory is powered by [Amazon FSx for Lustre](https://aws.amazon.com/fsx/lustre/). You can install software on the `/home` or `/fsx` directory. We recommend you run jobs out of the `/fsx` directory. 
+The `/home` and `/fsx` directories are network file systems. The `home` directory is provided by [Amazon Elastic Filesystem](https://aws.amazon.com/efs/), while the `fsx` directory is powered by [Amazon FSx for Lustre](https://aws.amazon.com/fsx/lustre/). You can install software on the `/home` or `/fsx` directory. We recommend you run jobs out of the `/fsx` directory. Any user can write to it.
 
 Verify that these filesystems are present with `df -h`. It will return a screen that resembles this.
 
@@ -101,7 +101,7 @@ We generated an SSH key as part of deploying the cluster. It is stored in [AWS S
 * Copy the name of the SSH key - it will look like this `/ec2/keypair/key-HEXADECIMAL-DATA`
 * Use the AWS CLI to download the key
 
-`aws ssm get-parameter —-name "/ec2/keypair/key-HEXADECIMAL-DATA" —-query "Parameter.Value" —-output text —-region us-east-2 —-with-decryption | tee > key-HEXADECIMAL-DATA.pem`
+`aws ssm get-parameter --name "/ec2/keypair/key-HEXADECIMAL-DATA" --query "Parameter.Value" --output text --region us-east-2 --with-decryption | tee > key-HEXADECIMAL-DATA.pem`
 
 * Set permissions on the key to owner-readable `chmod 400 key-HEXADECIMAL-DATA.pem`
 
