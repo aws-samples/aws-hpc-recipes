@@ -2,7 +2,11 @@
 
 ## Info
 
-This recipe helps you launch a Slurm cluster using AWS Parallel Computing Service, powered by Amazon EC2 instances with AMD processors.
+This recipe launches a Slurm cluster on AWS Parallel Computing Service using Amazon EC2 hpc8a instances. These instances run on 5th Generation AMD EPYC processors, with simultaneous multithreading turned off so each vCPU maps to a physical core.
+
+The high-performance queue uses `hpc8a.96xlarge` nodes. Each one has 192 cores, 768 GiB of memory, and up to 300 Gbps of Elastic Fabric Adapter (EFA) networking for the tightly coupled MPI traffic that HPC jobs generate. AWS reports up to 40% higher performance and 42% more memory bandwidth than the previous hpc7a generation, which helps with workloads such as computational fluid dynamics, crash and structural simulation, and weather modeling. The login node and the general-purpose queue use `c8a.xlarge` instances from the same AMD family.
+
+The [References](#references) at the end link to the full specifications and the benchmark data behind these numbers.
 
 ## Pre-requisites
 
@@ -110,6 +114,15 @@ We generated an SSH key as part of deploying the cluster. It is stored in [AWS S
 * Log in to the login node public IP, which you can retrieve via **Ec2ConsoleUrl**.
 
 `ssh -i key-HEXADECIMAL-DATA.pem ec2-user@LOGIN-NODE-PUBLIC-IP`
+
+## References
+
+More on the EC2 hpc8a instances and the AMD EPYC processors behind them.
+
+* [Amazon EC2 hpc8a instances](https://aws.amazon.com/ec2/instance-types/hpc8a/) - specifications and supported Regions.
+* [Amazon EC2 hpc8a instances, powered by 5th Gen AMD EPYC processors, are now available](https://aws.amazon.com/blogs/aws/amazon-ec2-hpc8a-instances-powered-by-5th-gen-amd-epyc-processors-are-now-available/) - the launch announcement.
+* [A technical deep dive into Amazon EC2 hpc8a performance for engineering and scientific workloads](https://aws.amazon.com/blogs/hpc/a-technical-deep-dive-into-amazon-ec2-hpc8a-performance-for-engineering-and-scientific-workloads/) - benchmarks for CFD, FEA, and crash simulation.
+* [The new standard for cloud compute](https://www.amd.com/en/blogs/2026/the-new-standard-for-cloud-compute-amd.html) - AMD's take on the EPYC processors.
 
 ## Resources
 
