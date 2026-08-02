@@ -262,6 +262,11 @@ You can use an HPC Recipe for AWS in several ways:
 * **About**: Exemplar community scripts for AWS PCS node lifecycle actions, demonstrating use of lifecycle context, portable and idempotent design, and the publish/reference/run/log pattern.
 * **Usage**: [README.md](pcs-scripts/node_lifecycle_demo/README.md)
 
+#### open_shared_dir ![tag](https://img.shields.io/badge/-community-%2317202A) ![tag](https://img.shields.io/badge/-lifecycle-%237DCEA0) ![tag](https://img.shields.io/badge/-pcs-%23FF9900) 
+
+* **About**: Community AWS PCS node lifecycle action that opens permissions on an already-mounted shared directory (e.g. FSx for Lustre at /fsx) so all users can write to it. Runs after the mount and is a no-op if the path is not mounted.
+* **Usage**: [README.md](pcs-scripts/open_shared_dir/README.md)
+
 
 ### :arrow_right: res: Research and Engineering Studio on AWS
 

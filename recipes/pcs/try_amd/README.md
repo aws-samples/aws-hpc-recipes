@@ -13,7 +13,7 @@ This recipe helps you launch a Slurm cluster using AWS Parallel Computing Servic
     * Search for **Running On-Demand Standard (A, C, D, H, I, M, R, T, Z) instances**
     * Make sure your **Applied account-level quota value** is at least 16
     * Search for **Running On-Demand HPC instances**
-    * Make sure your **Applied quota value** is at least 192 to run two HPC instances or 384 to run four HPC instances.
+    * Make sure your **Applied quota value** is at least 384 to run two HPC instances or 768 to run four HPC instances.
     * If either quota is too low, choose the **Request increase at account-level** option and wait for your request to be processed. Then, return to this exercise. 
 
 ## Create an AWS PCS cluster powered by AMD processors
@@ -52,7 +52,7 @@ You can connect to your PCS cluster login node right in the browser.
 
 ### Cluster design
 
-There are two Slurm partitions on the system `small` and `large`. The `small` partition sends jobs to nodes managed by the `c7a-xlarge` node group. These will be [`c7a.xlarge`](https://aws.amazon.com/ec2/instance-types/c7a/) compute instances without Elastic Fabric Adapter (EFA) networking. The `large` partition sends work to the `hpc7a-48xlarge` node group, which features [`hpc7a.48xlarge`](https://aws.amazon.com/ec2/instance-types/hpc7a/) instances that have EFA built in. 
+There are two Slurm partitions on the system `small` and `large`. The `small` partition sends jobs to nodes managed by the `c8a-xlarge` node group. These will be [`c8a.xlarge`](https://aws.amazon.com/ec2/instance-types/c8a/) compute instances without Elastic Fabric Adapter (EFA) networking. The `large` partition sends work to the `hpc8a-96xlarge` node group, which features [`hpc8a.96xlarge`](https://aws.amazon.com/ec2/instance-types/hpc8a/) instances that have EFA built in. 
 
 Find the queues by running `sinfo` and inspect the nodes with `scontrol show nodes`. 
 
@@ -81,11 +81,11 @@ Once you have connected to the login instance, follow along with the **Getting S
 
 When you are done using your PCS cluster, you can delete it and all its associated resources by navigating to the AWS CloudFormation console and deleting the stack you created.
 
-However, if you have created additional resources in your cluster, beyond the `login`, `c7a-xlarge`, and `hpc7a-48xlarge` node groups, or the `large` and `small` queues, **you must delete those resources** in the PCS console before deleting the CloudFormation stack. Otherwise, deleting the stack will fail and you will need to manually delete several resources on your own. 
+However, if you have created additional resources in your cluster, beyond the `login`, `c8a-xlarge`, and `hpc8a-96xlarge` node groups, or the `large` and `small` queues, **you must delete those resources** in the PCS console before deleting the CloudFormation stack. Otherwise, deleting the stack will fail and you will need to manually delete several resources on your own. 
 
 If you do need to delete extra resources , go to detail page for your PCS cluster. 
 * Delete any queues besides `small` and `large`
-* Delete any node groups besides `login`, `c7a-xlarge`, and `hpc7a-48xlarge`
+* Delete any node groups besides `login`, `c8a-xlarge`, and `hpc8a-96xlarge`
 
 **Note** We do not recommend you create or delete any resources in this demonstration cluster. Get started building your own, totally customizable HPC clusters with [this tutorial](https://docs.aws.amazon.com/pcs/latest/userguide/getting-started.html) in the AWS PCS user guide. 
 
