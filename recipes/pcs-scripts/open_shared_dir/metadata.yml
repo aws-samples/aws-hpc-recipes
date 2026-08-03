@@ -1,0 +1,27 @@
+---
+# The name of the recipe. This has the same character requirements as namespace.
+name: open_shared_dir
+# The version of the recipe. Must be compatible with semantic versioning.
+version: "1.0.0"
+# A short summary description of the recipe
+description: Community AWS PCS node lifecycle action that opens permissions on an already-mounted shared directory (e.g. FSx for Lustre at /fsx) so all users can write to it. Runs after the mount and is a no-op if the path is not mounted.
+# The path to the README for the recipe relative to its root directory.
+readme: README.md
+# Optional URL for external documentation
+documentation: https://docs.aws.amazon.com/pcs/latest/userguide/cng-node-lifecycle-actions.html
+# Optional URL for a homepage
+homepage:
+# A list of recipe content authors
+authors:
+  - AWS HPC Recipes Team
+# A list of tags you want to associate with the collection for indexing/searching. Tags have the same character requirements as namespace.
+tags:
+  - pcs
+  - lifecycle
+  - community
+# A list of file glob-like patterns used to filter any files or directories that should not be included in the S3 release.
+build_ignore: []
+# Recipe type
+type: shell
+# Default asset path
+default:
