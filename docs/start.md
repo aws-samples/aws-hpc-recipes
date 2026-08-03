@@ -21,7 +21,7 @@ Here's an example of this script in action:
 
 ```shell
 python -m scripts.new_recipe
-Namespaces: aws,db,dir,env,iam,ide,net,pcluster,scheduler,storage
+Namespaces: aws,batch,db,dir,env,iam,ide,net,pcs,pcs-scripts,pcluster,res,security,scheduler,storage,training
 Namespace [aws]: env
 Recipe name [a-z_]+: install_figlet
 Short description: Install the figlet ASCII art generator so you can create awesome login banners.

@@ -9,9 +9,9 @@ namespace:
   iam: Identity Access and Management
   ide: IDEs and GUIs
   net: Networking
-  pcluster: AWS ParallelCluster
   pcs: AWS Parallel Computing Service
   pcs-scripts: PCS node lifecycle action scripts (community)
+  pcluster: AWS ParallelCluster
   res: Research and Engineering Studio on AWS
   security: Security configuration
   scheduler: HPC scheduler

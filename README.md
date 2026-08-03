@@ -5,17 +5,16 @@
 
 # HPC Recipes for AWS
 
-This repository contains example recipes that demonstrate how to build HPC systems using [AWS Parallel Computing Service](https://aws.amazon.com/pcs/), [AWS ParallelCluster](https://aws.amazon.com/hpc/parallelcluster/), [Research and Engineering Studio](https://aws.amazon.com/hpc/res/), [AWS Batch](https://aws.amazon.com/batch/), and several other AWS products.
+This repository contains example recipes that demonstrate how to build HPC systems on AWS. The recipes focus on [AWS Parallel Computing Service](https://aws.amazon.com/pcs/), the managed Slurm service, and also cover [AWS ParallelCluster](https://aws.amazon.com/hpc/parallelcluster/), [Research and Engineering Studio](https://aws.amazon.com/hpc/res/), [AWS Batch](https://aws.amazon.com/batch/), and several other AWS products.
 
 ## Getting Started
 
 * If you are new to AWS Parallel Computing Service (AWS PCS), you can watch this [short introductory video](https://youtu.be/BlgYbb6pdu0).
-* You can learn about ParallelCluster from this [quick explainer video](https://youtu.be/gmw7A3kOh60).
-* [This video](https://www.youtube.com/watch?v=2Nku6MWDwT0) introduces Research and Engineering Studio on AWS.
 * Discover recipes to help you [get started with AWS PCS](recipes/pcs/)
 * Try launching a HPC cluster in the cloud [with just a few clicks](recipes/pcs/getting_started/README.md).
 * Need to set up HPC-ready networking? Choose from a [simple example](recipes/net/hpc_basic/README.md) or a [more advanced configuration](recipes/net/hpc_large_scale/README.md).
 * There are also examples of setting up HPC-ready filesystems on AWS [for you to try and learn from](recipes/README.md#arrow_right-storage-storage).
+* Prefer other tools? Intro videos are also available for [AWS ParallelCluster](https://youtu.be/gmw7A3kOh60) and [Research and Engineering Studio on AWS](https://www.youtube.com/watch?v=2Nku6MWDwT0).
 
 If you just want to explore what all is available, the [recipes home page](./recipes/README.md) shows you every recipe. Here is an example of what you'll find:
 
