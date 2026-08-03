@@ -2,7 +2,11 @@
 
 ## Info
 
-This recipe helps you launch a Slurm cluster using AWS Parallel Computing Service, powered by Amazon EC2 instances with AMD processors.
+This recipe launches a Slurm cluster on AWS Parallel Computing Service using Amazon EC2 hpc8a instances. These instances run on 5th Generation AMD EPYC processors, with simultaneous multithreading turned off so each vCPU maps to a physical core.
+
+The high-performance queue uses `hpc8a.96xlarge` nodes. Each one has 192 cores, 768 GiB of memory, and up to 300 Gbps of Elastic Fabric Adapter (EFA) networking for the tightly coupled MPI traffic that HPC jobs generate. AWS reports up to 40% higher performance and 42% more memory bandwidth than the previous hpc7a generation, which helps with workloads such as computational fluid dynamics, crash and structural simulation, and weather modeling. The login node and the general-purpose queue use `c8a.xlarge` instances from the same AMD family.
+
+The [References](#references) at the end link to the full specifications and the benchmark data behind these numbers.
 
 ## Pre-requisites
 
@@ -13,7 +17,7 @@ This recipe helps you launch a Slurm cluster using AWS Parallel Computing Servic
     * Search for **Running On-Demand Standard (A, C, D, H, I, M, R, T, Z) instances**
     * Make sure your **Applied account-level quota value** is at least 16
     * Search for **Running On-Demand HPC instances**
-    * Make sure your **Applied quota value** is at least 192 to run two HPC instances or 384 to run four HPC instances.
+    * Make sure your **Applied quota value** is at least 384 to run two HPC instances or 768 to run four HPC instances.
     * If either quota is too low, choose the **Request increase at account-level** option and wait for your request to be processed. Then, return to this exercise. 
 
 ## Create an AWS PCS cluster powered by AMD processors
@@ -52,11 +56,11 @@ You can connect to your PCS cluster login node right in the browser.
 
 ### Cluster design
 
-There are two Slurm partitions on the system `small` and `large`. The `small` partition sends jobs to nodes managed by the `c7a-xlarge` node group. These will be [`c7a.xlarge`](https://aws.amazon.com/ec2/instance-types/c7a/) compute instances without Elastic Fabric Adapter (EFA) networking. The `large` partition sends work to the `hpc7a-48xlarge` node group, which features [`hpc7a.48xlarge`](https://aws.amazon.com/ec2/instance-types/hpc7a/) instances that have EFA built in. 
+There are two Slurm partitions on the system `small` and `large`. The `small` partition sends jobs to nodes managed by the `c8a-xlarge` node group. These will be [`c8a.xlarge`](https://aws.amazon.com/ec2/instance-types/c8a/) compute instances without Elastic Fabric Adapter (EFA) networking. The `large` partition sends work to the `hpc8a-96xlarge` node group, which features [`hpc8a.96xlarge`](https://aws.amazon.com/ec2/instance-types/hpc8a/) instances that have EFA built in. 
 
 Find the queues by running `sinfo` and inspect the nodes with `scontrol show nodes`. 
 
-The `/home` and `/fsx` directories are network file systems. The `home` directory is provided by [Amazon Elastic Filesystem](https://aws.amazon.com/efs/), while the `fsx` directory is powered by [Amazon FSx for Lustre](https://aws.amazon.com/fsx/lustre/). You can install software on the `/home` or `/fsx` directory. We recommend you run jobs out of the `/fsx` directory. 
+The `/home` and `/fsx` directories are network file systems. The `home` directory is provided by [Amazon Elastic Filesystem](https://aws.amazon.com/efs/), while the `fsx` directory is powered by [Amazon FSx for Lustre](https://aws.amazon.com/fsx/lustre/). You can install software on the `/home` or `/fsx` directory. We recommend you run jobs out of the `/fsx` directory. Any user can write to it.
 
 Verify that these filesystems are present with `df -h`. It will return a screen that resembles this.
 
@@ -81,11 +85,11 @@ Once you have connected to the login instance, follow along with the **Getting S
 
 When you are done using your PCS cluster, you can delete it and all its associated resources by navigating to the AWS CloudFormation console and deleting the stack you created.
 
-However, if you have created additional resources in your cluster, beyond the `login`, `c7a-xlarge`, and `hpc7a-48xlarge` node groups, or the `large` and `small` queues, **you must delete those resources** in the PCS console before deleting the CloudFormation stack. Otherwise, deleting the stack will fail and you will need to manually delete several resources on your own. 
+However, if you have created additional resources in your cluster, beyond the `login`, `c8a-xlarge`, and `hpc8a-96xlarge` node groups, or the `large` and `small` queues, **you must delete those resources** in the PCS console before deleting the CloudFormation stack. Otherwise, deleting the stack will fail and you will need to manually delete several resources on your own. 
 
 If you do need to delete extra resources , go to detail page for your PCS cluster. 
 * Delete any queues besides `small` and `large`
-* Delete any node groups besides `login`, `c7a-xlarge`, and `hpc7a-48xlarge`
+* Delete any node groups besides `login`, `c8a-xlarge`, and `hpc8a-96xlarge`
 
 **Note** We do not recommend you create or delete any resources in this demonstration cluster. Get started building your own, totally customizable HPC clusters with [this tutorial](https://docs.aws.amazon.com/pcs/latest/userguide/getting-started.html) in the AWS PCS user guide. 
 
@@ -101,7 +105,7 @@ We generated an SSH key as part of deploying the cluster. It is stored in [AWS S
 * Copy the name of the SSH key - it will look like this `/ec2/keypair/key-HEXADECIMAL-DATA`
 * Use the AWS CLI to download the key
 
-`aws ssm get-parameter —-name "/ec2/keypair/key-HEXADECIMAL-DATA" —-query "Parameter.Value" —-output text —-region us-east-2 —-with-decryption | tee > key-HEXADECIMAL-DATA.pem`
+`aws ssm get-parameter --name "/ec2/keypair/key-HEXADECIMAL-DATA" --query "Parameter.Value" --output text --region us-east-2 --with-decryption | tee > key-HEXADECIMAL-DATA.pem`
 
 * Set permissions on the key to owner-readable `chmod 400 key-HEXADECIMAL-DATA.pem`
 
@@ -110,6 +114,15 @@ We generated an SSH key as part of deploying the cluster. It is stored in [AWS S
 * Log in to the login node public IP, which you can retrieve via **Ec2ConsoleUrl**.
 
 `ssh -i key-HEXADECIMAL-DATA.pem ec2-user@LOGIN-NODE-PUBLIC-IP`
+
+## References
+
+More on the EC2 hpc8a instances and the AMD EPYC processors behind them.
+
+* [Amazon EC2 hpc8a instances](https://aws.amazon.com/ec2/instance-types/hpc8a/) - specifications and supported Regions.
+* [Amazon EC2 hpc8a instances, powered by 5th Gen AMD EPYC processors, are now available](https://aws.amazon.com/blogs/aws/amazon-ec2-hpc8a-instances-powered-by-5th-gen-amd-epyc-processors-are-now-available/) - the launch announcement.
+* [A technical deep dive into Amazon EC2 hpc8a performance for engineering and scientific workloads](https://aws.amazon.com/blogs/hpc/a-technical-deep-dive-into-amazon-ec2-hpc8a-performance-for-engineering-and-scientific-workloads/) - benchmarks for CFD, FEA, and crash simulation.
+* [The new standard for cloud compute](https://www.amd.com/en/blogs/2026/the-new-standard-for-cloud-compute-amd.html) - AMD's take on the EPYC processors.
 
 ## Resources
 

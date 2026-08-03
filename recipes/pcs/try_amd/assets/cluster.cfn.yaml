@@ -3,7 +3,7 @@ Transform: AWS::Serverless-2016-10-31
 Description: AWS PCS Getting Started Environment with AMD Instances.
   This template deploys a demonstration cluster using AMD-based instances and AWS Parallel Computing Service (PCS).
   It configures a multi-tier network with FSx Lustre and EFS storage, EFA-enabled instances, and auto-scaling Slurm queues.
-  The cluster includes a login node (c7a.xlarge) and two compute queues - high-performance (hpc7a.48xlarge) and general purpose (c7a.xlarge).
+  The cluster includes a login node (c8a.xlarge) and two compute queues - high-performance (hpc8a.96xlarge) and general purpose (c8a.xlarge).
   Network security is managed through security groups with client IP restrictions and EFA support.
   Use this template as a starting point for evaluating AWS PCS capabilities with AMD processors.
   Refer to the Outputs tab for cluster access URLs and SSH key pair information.
@@ -25,6 +25,7 @@ Metadata:
         Parameters:
           - HpcRecipesS3Bucket
           - HpcRecipesBranch
+          - NodeLifecycleScriptsVersion
 
 Parameters:
 
@@ -58,6 +59,13 @@ Parameters:
     Description: HPC Recipes for AWS release branch
     AllowedPattern: '^(?!.*/\.git$)(?!.*/\.)(?!.*\\.\.)[a-zA-Z0-9-_\.]+$'
 
+  NodeLifecycleScriptsVersion:
+    Type: String
+    Default: v1.0.0
+    Description: Version of the AWS-maintained node lifecycle action scripts to use (from the aws-pcs-repo-<region> bucket)
+    AllowedPattern: '^v\d+\.\d+\.\d+$'
+    ConstraintDescription: Value must be a semantic version prefixed with "v", e.g. v1.0.0
+
 Conditions:
   GovCloud: !Equals [!Ref AWS::Partition, 'aws-us-gov']
   China: !Equals [!Ref AWS::Partition, 'aws-cn']
@@ -68,10 +76,10 @@ Mappings:
     AmiArchParameter:
       x86: x86_64
     LoginNodeInstances:
-      x86: c7a.xlarge
+      x86: c8a.xlarge
     ComputeNodeInstances:
-      x86: c7a.xlarge
-      HPCx86: hpc7a.48xlarge
+      x86: c8a.xlarge
+      HPCx86: hpc8a.96xlarge
 
 Resources:
 
@@ -267,40 +275,13 @@ Resources:
           HttpPutResponseHopLimit: 2
           HttpTokens: required
         KeyName: !Ref CreatedKeyPair
-        SecurityGroupIds: 
+        SecurityGroupIds:
           - !GetAtt [ PCSSecurityGroup, Outputs.ClusterSecurityGroupId ]
           - !GetAtt [ PCSSecurityGroup, Outputs.InboundSshSecurityGroupId ]
           - !GetAtt [ EfsStorage, Outputs.SecurityGroupId ]
           - !GetAtt [ FSxLStorage, Outputs.FSxLustreSecurityGroupId ]
-        UserData:
-          Fn::Base64:
-            Fn::Sub:
-              - |
-                MIME-Version: 1.0
-                Content-Type: multipart/mixed; boundary="==MYBOUNDARY=="
-
-                --==MYBOUNDARY==
-                Content-Type: text/cloud-config; charset="us-ascii"
-                MIME-Version: 1.0
-                
-                runcmd:
-                  # Mount EFS filesystem as /home
-                  - mkdir -p /tmp/home
-                  - rsync -a /home/ /tmp/home
-                  - echo "${EfsFilesystem}:/ /home efs tls,_netdev" >> /etc/fstab
-                  - mount -a -t efs defaults
-                  - if [ "enabled" == "$(sestatus | awk "/^SELinux status:/{print $3}")" ]; then setsebool -P use_nfs_home_dirs 1; fi
-                  - rsync -a --ignore-existing /tmp/home/ /home
-                  - rm -rf /tmp/home/
-                  # Mount FSxL filesystem as /fsx
-                  - mkdir -p /fsx 
-                  - mount -t lustre -o relatime,flock ${FSxLustreDns}@tcp:/${FSxLustreMountName} /fsx
-                  - chmod 777 /fsx
-                --==MYBOUNDARY==--
-              - EfsFilesystem: !GetAtt [ EfsStorage, Outputs.EFSFilesystemId ]
-                FSxLustreDns: !GetAtt FSxLustreLookup.DNSName
-                FSxLustreMountName: !GetAtt FSxLustreLookup.MountName
-                Region: !Ref AWS::Region
+        # Filesystem mounting and log forwarding are handled by node lifecycle
+        # actions on the compute node groups, not by launch template UserData.
 
   # Launch template for compute node(s)
   HpcComputeLaunchTemplate:
@@ -320,7 +301,7 @@ Resources:
         Placement:
           GroupName: !GetAtt PlacementGroup.PlacementGroupName
         NetworkInterfaces:
-          # hpc7a have dual NICs
+          # hpc8a have dual NICs
           - Description: Primary network interface
             DeviceIndex: 0
             InterfaceType: efa
@@ -339,35 +320,8 @@ Resources:
             Groups:
               - !Ref EfaSecurityGroup
         # KeyName: !Ref SshKeyName
-        UserData:
-          Fn::Base64:
-            Fn::Sub:
-              - |
-                MIME-Version: 1.0
-                Content-Type: multipart/mixed; boundary="==MYBOUNDARY=="
-
-                --==MYBOUNDARY==
-                Content-Type: text/cloud-config; charset="us-ascii"
-                MIME-Version: 1.0
-                
-                runcmd:
-                  # Mount EFS filesystem as /home
-                  - mkdir -p /tmp/home
-                  - rsync -a /home/ /tmp/home
-                  - echo "${EfsFilesystem}:/ /home efs tls,_netdev" >> /etc/fstab
-                  - mount -a -t efs defaults
-                  - if [ "enabled" == "$(sestatus | awk "/^SELinux status:/{print $3}")" ]; then setsebool -P use_nfs_home_dirs 1; fi
-                  - rsync -a --ignore-existing /tmp/home/ /home
-                  - rm -rf /tmp/home/
-                  # Mount FSxL filesystem as /fsx
-                  - mkdir -p /fsx 
-                  - mount -t lustre -o relatime,flock ${FSxLustreDns}@tcp:/${FSxLustreMountName} /fsx
-                  - chmod 777 /fsx
-                --==MYBOUNDARY==--
-              - EfsFilesystem: !GetAtt [ EfsStorage, Outputs.EFSFilesystemId ]
-                FSxLustreDns: !GetAtt FSxLustreLookup.DNSName
-                FSxLustreMountName: !GetAtt FSxLustreLookup.MountName
-                Region: !Ref AWS::Region
+        # Filesystem mounting and log forwarding are handled by node lifecycle
+        # actions on the compute node groups, not by launch template UserData.
 
   # Launch template for compute node(s)
   ComputeLaunchTemplate:
@@ -384,40 +338,13 @@ Resources:
           HttpEndpoint: enabled
           HttpPutResponseHopLimit: 2
           HttpTokens: required
-        SecurityGroupIds: 
+        SecurityGroupIds:
           - !GetAtt [ PCSSecurityGroup, Outputs.ClusterSecurityGroupId ]
           - !GetAtt [ PCSSecurityGroup, Outputs.InboundSshSecurityGroupId ]
           - !GetAtt [ EfsStorage, Outputs.SecurityGroupId ]
           - !GetAtt [ FSxLStorage, Outputs.FSxLustreSecurityGroupId ]
-        UserData:
-          Fn::Base64:
-            Fn::Sub:
-              - |
-                MIME-Version: 1.0
-                Content-Type: multipart/mixed; boundary="==MYBOUNDARY=="
-
-                --==MYBOUNDARY==
-                Content-Type: text/cloud-config; charset="us-ascii"
-                MIME-Version: 1.0
-                
-                runcmd:
-                  # Mount EFS filesystem as /home
-                  - mkdir -p /tmp/home
-                  - rsync -a /home/ /tmp/home
-                  - echo "${EfsFilesystem}:/ /home efs tls,_netdev" >> /etc/fstab
-                  - mount -a -t efs defaults
-                  - if [ "enabled" == "$(sestatus | awk "/^SELinux status:/{print $3}")" ]; then setsebool -P use_nfs_home_dirs 1; fi
-                  - rsync -a --ignore-existing /tmp/home/ /home
-                  - rm -rf /tmp/home/
-                  # Mount FSxL filesystem as /fsx
-                  - mkdir -p /fsx 
-                  - mount -t lustre -o relatime,flock ${FSxLustreDns}@tcp:/${FSxLustreMountName} /fsx
-                  - chmod 777 /fsx
-                --==MYBOUNDARY==--
-              - EfsFilesystem: !GetAtt [ EfsStorage, Outputs.EFSFilesystemId ]
-                FSxLustreDns: !GetAtt FSxLustreLookup.DNSName
-                FSxLustreMountName: !GetAtt FSxLustreLookup.MountName
-                Region: !Ref AWS::Region
+        # Filesystem mounting and log forwarding are handled by node lifecycle
+        # actions on the compute node groups, not by launch template UserData.
 
   Networking:
     Type: AWS::CloudFormation::Stack
@@ -476,6 +403,9 @@ Resources:
         # We regionalize this in case customer uses the template in more than one region. Otherwise,
         # the create action will fail since instance-role-${AWS::StackName} already exists!
         RoleName: !Sub '${AWS::StackName}-${AWS::Region}'
+        # Grant CloudWatch Logs permissions (logs:CreateLogGroup/CreateLogStream/PutLogEvents)
+        # so the configure-cloudwatch-logs node lifecycle action can forward node logs.
+        EnableCloudwatchAgent: "True"
       TemplateURL: !Sub 'https://${HpcRecipesS3Bucket}.s3.amazonaws.com/${HpcRecipesBranch}/recipes/pcs/getting_started/assets/pcs-iip-minimal.yaml'
 
   # Compute Node groups - Login Nodes
@@ -496,13 +426,66 @@ Resources:
       AmiId: !GetAtt [PcsSampleAmi, AmiId]
       InstanceConfigs:
         - InstanceType: !FindInMap [ Architecture, LoginNodeInstances, x86 ]
+      # Mount shared storage and forward node logs using AWS-maintained node
+      # lifecycle action scripts, run at the nodeBootstrapped stage (before slurmd
+      # starts). All actions use OnError: CONTINUE so a node still starts if an
+      # optional step (e.g. CloudWatch when the agent is absent) cannot complete.
+      NodeLifecycleActions:
+        ScriptCachingPolicy: CACHE_ONCE
+        Stages:
+          NodeBootstrapped:
+            - Name: mount-fsx-lustre
+              ScriptSource:
+                ScriptLocation: !Sub 's3://aws-pcs-repo-${AWS::Region}/aws-pcs-node-lifecycle-scripts/mount-fsx-lustre-${NodeLifecycleScriptsVersion}.sh'
+              Arguments:
+                - '--fsx-dns-name'
+                - !GetAtt FSxLustreLookup.DNSName
+                - '--mount-name'
+                - !GetAtt FSxLustreLookup.MountName
+                - '--mount-point'
+                - '/fsx'
+              OnError: CONTINUE
+              ExecutionPolicy: EVERY_BOOT
+            - Name: set-shared-dir-mode
+              ScriptSource:
+                # HTTPS (not s3://) so the region-pinned PCS agent can fetch from the
+                # single-Region HPC Recipes bucket (us-east-1) regardless of the cluster's
+                # Region. An s3:// URI to an out-of-Region bucket fails with PermanentRedirect.
+                ScriptLocation: !Sub 'https://${HpcRecipesS3Bucket}.s3.us-east-1.amazonaws.com/${HpcRecipesBranch}/recipes/pcs-scripts/open_shared_dir/assets/set-shared-dir-mode-v1.0.0.sh' # partition-exception: single-Region HPC Recipes bucket (us-east-1), matches this recipe's nested-stack TemplateURLs
+              Arguments:
+                - '--path'
+                - '/fsx'
+                - '--mode'
+                - '1777'
+              OnError: CONTINUE
+              ExecutionPolicy: EVERY_BOOT
+            - Name: configure-efs-homes
+              ScriptSource:
+                ScriptLocation: !Sub 's3://aws-pcs-repo-${AWS::Region}/aws-pcs-node-lifecycle-scripts/configure-efs-homes-${NodeLifecycleScriptsVersion}.sh'
+              Arguments:
+                - '--efs-id'
+                - !GetAtt [ EfsStorage, Outputs.EFSFilesystemId ]
+                - '--home-base'
+                - '/home'
+                - '--options'
+                - 'tls'
+              OnError: CONTINUE
+              ExecutionPolicy: EVERY_BOOT
+            - Name: configure-cloudwatch-logs
+              ScriptSource:
+                ScriptLocation: !Sub 's3://aws-pcs-repo-${AWS::Region}/aws-pcs-node-lifecycle-scripts/configure-cloudwatch-logs-${NodeLifecycleScriptsVersion}.sh'
+              Arguments:
+                - '--log-group-name'
+                - !Sub '/aws/pcs/${PCSCluster.Id}/lifecycle'
+              OnError: CONTINUE
+              ExecutionPolicy: FIRST_BOOT_ONLY
 
   # Compute Node groups - Compute Nodes (HPC)
   PCSNodeGroupCompute1:
     Type: AWS::PCS::ComputeNodeGroup
     Properties:
       ClusterId: !GetAtt [PCSCluster, Id]
-      Name: hpc7a-48xlarge
+      Name: hpc8a-96xlarge
       ScalingConfiguration:
         MinInstanceCount: 0
         MaxInstanceCount: 4
@@ -515,13 +498,66 @@ Resources:
       AmiId: !GetAtt [PcsSampleAmi, AmiId]
       InstanceConfigs:
         - InstanceType: !FindInMap [ Architecture, ComputeNodeInstances, HPCx86 ]
+      # Mount shared storage and forward node logs using AWS-maintained node
+      # lifecycle action scripts, run at the nodeBootstrapped stage (before slurmd
+      # starts). All actions use OnError: CONTINUE so a node still starts if an
+      # optional step (e.g. CloudWatch when the agent is absent) cannot complete.
+      NodeLifecycleActions:
+        ScriptCachingPolicy: CACHE_ONCE
+        Stages:
+          NodeBootstrapped:
+            - Name: mount-fsx-lustre
+              ScriptSource:
+                ScriptLocation: !Sub 's3://aws-pcs-repo-${AWS::Region}/aws-pcs-node-lifecycle-scripts/mount-fsx-lustre-${NodeLifecycleScriptsVersion}.sh'
+              Arguments:
+                - '--fsx-dns-name'
+                - !GetAtt FSxLustreLookup.DNSName
+                - '--mount-name'
+                - !GetAtt FSxLustreLookup.MountName
+                - '--mount-point'
+                - '/fsx'
+              OnError: CONTINUE
+              ExecutionPolicy: EVERY_BOOT
+            - Name: set-shared-dir-mode
+              ScriptSource:
+                # HTTPS (not s3://) so the region-pinned PCS agent can fetch from the
+                # single-Region HPC Recipes bucket (us-east-1) regardless of the cluster's
+                # Region. An s3:// URI to an out-of-Region bucket fails with PermanentRedirect.
+                ScriptLocation: !Sub 'https://${HpcRecipesS3Bucket}.s3.us-east-1.amazonaws.com/${HpcRecipesBranch}/recipes/pcs-scripts/open_shared_dir/assets/set-shared-dir-mode-v1.0.0.sh' # partition-exception: single-Region HPC Recipes bucket (us-east-1), matches this recipe's nested-stack TemplateURLs
+              Arguments:
+                - '--path'
+                - '/fsx'
+                - '--mode'
+                - '1777'
+              OnError: CONTINUE
+              ExecutionPolicy: EVERY_BOOT
+            - Name: configure-efs-homes
+              ScriptSource:
+                ScriptLocation: !Sub 's3://aws-pcs-repo-${AWS::Region}/aws-pcs-node-lifecycle-scripts/configure-efs-homes-${NodeLifecycleScriptsVersion}.sh'
+              Arguments:
+                - '--efs-id'
+                - !GetAtt [ EfsStorage, Outputs.EFSFilesystemId ]
+                - '--home-base'
+                - '/home'
+                - '--options'
+                - 'tls'
+              OnError: CONTINUE
+              ExecutionPolicy: EVERY_BOOT
+            - Name: configure-cloudwatch-logs
+              ScriptSource:
+                ScriptLocation: !Sub 's3://aws-pcs-repo-${AWS::Region}/aws-pcs-node-lifecycle-scripts/configure-cloudwatch-logs-${NodeLifecycleScriptsVersion}.sh'
+              Arguments:
+                - '--log-group-name'
+                - !Sub '/aws/pcs/${PCSCluster.Id}/lifecycle'
+              OnError: CONTINUE
+              ExecutionPolicy: FIRST_BOOT_ONLY
 
   # Compute Node groups  - Compute Nodes (Small)
   PCSNodeGroupCompute2:
     Type: AWS::PCS::ComputeNodeGroup
     Properties:
       ClusterId: !GetAtt [PCSCluster, Id]
-      Name: c7a-xlarge
+      Name: c8a-xlarge
       ScalingConfiguration:
         MinInstanceCount: 0
         MaxInstanceCount: 3
@@ -534,6 +570,59 @@ Resources:
       AmiId: !GetAtt [PcsSampleAmi, AmiId]
       InstanceConfigs:
         - InstanceType: !FindInMap [ Architecture, ComputeNodeInstances, x86 ]
+      # Mount shared storage and forward node logs using AWS-maintained node
+      # lifecycle action scripts, run at the nodeBootstrapped stage (before slurmd
+      # starts). All actions use OnError: CONTINUE so a node still starts if an
+      # optional step (e.g. CloudWatch when the agent is absent) cannot complete.
+      NodeLifecycleActions:
+        ScriptCachingPolicy: CACHE_ONCE
+        Stages:
+          NodeBootstrapped:
+            - Name: mount-fsx-lustre
+              ScriptSource:
+                ScriptLocation: !Sub 's3://aws-pcs-repo-${AWS::Region}/aws-pcs-node-lifecycle-scripts/mount-fsx-lustre-${NodeLifecycleScriptsVersion}.sh'
+              Arguments:
+                - '--fsx-dns-name'
+                - !GetAtt FSxLustreLookup.DNSName
+                - '--mount-name'
+                - !GetAtt FSxLustreLookup.MountName
+                - '--mount-point'
+                - '/fsx'
+              OnError: CONTINUE
+              ExecutionPolicy: EVERY_BOOT
+            - Name: set-shared-dir-mode
+              ScriptSource:
+                # HTTPS (not s3://) so the region-pinned PCS agent can fetch from the
+                # single-Region HPC Recipes bucket (us-east-1) regardless of the cluster's
+                # Region. An s3:// URI to an out-of-Region bucket fails with PermanentRedirect.
+                ScriptLocation: !Sub 'https://${HpcRecipesS3Bucket}.s3.us-east-1.amazonaws.com/${HpcRecipesBranch}/recipes/pcs-scripts/open_shared_dir/assets/set-shared-dir-mode-v1.0.0.sh' # partition-exception: single-Region HPC Recipes bucket (us-east-1), matches this recipe's nested-stack TemplateURLs
+              Arguments:
+                - '--path'
+                - '/fsx'
+                - '--mode'
+                - '1777'
+              OnError: CONTINUE
+              ExecutionPolicy: EVERY_BOOT
+            - Name: configure-efs-homes
+              ScriptSource:
+                ScriptLocation: !Sub 's3://aws-pcs-repo-${AWS::Region}/aws-pcs-node-lifecycle-scripts/configure-efs-homes-${NodeLifecycleScriptsVersion}.sh'
+              Arguments:
+                - '--efs-id'
+                - !GetAtt [ EfsStorage, Outputs.EFSFilesystemId ]
+                - '--home-base'
+                - '/home'
+                - '--options'
+                - 'tls'
+              OnError: CONTINUE
+              ExecutionPolicy: EVERY_BOOT
+            - Name: configure-cloudwatch-logs
+              ScriptSource:
+                ScriptLocation: !Sub 's3://aws-pcs-repo-${AWS::Region}/aws-pcs-node-lifecycle-scripts/configure-cloudwatch-logs-${NodeLifecycleScriptsVersion}.sh'
+              Arguments:
+                - '--log-group-name'
+                - !Sub '/aws/pcs/${PCSCluster.Id}/lifecycle'
+              OnError: CONTINUE
+              ExecutionPolicy: FIRST_BOOT_ONLY
 
   PCSQueueCompute1:
     Type: AWS::PCS::Queue
