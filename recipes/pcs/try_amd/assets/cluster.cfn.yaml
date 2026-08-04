@@ -474,9 +474,8 @@ Resources:
             - Name: configure-cloudwatch-logs
               ScriptSource:
                 ScriptLocation: !Sub 's3://aws-pcs-repo-${AWS::Region}/aws-pcs-node-lifecycle-scripts/configure-cloudwatch-logs-${NodeLifecycleScriptsVersion}.sh'
-              Arguments:
-                - '--log-group-name'
-                - !Sub '/aws/pcs/${PCSCluster.Id}/lifecycle'
+              # No arguments: --log-group-name defaults to /aws/pcs/${PCS_CLUSTER_ID}/lifecycle,
+              # which the script derives from the PCS_CLUSTER_ID env var PCS sets on every node.
               OnError: CONTINUE
               ExecutionPolicy: FIRST_BOOT_ONLY
 
@@ -546,9 +545,8 @@ Resources:
             - Name: configure-cloudwatch-logs
               ScriptSource:
                 ScriptLocation: !Sub 's3://aws-pcs-repo-${AWS::Region}/aws-pcs-node-lifecycle-scripts/configure-cloudwatch-logs-${NodeLifecycleScriptsVersion}.sh'
-              Arguments:
-                - '--log-group-name'
-                - !Sub '/aws/pcs/${PCSCluster.Id}/lifecycle'
+              # No arguments: --log-group-name defaults to /aws/pcs/${PCS_CLUSTER_ID}/lifecycle,
+              # which the script derives from the PCS_CLUSTER_ID env var PCS sets on every node.
               OnError: CONTINUE
               ExecutionPolicy: FIRST_BOOT_ONLY
 
@@ -618,9 +616,8 @@ Resources:
             - Name: configure-cloudwatch-logs
               ScriptSource:
                 ScriptLocation: !Sub 's3://aws-pcs-repo-${AWS::Region}/aws-pcs-node-lifecycle-scripts/configure-cloudwatch-logs-${NodeLifecycleScriptsVersion}.sh'
-              Arguments:
-                - '--log-group-name'
-                - !Sub '/aws/pcs/${PCSCluster.Id}/lifecycle'
+              # No arguments: --log-group-name defaults to /aws/pcs/${PCS_CLUSTER_ID}/lifecycle,
+              # which the script derives from the PCS_CLUSTER_ID env var PCS sets on every node.
               OnError: CONTINUE
               ExecutionPolicy: FIRST_BOOT_ONLY
 
