@@ -1,0 +1,233 @@
+---
+AWSTemplateFormatVersion: '2010-09-09'
+Description: Complete isolated PCS cluster infrastructure with no internet access.
+
+### This template orchestrates the deployment of a fully isolated AWS PCS cluster including:
+### - VPC and private subnets (no Internet Gateway or NAT Gateway)
+### - Security groups for cluster nodes and file systems
+### - Optional shared storage (EFS, FSx for Lustre)
+
+### Stack metadata
+Metadata:
+  AWS::CloudFormation::Interface:
+    ParameterGroups:
+      - Label:
+          default: VPC Configuration
+        Parameters:
+          - VpcCIDR
+      - Label:
+          default: Subnet Configuration
+        Parameters:
+          - SubnetAZ
+          - SubnetCIDR
+      - Label:
+          default: File System Options
+        Parameters:
+          - CreateEFS
+          - CreateFSxLustre
+      - Label:
+          default: SSH Access
+        Parameters:
+          - ClientIpCidr
+      - Label:
+          default: Slurm Configuration
+        Parameters:
+          - SrunPortRange
+      - Label:
+          default: HPC Recipes Configuration
+        Parameters:
+          - HpcRecipesS3Bucket
+          - HpcRecipesBranch
+
+Parameters:
+  VpcCIDR:
+    Description: CIDR block for the VPC (e.g., 10.0.0.0/16)
+    Type: String
+    Default: 10.0.0.0/16
+    AllowedPattern: '((\d{1,3})\.){3}\d{1,3}/\d{1,2}'
+    ConstraintDescription: Must be a valid IP CIDR range of the form x.x.x.x/x
+
+  SubnetAZ:
+    Description: Availability Zone for the private subnet
+    Type: AWS::EC2::AvailabilityZone::Name
+
+  SubnetCIDR:
+    Description: CIDR block for the private subnet (e.g., 10.0.0.0/20)
+    Type: String
+    Default: 10.0.0.0/20
+    AllowedPattern: '((\d{1,3})\.){3}\d{1,3}/\d{1,2}'
+    ConstraintDescription: Must be a valid IP CIDR range of the form x.x.x.x/x
+
+  CreateEFS:
+    Description: Create Amazon EFS file system
+    Type: String
+    Default: 'False'
+    AllowedValues:
+      - 'True'
+      - 'False'
+
+  CreateFSxLustre:
+    Description: Create Amazon FSx for Lustre file system
+    Type: String
+    Default: 'False'
+    AllowedValues:
+      - 'True'
+      - 'False'
+
+  ClientIpCidr:
+    Description: IP address range allowed to SSH to login nodes (e.g., x.x.x.x/32 for a single IP or x.x.x.x/24 for a range). Use 0.0.0.0/0 to allow from anywhere (not recommended).
+    Type: String
+    AllowedPattern: '(\d{1,3})\.(\d{1,3})\.(\d{1,3})\.(\d{1,3})/(\d{1,2})'
+    ConstraintDescription: Must be a valid IP CIDR range of the form x.x.x.x/x
+
+  SrunPortRange:
+    Description: >-
+      Port range (MinPort-MaxPort) that Slurm srun uses for interactive job I/O.
+      Set as the SrunPortRange custom Slurm setting on the cluster and used to
+      scope the srun ingress/egress security group rules. Note: SrunPortRange
+      must be large enough to cover the expected number of srun ports created. A
+      single srun opens 4 listening ports plus 2 more for every 48 hosts beyond
+      the first 48. Use of the --pty option will result in an additional port
+      being used.
+    Type: String
+    Default: '60001-63000'
+    AllowedPattern: '^\d{1,5}-\d{1,5}$'
+    ConstraintDescription: Must be a port range of the form MinPort-MaxPort (e.g., 60001-63000)
+
+  HpcRecipesS3Bucket:
+    Description: HPC Recipes for AWS S3 bucket
+    Type: String
+    Default: aws-hpc-recipes
+
+  HpcRecipesBranch:
+    Description: HPC Recipes for AWS version/branch
+    Type: String
+    Default: main
+
+Conditions:
+  CreateEFSResources: !Equals [!Ref CreateEFS, 'True']
+  CreateFSxLustreResources: !Equals [!Ref CreateFSxLustre, 'True']
+  CreateAnyStorage: !Or
+    - !Equals [!Ref CreateEFS, 'True']
+    - !Equals [!Ref CreateFSxLustre, 'True']
+
+Resources:
+  # VPC and Networking Nested Stack
+  Networking:
+    Type: AWS::CloudFormation::Stack
+    Properties:
+      TemplateURL: !Sub 'https://${HpcRecipesS3Bucket}.s3.${AWS::Region}.${AWS::URLSuffix}/${HpcRecipesBranch}/recipes/pcs/isolated_pcs/assets/networking/pcs-isolated-vpc.yaml'
+      Parameters:
+        StackName: !Ref AWS::StackName
+        VpcCIDR: !Ref VpcCIDR
+        SubnetAZ: !Ref SubnetAZ
+        SubnetCIDR: !Ref SubnetCIDR
+
+  # Security Groups Nested Stack
+  SecurityGroups:
+    Type: AWS::CloudFormation::Stack
+    DependsOn: Networking
+    Properties:
+      TemplateURL: !Sub 'https://${HpcRecipesS3Bucket}.s3.${AWS::Region}.${AWS::URLSuffix}/${HpcRecipesBranch}/recipes/pcs/isolated_pcs/assets/networking/pcs-isolated-sgs.yaml'
+      Parameters:
+        VpcId: !GetAtt Networking.Outputs.VpcId
+        StackName: !Ref AWS::StackName
+        ClientIpCidr: !Ref ClientIpCidr
+        CreateEFS: !Ref CreateEFS
+        CreateFSxLustre: !Ref CreateFSxLustre
+        SrunPortRange: !Ref SrunPortRange
+
+  # VPC Endpoint for AWS PCS (created in main stack after both nested stacks)
+  PCSVpcEndpoint:
+    Type: AWS::EC2::VPCEndpoint
+    DependsOn:
+      - Networking
+      - SecurityGroups
+    Properties:
+      VpcEndpointType: Interface
+      ServiceName: !Sub 'com.amazonaws.${AWS::Region}.pcs'
+      VpcId: !GetAtt Networking.Outputs.VpcId
+      SubnetIds:
+        - !GetAtt Networking.Outputs.PrivateSubnetId
+      SecurityGroupIds:
+        - !GetAtt SecurityGroups.Outputs.PCSVpcEndpointSecurityGroupId
+      PrivateDnsEnabled: true
+
+Outputs:
+  VpcId:
+    Description: ID of the VPC
+    Value: !GetAtt Networking.Outputs.VpcId
+    Export:
+      Name: !Sub '${AWS::StackName}-VpcId'
+
+  StackName:
+    Description: Name of this CloudFormation stack (for reference in storage stacks)
+    Value: !Ref AWS::StackName
+
+  PrivateSubnetId:
+    Description: ID of the private subnet
+    Value: !GetAtt Networking.Outputs.PrivateSubnetId
+    Export:
+      Name: !Sub '${AWS::StackName}-PrivateSubnetId'
+
+  ClusterSecurityGroupId:
+    Description: SG ID for PCS cluster - shared by controller, compute, and login nodes
+    Value: !GetAtt SecurityGroups.Outputs.ClusterSecurityGroupId
+    Export:
+      Name: !Sub '${AWS::StackName}-ClusterSecurityGroupId'
+
+  LoginNodeSecurityGroupId:
+    Description: SG ID for PCS login nodes
+    Value: !GetAtt SecurityGroups.Outputs.LoginNodeSecurityGroupId
+    Export:
+      Name: !Sub '${AWS::StackName}-LoginNodeSecurityGroupId'
+
+  ComputeNodeSecurityGroupId:
+    Description: SG ID for PCS compute nodes
+    Value: !GetAtt SecurityGroups.Outputs.ComputeNodeSecurityGroupId
+    Export:
+      Name: !Sub '${AWS::StackName}-ComputeNodeSecurityGroupId'
+
+  EFSSecurityGroupId:
+    Description: SG ID for Amazon EFS file system (only if created)
+    Condition: CreateEFSResources
+    Value: !GetAtt SecurityGroups.Outputs.EFSSecurityGroupId
+    Export:
+      Name: !Sub '${AWS::StackName}-EFSSecurityGroupId'
+
+  FSxLustreSecurityGroupId:
+    Description: SG ID for FSx for Lustre file system (only if created)
+    Condition: CreateFSxLustreResources
+    Value: !GetAtt SecurityGroups.Outputs.FSxLustreSecurityGroupId
+    Export:
+      Name: !Sub '${AWS::StackName}-FSxLustreSecurityGroupId'
+
+  CreateEFSParameter:
+    Description: Whether to create EFS file system
+    Value: !Ref CreateEFS
+    Export:
+      Name: !Sub '${AWS::StackName}-CreateEFS'
+
+  CreateFSxLustreParameter:
+    Description: Whether to create FSx for Lustre file system
+    Value: !Ref CreateFSxLustre
+    Export:
+      Name: !Sub '${AWS::StackName}-CreateFSxLustre'
+
+  PCSVpcEndpointId:
+    Description: ID of the AWS PCS VPC endpoint
+    Value: !Ref PCSVpcEndpoint
+    Export:
+      Name: !Sub '${AWS::StackName}-PCSVpcEndpointId'
+
+  PCSVpcEndpointSecurityGroupId:
+    Description: Security group ID for the AWS PCS VPC endpoint
+    Value: !GetAtt SecurityGroups.Outputs.PCSVpcEndpointSecurityGroupId
+    Export:
+      Name: !Sub '${AWS::StackName}-PCSVpcEndpointSecurityGroupId'
+
+  SrunPortRange:
+    Description: Port range used for Slurm srun interactive job I/O (referenced by the SG and cluster stacks)
+    Value: !Ref SrunPortRange
+    Export:
+      Name: !Sub '${AWS::StackName}-SrunPortRange'

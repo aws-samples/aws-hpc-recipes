@@ -1,0 +1,634 @@
+---
+AWSTemplateFormatVersion: '2010-09-09'
+Description: Security groups for AWS PCS isolated cluster with optional file systems.
+  
+### This template creates EFA-enabled security groups for PCS cluster nodes and optional file systems.
+
+Parameters:
+  VpcId:
+    Description: VPC ID where security groups will be created
+    Type: AWS::EC2::VPC::Id
+
+  StackName:
+    Description: Parent stack name for resource naming
+    Type: String
+
+  ClientIpCidr:
+    Description: IP address range allowed to SSH to login nodes
+    Type: String
+    AllowedPattern: '(\d{1,3})\.(\d{1,3})\.(\d{1,3})\.(\d{1,3})/(\d{1,2})'
+    ConstraintDescription: Must be a valid IP CIDR range of the form x.x.x.x/x
+
+  CreateEFS:
+    Description: Create Amazon EFS file system SG
+    Type: String
+    Default: 'False'
+    AllowedValues:
+      - 'True'
+      - 'False'
+
+  CreateFSxLustre:
+    Description: Create Amazon FSx for Lustre file system SG
+    Type: String
+    Default: 'False'
+    AllowedValues:
+      - 'True'
+      - 'False'
+
+  SrunPortRange:
+    Description: Port range (MinPort-MaxPort) that Slurm srun uses for interactive job I/O; scopes the srun ingress/egress rules
+    Type: String
+    Default: '60001-63000'
+    AllowedPattern: '^\d{1,5}-\d{1,5}$'
+    ConstraintDescription: Must be a port range of the form MinPort-MaxPort (e.g., 60001-63000)
+
+Conditions:
+  CreateEFSResources: !Equals [!Ref CreateEFS, 'True']
+  CreateFSxLustreResources: !Equals [!Ref CreateFSxLustre, 'True']
+
+Resources:
+  
+  # PCS VPC Endpoint Security Group
+
+  PCSVpcEndpointSecurityGroup:
+    Type: AWS::EC2::SecurityGroup
+    Properties:
+      GroupDescription: Security group for AWS PCS VPC endpoint
+      GroupName: !Sub '${StackName}-PCSEndpoint-SG'
+      VpcId: !Ref VpcId
+      Tags:
+        - Key: Name
+          Value: !Sub '${StackName}-PCSEndpoint-SG'
+
+  # Allow RegisterComputeNodeGroupInstance from login nodes SG
+  PCSEndpointFromLoginIngressRule:
+    Type: AWS::EC2::SecurityGroupIngress
+    Properties:
+      GroupId: !Ref PCSVpcEndpointSecurityGroup
+      IpProtocol: tcp
+      FromPort: 443
+      ToPort: 443
+      SourceSecurityGroupId: !Ref LoginNodeSecurityGroup
+      Description: Allow RegisterComputeNodeGroupInstance from login nodes SG
+
+  # Allow RegisterComputeNodeGroupInstance from compute nodes SG
+  PCSEndpointFromComputeIngressRule:
+    Type: AWS::EC2::SecurityGroupIngress
+    Properties:
+      GroupId: !Ref PCSVpcEndpointSecurityGroup
+      IpProtocol: tcp
+      FromPort: 443
+      ToPort: 443
+      SourceSecurityGroupId: !Ref ComputeNodeSecurityGroup
+      Description: Allow RegisterComputeNodeGroupInstance from compute nodes SG
+
+  # Overwrite default allow-all outbound rule
+  PCSEndpointSelfEgressRule:
+    Type: AWS::EC2::SecurityGroupEgress
+    Properties:
+      GroupId: !Ref PCSVpcEndpointSecurityGroup
+      IpProtocol: '-1'
+      DestinationSecurityGroupId: !Ref PCSVpcEndpointSecurityGroup
+      Description: Overwrite default allow-all outbound rule - this rule can be deleted after creation
+
+  # Cluster Security Group (shared by all nodes)
+  # Follows AWS PCS restrictive security group requirements:
+  # https://docs.aws.amazon.com/pcs/latest/userguide/working-with_networking_sg.html#working-with_networking_sg-requirements
+  PCSClusterSecurityGroup:
+    Type: AWS::EC2::SecurityGroup
+    Properties:
+      GroupDescription: SG for PCS cluster - enables slurmctld and slurmd communication between controller, compute nodes, and login nodes
+      GroupName: !Sub '${StackName}-PCS-SG'
+      VpcId: !Ref VpcId
+      Tags:
+        - Key: Name
+          Value: !Sub '${StackName}-PCS-SG'
+
+  # Allow Slurm traffic to slurmctld from login node SG
+  PCSClusterFromLoginIngressRule6817:
+    Type: AWS::EC2::SecurityGroupIngress
+    Properties:
+      GroupId: !Ref PCSClusterSecurityGroup
+      IpProtocol: tcp
+      FromPort: 6817
+      ToPort: 6817
+      SourceSecurityGroupId: !Ref LoginNodeSecurityGroup
+      Description: Allow Slurm traffic to slurmctld from login node SG
+
+  # Allow Slurm traffic to slurmctld from login node SG
+  PCSClusterFromLoginIngressRule6819:
+    Type: AWS::EC2::SecurityGroupIngress
+    Properties:
+      GroupId: !Ref PCSClusterSecurityGroup
+      IpProtocol: tcp
+      FromPort: 6819
+      ToPort: 6819
+      SourceSecurityGroupId: !Ref LoginNodeSecurityGroup
+      Description: Allow Slurm traffic to slurmdbd from login node SG
+
+  # Allow Slurm traffic to slurmctld from compute node SG
+  PCSClusterFromComputeIngressRule6817:
+    Type: AWS::EC2::SecurityGroupIngress
+    Properties:
+      GroupId: !Ref PCSClusterSecurityGroup
+      IpProtocol: tcp
+      FromPort: 6817
+      ToPort: 6817
+      SourceSecurityGroupId: !Ref ComputeNodeSecurityGroup
+      Description: Allow Slurm traffic to slurmctld from compute node SG
+
+  # Allow Slurm traffic to slurmdbd from compute node SG
+  PCSClusterFromComputeIngressRule6819:
+    Type: AWS::EC2::SecurityGroupIngress
+    Properties:
+      GroupId: !Ref PCSClusterSecurityGroup
+      IpProtocol: tcp
+      FromPort: 6819
+      ToPort: 6819
+      SourceSecurityGroupId: !Ref ComputeNodeSecurityGroup
+      Description: Allow Slurm traffic to slurmdbd from compute node SG
+
+  # Allow Slurm traffic from slurmctld to login node SG
+  PCSClusterToLoginEgressRule:
+    Type: AWS::EC2::SecurityGroupEgress
+    Properties:
+      GroupId: !Ref PCSClusterSecurityGroup
+      IpProtocol: tcp
+      FromPort: 6818
+      ToPort: 6818
+      DestinationSecurityGroupId: !Ref LoginNodeSecurityGroup
+      Description: Allow Slurm traffic from slurmctld to login node SG
+
+  # Allow Slurm traffic from slurmctld to compute node SG
+  PCSClusterToComputeEgressRule:
+    Type: AWS::EC2::SecurityGroupEgress
+    Properties:
+      GroupId: !Ref PCSClusterSecurityGroup
+      IpProtocol: tcp
+      FromPort: 6818
+      ToPort: 6818
+      DestinationSecurityGroupId: !Ref ComputeNodeSecurityGroup
+      Description: Allow Slurm traffic from slurmctld to compute node SG
+
+  # Login Node Security Group
+  LoginNodeSecurityGroup:
+    Type: AWS::EC2::SecurityGroup
+    Properties:
+      GroupDescription: SG for PCS login nodes
+      GroupName: !Sub '${StackName}-LoginNode-SG'
+      VpcId: !Ref VpcId
+      Tags:
+        - Key: Name
+          Value: !Sub '${StackName}-LoginNode-SG'
+
+  # Allow inbound traffic from Slurmctld
+  LoginNodeSlurmIngressRule:
+    Type: AWS::EC2::SecurityGroupIngress
+    Properties:
+      GroupId: !Ref LoginNodeSecurityGroup
+      IpProtocol: tcp
+      FromPort: 6818
+      ToPort: 6818
+      SourceSecurityGroupId: !Ref PCSClusterSecurityGroup
+      Description: Allow Slurm traffic from slurmctld 
+
+  # Allow outbound traffic to Slurmctld
+  LoginNodeSlurmEgressRule6817:
+    Type: AWS::EC2::SecurityGroupEgress
+    Properties:
+      GroupId: !Ref LoginNodeSecurityGroup
+      IpProtocol: tcp
+      FromPort: 6817
+      ToPort: 6817
+      DestinationSecurityGroupId: !Ref PCSClusterSecurityGroup
+      Description: Allow Slurm traffic to slurmctld 
+
+  # Allow outbound traffic to Slurmdbd
+  LoginNodeSlurmEgressRule6819:
+    Type: AWS::EC2::SecurityGroupEgress
+    Properties:
+      GroupId: !Ref LoginNodeSecurityGroup
+      IpProtocol: tcp
+      FromPort: 6819
+      ToPort: 6819
+      DestinationSecurityGroupId: !Ref PCSClusterSecurityGroup
+      Description: Allow Slurm traffic to slurmdbd
+
+  # Allow RegisterComputeNodeGroupInstance to PCS VPC Endpoint SG
+  LoginNodeRegisterNodeEgressRule:
+    Type: AWS::EC2::SecurityGroupEgress
+    Properties:
+      GroupId: !Ref LoginNodeSecurityGroup
+      IpProtocol: tcp
+      FromPort: 443
+      ToPort: 443
+      DestinationSecurityGroupId: !Ref PCSVpcEndpointSecurityGroup
+      Description: Allow RegisterComputeNodeGroupInstance to PCS VPC Endpoint SG
+
+  # Allow Srun I/O traffic from compute nodes (for interactive srun)
+  LoginNodeSrunFromComputeIngressRule:
+    Type: AWS::EC2::SecurityGroupIngress
+    Properties:
+      GroupId: !Ref LoginNodeSecurityGroup
+      IpProtocol: tcp
+      FromPort: !Select [0, !Split ['-', !Ref SrunPortRange]]
+      ToPort: !Select [1, !Split ['-', !Ref SrunPortRange]]
+      SourceSecurityGroupId: !Ref ComputeNodeSecurityGroup
+      Description: Allow srun I/O traffic from compute nodes
+
+  # Allow Srun I/O traffic to compute nodes (for interactive srun)
+  LoginNodeSrunToComputeEgressRule6818:
+    Type: AWS::EC2::SecurityGroupEgress
+    Properties:
+      GroupId: !Ref LoginNodeSecurityGroup
+      IpProtocol: tcp
+      FromPort: 6818
+      ToPort: 6818
+      DestinationSecurityGroupId: !Ref ComputeNodeSecurityGroup
+      Description: Allow slurmd traffic to compute nodes for srun I/O
+      
+  # Allow Srun I/O traffic to compute nodes (for interactive srun)
+  LoginNodeSrunToComputeEgressRule:
+    Type: AWS::EC2::SecurityGroupEgress
+    Properties:
+      GroupId: !Ref LoginNodeSecurityGroup
+      IpProtocol: tcp
+      FromPort: !Select [0, !Split ['-', !Ref SrunPortRange]]
+      ToPort: !Select [1, !Split ['-', !Ref SrunPortRange]]
+      DestinationSecurityGroupId: !Ref ComputeNodeSecurityGroup
+      Description: Allow srun I/O traffic to compute nodes
+
+  # Allow SSH access to login nodes from specified IP range
+  LoginNodeSSHIngressRule:
+    Type: AWS::EC2::SecurityGroupIngress
+    Properties:
+      GroupId: !Ref LoginNodeSecurityGroup
+      IpProtocol: tcp
+      FromPort: 22
+      ToPort: 22
+      CidrIp: !Ref ClientIpCidr
+      Description: Allow SSH access from specified IP range
+
+  # Allow login nodes to access EFS (conditional)
+  LoginNodeToEFSEgressRule:
+    Type: AWS::EC2::SecurityGroupEgress
+    Condition: CreateEFSResources
+    Properties:
+      GroupId: !Ref LoginNodeSecurityGroup
+      IpProtocol: tcp
+      FromPort: 2049
+      ToPort: 2049
+      DestinationSecurityGroupId: !Ref EFSSecurityGroup
+      Description: Allow NFS traffic to EFS
+
+  # Allow login nodes to access FSx Lustre (conditional)
+  LoginNodeToFSxLustreEgressRule1:
+    Type: AWS::EC2::SecurityGroupEgress
+    Condition: CreateFSxLustreResources
+    Properties:
+      GroupId: !Ref LoginNodeSecurityGroup
+      IpProtocol: tcp
+      FromPort: 988
+      ToPort: 988
+      DestinationSecurityGroupId: !Ref FSxLustreSecurityGroup
+      Description: Allow Lustre traffic to FSx Lustre
+
+  LoginNodeToFSxLustreEgressRule2:
+    Type: AWS::EC2::SecurityGroupEgress
+    Condition: CreateFSxLustreResources
+    Properties:
+      GroupId: !Ref LoginNodeSecurityGroup
+      IpProtocol: tcp
+      FromPort: 1018
+      ToPort: 1023
+      DestinationSecurityGroupId: !Ref FSxLustreSecurityGroup
+      Description: Allow Lustre traffic to FSx Lustre
+
+  # Compute Node Security Group
+  ComputeNodeSecurityGroup:
+    Type: AWS::EC2::SecurityGroup
+    Properties:
+      GroupDescription: SG for PCS compute nodes
+      GroupName: !Sub '${StackName}-ComputeNode-SG'
+      VpcId: !Ref VpcId
+      Tags:
+        - Key: Name
+          Value: !Sub '${StackName}-ComputeNode-SG'
+
+  # Allow inbound traffic from Slurmctld
+  ComputeNodeSlurmIngressRule:
+    Type: AWS::EC2::SecurityGroupIngress
+    Properties:
+      GroupId: !Ref ComputeNodeSecurityGroup
+      IpProtocol: tcp
+      FromPort: 6818
+      ToPort: 6818
+      SourceSecurityGroupId: !Ref PCSClusterSecurityGroup
+      Description: Allow Slurm traffic from slurmctld 
+
+  # Allow outbound traffic to Slurmctld
+  ComputeNodeSlurmEgressRule6817:
+    Type: AWS::EC2::SecurityGroupEgress
+    Properties:
+      GroupId: !Ref ComputeNodeSecurityGroup
+      IpProtocol: tcp
+      FromPort: 6817
+      ToPort: 6817
+      DestinationSecurityGroupId: !Ref PCSClusterSecurityGroup
+      Description: Allow Slurm traffic to slurmctld 
+
+  # Allow outbound traffic to Slurmctld
+  ComputeNodeSlurmEgressRule6819:
+    Type: AWS::EC2::SecurityGroupEgress
+    Properties:
+      GroupId: !Ref ComputeNodeSecurityGroup
+      IpProtocol: tcp
+      FromPort: 6819
+      ToPort: 6819
+      DestinationSecurityGroupId: !Ref PCSClusterSecurityGroup
+      Description: Allow Slurm traffic to slurmdbd
+
+  # Allow RegisterComputeNodeGroupInstance to PCS VPC Endpoint SG
+  ComputeNodeRegisterNodeEgressRule:
+    Type: AWS::EC2::SecurityGroupEgress
+    Properties:
+      GroupId: !Ref ComputeNodeSecurityGroup
+      IpProtocol: tcp
+      FromPort: 443
+      ToPort: 443
+      DestinationSecurityGroupId: !Ref PCSVpcEndpointSecurityGroup
+      Description: Allow RegisterComputeNodeGroupInstance to PCS VPC Endpoint SG
+
+  # Allow all traffic within SG for EFA
+  ComputeNodeEFASelfIngressRule:
+    Type: AWS::EC2::SecurityGroupIngress
+    Properties:
+      GroupId: !Ref ComputeNodeSecurityGroup
+      IpProtocol: '-1'
+      SourceSecurityGroupId: !Ref ComputeNodeSecurityGroup
+      Description: Allow all traffic within SG for EFA and Slurm
+
+  # Allow all traffic within SG for EFA
+  ComputeNodeEFASelfEgressRule:
+    Type: AWS::EC2::SecurityGroupEgress
+    Properties:
+      GroupId: !Ref ComputeNodeSecurityGroup
+      IpProtocol: '-1'
+      DestinationSecurityGroupId: !Ref ComputeNodeSecurityGroup
+      Description: Allow all traffic within SG for EFA and Slurm
+
+  # Allow Srun I/O traffic from login nodes (for interactive srun)
+  ComputeNodeSrunFromLoginIngressRule6818:
+    Type: AWS::EC2::SecurityGroupIngress
+    Properties:
+      GroupId: !Ref ComputeNodeSecurityGroup
+      IpProtocol: tcp
+      FromPort: 6818
+      ToPort: 6818
+      SourceSecurityGroupId: !Ref LoginNodeSecurityGroup
+      Description: Allow slurmd traffic from login nodes for srun I/O
+      
+  # Allow Srun I/O traffic from login nodes (for interactive srun)
+  ComputeNodeSrunFromLoginIngressRule:
+    Type: AWS::EC2::SecurityGroupIngress
+    Properties:
+      GroupId: !Ref ComputeNodeSecurityGroup
+      IpProtocol: tcp
+      FromPort: !Select [0, !Split ['-', !Ref SrunPortRange]]
+      ToPort: !Select [1, !Split ['-', !Ref SrunPortRange]]
+      SourceSecurityGroupId: !Ref LoginNodeSecurityGroup
+      Description: Allow srun I/O traffic from login nodes
+
+  # Allow Srun I/O traffic to login nodes (for interactive srun)
+  ComputeNodeSrunToLoginEgressRule:
+    Type: AWS::EC2::SecurityGroupEgress
+    Properties:
+      GroupId: !Ref ComputeNodeSecurityGroup
+      IpProtocol: tcp
+      FromPort: !Select [0, !Split ['-', !Ref SrunPortRange]]
+      ToPort: !Select [1, !Split ['-', !Ref SrunPortRange]]
+      DestinationSecurityGroupId: !Ref LoginNodeSecurityGroup
+      Description: Allow srun I/O traffic to login nodes
+
+  # Allow compute nodes to access EFS (conditional)
+  ComputeNodeToEFSEgressRule:
+    Type: AWS::EC2::SecurityGroupEgress
+    Condition: CreateEFSResources
+    Properties:
+      GroupId: !Ref ComputeNodeSecurityGroup
+      IpProtocol: tcp
+      FromPort: 2049
+      ToPort: 2049
+      DestinationSecurityGroupId: !Ref EFSSecurityGroup
+      Description: Allow NFS traffic to EFS
+
+  # Allow compute nodes to access FSx Lustre (conditional)
+  ComputeNodeToFSxLustreEgressRule1:
+    Type: AWS::EC2::SecurityGroupEgress
+    Condition: CreateFSxLustreResources
+    Properties:
+      GroupId: !Ref ComputeNodeSecurityGroup
+      IpProtocol: tcp
+      FromPort: 988
+      ToPort: 988
+      DestinationSecurityGroupId: !Ref FSxLustreSecurityGroup
+      Description: Allow Lustre traffic to FSx Lustre
+
+  ComputeNodeToFSxLustreEgressRule2:
+    Type: AWS::EC2::SecurityGroupEgress
+    Condition: CreateFSxLustreResources
+    Properties:
+      GroupId: !Ref ComputeNodeSecurityGroup
+      IpProtocol: tcp
+      FromPort: 1018
+      ToPort: 1023
+      DestinationSecurityGroupId: !Ref FSxLustreSecurityGroup
+      Description: Allow Lustre traffic to FSx Lustre
+
+  # EFS Security Groups (conditional)
+
+  EFSSecurityGroup:
+    Type: AWS::EC2::SecurityGroup
+    Condition: CreateEFSResources
+    Properties:
+      GroupDescription: SG for Amazon EFS file system
+      GroupName: !Sub '${StackName}-EFS-SG'
+      VpcId: !Ref VpcId
+      Tags:
+        - Key: Name
+          Value: !Sub '${StackName}-EFS-SG'
+
+  # Allow EFS to accept NFS traffic from login nodes
+  EFSFromLoginIngressRule:
+    Type: AWS::EC2::SecurityGroupIngress
+    Condition: CreateEFSResources
+    Properties:
+      GroupId: !Ref EFSSecurityGroup
+      IpProtocol: tcp
+      FromPort: 2049
+      ToPort: 2049
+      SourceSecurityGroupId: !Ref LoginNodeSecurityGroup
+      Description: Allow NFS traffic from login nodes
+
+  # Allow EFS to accept NFS traffic from compute nodes
+  EFSFromComputeIngressRule:
+    Type: AWS::EC2::SecurityGroupIngress
+    Condition: CreateEFSResources
+    Properties:
+      GroupId: !Ref EFSSecurityGroup
+      IpProtocol: tcp
+      FromPort: 2049
+      ToPort: 2049
+      SourceSecurityGroupId: !Ref ComputeNodeSecurityGroup
+      Description: Allow NFS traffic from compute nodes
+
+  # FSx for Lustre Security Groups (conditional)
+
+  FSxLustreSecurityGroup:
+    Type: AWS::EC2::SecurityGroup
+    Condition: CreateFSxLustreResources
+    Properties:
+      GroupDescription: SG for FSx for Lustre file system
+      GroupName: !Sub '${StackName}-FSxLustre-SG'
+      VpcId: !Ref VpcId
+      Tags:
+        - Key: Name
+          Value: !Sub '${StackName}-FSxLustre-SG'
+
+  # Allow FSx Lustre to communicate with itself (EFA-enabled)
+  FSxLustreSelfIngressRule:
+    Type: AWS::EC2::SecurityGroupIngress
+    Condition: CreateFSxLustreResources
+    Properties:
+      GroupId: !Ref FSxLustreSecurityGroup
+      IpProtocol: '-1'
+      SourceSecurityGroupId: !Ref FSxLustreSecurityGroup
+      Description: Allow all inbound traffic within FSx Lustre SG for EFA
+
+  FSxLustreSelfEgressRule:
+    Type: AWS::EC2::SecurityGroupEgress
+    Condition: CreateFSxLustreResources
+    Properties:
+      GroupId: !Ref FSxLustreSecurityGroup
+      IpProtocol: '-1'
+      DestinationSecurityGroupId: !Ref FSxLustreSecurityGroup
+      Description: Allow all outbound traffic within FSx Lustre SG for EFA
+
+  # Allow FSx Lustre to accept traffic from login nodes (ports 988, 1018-1023)
+  FSxLustreFromLoginIngressRule:
+    Type: AWS::EC2::SecurityGroupIngress
+    Condition: CreateFSxLustreResources
+    Properties:
+      GroupId: !Ref FSxLustreSecurityGroup
+      IpProtocol: tcp
+      FromPort: 988
+      ToPort: 988
+      SourceSecurityGroupId: !Ref LoginNodeSecurityGroup
+      Description: Allow Lustre traffic from login nodes
+
+  FSxLustreFromLoginIngressRule2:
+    Type: AWS::EC2::SecurityGroupIngress
+    Condition: CreateFSxLustreResources
+    Properties:
+      GroupId: !Ref FSxLustreSecurityGroup
+      IpProtocol: tcp
+      FromPort: 1018
+      ToPort: 1023
+      SourceSecurityGroupId: !Ref LoginNodeSecurityGroup
+      Description: Allow Lustre traffic from login nodes
+
+  # Allow FSx Lustre to accept traffic from compute nodes
+  FSxLustreFromComputeIngressRule:
+    Type: AWS::EC2::SecurityGroupIngress
+    Condition: CreateFSxLustreResources
+    Properties:
+      GroupId: !Ref FSxLustreSecurityGroup
+      IpProtocol: tcp
+      FromPort: 988
+      ToPort: 988
+      SourceSecurityGroupId: !Ref ComputeNodeSecurityGroup
+      Description: Allow Lustre traffic from compute nodes
+
+  FSxLustreFromComputeIngressRule2:
+    Type: AWS::EC2::SecurityGroupIngress
+    Condition: CreateFSxLustreResources
+    Properties:
+      GroupId: !Ref FSxLustreSecurityGroup
+      IpProtocol: tcp
+      FromPort: 1018
+      ToPort: 1023
+      SourceSecurityGroupId: !Ref ComputeNodeSecurityGroup
+      Description: Allow Lustre traffic from compute nodes
+
+  # Allow FSx Lustre to send traffic back to login nodes
+  FSxLustreToLoginEgressRule1:
+    Type: AWS::EC2::SecurityGroupEgress
+    Condition: CreateFSxLustreResources
+    Properties:
+      GroupId: !Ref FSxLustreSecurityGroup
+      IpProtocol: tcp
+      FromPort: 988
+      ToPort: 988
+      DestinationSecurityGroupId: !Ref LoginNodeSecurityGroup
+      Description: Allow Lustre traffic to login nodes
+
+  FSxLustreToLoginEgressRule2:
+    Type: AWS::EC2::SecurityGroupEgress
+    Condition: CreateFSxLustreResources
+    Properties:
+      GroupId: !Ref FSxLustreSecurityGroup
+      IpProtocol: tcp
+      FromPort: 1018
+      ToPort: 1023
+      DestinationSecurityGroupId: !Ref LoginNodeSecurityGroup
+      Description: Allow Lustre traffic to login nodes
+
+  # Allow FSx Lustre to send traffic back to compute nodes
+  FSxLustreToComputeEgressRule1:
+    Type: AWS::EC2::SecurityGroupEgress
+    Condition: CreateFSxLustreResources
+    Properties:
+      GroupId: !Ref FSxLustreSecurityGroup
+      IpProtocol: tcp
+      FromPort: 988
+      ToPort: 988
+      DestinationSecurityGroupId: !Ref ComputeNodeSecurityGroup
+      Description: Allow Lustre traffic to compute nodes
+
+  FSxLustreToComputeEgressRule2:
+    Type: AWS::EC2::SecurityGroupEgress
+    Condition: CreateFSxLustreResources
+    Properties:
+      GroupId: !Ref FSxLustreSecurityGroup
+      IpProtocol: tcp
+      FromPort: 1018
+      ToPort: 1023
+      DestinationSecurityGroupId: !Ref ComputeNodeSecurityGroup
+      Description: Allow Lustre traffic to compute nodes
+
+Outputs:
+  ClusterSecurityGroupId:
+    Description: SG ID for PCS cluster - shared by controller, compute, and login nodes
+    Value: !Ref PCSClusterSecurityGroup
+
+  LoginNodeSecurityGroupId:
+    Description: SG ID for PCS login nodes
+    Value: !Ref LoginNodeSecurityGroup
+
+  ComputeNodeSecurityGroupId:
+    Description: SG ID for PCS compute nodes
+    Value: !Ref ComputeNodeSecurityGroup
+
+  EFSSecurityGroupId:
+    Description: SG ID for Amazon EFS file system (only if created)
+    Condition: CreateEFSResources
+    Value: !Ref EFSSecurityGroup
+
+  FSxLustreSecurityGroupId:
+    Description: SG ID for FSx for Lustre file system (only if created)
+    Condition: CreateFSxLustreResources
+    Value: !Ref FSxLustreSecurityGroup
+
+  PCSVpcEndpointSecurityGroupId:
+    Description: SG ID for AWS PCS VPC endpoint
+    Value: !Ref PCSVpcEndpointSecurityGroup
