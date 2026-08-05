@@ -1,0 +1,286 @@
+---
+AWSTemplateFormatVersion: '2010-09-09'
+Description: AWS PCS private cluster with login node group and compute node group
+
+### This template creates an AWS Parallel Computing Service (PCS) cluster with:
+### - PCS Cluster resource
+### - Login Node Group with 1 static instance
+### - Compute Node Group with 0-4 hpc8a instances (auto-scaling)
+###
+### Prerequisites:
+### - pcs-private-networking stack must be deployed
+### - pcs-private-launch-template stack must be deployed
+### - (Optional) Storage stacks (EFS, FSx Lustre, FSx ONTAP)
+###
+### Deploy this stack after networking, storage, and launch template stacks
+
+Metadata:
+  AWS::CloudFormation::Interface:
+    ParameterGroups:
+      - Label:
+          default: Stack References
+        Parameters:
+          - NetworkingStackName
+          - LaunchTemplateStackName
+      - Label:
+          default: Cluster Configuration
+        Parameters:
+          - ClusterName
+          - ClusterSize
+          - SlurmVersion
+          - EnableAccounting
+          - AccountingPolicyEnforcement
+      - Label:
+          default: Login Node Group Configuration
+        Parameters:
+          - LoginNodeInstanceType
+      - Label:
+          default: Compute Node Group Configuration
+        Parameters:
+          - ComputeNodeInstanceType
+          - ComputeNodeMinCount
+          - ComputeNodeMaxCount
+
+Parameters:
+  NetworkingStackName:
+    Description: Name of the pcs-private-networking CloudFormation stack
+    Type: String
+    Default: 'pcs-private-networking'
+
+  LaunchTemplateStackName:
+    Description: Name of the pcs-private-launch-template CloudFormation stack
+    Type: String
+    Default: 'pcs-private-launch-template'
+
+  ClusterName:
+    Description: Name for the PCS cluster (alphanumeric and hyphens only)
+    Type: String
+    Default: 'private-hpc-cluster'
+    AllowedPattern: '^[a-zA-Z0-9-]+$'
+    ConstraintDescription: Must contain only alphanumeric characters and hyphens
+
+  ClusterSize:
+    Description: Size of the PCS cluster (SMALL=up to 100 instances, MEDIUM=up to 500, LARGE=up to 5000)
+    Type: String
+    Default: SMALL
+    AllowedValues:
+      - SMALL
+      - MEDIUM
+      - LARGE
+
+  SlurmVersion:
+    Description: Slurm version for the cluster (must match the version in your AMI)
+    Type: String
+    Default: '25.11'
+    AllowedValues:
+      - '25.11'
+      - '25.05'
+
+  EnableAccounting:
+    Description: Enable Slurm accounting database to monitor cluster usage, manage access control, and enforce resource limits
+    Type: String
+    Default: 'enabled'
+    AllowedValues:
+      - 'enabled'
+      - 'disabled'
+
+  AccountingPolicyEnforcement:
+    Description: Slurm accounting policies to enforce (associations=user/account associations, limits=resource limits, safe=prevent invalid records)
+    Type: String
+    Default: 'associations,limits,safe'
+    AllowedValues:
+      - 'none'
+      - 'associations,limits,safe'
+
+  LoginNodeInstanceType:
+    Description: EC2 instance type for login nodes
+    Type: String
+    Default: c6a.xlarge
+
+  ComputeNodeInstanceType:
+    Description: EC2 instance type for compute nodes (should support EFA)
+    Type: String
+    Default: hpc8a.96xlarge
+
+  ComputeNodeMinCount:
+    Description: Minimum number of compute nodes (0 for no minimum)
+    Type: Number
+    Default: 0
+    MinValue: 0
+    MaxValue: 4
+
+  ComputeNodeMaxCount:
+    Description: Maximum number of compute nodes
+    Type: Number
+    Default: 4
+    MinValue: 1
+    MaxValue: 4
+
+Conditions:
+  IsAccountingEnabled: !Equals [!Ref EnableAccounting, 'enabled']
+  SetAccountingPolicy: !Not [!Equals [!Ref AccountingPolicyEnforcement, 'none']]
+
+Resources:
+  # PCS Cluster
+  PCSCluster:
+    Type: AWS::PCS::Cluster
+    Properties:
+      Name: !Ref ClusterName
+      Scheduler:
+        Type: SLURM
+        Version: !Ref SlurmVersion
+      Networking:
+        SubnetIds:
+          - Fn::ImportValue: !Sub '${NetworkingStackName}-PrivateSubnet1Id'
+        SecurityGroupIds:
+          - Fn::ImportValue: !Sub '${NetworkingStackName}-ClusterSecurityGroupId'
+      Size: !Ref ClusterSize
+      SlurmConfiguration: !If
+        - IsAccountingEnabled
+        - Accounting:
+            Mode: STANDARD
+            DefaultPurgeTimeInDays: 30
+          SlurmCustomSettings: !If
+            - SetAccountingPolicy
+            - - ParameterName: AccountingStorageEnforce
+                ParameterValue: !Ref AccountingPolicyEnforcement
+            - []
+        - !Ref AWS::NoValue
+
+  # Login Node Group
+  LoginComputeNodeGroup:
+    Type: AWS::PCS::ComputeNodeGroup
+    DependsOn: PCSInstanceProfile
+    Properties:
+      ClusterId: !GetAtt PCSCluster.Id
+      Name: login-nodes
+      AmiId:
+        Fn::ImportValue: !Sub '${LaunchTemplateStackName}-LoginAmiId'
+      SubnetIds:
+        - Fn::ImportValue: !Sub '${NetworkingStackName}-PrivateSubnet1Id'
+      InstanceConfigs:
+        - InstanceType: !Ref LoginNodeInstanceType
+      ScalingConfiguration:
+        MinInstanceCount: 1
+        MaxInstanceCount: 1
+      CustomLaunchTemplate:
+        TemplateId:
+          Fn::ImportValue: !Sub '${LaunchTemplateStackName}-LoginLaunchTemplateId'
+        Version: 1
+      IamInstanceProfileArn: !GetAtt PCSInstanceProfile.Arn
+
+  # Compute Node Group
+  ComputeNodeGroup:
+    Type: AWS::PCS::ComputeNodeGroup
+    DependsOn: PCSInstanceProfile
+    Properties:
+      ClusterId: !GetAtt PCSCluster.Id
+      Name: compute-nodes
+      AmiId:
+        Fn::ImportValue: !Sub '${LaunchTemplateStackName}-ComputeAmiId'
+      SubnetIds:
+        - Fn::ImportValue: !Sub '${NetworkingStackName}-PrivateSubnet1Id'
+      InstanceConfigs:
+        - InstanceType: !Ref ComputeNodeInstanceType
+      ScalingConfiguration:
+        MinInstanceCount: !Ref ComputeNodeMinCount
+        MaxInstanceCount: !Ref ComputeNodeMaxCount
+      CustomLaunchTemplate:
+        TemplateId:
+          Fn::ImportValue: !Sub '${LaunchTemplateStackName}-ComputeLaunchTemplateId'
+        Version: 1
+      IamInstanceProfileArn: !GetAtt PCSInstanceProfile.Arn
+
+  # Compute Queue
+  ComputeQueue:
+    Type: AWS::PCS::Queue
+    Properties:
+      ClusterId: !GetAtt PCSCluster.Id
+      Name: compute
+      ComputeNodeGroupConfigurations:
+        - ComputeNodeGroupId: !GetAtt ComputeNodeGroup.Id
+
+  # IAM Role for PCS Instances
+  PCSInstanceRole:
+    Type: AWS::IAM::Role
+    Properties:
+      RoleName: !Sub 'AWSPCS-${AWS::StackName}-role'
+      Description: IAM role for AWS PCS compute node group instances
+      AssumeRolePolicyDocument:
+        Version: '2012-10-17'
+        Statement:
+          - Effect: Allow
+            Principal:
+              Service: ec2.amazonaws.com
+            Action: sts:AssumeRole
+      ManagedPolicyArns:
+        - !Sub 'arn:${AWS::Partition}:iam::aws:policy/CloudWatchAgentServerPolicy'
+        - !Sub 'arn:${AWS::Partition}:iam::aws:policy/AWSPCSComputeNodePolicy'
+      Tags:
+        - Key: Name
+          Value: !Sub '${AWS::StackName}-pcs-instance-role'
+        - Key: Stack
+          Value: !Ref AWS::StackId
+
+  # IAM Instance Profile
+  PCSInstanceProfile:
+    Type: AWS::IAM::InstanceProfile
+    Properties:
+      InstanceProfileName: !Sub 'AWSPCS-${AWS::StackName}'
+      Roles:
+        - !Ref PCSInstanceRole
+
+Outputs:
+  ClusterId:
+    Description: ID of the PCS Cluster
+    Value: !GetAtt PCSCluster.Id
+    Export:
+      Name: !Sub '${AWS::StackName}-ClusterId'
+
+  ClusterArn:
+    Description: ARN of the PCS Cluster
+    Value: !GetAtt PCSCluster.Arn
+    Export:
+      Name: !Sub '${AWS::StackName}-ClusterArn'
+
+  ClusterName:
+    Description: Name of the PCS Cluster
+    Value: !Ref ClusterName
+    Export:
+      Name: !Sub '${AWS::StackName}-ClusterName'
+
+  ClusterStatus:
+    Description: Status of the PCS Cluster
+    Value: !GetAtt PCSCluster.Status
+    Export:
+      Name: !Sub '${AWS::StackName}-ClusterStatus'
+
+  LoginNodeGroupId:
+    Description: ID of the Login Node Group
+    Value: !GetAtt LoginComputeNodeGroup.Id
+    Export:
+      Name: !Sub '${AWS::StackName}-LoginNodeGroupId'
+
+  ComputeNodeGroupId:
+    Description: ID of the Compute Node Group
+    Value: !GetAtt ComputeNodeGroup.Id
+    Export:
+      Name: !Sub '${AWS::StackName}-ComputeNodeGroupId'
+
+  ComputeQueueId:
+    Description: ID of the Compute Queue
+    Value: !GetAtt ComputeQueue.Id
+    Export:
+      Name: !Sub '${AWS::StackName}-ComputeQueueId'
+
+  PCSInstanceRoleArn:
+    Description: ARN of the PCS Instance IAM Role
+    Value: !GetAtt PCSInstanceRole.Arn
+    Export:
+      Name: !Sub '${AWS::StackName}-PCSInstanceRoleArn'
+
+  PCSInstanceProfileArn:
+    Description: ARN of the PCS Instance Profile
+    Value: !GetAtt PCSInstanceProfile.Arn
+    Export:
+      Name: !Sub '${AWS::StackName}-PCSInstanceProfileArn'

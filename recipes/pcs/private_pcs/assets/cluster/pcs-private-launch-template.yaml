@@ -1,0 +1,330 @@
+---
+AWSTemplateFormatVersion: '2010-09-09'
+Description: EC2 Launch Templates for AWS PCS private cluster (MIME multipart format required by PCS)
+
+### This template creates TWO EC2 Launch Templates with MIME multipart user data:
+### 1. Compute Node Launch Template - Mounts shared storage (EFS, FSx Lustre)
+### 2. Login Node Launch Template - Mounts shared storage (EFS, FSx Lustre)
+###
+### IMPORTANT: User data MUST be in MIME multipart format for AWS PCS
+### See: https://docs.aws.amazon.com/pcs/latest/userguide/working-with_custom-launch-template.html
+
+Metadata:
+  AWS::CloudFormation::Interface:
+    ParameterGroups:
+      - Label:
+          default: Networking Stack Reference
+        Parameters:
+          - NetworkingStackName
+      - Label:
+          default: Storage Configuration
+        Parameters:
+          - EFSStackName
+          - EFSMountDirectory
+          - FSxLustreStackName
+          - FSxLMountDirectory
+      - Label:
+          default: AMI Configuration
+        Parameters:
+          - LoginAmiId
+          - ComputeAmiId
+      - Label:
+          default: Operating System
+        Parameters:
+          - OperatingSystem
+      - Label:
+          default: SSH Access
+        Parameters:
+          - KeyName
+
+Parameters:
+  NetworkingStackName:
+    Description: Name of the pcs-private-networking CloudFormation stack
+    Type: String
+    Default: 'pcs-private-networking'
+
+  EFSStackName:
+    Description: (Optional) Name of the pcs-private-efs CloudFormation stack
+    Type: String
+    Default: ''
+
+  EFSMountDirectory:
+    Description: Mount point for EFS file system (e.g., /home)
+    Type: String
+    Default: /home
+
+  FSxLustreStackName:
+    Description: (Optional) Name of the pcs-private-fsxl CloudFormation stack
+    Type: String
+    Default: ''
+
+  FSxLMountDirectory:
+    Description: Mount point for FSx Lustre file system (e.g., /fsx)
+    Type: String
+    Default: /fsx
+
+  LoginAmiId:
+    Description: AMI ID for login nodes (AWS PCS sample AMI)
+    Type: AWS::EC2::Image::Id
+
+  ComputeAmiId:
+    Description: AMI ID for compute nodes (AWS PCS sample AMI)
+    Type: AWS::EC2::Image::Id
+  
+  OperatingSystem:
+    Description: Operating system for the instances (determines package manager and commands)
+    Type: String
+    Default: Amazon Linux 2023
+    AllowedValues:
+      - Amazon Linux 2023
+      - Ubuntu
+
+  KeyName:
+    Description: EC2 Key Pair for SSH access to login nodes
+    Type: AWS::EC2::KeyPair::KeyName
+
+Conditions:
+  UseEFS: !Not [!Equals [!Ref EFSStackName, '']]
+  UseFSxLustre: !Not [!Equals [!Ref FSxLustreStackName, '']]
+  IsUbuntu: !Equals [!Ref OperatingSystem, 'Ubuntu']
+
+Resources:
+  # Compute Node Launch Template
+  ComputeLaunchTemplate:
+    Type: AWS::EC2::LaunchTemplate
+    Properties:
+      LaunchTemplateName: !Sub '${AWS::StackName}-compute'
+      LaunchTemplateData:
+        ImageId: !Ref ComputeAmiId
+        SecurityGroupIds:
+          - Fn::ImportValue: !Sub '${NetworkingStackName}-ComputeNodeSecurityGroupId'
+        UserData:
+          Fn::Base64: !Sub
+            - |
+              Content-Type: multipart/mixed; boundary="==MYBOUNDARY=="
+              MIME-Version: 1.0
+
+              --==MYBOUNDARY==
+              Content-Type: text/x-shellscript; charset="us-ascii"
+
+              #!/bin/bash
+              set -e
+              exec > >(tee /var/log/pcs-lt-userdata-setup.log) 2>&1
+
+              echo "Compute node setup starting at $(date)"
+
+              ${EFSMountScript}
+              ${FSxLMountScript}
+
+              echo "Compute node setup completed at $(date)"
+
+              --==MYBOUNDARY==--
+            - EFSMountScript: !If
+                - UseEFS
+                - !Sub
+                  - |
+                    # Configure EFS mount (preserve existing directory content)
+                    echo -e "\n=== CONFIGURING EFS MOUNT ===" >> /var/log/pcs-lt-userdata-setup.log
+                    echo "Creating ${EFSMountDirectory} directory..." >> /var/log/pcs-lt-userdata-setup.log
+                    sudo mkdir -p ${EFSMountDirectory}
+                    echo "${EFSMountDirectory} directory created" >> /var/log/pcs-lt-userdata-setup.log
+
+                    # Backup existing content if directory is not empty
+                    if [ "$(sudo ls -A ${EFSMountDirectory})" ]; then
+                        echo "Backing up existing content in ${EFSMountDirectory}..." >> /var/log/pcs-lt-userdata-setup.log
+                        sudo mkdir -p /tmp${EFSMountDirectory}
+                        sudo rsync -a ${EFSMountDirectory}/ /tmp${EFSMountDirectory}/
+                        echo "Backed up existing content in ${EFSMountDirectory}" >> /var/log/pcs-lt-userdata-setup.log
+                    fi
+
+                    # Add to fstab and mount (with user ownership)
+                    echo "Mounting EFS..." >> /var/log/pcs-lt-userdata-setup.log
+                    sudo mount -t nfs4 -o nfsvers=4.1,rsize=1048576,wsize=1048576,hard,timeo=600,retrans=2,noresvport ${EFSDns}:/ ${EFSMountDirectory}
+                    echo "EFS mounted with uid=1000, gid=1000 ownership" >> /var/log/pcs-lt-userdata-setup.log
+
+                    # Restore backed up content (without overwriting existing files on EFS)
+                    if [ -d /tmp${EFSMountDirectory} ]; then
+                        echo "Restoring backed up content to ${EFSMountDirectory}..." >> /var/log/pcs-lt-userdata-setup.log
+                        sudo rsync -a --ignore-existing /tmp${EFSMountDirectory}/ ${EFSMountDirectory}/
+                        sudo rm -rf /tmp${EFSMountDirectory}
+                        echo "Restored backed up content to ${EFSMountDirectory}" >> /var/log/pcs-lt-userdata-setup.log
+                    fi
+
+                    echo "Adding to /etc/fstab..." >> /var/log/pcs-lt-userdata-setup.log
+                    echo "${EFSDns}:/ ${EFSMountDirectory} nfs4 nfsvers=4.1,rsize=1048576,wsize=1048576,hard,timeo=600,retrans=2,noresvport,uid=1000,gid=1000 0 0" | sudo tee -a /etc/fstab
+                    echo "Added to /etc/fstab" >> /var/log/pcs-lt-userdata-setup.log
+                  - EFSDns:
+                      Fn::ImportValue: !Sub '${EFSStackName}-EFSFileSystemDNS'
+                - '# EFS not configured'
+              FSxLMountScript: !If
+                - UseFSxLustre
+                - !Sub
+                  - |
+                    # Configure FSx Lustre mount (Lustre client must be pre-installed in AMI)
+                    ${MountUser}
+                    echo -e "\n=== CONFIGURING FSxL MOUNT ===" >> /var/log/pcs-lt-userdata-setup.log
+                    echo "Verifying Lustre client is installed..." >> /var/log/pcs-lt-userdata-setup.log
+                    if ! command -v mount.lustre &> /dev/null; then
+                        echo "ERROR: Lustre client not found. Please pre-install Lustre client in your AMI." >> /var/log/pcs-lt-userdata-setup.log
+                        exit 1
+                    fi
+                    echo "Lustre client is installed" >> /var/log/pcs-lt-userdata-setup.log
+                    
+                    echo "Creating ${FSxLMountDirectory} directory..." >> /var/log/pcs-lt-userdata-setup.log
+                    sudo mkdir -p ${FSxLMountDirectory}
+                    echo "Created ${FSxLMountDirectory} directory" >> /var/log/pcs-lt-userdata-setup.log
+ 
+                    echo "Mounting FSx Lustre at ${FSxLMountDirectory}..." >> /var/log/pcs-lt-userdata-setup.log
+                    sudo mount -t lustre -o relatime,flock ${FSxLDns}@tcp:/${FSxLMountName} ${FSxLMountDirectory}
+                    echo "Mounted FSx Lustre at ${FSxLMountDirectory}" >> /var/log/pcs-lt-userdata-setup.log
+
+                    echo "Adding to /etc/fstab..." >> /var/log/pcs-lt-userdata-setup.log
+                    echo "${FSxLDns}@tcp:/${FSxLMountName} ${FSxLMountDirectory} lustre defaults,relatime,flock,_netdev,x-systemd.automount,x-systemd.requires=configure-efa-fsx-lustre-client.service,x-systemd.after=configure-efa-fsx-lustre-client.service 0 0" | sudo tee -a /etc/fstab
+                    echo "Added to /etc/fstab" >> /var/log/pcs-lt-userdata-setup.log
+
+                    echo "Configuring $MOUNT_USER permissions..." >> /var/log/pcs-lt-userdata-setup.log
+                    sudo chown -R $MOUNT_USER:$MOUNT_USER ${FSxLMountDirectory}
+                    echo "FSx Lustre mounted successfully with $MOUNT_USER ownership" >> /var/log/pcs-lt-userdata-setup.log
+                  - MountUser: !If
+                      - IsUbuntu
+                      - 'MOUNT_USER=ubuntu'
+                      - 'MOUNT_USER=ec2-user'
+                    FSxLDns:
+                      Fn::ImportValue: !Sub '${FSxLustreStackName}-FSxLustreFileSystemDNS'
+                    FSxLMountName:
+                      Fn::ImportValue: !Sub '${FSxLustreStackName}-FSxLustreMountName'
+                - '# FSx Lustre not configured'
+
+  # Login Node Launch Template
+  LoginLaunchTemplate:
+    Type: AWS::EC2::LaunchTemplate
+    Properties:
+      LaunchTemplateName: !Sub '${AWS::StackName}-login'
+      LaunchTemplateData:
+        ImageId: !Ref LoginAmiId
+        KeyName: !Ref KeyName
+        SecurityGroupIds:
+          - Fn::ImportValue: !Sub '${NetworkingStackName}-LoginNodeSecurityGroupId'
+        UserData:
+          Fn::Base64: !Sub
+            - |
+              Content-Type: multipart/mixed; boundary="==MYBOUNDARY=="
+              MIME-Version: 1.0
+
+              --==MYBOUNDARY==
+              Content-Type: text/x-shellscript; charset="us-ascii"
+
+              #!/bin/bash
+              set -e
+              exec > >(tee /var/log/pcs-userdata.log) 2>&1
+
+              echo "Login node setup starting at $(date)"
+
+              ${EFSMountScript}
+              ${FSxLMountScript}
+
+              echo "Login node setup completed at $(date)"
+
+              --==MYBOUNDARY==--
+            - EFSMountScript: !If
+                - UseEFS
+                - !Sub
+                  - |
+                    # Configure EFS mount (preserve existing directory content)
+                    echo -e "\n=== CONFIGURING EFS MOUNT ===" >> /var/log/pcs-lt-userdata-setup.log
+                    
+                    echo "Creating ${EFSMountDirectory} directory..." >> /var/log/pcs-lt-userdata-setup.log
+                    sudo mkdir -p ${EFSMountDirectory}
+                    echo "${EFSMountDirectory} directory created" >> /var/log/pcs-lt-userdata-setup.log
+
+                    # Backup existing content if directory is not empty
+                    if [ "$(sudo ls -A ${EFSMountDirectory})" ]; then
+                        echo "Backing up existing content in ${EFSMountDirectory}..." >> /var/log/pcs-lt-userdata-setup.log
+                        sudo mkdir -p /tmp${EFSMountDirectory}
+                        sudo rsync -a ${EFSMountDirectory}/ /tmp${EFSMountDirectory}/
+                        echo "Backed up existing content in ${EFSMountDirectory}" >> /var/log/pcs-lt-userdata-setup.log
+                    fi
+
+                    # Add to fstab and mount (with user ownership)
+                    echo "Mounting EFS..." >> /var/log/pcs-lt-userdata-setup.log
+                    sudo mount -t nfs4 -o nfsvers=4.1,rsize=1048576,wsize=1048576,hard,timeo=600,retrans=2,noresvport ${EFSDns}:/ ${EFSMountDirectory}
+                    echo "EFS mounted with uid=1000, gid=1000 ownership" >> /var/log/pcs-lt-userdata-setup.log
+
+                    # Restore backed up content (without overwriting existing files on EFS)
+                    if [ -d /tmp${EFSMountDirectory} ]; then
+                        echo "Restoring backed up content to ${EFSMountDirectory}..." >> /var/log/pcs-lt-userdata-setup.log
+                        sudo rsync -a --ignore-existing /tmp${EFSMountDirectory}/ ${EFSMountDirectory}/
+                        sudo rm -rf /tmp${EFSMountDirectory}
+                        echo "Restored backed up content to ${EFSMountDirectory}" >> /var/log/pcs-lt-userdata-setup.log
+                    fi
+
+                    echo "Adding to /etc/fstab..." >> /var/log/pcs-lt-userdata-setup.log
+                    echo "${EFSDns}:/ ${EFSMountDirectory} nfs4 nfsvers=4.1,rsize=1048576,wsize=1048576,hard,timeo=600,retrans=2,noresvport,uid=1000,gid=1000 0 0" | sudo tee -a /etc/fstab
+                    echo "Added to /etc/fstab" >> /var/log/pcs-lt-userdata-setup.log
+                  - EFSDns:
+                      Fn::ImportValue: !Sub '${EFSStackName}-EFSFileSystemDNS'
+                - '# EFS not configured'
+              FSxLMountScript: !If
+                - UseFSxLustre
+                - !Sub
+                  - |
+                    # Configure FSx Lustre mount (Lustre client must be pre-installed in AMI)
+                    ${MountUser}
+                    echo -e "\n=== CONFIGURING FSxL MOUNT ===" >> /var/log/pcs-lt-userdata-setup.log
+                    echo "Verifying Lustre client is installed..." >> /var/log/pcs-lt-userdata-setup.log
+                    if ! command -v mount.lustre &> /dev/null; then
+                        echo "ERROR: Lustre client not found. Please pre-install Lustre client in your AMI." >> /var/log/pcs-lt-userdata-setup.log
+                        exit 1
+                    fi
+                    echo "Lustre client is installed" >> /var/log/pcs-lt-userdata-setup.log
+                    
+                    echo "Creating ${FSxLMountDirectory} directory..." >> /var/log/pcs-lt-userdata-setup.log
+                    sudo mkdir -p ${FSxLMountDirectory}
+                    echo "Created ${FSxLMountDirectory} directory" >> /var/log/pcs-lt-userdata-setup.log
+ 
+                    echo "Mounting FSx Lustre at ${FSxLMountDirectory}..." >> /var/log/pcs-lt-userdata-setup.log
+                    sudo mount -t lustre -o relatime,flock ${FSxLDns}@tcp:/${FSxLMountName} ${FSxLMountDirectory}
+                    echo "Mounted FSx Lustre at ${FSxLMountDirectory}" >> /var/log/pcs-lt-userdata-setup.log
+
+                    echo "Adding to /etc/fstab..." >> /var/log/pcs-lt-userdata-setup.log
+                    echo "${FSxLDns}@tcp:/${FSxLMountName} ${FSxLMountDirectory} lustre defaults,relatime,flock,_netdev,x-systemd.automount,x-systemd.requires=configure-efa-fsx-lustre-client.service,x-systemd.after=configure-efa-fsx-lustre-client.service 0 0" | sudo tee -a /etc/fstab
+                    echo "Added to /etc/fstab" >> /var/log/pcs-lt-userdata-setup.log
+
+                    echo "Configuring $MOUNT_USER permissions..." >> /var/log/pcs-lt-userdata-setup.log
+                    sudo chown -R $MOUNT_USER:$MOUNT_USER ${FSxLMountDirectory}
+                    echo "FSx Lustre mounted successfully with $MOUNT_USER ownership" >> /var/log/pcs-lt-userdata-setup.log
+
+                  - MountUser: !If
+                      - IsUbuntu
+                      - 'MOUNT_USER=ubuntu'
+                      - 'MOUNT_USER=ec2-user'
+                    FSxLDns:
+                      Fn::ImportValue: !Sub '${FSxLustreStackName}-FSxLustreFileSystemDNS'
+                    FSxLMountName:
+                      Fn::ImportValue: !Sub '${FSxLustreStackName}-FSxLustreMountName'
+                - '# FSx Lustre not configured'
+
+Outputs:
+  ComputeLaunchTemplateId:
+    Description: ID of the Compute Node Launch Template
+    Value: !Ref ComputeLaunchTemplate
+    Export:
+      Name: !Sub '${AWS::StackName}-ComputeLaunchTemplateId'
+
+  LoginLaunchTemplateId:
+    Description: ID of the Login Node Launch Template
+    Value: !Ref LoginLaunchTemplate
+    Export:
+      Name: !Sub '${AWS::StackName}-LoginLaunchTemplateId'
+
+  ComputeAmiId:
+    Description: AMI ID for Compute Nodes
+    Value: !Ref ComputeAmiId
+    Export:
+      Name: !Sub '${AWS::StackName}-ComputeAmiId'
+
+  LoginAmiId:
+    Description: AMI ID for Login Nodes
+    Value: !Ref LoginAmiId
+    Export:
+      Name: !Sub '${AWS::StackName}-LoginAmiId'

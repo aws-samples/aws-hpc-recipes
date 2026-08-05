@@ -1,0 +1,245 @@
+---
+AWSTemplateFormatVersion: '2010-09-09'
+Description: VPC and networking infrastructure for AWS PCS private cluster with no internet access.
+
+### This template creates a fully private VPC and subnets for AWS Parallel Computing Service (PCS) clusters with no internet connectivity.
+### The VPC supports 1, 2, or 3 private subnets across user-selected Availability Zones, with no Internet Gateway or NAT Gateway.
+### Private subnets are configured for isolated workloads that communicate only within the VPC or through VPC endpoints.
+
+Metadata:
+  AWS::CloudFormation::Interface:
+    ParameterGroups:
+      - Label:
+          default: VPC Configuration
+        Parameters:
+          - VpcCIDR
+          - StackName
+      - Label:
+          default: Subnet Configuration
+        Parameters:
+          - NumberOfSubnets
+          - Subnet1AZ
+          - Subnet1CIDR
+          - Subnet2AZ
+          - Subnet2CIDR
+          - Subnet3AZ
+          - Subnet3CIDR
+
+Parameters:
+  StackName:
+    Description: Parent stack name for resource naming
+    Type: String
+
+  VpcCIDR:
+    Description: CIDR block for the VPC (e.g., 10.0.0.0/16)
+    Type: String
+    Default: 10.0.0.0/16
+    AllowedPattern: '((\d{1,3})\.){3}\d{1,3}/\d{1,2}'
+    ConstraintDescription: Must be a valid IP CIDR range of the form x.x.x.x/x
+
+  NumberOfSubnets:
+    Description: Number of private subnets to create (1, 2, or 3)
+    Type: Number
+    Default: 1
+    MinValue: 1
+    MaxValue: 3
+
+  Subnet1AZ:
+    Description: Availability Zone for the first private subnet
+    Type: AWS::EC2::AvailabilityZone::Name
+
+  Subnet1CIDR:
+    Description: CIDR block for the first private subnet (e.g., 10.0.0.0/20)
+    Type: String
+    Default: 10.0.0.0/20
+    AllowedPattern: '((\d{1,3})\.){3}\d{1,3}/\d{1,2}'
+    ConstraintDescription: Must be a valid IP CIDR range of the form x.x.x.x/x
+
+  Subnet2AZ:
+    Description: Availability Zone for the second private subnet (required if NumberOfSubnets >= 2, e.g., ap-northeast-1a)
+    Type: String
+    Default: ''
+
+  Subnet2CIDR:
+    Description: CIDR block for the second private subnet (required if NumberOfSubnets is 2 or 3, e.g., 10.0.16.0/20)
+    Type: String
+    Default: 10.0.16.0/20
+    AllowedPattern: '(((\d{1,3})\.){3}\d{1,3}/\d{1,2})?'
+    ConstraintDescription: Must be a valid IP CIDR range of the form x.x.x.x/x or empty
+
+  Subnet3AZ:
+    Description: Availability Zone for the third private subnet (required if NumberOfSubnets = 3, e.g., ap-northeast-1a)
+    Type: String
+    Default: ''
+
+  Subnet3CIDR:
+    Description: CIDR block for the third private subnet (required if NumberOfSubnets is 3, e.g., 10.0.32.0/20)
+    Type: String
+    Default: 10.0.32.0/20
+    AllowedPattern: '(((\d{1,3})\.){3}\d{1,3}/\d{1,2})?'
+    ConstraintDescription: Must be a valid IP CIDR range of the form x.x.x.x/x or empty
+
+Conditions:
+  CreateSubnet2: !Or
+    - !Equals [!Ref NumberOfSubnets, 2]
+    - !Equals [!Ref NumberOfSubnets, 3]
+  CreateSubnet3: !Equals [!Ref NumberOfSubnets, 3]
+
+Resources:
+  # VPC
+  Vpc:
+    Type: AWS::EC2::VPC
+    Properties:
+      CidrBlock: !Ref VpcCIDR
+      EnableDnsHostnames: true
+      EnableDnsSupport: true
+      Tags:
+        - Key: Name
+          Value: !Sub '${StackName}-PrivatePcsVpc'
+        - Key: Stack
+          Value: !Ref AWS::StackId
+
+  # Private Subnet 1
+  PrivateSubnet1:
+    Type: AWS::EC2::Subnet
+    Properties:
+      VpcId: !Ref Vpc
+      AvailabilityZone: !Ref Subnet1AZ
+      CidrBlock: !Ref Subnet1CIDR
+      MapPublicIpOnLaunch: false
+      Tags:
+        - Key: Name
+          Value: !Sub '${StackName}-PrivateSubnet1-${Subnet1AZ}'
+        - Key: Stack
+          Value: !Ref AWS::StackId
+
+  # Private Subnet 2 (conditional)
+  PrivateSubnet2:
+    Type: AWS::EC2::Subnet
+    Condition: CreateSubnet2
+    Properties:
+      VpcId: !Ref Vpc
+      AvailabilityZone: !Ref Subnet2AZ
+      CidrBlock: !Ref Subnet2CIDR
+      MapPublicIpOnLaunch: false
+      Tags:
+        - Key: Name
+          Value: !Sub '${StackName}-PrivateSubnet2-${Subnet2AZ}'
+        - Key: Stack
+          Value: !Ref AWS::StackId
+
+  # Private Subnet 3 (conditional)
+  PrivateSubnet3:
+    Type: AWS::EC2::Subnet
+    Condition: CreateSubnet3
+    Properties:
+      VpcId: !Ref Vpc
+      AvailabilityZone: !Ref Subnet3AZ
+      CidrBlock: !Ref Subnet3CIDR
+      MapPublicIpOnLaunch: false
+      Tags:
+        - Key: Name
+          Value: !Sub '${StackName}-PrivateSubnet3-${Subnet3AZ}'
+        - Key: Stack
+          Value: !Ref AWS::StackId
+
+  # Route Table for Subnet 1
+  RouteTablePrivate1:
+    Type: AWS::EC2::RouteTable
+    Properties:
+      VpcId: !Ref Vpc
+      Tags:
+        - Key: Name
+          Value: !Sub '${StackName}-PrivateRouteTable1'
+        - Key: Stack
+          Value: !Ref AWS::StackId
+
+  # Route Table for Subnet 2 (conditional)
+  RouteTablePrivate2:
+    Type: AWS::EC2::RouteTable
+    Condition: CreateSubnet2
+    Properties:
+      VpcId: !Ref Vpc
+      Tags:
+        - Key: Name
+          Value: !Sub '${StackName}-PrivateRouteTable2'
+        - Key: Stack
+          Value: !Ref AWS::StackId
+
+  # Route Table for Subnet 3 (conditional)
+  RouteTablePrivate3:
+    Type: AWS::EC2::RouteTable
+    Condition: CreateSubnet3
+    Properties:
+      VpcId: !Ref Vpc
+      Tags:
+        - Key: Name
+          Value: !Sub '${StackName}-PrivateRouteTable3'
+        - Key: Stack
+          Value: !Ref AWS::StackId
+
+  # Route Table Association for Subnet 1
+  RouteAssociationPrivate1:
+    Type: AWS::EC2::SubnetRouteTableAssociation
+    Properties:
+      SubnetId: !Ref PrivateSubnet1
+      RouteTableId: !Ref RouteTablePrivate1
+
+  # Route Table Association for Subnet 2 (conditional)
+  RouteAssociationPrivate2:
+    Type: AWS::EC2::SubnetRouteTableAssociation
+    Condition: CreateSubnet2
+    Properties:
+      SubnetId: !Ref PrivateSubnet2
+      RouteTableId: !Ref RouteTablePrivate2
+
+  # Route Table Association for Subnet 3 (conditional)
+  RouteAssociationPrivate3:
+    Type: AWS::EC2::SubnetRouteTableAssociation
+    Condition: CreateSubnet3
+    Properties:
+      SubnetId: !Ref PrivateSubnet3
+      RouteTableId: !Ref RouteTablePrivate3
+
+Outputs:
+  VpcId:
+    Description: ID of the VPC
+    Value: !Ref Vpc
+
+  PrivateSubnet1Id:
+    Description: ID of the first private subnet
+    Value: !Ref PrivateSubnet1
+
+  PrivateSubnet1AZ:
+    Description: Availability Zone of the first private subnet
+    Value: !Ref Subnet1AZ
+
+  PrivateSubnet2Id:
+    Description: ID of the second private subnet (only if created)
+    Condition: CreateSubnet2
+    Value: !Ref PrivateSubnet2
+
+  PrivateSubnet2AZ:
+    Description: Availability Zone of the second private subnet (only if created)
+    Condition: CreateSubnet2
+    Value: !Ref Subnet2AZ
+
+  PrivateSubnet3Id:
+    Description: ID of the third private subnet (only if created)
+    Condition: CreateSubnet3
+    Value: !Ref PrivateSubnet3
+
+  PrivateSubnet3AZ:
+    Description: Availability Zone of the third private subnet (only if created)
+    Condition: CreateSubnet3
+    Value: !Ref Subnet3AZ
+
+  PrivateSubnetIds:
+    Description: Comma-separated list of private subnet IDs
+    Value: !If
+      - CreateSubnet3
+      - !Sub '${PrivateSubnet1},${PrivateSubnet2},${PrivateSubnet3}'
+      - !If
+        - CreateSubnet2
+        - !Sub '${PrivateSubnet1},${PrivateSubnet2}'
+        - !Ref PrivateSubnet1
