@@ -582,6 +582,29 @@ Resources:
         ScriptCachingPolicy: CACHE_ONCE
         Stages:
           NodeBootstrapped:
+            # Forward node lifecycle action logs to CloudWatch Logs. Runs first so the
+            # actions that follow have their output captured from the node's first boot.
+            - Name: configure-cloudwatch-logs
+              ScriptSource:
+                ScriptLocation: !Sub 's3://aws-pcs-repo-${AWS::Region}/aws-pcs-node-lifecycle-scripts/configure-cloudwatch-logs-v1-latest.sh'
+              # No arguments: --log-group-name defaults to /aws/pcs/${PCS_CLUSTER_ID}/lifecycle,
+              # which the script derives from the PCS_CLUSTER_ID env var PCS sets on every node.
+              OnError: CONTINUE
+              ExecutionPolicy: FIRST_BOOT_ONLY
+            # Mount EFS as the home-directory base at /home and create home dirs on first login.
+            - Name: configure-efs-homes
+              ScriptSource:
+                ScriptLocation: !Sub 's3://aws-pcs-repo-${AWS::Region}/aws-pcs-node-lifecycle-scripts/configure-efs-homes-v1-latest.sh'
+              Arguments:
+                - '--efs-id'
+                - !GetAtt [ EfsStorage, Outputs.EFSFilesystemId ]
+                - '--home-base'
+                - '/home'
+                - '--options'
+                - 'tls'
+              OnError: CONTINUE
+              ExecutionPolicy: EVERY_BOOT
+            # Mount FSx for Lustre at /shared for high-performance shared scratch storage.
             - Name: mount-fsx-lustre
               ScriptSource:
                 # AWS-maintained script; pinned to the v1 line via the -v1-latest tag so it
@@ -596,6 +619,8 @@ Resources:
                 - '/shared'
               OnError: CONTINUE
               ExecutionPolicy: EVERY_BOOT
+            # Set /shared to world-writable sticky mode (1777). Runs after mount-fsx-lustre
+            # so it applies to the mounted file system, not an empty directory.
             - Name: set-shared-dir-mode
               ScriptSource:
                 # HTTPS (not s3://) so the region-pinned PCS agent can fetch from the
@@ -609,25 +634,6 @@ Resources:
                 - '1777'
               OnError: CONTINUE
               ExecutionPolicy: EVERY_BOOT
-            - Name: configure-efs-homes
-              ScriptSource:
-                ScriptLocation: !Sub 's3://aws-pcs-repo-${AWS::Region}/aws-pcs-node-lifecycle-scripts/configure-efs-homes-v1-latest.sh'
-              Arguments:
-                - '--efs-id'
-                - !GetAtt [ EfsStorage, Outputs.EFSFilesystemId ]
-                - '--home-base'
-                - '/home'
-                - '--options'
-                - 'tls'
-              OnError: CONTINUE
-              ExecutionPolicy: EVERY_BOOT
-            - Name: configure-cloudwatch-logs
-              ScriptSource:
-                ScriptLocation: !Sub 's3://aws-pcs-repo-${AWS::Region}/aws-pcs-node-lifecycle-scripts/configure-cloudwatch-logs-v1-latest.sh'
-              # No arguments: --log-group-name defaults to /aws/pcs/${PCS_CLUSTER_ID}/lifecycle,
-              # which the script derives from the PCS_CLUSTER_ID env var PCS sets on every node.
-              OnError: CONTINUE
-              ExecutionPolicy: FIRST_BOOT_ONLY
 
   # Compute Node groups - Compute Nodes
   PCSNodeGroupCompute:
@@ -660,6 +666,29 @@ Resources:
         ScriptCachingPolicy: CACHE_ONCE
         Stages:
           NodeBootstrapped:
+            # Forward node lifecycle action logs to CloudWatch Logs. Runs first so the
+            # actions that follow have their output captured from the node's first boot.
+            - Name: configure-cloudwatch-logs
+              ScriptSource:
+                ScriptLocation: !Sub 's3://aws-pcs-repo-${AWS::Region}/aws-pcs-node-lifecycle-scripts/configure-cloudwatch-logs-v1-latest.sh'
+              # No arguments: --log-group-name defaults to /aws/pcs/${PCS_CLUSTER_ID}/lifecycle,
+              # which the script derives from the PCS_CLUSTER_ID env var PCS sets on every node.
+              OnError: CONTINUE
+              ExecutionPolicy: FIRST_BOOT_ONLY
+            # Mount EFS as the home-directory base at /home and create home dirs on first login.
+            - Name: configure-efs-homes
+              ScriptSource:
+                ScriptLocation: !Sub 's3://aws-pcs-repo-${AWS::Region}/aws-pcs-node-lifecycle-scripts/configure-efs-homes-v1-latest.sh'
+              Arguments:
+                - '--efs-id'
+                - !GetAtt [ EfsStorage, Outputs.EFSFilesystemId ]
+                - '--home-base'
+                - '/home'
+                - '--options'
+                - 'tls'
+              OnError: CONTINUE
+              ExecutionPolicy: EVERY_BOOT
+            # Mount FSx for Lustre at /shared for high-performance shared scratch storage.
             - Name: mount-fsx-lustre
               ScriptSource:
                 # AWS-maintained script; pinned to the v1 line via the -v1-latest tag so it
@@ -674,6 +703,8 @@ Resources:
                 - '/shared'
               OnError: CONTINUE
               ExecutionPolicy: EVERY_BOOT
+            # Set /shared to world-writable sticky mode (1777). Runs after mount-fsx-lustre
+            # so it applies to the mounted file system, not an empty directory.
             - Name: set-shared-dir-mode
               ScriptSource:
                 # HTTPS (not s3://) so the region-pinned PCS agent can fetch from the
@@ -687,25 +718,6 @@ Resources:
                 - '1777'
               OnError: CONTINUE
               ExecutionPolicy: EVERY_BOOT
-            - Name: configure-efs-homes
-              ScriptSource:
-                ScriptLocation: !Sub 's3://aws-pcs-repo-${AWS::Region}/aws-pcs-node-lifecycle-scripts/configure-efs-homes-v1-latest.sh'
-              Arguments:
-                - '--efs-id'
-                - !GetAtt [ EfsStorage, Outputs.EFSFilesystemId ]
-                - '--home-base'
-                - '/home'
-                - '--options'
-                - 'tls'
-              OnError: CONTINUE
-              ExecutionPolicy: EVERY_BOOT
-            - Name: configure-cloudwatch-logs
-              ScriptSource:
-                ScriptLocation: !Sub 's3://aws-pcs-repo-${AWS::Region}/aws-pcs-node-lifecycle-scripts/configure-cloudwatch-logs-v1-latest.sh'
-              # No arguments: --log-group-name defaults to /aws/pcs/${PCS_CLUSTER_ID}/lifecycle,
-              # which the script derives from the PCS_CLUSTER_ID env var PCS sets on every node.
-              OnError: CONTINUE
-              ExecutionPolicy: FIRST_BOOT_ONLY
 
   PCSQueueCompute:
     Type: AWS::PCS::Queue
