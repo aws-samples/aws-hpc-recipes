@@ -17,12 +17,6 @@ Metadata:
           - ClusterSecurityGroupId
           - SshSecurityGroupId
           - SshKeyName
-      - Label:
-          default: File systems
-        Parameters:
-          - EfsFilesystemId
-          - FSxLustreFilesystemId
-          - FSxLustreFilesystemMountName
 
 Parameters:
 
@@ -38,19 +32,6 @@ Parameters:
   SshKeyName:
     Type: AWS::EC2::KeyPair::KeyName
     Description: SSH key name for access to login nodes
-  # EfsFilesystemId, FSxLustreFilesystemId, and FSxLustreFilesystemMountName are
-  # retained for backward compatibility with callers that still pass them. The file
-  # systems are now mounted by node lifecycle actions, so these values are no longer
-  # consumed here.
-  EfsFilesystemId:
-    Type: String
-    Description: Amazon EFS file system Id
-  FSxLustreFilesystemId:
-    Type: String
-    Description: Amazon FSx for Lustre file system Id
-  FSxLustreFilesystemMountName:
-    Type: String
-    Description: Amazon FSx for Lustre mount name
 
 Resources:
 
