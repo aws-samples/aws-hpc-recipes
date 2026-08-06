@@ -20,11 +20,8 @@ Metadata:
       - Label:
           default: File systems
         Parameters:
-          - EfsFilesystemId
           - EfsFilesystemSecurityGroupId
-          - FSxLustreFilesystemId
           - FSxLustreFilesystemSecurityGroupId
-          - FSxLustreFilesystemMountName
 
 Parameters:
 
@@ -40,25 +37,15 @@ Parameters:
   SshKeyName:
     Type: AWS::EC2::KeyPair::KeyName
     Description: SSH key name for access to login nodes
-  # EfsFilesystemId, FSxLustreFilesystemId, and FSxLustreFilesystemMountName are
-  # retained for backward compatibility with callers that still pass them. The file
-  # systems are now mounted by node lifecycle actions, so these values are no longer
-  # consumed here; only the security group inputs are used, to grant network access.
-  EfsFilesystemId:
-    Type: String
-    Description: Amazon EFS file system Id
+  # The file systems are mounted by node lifecycle actions on the compute node groups,
+  # so this template only needs the file system security groups, which it attaches to
+  # the nodes to grant network access to EFS and FSx for Lustre.
   EfsFilesystemSecurityGroupId:
     Type: String
-    Description: Security group for EFS filesystem. Choose VPC default if filesysten was created using EFS console quick-start defaults.
-  FSxLustreFilesystemId:
-    Type: String
-    Description: Amazon FSx for Lustre file system Id
+    Description: Security group for EFS filesystem. Choose VPC default if filesystem was created using EFS console quick-start defaults.
   FSxLustreFilesystemSecurityGroupId:
     Type: String
-    Description: Security group for Amazon FSx for Lustre filesystem. Choose VPC default if filesysten was created using FSx console quick-start defaults.
-  FSxLustreFilesystemMountName:
-    Type: String
-    Description: Amazon FSx for Lustre mount name
+    Description: Security group for Amazon FSx for Lustre filesystem. Choose VPC default if filesystem was created using FSx console quick-start defaults.
 
 Resources:
 

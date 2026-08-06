@@ -546,9 +546,6 @@ Resources:
         EfsFilesystemSecurityGroupId: !GetAtt [ EfsStorage, Outputs.SecurityGroupId ]
         FSxLustreFilesystemSecurityGroupId: !GetAtt [ FSxLStorage, Outputs.FSxLustreSecurityGroupId ]
         SshKeyName: !Ref KeyName
-        EfsFilesystemId: !GetAtt [ EfsStorage, Outputs.EFSFilesystemId ]
-        FSxLustreFilesystemId: !GetAtt [ FSxLStorage, Outputs.FSxLustreFilesystemId ]
-        FSxLustreFilesystemMountName: !GetAtt [ FSxLStorage, Outputs.FSxLustreMountName ]
       TemplateURL: !Sub 'https://${HpcRecipesS3Bucket}.s3.amazonaws.com/${HpcRecipesBranch}/recipes/pcs/getting_started/assets/cfn-pcs-lt-efs-fsxl.yaml'
 
   # Compute Node groups - Login Nodes
