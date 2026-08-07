@@ -1,8 +1,9 @@
 AWSTemplateFormatVersion: 2010-09-09
 Description: EC2 launch templates for AWS PCS login and compute node groups.
-  This template creates EC2 launch templates for AWS PCS login and compute node groups. 
-  It demonstrates mounting EFS and FSx for Lustre file systems, configuring EC2 instance tags, enabling Instance Metadata Service Version 2 (IMDSv2), and setting up the cluster security group for communication with the AWS PCS controller. 
-  Additionally, it shows how to configure inbound SSH access to the login nodes. 
+  This template creates EC2 launch templates for AWS PCS login and compute node groups.
+  It attaches the security groups needed to reach the EFS and FSx for Lustre file systems, configures EC2 instance tags, enables Instance Metadata Service Version 2 (IMDSv2), and sets up the cluster security group for communication with the AWS PCS controller.
+  Additionally, it shows how to configure inbound SSH access to the login nodes.
+  Mounting the file systems and forwarding node logs are handled by node lifecycle actions on the compute node groups, not by launch template UserData.
   Use this template as a starting point to create custom launch templates tailored to your specific requirements.
   Check the Outputs tab of this stack for useful details about resources created by this template.
 
@@ -19,11 +20,8 @@ Metadata:
       - Label:
           default: File systems
         Parameters:
-          - EfsFilesystemId
           - EfsFilesystemSecurityGroupId
-          - FSxLustreFilesystemId
           - FSxLustreFilesystemSecurityGroupId
-          - FSxLustreFilesystemMountName
 
 Parameters:
 
@@ -39,21 +37,15 @@ Parameters:
   SshKeyName:
     Type: AWS::EC2::KeyPair::KeyName
     Description: SSH key name for access to login nodes
-  EfsFilesystemId:
-    Type: String
-    Description: Amazon EFS file system Id
+  # The file systems are mounted by node lifecycle actions on the compute node groups,
+  # so this template only needs the file system security groups, which it attaches to
+  # the nodes to grant network access to EFS and FSx for Lustre.
   EfsFilesystemSecurityGroupId:
     Type: String
-    Description: Security group for EFS filesystem. Choose VPC default if filesysten was created using EFS console quick-start defaults.
-  FSxLustreFilesystemId:
-    Type: String
-    Description: Amazon FSx for Lustre file system Id
+    Description: Security group for EFS filesystem. Choose VPC default if filesystem was created using EFS console quick-start defaults.
   FSxLustreFilesystemSecurityGroupId:
     Type: String
-    Description: Security group for Amazon FSx for Lustre filesystem. Choose VPC default if filesysten was created using FSx console quick-start defaults.
-  FSxLustreFilesystemMountName:
-    Type: String
-    Description: Amazon FSx for Lustre mount name
+    Description: Security group for Amazon FSx for Lustre filesystem. Choose VPC default if filesystem was created using FSx console quick-start defaults.
 
 Resources:
 
@@ -72,36 +64,14 @@ Resources:
           HttpPutResponseHopLimit: 4
           HttpTokens: required
         KeyName: !Ref SshKeyName
-        SecurityGroupIds: 
+        SecurityGroupIds:
           - !Ref VpcDefaultSecurityGroupId
           - !Ref ClusterSecurityGroupId
           - !Ref SshSecurityGroupId
           - !Ref EfsFilesystemSecurityGroupId
           - !Ref FSxLustreFilesystemSecurityGroupId
-        UserData:
-          Fn::Base64: !Sub |
-            MIME-Version: 1.0
-            Content-Type: multipart/mixed; boundary="==MYBOUNDARY=="
-
-            --==MYBOUNDARY==
-            Content-Type: text/cloud-config; charset="us-ascii"
-            MIME-Version: 1.0
-
-            packages:
-            - amazon-efs-utils
-            
-            runcmd:
-            # Mount EFS filesystem as /home
-            - mkdir -p /tmp/home
-            - rsync -aA /home/ /tmp/home
-            - echo "${EfsFilesystemId}:/ /home efs tls,_netdev" >> /etc/fstab
-            - mount -a -t efs defaults
-            - rsync -aA --ignore-existing /tmp/home/ /home
-            - rm -rf /tmp/home/
-            # If provided, mount FSxL filesystem as /shared
-            - if [ ! -z "${FSxLustreFilesystemId}" ]; then amazon-linux-extras install -y lustre=latest; mkdir -p /shared; chmod a+rwx /shared; mount -t lustre ${FSxLustreFilesystemId}.fsx.${AWS::Region}.amazonaws.com@tcp:/${FSxLustreFilesystemMountName} /shared; chmod 777 /shared; fi
-
-            --==MYBOUNDARY==--
+        # Filesystem mounting and log forwarding are handled by node lifecycle
+        # actions on the compute node groups, not by launch template UserData.
 
   ComputeLaunchTemplate:
     Type: AWS::EC2::LaunchTemplate
@@ -117,36 +87,14 @@ Resources:
           HttpEndpoint: enabled
           HttpPutResponseHopLimit: 4
           HttpTokens: required
-        SecurityGroupIds: 
+        SecurityGroupIds:
           - !Ref VpcDefaultSecurityGroupId
           - !Ref ClusterSecurityGroupId
           - !Ref EfsFilesystemSecurityGroupId
           - !Ref FSxLustreFilesystemSecurityGroupId
         KeyName: !Ref SshKeyName
-        UserData:
-          Fn::Base64: !Sub |
-            MIME-Version: 1.0
-            Content-Type: multipart/mixed; boundary="==MYBOUNDARY=="
-
-            --==MYBOUNDARY==
-            Content-Type: text/cloud-config; charset="us-ascii"
-            MIME-Version: 1.0
-
-            packages:
-            - amazon-efs-utils
-            
-            runcmd:
-            # Mount EFS filesystem as /home
-            - mkdir -p /tmp/home
-            - rsync -aA /home/ /tmp/home
-            - echo "${EfsFilesystemId}:/ /home efs tls,_netdev" >> /etc/fstab
-            - mount -a -t efs defaults
-            - rsync -aA --ignore-existing /tmp/home/ /home
-            - rm -rf /tmp/home/
-            # If provided, mount FSxL filesystem as /shared
-            - if [ ! -z "${FSxLustreFilesystemId}" ]; then amazon-linux-extras install -y lustre=latest; mkdir -p /shared; chmod a+rwx /shared; mount -t lustre ${FSxLustreFilesystemId}.fsx.${AWS::Region}.amazonaws.com@tcp:/${FSxLustreFilesystemMountName} /shared; fi
-
-            --==MYBOUNDARY==--
+        # Filesystem mounting and log forwarding are handled by node lifecycle
+        # actions on the compute node groups, not by launch template UserData.
 
 Outputs:
   LoginLaunchTemplateId:

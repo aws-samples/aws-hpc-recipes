@@ -2,7 +2,7 @@
 
 ## Info
 
-This recipe launches a Slurm cluster on AWS Parallel Computing Service using Amazon EC2 hpc8a instances featuring 5th Generation AMD EPYC processors.
+This recipe launches a Slurm cluster on AWS Parallel Computing Service using Amazon EC2 hpc8a instances. These instances run on 5th Generation AMD EPYC processors, with simultaneous multithreading turned off so each vCPU maps to a physical core.
 
 The high-performance queue uses `hpc8a.96xlarge` nodes. Each one has 192 cores, 768 GiB of memory, and up to 300 Gbps of Elastic Fabric Adapter (EFA) networking for the tightly coupled MPI traffic that HPC jobs generate. AWS reports up to 40% higher performance and 42% more memory bandwidth than the previous hpc7a generation, which helps with workloads such as computational fluid dynamics, crash and structural simulation, and weather modeling. The login node and the general-purpose queue use `c8a.xlarge` instances from the same AMD family.
 

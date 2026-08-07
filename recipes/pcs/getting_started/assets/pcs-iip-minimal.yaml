@@ -62,6 +62,9 @@ Resources:
               Service: ec2.amazonaws.com
         Version: "2012-10-17"
       ManagedPolicyArns:
+        # AWS-managed policy that lets a node register with and connect to a PCS cluster.
+        # Grants pcs:RegisterComputeNodeGroupInstance; replaces the equivalent inline policy.
+        - !Sub "arn:${AWS::Partition}:iam::aws:policy/AWSPCSComputeNodePolicy"
         - !If
           - EnableSsmCondition
           - !Sub "arn:${AWS::Partition}:iam::aws:policy/AmazonSSMManagedInstanceCore"
@@ -74,15 +77,6 @@ Resources:
           - EnableCloudwatchAgentCondition
           - !Sub "arn:${AWS::Partition}:iam::aws:policy/CloudWatchAgentServerPolicy"
           - !Ref AWS::NoValue
-      Policies:
-        - PolicyDocument:
-            Version: "2012-10-17"
-            Statement:
-              - Action:
-                  - pcs:RegisterComputeNodeGroupInstance
-                Effect: Allow
-                Resource: "*"
-          PolicyName: PcsRegisterInstancePolicy
 
   PcsInstanceProfile:
     Type: AWS::IAM::InstanceProfile
