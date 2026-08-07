@@ -421,6 +421,75 @@ Resources:
         VpcId: !Ref VpcId
       TemplateURL: !Sub 'https://${HpcRecipesS3Bucket}.s3.amazonaws.com/${HpcRecipesBranch}/recipes/storage/fsx_lustre/assets/persistent.yaml'
 
+  # Resolver for FSx Lustre DNS name and mount name from the filesystem Id. The
+  # mount-fsx-lustre node lifecycle action needs the real DNS name; resolving it via
+  # the FSx API is partition-safe, unlike constructing it from a hardcoded suffix.
+  FSxLustreLookupLambdaRole:
+    Type: AWS::IAM::Role
+    Properties:
+      AssumeRolePolicyDocument:
+        Version: "2012-10-17"
+        Statement:
+          - Effect: Allow
+            Principal:
+              Service: lambda.amazonaws.com
+            Action: sts:AssumeRole
+      Policies:
+        - PolicyName: FSxLustreLookupPolicy
+          PolicyDocument:
+            Version: "2012-10-17"
+            Statement:
+              - Effect: Allow
+                Action:
+                  - fsx:DescribeFileSystems
+                Resource: "*"
+      ManagedPolicyArns:
+        - !Sub arn:${AWS::Partition}:iam::aws:policy/service-role/AWSLambdaBasicExecutionRole
+
+  FSxLustreLookupLambda:
+    Type: AWS::Lambda::Function
+    Properties:
+      Handler: index.lambda_handler
+      Role: !GetAtt FSxLustreLookupLambdaRole.Arn
+      Runtime: python3.11
+      Timeout: 30
+      Code:
+        ZipFile: |
+          import boto3
+          import cfnresponse
+
+          def lambda_handler(event, context):
+              fsx_client = boto3.client("fsx")
+
+              try:
+                  filesystem_id = event["ResourceProperties"]["FilesystemId"]
+
+                  response = fsx_client.describe_file_systems(FileSystemIds=[filesystem_id])
+
+                  if "FileSystems" in response and len(response["FileSystems"]) > 0:
+                      filesystem = response["FileSystems"][0]
+                      dns_name = filesystem["DNSName"]
+                      mount_name = filesystem["LustreConfiguration"]["MountName"]
+
+                      cfnresponse.send(event, context, cfnresponse.SUCCESS, {
+                          "DNSName": dns_name,
+                          "MountName": mount_name
+                      })
+                  else:
+                      cfnresponse.send(event, context, cfnresponse.FAILED, {
+                          "Reason": f"Filesystem {filesystem_id} not found"
+                      })
+              except Exception as e:
+                  cfnresponse.send(event, context, cfnresponse.FAILED, {
+                      "Reason": str(e)
+                  })
+
+  FSxLustreLookup:
+    Type: Custom::FSxLustreLookup
+    Properties:
+      ServiceToken: !GetAtt FSxLustreLookupLambda.Arn
+      FilesystemId: !GetAtt [ FSxLStorage, Outputs.FSxLustreFilesystemId ]
+
   PCSSecurityGroup:
     Type: AWS::CloudFormation::Stack
     DependsOn: NetworkValidation
@@ -462,6 +531,9 @@ Resources:
     Properties:
       Parameters:
         RoleName: !Sub '${AWS::StackName}-${AWS::Region}'
+        # Grant CloudWatch Logs permissions (via CloudWatchAgentServerPolicy) so the
+        # configure-cloudwatch-logs node lifecycle action can forward node logs.
+        EnableCloudwatchAgent: "True"
       TemplateURL: !Sub 'https://${HpcRecipesS3Bucket}.s3.amazonaws.com/${HpcRecipesBranch}/recipes/pcs/getting_started/assets/pcs-iip-minimal.yaml'
 
   PCSLaunchTemplate:
@@ -474,9 +546,6 @@ Resources:
         EfsFilesystemSecurityGroupId: !GetAtt [ EfsStorage, Outputs.SecurityGroupId ]
         FSxLustreFilesystemSecurityGroupId: !GetAtt [ FSxLStorage, Outputs.FSxLustreSecurityGroupId ]
         SshKeyName: !Ref KeyName
-        EfsFilesystemId: !GetAtt [ EfsStorage, Outputs.EFSFilesystemId ]
-        FSxLustreFilesystemId: !GetAtt [ FSxLStorage, Outputs.FSxLustreFilesystemId ]
-        FSxLustreFilesystemMountName: !GetAtt [ FSxLStorage, Outputs.FSxLustreMountName ]
       TemplateURL: !Sub 'https://${HpcRecipesS3Bucket}.s3.amazonaws.com/${HpcRecipesBranch}/recipes/pcs/getting_started/assets/cfn-pcs-lt-efs-fsxl.yaml'
 
   # Compute Node groups - Login Nodes
@@ -501,6 +570,67 @@ Resources:
             - !Ref AWS::Region
             - !Ref NodeArchitecture
             - DefaultValue: !FindInMap [ Architecture, LoginNodeInstances, !Ref NodeArchitecture ]
+      # Mount shared storage and forward node logs using AWS-maintained node
+      # lifecycle action scripts, run at the nodeBootstrapped stage (before slurmd
+      # starts). All actions use OnError: CONTINUE so a node still starts if an
+      # optional step cannot complete. Action order matters: set-shared-dir-mode
+      # must run after mount-fsx-lustre.
+      NodeLifecycleActions:
+        ScriptCachingPolicy: CACHE_ONCE
+        Stages:
+          NodeBootstrapped:
+            # Forward node lifecycle action logs to CloudWatch Logs. Runs first so the
+            # actions that follow have their output captured from the node's first boot.
+            - Name: configure-cloudwatch-logs
+              ScriptSource:
+                ScriptLocation: !Sub 's3://aws-pcs-repo-${AWS::Region}/aws-pcs-node-lifecycle-scripts/configure-cloudwatch-logs-v1-latest.sh'
+              # No arguments: --log-group-name defaults to /aws/pcs/${PCS_CLUSTER_ID}/lifecycle,
+              # which the script derives from the PCS_CLUSTER_ID env var PCS sets on every node.
+              OnError: CONTINUE
+              ExecutionPolicy: FIRST_BOOT_ONLY
+            # Mount EFS as the home-directory base at /home and create home dirs on first login.
+            - Name: configure-efs-homes
+              ScriptSource:
+                ScriptLocation: !Sub 's3://aws-pcs-repo-${AWS::Region}/aws-pcs-node-lifecycle-scripts/configure-efs-homes-v1-latest.sh'
+              Arguments:
+                - '--efs-id'
+                - !GetAtt [ EfsStorage, Outputs.EFSFilesystemId ]
+                - '--home-base'
+                - '/home'
+                - '--options'
+                - 'tls'
+              OnError: CONTINUE
+              ExecutionPolicy: EVERY_BOOT
+            # Mount FSx for Lustre at /shared for high-performance shared scratch storage.
+            - Name: mount-fsx-lustre
+              ScriptSource:
+                # AWS-maintained script; pinned to the v1 line via the -v1-latest tag so it
+                # picks up backward-compatible updates without a template change.
+                ScriptLocation: !Sub 's3://aws-pcs-repo-${AWS::Region}/aws-pcs-node-lifecycle-scripts/mount-fsx-lustre-v1-latest.sh'
+              Arguments:
+                - '--fsx-dns-name'
+                - !GetAtt FSxLustreLookup.DNSName
+                - '--mount-name'
+                - !GetAtt FSxLustreLookup.MountName
+                - '--mount-point'
+                - '/shared'
+              OnError: CONTINUE
+              ExecutionPolicy: EVERY_BOOT
+            # Set /shared to world-writable sticky mode (1777). Runs after mount-fsx-lustre
+            # so it applies to the mounted file system, not an empty directory.
+            - Name: set-shared-dir-mode
+              ScriptSource:
+                # HTTPS (not s3://) so the region-pinned PCS agent can fetch from the
+                # single-Region HPC Recipes bucket (us-east-1) regardless of the cluster's
+                # Region. An s3:// URI to an out-of-Region bucket fails with PermanentRedirect.
+                ScriptLocation: !Sub 'https://${HpcRecipesS3Bucket}.s3.us-east-1.amazonaws.com/${HpcRecipesBranch}/recipes/pcs-scripts/open_shared_dir/assets/set-shared-dir-mode-v1.0.0.sh' # partition-exception: single-Region HPC Recipes bucket (us-east-1), matches this recipe's nested-stack TemplateURLs
+              Arguments:
+                - '--path'
+                - '/shared'
+                - '--mode'
+                - '1777'
+              OnError: CONTINUE
+              ExecutionPolicy: EVERY_BOOT
 
   # Compute Node groups - Compute Nodes
   PCSNodeGroupCompute:
@@ -524,6 +654,67 @@ Resources:
             - !Ref AWS::Region
             - !Ref NodeArchitecture
             - DefaultValue: !FindInMap [ Architecture, ComputeNodeInstances, !Ref NodeArchitecture ]
+      # Mount shared storage and forward node logs using AWS-maintained node
+      # lifecycle action scripts, run at the nodeBootstrapped stage (before slurmd
+      # starts). All actions use OnError: CONTINUE so a node still starts if an
+      # optional step cannot complete. Action order matters: set-shared-dir-mode
+      # must run after mount-fsx-lustre.
+      NodeLifecycleActions:
+        ScriptCachingPolicy: CACHE_ONCE
+        Stages:
+          NodeBootstrapped:
+            # Forward node lifecycle action logs to CloudWatch Logs. Runs first so the
+            # actions that follow have their output captured from the node's first boot.
+            - Name: configure-cloudwatch-logs
+              ScriptSource:
+                ScriptLocation: !Sub 's3://aws-pcs-repo-${AWS::Region}/aws-pcs-node-lifecycle-scripts/configure-cloudwatch-logs-v1-latest.sh'
+              # No arguments: --log-group-name defaults to /aws/pcs/${PCS_CLUSTER_ID}/lifecycle,
+              # which the script derives from the PCS_CLUSTER_ID env var PCS sets on every node.
+              OnError: CONTINUE
+              ExecutionPolicy: FIRST_BOOT_ONLY
+            # Mount EFS as the home-directory base at /home and create home dirs on first login.
+            - Name: configure-efs-homes
+              ScriptSource:
+                ScriptLocation: !Sub 's3://aws-pcs-repo-${AWS::Region}/aws-pcs-node-lifecycle-scripts/configure-efs-homes-v1-latest.sh'
+              Arguments:
+                - '--efs-id'
+                - !GetAtt [ EfsStorage, Outputs.EFSFilesystemId ]
+                - '--home-base'
+                - '/home'
+                - '--options'
+                - 'tls'
+              OnError: CONTINUE
+              ExecutionPolicy: EVERY_BOOT
+            # Mount FSx for Lustre at /shared for high-performance shared scratch storage.
+            - Name: mount-fsx-lustre
+              ScriptSource:
+                # AWS-maintained script; pinned to the v1 line via the -v1-latest tag so it
+                # picks up backward-compatible updates without a template change.
+                ScriptLocation: !Sub 's3://aws-pcs-repo-${AWS::Region}/aws-pcs-node-lifecycle-scripts/mount-fsx-lustre-v1-latest.sh'
+              Arguments:
+                - '--fsx-dns-name'
+                - !GetAtt FSxLustreLookup.DNSName
+                - '--mount-name'
+                - !GetAtt FSxLustreLookup.MountName
+                - '--mount-point'
+                - '/shared'
+              OnError: CONTINUE
+              ExecutionPolicy: EVERY_BOOT
+            # Set /shared to world-writable sticky mode (1777). Runs after mount-fsx-lustre
+            # so it applies to the mounted file system, not an empty directory.
+            - Name: set-shared-dir-mode
+              ScriptSource:
+                # HTTPS (not s3://) so the region-pinned PCS agent can fetch from the
+                # single-Region HPC Recipes bucket (us-east-1) regardless of the cluster's
+                # Region. An s3:// URI to an out-of-Region bucket fails with PermanentRedirect.
+                ScriptLocation: !Sub 'https://${HpcRecipesS3Bucket}.s3.us-east-1.amazonaws.com/${HpcRecipesBranch}/recipes/pcs-scripts/open_shared_dir/assets/set-shared-dir-mode-v1.0.0.sh' # partition-exception: single-Region HPC Recipes bucket (us-east-1), matches this recipe's nested-stack TemplateURLs
+              Arguments:
+                - '--path'
+                - '/shared'
+                - '--mode'
+                - '1777'
+              OnError: CONTINUE
+              ExecutionPolicy: EVERY_BOOT
 
   PCSQueueCompute:
     Type: AWS::PCS::Queue

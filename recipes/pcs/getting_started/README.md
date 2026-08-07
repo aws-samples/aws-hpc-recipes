@@ -12,7 +12,7 @@ Follow these links to inspect their source code:
 * [`pcs-cluster-sg.yaml`](assets/pcs-cluster-sg.yaml) - Creates a cluster-wide security group for your PCS controller and attached nodes.
 * [`pcs-iip-minimal.yaml`](assets/pcs-iip-minimal.yaml) - Creates a minimal IAM instance profile for your PCS compute node groups.
 * [`pcs-lt-simple.yaml`](assets/pcs-lt-simple.yaml) - Creats a minimal launch template for PCS compute node groups.
-* [`pcs-lt-efs-fsxl.yaml`](assets/pcs-lt-efs-fsxl.yaml) - Creates launch templates with a shared home (EFS) and high-speed storage filesystem (FSx for Lustre).
+* [`pcs-lt-efs-fsxl.yaml`](assets/pcs-lt-efs-fsxl.yaml) - Creates launch templates for compute node groups that use a shared home (EFS) and a high-speed shared filesystem (FSx for Lustre). The file systems are mounted by node lifecycle actions, not by the launch template.
 * [`cluster-byovpc.yaml`](assets/cluster-byovpc.yaml) - Complete cluster template that uses an existing VPC instead of creating new networking resources.
 
 Feel free to use or adapt these basic templates for your own clusters.
@@ -103,6 +103,17 @@ There will be two URLs:
 * **Ec2ConsoleUrl** This link takes you to a filtered view of the EC2 console that shows the instance(s) managed by the `login` node group. Select an instance and choose **Connect**. The instance should be configured to support inbound SSH and Amazon SSM connections in the web browser. 
 
 Once you have connected to a login instance, follow along with the **Getting Started with AWS PCS** tutorial starting at [_Explore the cluster environment in AWS PCS_](https://docs.aws.amazon.com/pcs/latest/userguide/getting-started_explore.html). 
+
+### Shared storage and logging
+
+The cluster mounts two shared file systems on every node using AWS PCS node lifecycle actions, which run when each instance boots:
+
+* `/home` is an [Amazon EFS](https://aws.amazon.com/efs/) file system for user home directories. Files written here are available on all nodes.
+* `/shared` is an [Amazon FSx for Lustre](https://aws.amazon.com/fsx/lustre/) file system for high-speed shared data. It is world-writable with the sticky bit set (mode `1777`), so any user can write to it. Run jobs out of `/shared`.
+
+Confirm both are present by running `df -h` on the login node.
+
+The same node lifecycle actions forward instance logs to Amazon CloudWatch Logs under the log group `/aws/pcs/<cluster-id>/lifecycle`, where `<cluster-id>` is the PCS cluster Id from the stack **Outputs**.
 
 ### Cleaning Up
 

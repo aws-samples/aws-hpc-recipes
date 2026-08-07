@@ -116,7 +116,7 @@ You can use an HPC Recipe for AWS in several ways:
 * **About**: Use EFA with AWS PCS compute node groups
 * **Usage**: [README.md](pcs/enable_efa/README.md)
 
-#### getting_started ![tag](https://img.shields.io/badge/-cloudformation-%237DCEA0) ![tag](https://img.shields.io/badge/-core-%23146EB4) ![tag](https://img.shields.io/badge/-ec2-%23FF9900) ![tag](https://img.shields.io/badge/-efs-%237DCEA0) ![tag](https://img.shields.io/badge/-fsx-%237DCEA0) ![tag](https://img.shields.io/badge/-iam-%23AAB7B8) ![tag](https://img.shields.io/badge/-pcs-%23FF9900) 
+#### getting_started ![tag](https://img.shields.io/badge/-cloudformation-%237DCEA0) ![tag](https://img.shields.io/badge/-cloudwatch-%237DCEA0) ![tag](https://img.shields.io/badge/-core-%23146EB4) ![tag](https://img.shields.io/badge/-ec2-%23FF9900) ![tag](https://img.shields.io/badge/-efs-%237DCEA0) ![tag](https://img.shields.io/badge/-fsx-%237DCEA0) ![tag](https://img.shields.io/badge/-iam-%23AAB7B8) ![tag](https://img.shields.io/badge/-lifecycle-%237DCEA0) ![tag](https://img.shields.io/badge/-pcs-%23FF9900) 
 
 * **About**: Supports "Getting Started with AWS PCS" in AWS PCS user guide.
 * **Usage**: [README.md](pcs/getting_started/README.md)
@@ -173,6 +173,11 @@ You can use an HPC Recipe for AWS in several ways:
 
 * **About**: Exemplar community scripts for AWS PCS node lifecycle actions, demonstrating use of lifecycle context, portable and idempotent design, and the publish/reference/run/log pattern.
 * **Usage**: [README.md](pcs-scripts/node_lifecycle_demo/README.md)
+
+#### open_shared_dir ![tag](https://img.shields.io/badge/-community-%2317202A) ![tag](https://img.shields.io/badge/-lifecycle-%237DCEA0) ![tag](https://img.shields.io/badge/-pcs-%23FF9900) 
+
+* **About**: Community AWS PCS node lifecycle action that opens permissions on an already-mounted shared directory (e.g. FSx for Lustre at /fsx) so all users can write to it. Runs after the mount and is a no-op if the path is not mounted.
+* **Usage**: [README.md](pcs-scripts/open_shared_dir/README.md)
 
 
 ### :arrow_right: pcluster: AWS ParallelCluster
@@ -261,97 +266,6 @@ You can use an HPC Recipe for AWS in several ways:
 
 * **About**: Create a ParallelCluster system to try out Trn1 instances.
 * **Usage**: [README.md](pcluster/try_trn1/README.md)
-
-
-### :arrow_right: pcs: AWS Parallel Computing Service
-
-#### byo_login ![tag](https://img.shields.io/badge/-core-%23146EB4) ![tag](https://img.shields.io/badge/-ec2-%23FF9900) ![tag](https://img.shields.io/badge/-lambda-%237DCEA0) ![tag](https://img.shields.io/badge/-pcs-%23FF9900) ![tag](https://img.shields.io/badge/-secretsmanager-%237DCEA0) 
-
-* **About**: Connect standalone access nodes to AWS PCS
-* **Usage**: [README.md](pcs/byo_login/README.md)
-
-#### cfd_cluster ![tag](https://img.shields.io/badge/-beta-%23800080) ![tag](https://img.shields.io/badge/-cfd-%23AAB7B8) ![tag](https://img.shields.io/badge/-dcv-%23AAB7B8) ![tag](https://img.shields.io/badge/-efs-%237DCEA0) ![tag](https://img.shields.io/badge/-fsx-%237DCEA0) ![tag](https://img.shields.io/badge/-pcs-%23FF9900) ![tag](https://img.shields.io/badge/-spack-%23AAB7B8) 
-
-* **About**: Run OpenFOAM on PCS
-* **Usage**: [README.md](pcs/cfd_cluster/README.md)
-
-#### cloudwatch ![tag](https://img.shields.io/badge/-cloudwatch-%237DCEA0) ![tag](https://img.shields.io/badge/-pcs-%23FF9900) ![tag](https://img.shields.io/badge/-s3-%237DCEA0) ![tag](https://img.shields.io/badge/-ssm-%23AAB7B8) 
-
-* **About**: Enable CloudWatch Logs on PCS instances
-* **Usage**: [README.md](pcs/cloudwatch/README.md)
-
-#### dlami_for_pcs_imagebuilder ![tag](https://img.shields.io/badge/-al2023-%23AAB7B8) ![tag](https://img.shields.io/badge/-beta-%23800080) ![tag](https://img.shields.io/badge/-dlami-%23AAB7B8) ![tag](https://img.shields.io/badge/-ec2-%23FF9900) ![tag](https://img.shields.io/badge/-gpu-%23AAB7B8) ![tag](https://img.shields.io/badge/-imagebuilder-%23AAB7B8) ![tag](https://img.shields.io/badge/-pcs-%23FF9900) ![tag](https://img.shields.io/badge/-ubuntu-%2317202A) 
-
-* **About**: EC2 ImageBuilder template to produce PCS-ready AMIs from DLAMI Base GPU images
-* **Usage**: [README.md](pcs/dlami_for_pcs_imagebuilder/README.md)
-
-#### enable_efa ![tag](https://img.shields.io/badge/-core-%23146EB4) ![tag](https://img.shields.io/badge/-ec2-%23FF9900) ![tag](https://img.shields.io/badge/-efa-%23AAB7B8) ![tag](https://img.shields.io/badge/-hpc-%23AAB7B8) ![tag](https://img.shields.io/badge/-pcs-%23FF9900) 
-
-* **About**: Use EFA with AWS PCS compute node groups
-* **Usage**: [README.md](pcs/enable_efa/README.md)
-
-#### getting_started ![tag](https://img.shields.io/badge/-cloudformation-%237DCEA0) ![tag](https://img.shields.io/badge/-core-%23146EB4) ![tag](https://img.shields.io/badge/-ec2-%23FF9900) ![tag](https://img.shields.io/badge/-efs-%237DCEA0) ![tag](https://img.shields.io/badge/-fsx-%237DCEA0) ![tag](https://img.shields.io/badge/-iam-%23AAB7B8) ![tag](https://img.shields.io/badge/-pcs-%23FF9900) 
-
-* **About**: Supports "Getting Started with AWS PCS" in AWS PCS user guide.
-* **Usage**: [README.md](pcs/getting_started/README.md)
-
-#### hpc_ready_ami ![tag](https://img.shields.io/badge/-alinux-%23AAB7B8) ![tag](https://img.shields.io/badge/-beta-%23800080) ![tag](https://img.shields.io/badge/-ec2-%23FF9900) ![tag](https://img.shields.io/badge/-efa-%23AAB7B8) ![tag](https://img.shields.io/badge/-imagebuilder-%23AAB7B8) ![tag](https://img.shields.io/badge/-lustre-%23AAB7B8) ![tag](https://img.shields.io/badge/-packer-%23AAB7B8) ![tag](https://img.shields.io/badge/-pcs-%23FF9900) ![tag](https://img.shields.io/badge/-rhel-%2317202A) ![tag](https://img.shields.io/badge/-rocky-%23AAB7B8) ![tag](https://img.shields.io/badge/-ubuntu-%2317202A) 
-
-* **About**: EC2 ImageBuilder and HashiCorp Packer assets to produce HPC-ready AMIs
-* **Usage**: [README.md](pcs/hpc_ready_ami/README.md)
-
-#### login_node_for_res ![tag](https://img.shields.io/badge/-beta-%23800080) ![tag](https://img.shields.io/badge/-ec2-%23FF9900) ![tag](https://img.shields.io/badge/-pcs-%23FF9900) ![tag](https://img.shields.io/badge/-res-%237DCEA0) 
-
-* **About**: PCS Login Node for Research and Engineering Studio
-* **Usage**: [README.md](pcs/login_node_for_res/README.md)
-
-#### multiuser_demo ![tag](https://img.shields.io/badge/-beta-%23800080) ![tag](https://img.shields.io/badge/-pcs-%23FF9900) 
-
-* **About**: Example for configuration for multi-user AWS PCS using LDAPS
-* **Usage**: [README.md](pcs/multiuser_demo/README.md)
-
-#### nice_dcv ![tag](https://img.shields.io/badge/-community-%2317202A) ![tag](https://img.shields.io/badge/-cryo-em-%23AAB7B8) ![tag](https://img.shields.io/badge/-gpu-%23AAB7B8) ![tag](https://img.shields.io/badge/-nice-dcv-%23AAB7B8) ![tag](https://img.shields.io/badge/-pcs-%23FF9900) ![tag](https://img.shields.io/badge/-relion-%23AAB7B8) ![tag](https://img.shields.io/badge/-visualization-%23AAB7B8) 
-
-* **About**: NICE DCV visualization workstation with Relion for cryo-EM, configured as a PCS BYO login node
-* **Usage**: [README.md](pcs/nice_dcv/README.md)
-
-#### observability_for_pcs ![tag](https://img.shields.io/badge/-ec2-%23FF9900) ![tag](https://img.shields.io/badge/-grafana-%23AAB7B8) ![tag](https://img.shields.io/badge/-hpc-%23AAB7B8) ![tag](https://img.shields.io/badge/-pcs-%23FF9900) ![tag](https://img.shields.io/badge/-prometheus-%23AAB7B8) 
-
-* **About**: Setup grafana observability stack on PCS
-* **Usage**: [README.md](pcs/observability_for_pcs/README.md)
-
-#### spack_for_pcs ![tag](https://img.shields.io/badge/-beta-%23800080) ![tag](https://img.shields.io/badge/-pcs-%23FF9900) ![tag](https://img.shields.io/badge/-spack-%23AAB7B8) 
-
-* **About**: Install Spack on AWS PCS
-* **Usage**: [README.md](pcs/spack_for_pcs/README.md)
-
-#### terraform_awscc ![tag](https://img.shields.io/badge/-beta-%23800080) ![tag](https://img.shields.io/badge/-efs-%237DCEA0) ![tag](https://img.shields.io/badge/-fsx-%237DCEA0) ![tag](https://img.shields.io/badge/-lustre-%23AAB7B8) ![tag](https://img.shields.io/badge/-pcs-%23FF9900) ![tag](https://img.shields.io/badge/-terraform-%23AAB7B8) 
-
-* **About**: Create a demo PCS cluster using the Terraform AWSCC provider
-* **Usage**: [README.md](pcs/terraform_awscc/README.md)
-
-#### try_amd ![tag](https://img.shields.io/badge/-amd-%23AAB7B8) ![tag](https://img.shields.io/badge/-beta-%23800080) ![tag](https://img.shields.io/badge/-cloudformation-%237DCEA0) ![tag](https://img.shields.io/badge/-demo-%23AAB7B8) ![tag](https://img.shields.io/badge/-efs-%237DCEA0) ![tag](https://img.shields.io/badge/-pcs-%23FF9900) 
-
-* **About**: Get started with AMD-powered HPC instances and AWS PCS
-* **Usage**: [README.md](pcs/try_amd/README.md)
-
-#### try_graviton ![tag](https://img.shields.io/badge/-alinux2-%23FF9900) ![tag](https://img.shields.io/badge/-arm64-%23AAB7B8) ![tag](https://img.shields.io/badge/-beta-%23800080) ![tag](https://img.shields.io/badge/-ec2-%23FF9900) ![tag](https://img.shields.io/badge/-efs-%237DCEA0) ![tag](https://img.shields.io/badge/-fsx-%237DCEA0) ![tag](https://img.shields.io/badge/-graviton-%237DCEA0) ![tag](https://img.shields.io/badge/-pcs-%23FF9900) 
-
-* **About**: Get started with Graviton-powered instances on AWS PCS
-* **Usage**: [README.md](pcs/try_graviton/README.md)
-
-
-### :arrow_right: pcs-scripts: PCS node lifecycle action scripts (community)
-
-#### node_lifecycle_demo ![tag](https://img.shields.io/badge/-community-%2317202A) ![tag](https://img.shields.io/badge/-lifecycle-%237DCEA0) ![tag](https://img.shields.io/badge/-pcs-%23FF9900) 
-
-* **About**: Exemplar community scripts for AWS PCS node lifecycle actions, demonstrating use of lifecycle context, portable and idempotent design, and the publish/reference/run/log pattern.
-* **Usage**: [README.md](pcs-scripts/node_lifecycle_demo/README.md)
-
-#### open_shared_dir ![tag](https://img.shields.io/badge/-community-%2317202A) ![tag](https://img.shields.io/badge/-lifecycle-%237DCEA0) ![tag](https://img.shields.io/badge/-pcs-%23FF9900) 
-
-* **About**: Community AWS PCS node lifecycle action that opens permissions on an already-mounted shared directory (e.g. FSx for Lustre at /fsx) so all users can write to it. Runs after the mount and is a no-op if the path is not mounted.
-* **Usage**: [README.md](pcs-scripts/open_shared_dir/README.md)
 
 
 ### :arrow_right: res: Research and Engineering Studio on AWS
