@@ -1,0 +1,92 @@
+---
+AWSTemplateFormatVersion: '2010-09-09'
+Transform: AWS::LanguageExtensions
+Description: Amazon EFS file system for AWS PCS private cluster.
+
+### This template creates an Amazon EFS file system for a private PCS cluster.
+### Deploy this stack after pcs-private-networking.yaml to add EFS shared storage.
+
+Metadata:
+  AWS::CloudFormation::Interface:
+    ParameterGroups:
+      - Label:
+          default: Networking Stack Reference
+        Parameters:
+          - NetworkingStackName
+          - SubnetIds
+      - Label:
+          default: EFS Configuration
+        Parameters:
+          - EFSPerformanceMode
+          - EFSThroughputMode
+
+Parameters:
+  NetworkingStackName:
+    Description: Name of the pcs-private-networking CloudFormation stack
+    Type: String
+    Default: 'pcs-private-networking'
+
+  SubnetIds:
+    Description: Select the private subnets for EFS mount targets (select all subnets from the networking stack)
+    Type: List<AWS::EC2::Subnet::Id>
+
+  EFSPerformanceMode:
+    Description: Performance mode for EFS
+    Type: String
+    Default: generalPurpose
+    AllowedValues:
+      - generalPurpose
+      - maxIO
+
+  EFSThroughputMode:
+    Description: Throughput mode for EFS
+    Type: String
+    Default: bursting
+    AllowedValues:
+      - bursting
+      - elastic
+
+Resources:
+  # EFS File System
+  EFSFileSystem:
+    Type: AWS::EFS::FileSystem
+    Properties:
+      PerformanceMode: !Ref EFSPerformanceMode
+      ThroughputMode: !Ref EFSThroughputMode
+      Encrypted: true
+      FileSystemTags:
+        - Key: Name
+          Value: !Sub '${AWS::StackName}-EFS'
+        - Key: Stack
+          Value: !Ref AWS::StackId
+        - Key: NetworkingStack
+          Value: !Ref NetworkingStackName
+
+  # EFS Mount Targets (one per selected subnet)
+  'Fn::ForEach::MountTargets':
+    - SubnetId
+    - !Ref SubnetIds
+    - 'EFSMountTarget&{SubnetId}':
+        Type: AWS::EFS::MountTarget
+        Properties:
+          FileSystemId: !Ref EFSFileSystem
+          SubnetId: !Ref SubnetId
+          SecurityGroups:
+            - Fn::ImportValue: !Sub '${NetworkingStackName}-EFSSecurityGroupId'
+
+Outputs:
+  EFSFileSystemId:
+    Description: ID of the EFS file system
+    Value: !Ref EFSFileSystem
+    Export:
+      Name: !Sub '${AWS::StackName}-EFSFileSystemId'
+
+  EFSFileSystemDNS:
+    Description: DNS name of the EFS file system
+    Value: !Sub '${EFSFileSystem}.efs.${AWS::Region}.${AWS::URLSuffix}'
+    Export:
+      Name: !Sub '${AWS::StackName}-EFSFileSystemDNS'
+
+  EFSMountCommand:
+    Description: Command to mount the EFS file system
+    Value: !Sub 'sudo mount -t nfs4 -o nfsvers=4.1,rsize=1048576,wsize=1048576,hard,timeo=600,retrans=2,noresvport ${EFSFileSystem}.efs.${AWS::Region}.${AWS::URLSuffix}:/ <EFS_MOUNT_DIRECTORY>'

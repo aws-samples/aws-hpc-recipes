@@ -1,0 +1,104 @@
+---
+AWSTemplateFormatVersion: '2010-09-09'
+Description: Amazon FSx for Lustre file system for AWS PCS private cluster.
+
+### This template creates an Amazon FSx for Lustre file system for a private PCS cluster.
+### Deploy this stack after pcs-private-networking.yaml to add FSx for Lustre high-performance storage.
+###
+### Uses PERSISTENT_2 deployment type with throughput options: 125, 250, 500, 1000 MB/s/TiB
+### Note: PERSISTENT_2 is available in most commercial AWS regions but may not be available in GovCloud
+
+Metadata:
+  AWS::CloudFormation::Interface:
+    ParameterGroups:
+      - Label:
+          default: Networking Stack Reference
+        Parameters:
+          - NetworkingStackName
+          - SubnetId
+      - Label:
+          default: FSx for Lustre Configuration
+        Parameters:
+          - FSxLustreStorageCapacity
+          - FSxLustrePerUnitStorageThroughput
+          - FSxLustreDataCompressionType
+
+Parameters:
+  NetworkingStackName:
+    Description: Name of the pcs-private-networking CloudFormation stack
+    Type: String
+    Default: 'pcs-private-networking'
+
+  SubnetId:
+    Description: Subnet ID to deploy FSx Lustre in (must be one of the private subnets from the networking stack)
+    Type: AWS::EC2::Subnet::Id
+
+  FSxLustreStorageCapacity:
+    Description: Storage capacity for FSx for Lustre (GiB). Must be 1200 GiB or increments of 2400 GiB.
+    Type: Number
+    Default: 1200
+    MinValue: 1200
+
+  FSxLustrePerUnitStorageThroughput:
+    Description: Per unit storage throughput (MB/s/TiB) for FSx for Lustre PERSISTENT_2
+    Type: Number
+    Default: 125
+    AllowedValues:
+      - 125
+      - 250
+      - 500
+      - 1000
+
+  FSxLustreDataCompressionType:
+    Description: Data compression type for FSx for Lustre (LZ4 provides automatic compression and is recommended)
+    Type: String
+    Default: LZ4
+    AllowedValues:
+      - NONE
+      - LZ4
+
+Resources:
+  # FSx for Lustre File System
+  FSxLustreFileSystem:
+    Type: AWS::FSx::FileSystem
+    Properties:
+      FileSystemType: LUSTRE
+      StorageCapacity: !Ref FSxLustreStorageCapacity
+      SubnetIds:
+        - !Ref SubnetId
+      SecurityGroupIds:
+        - Fn::ImportValue: !Sub '${NetworkingStackName}-FSxLustreSecurityGroupId'
+      LustreConfiguration:
+        DeploymentType: PERSISTENT_2
+        PerUnitStorageThroughput: !Ref FSxLustrePerUnitStorageThroughput
+        DataCompressionType: !Ref FSxLustreDataCompressionType
+      Tags:
+        - Key: Name
+          Value: !Sub '${AWS::StackName}-FSxLustre'
+        - Key: Stack
+          Value: !Ref AWS::StackId
+        - Key: NetworkingStack
+          Value: !Ref NetworkingStackName
+
+Outputs:
+  FSxLustreFileSystemId:
+    Description: ID of the FSx for Lustre file system
+    Value: !Ref FSxLustreFileSystem
+    Export:
+      Name: !Sub '${AWS::StackName}-FSxLustreFileSystemId'
+
+  FSxLustreFileSystemDNS:
+    Description: DNS name of the FSx for Lustre file system
+    Value: !GetAtt FSxLustreFileSystem.DNSName
+    Export:
+      Name: !Sub '${AWS::StackName}-FSxLustreFileSystemDNS'
+
+  FSxLustreMountName:
+    Description: Mount name of the FSx for Lustre file system
+    Value: !GetAtt FSxLustreFileSystem.LustreMountName
+    Export:
+      Name: !Sub '${AWS::StackName}-FSxLustreMountName'
+
+  FSxLustreMountCommand:
+    Description: Command to mount the FSx for Lustre file system
+    Value: !Sub 'sudo mount -t lustre -o noatime,flock ${FSxLustreFileSystem.DNSName}@tcp:/${FSxLustreFileSystem.LustreMountName} <FSXL_MOUNT_DIRECTORY>'
