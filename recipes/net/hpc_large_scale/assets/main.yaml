@@ -118,7 +118,8 @@ Mappings:
     ca-central-1:
       ZoneId1: cac1-az2
       ZoneId2: cac1-az1
-      ZoneId3: cac1-az3
+      # Canada (Central) has no cac1-az3. Its third zone is cac1-az4.
+      ZoneId3: cac1-az4
     eu-south-1:
       ZoneId1: eus1-az2
       ZoneId2: eus1-az1
