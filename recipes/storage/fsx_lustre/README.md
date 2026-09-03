@@ -20,30 +20,43 @@ There are two templates. One creates a "scratch" filesystem, suitable for short-
 
 When prompted to choose a VPC and subnet, select the one where you intend to place the majority of your computing. It is possible to access FSx for Lustre filesystems across Availability Zones, but there will be higher latency and additional costs due to cross-zone traffic.
 
-### Regional Considerations for Persistent Filesystems
+### Regional considerations
 
-The persistent filesystem template uses the PERSISTENT_2 deployment type by default, which supports throughput options of 125, 250, 500, or 1000 MB/s/TiB. However, some AWS regions only support the PERSISTENT_1 deployment type, which is limited to throughput options of 50, 100, or 200 MB/s/TiB.
+Not every Region offers every FSx for Lustre deployment type. The templates detect the Region they
+run in and adjust, so you can launch them anywhere FSx for Lustre is available. The authoritative
+source for the table below is [Deployment type availability](https://docs.aws.amazon.com/fsx/latest/LustreGuide/using-fsx-lustre.html#persistent-deployment-regions)
+in the FSx for Lustre User Guide.
 
-The template automatically detects these regions and switches to PERSISTENT_1 with 200 MB/s/TiB throughput. The following regions have this automatic override:
+#### Persistent filesystems
 
-| Region | Region Code |
+`persistent.yaml` uses the PERSISTENT_2 deployment type, which supports throughput options of 125,
+250, 500, or 1000 MB/s/TiB. Two Regions offer only PERSISTENT_1, and two more cap PERSISTENT_2 at
+250 MB/s/TiB.
+
+| Region | Region code | What the template does |
+|--------|-------------|------------------------|
+| Middle East (Bahrain) | me-south-1 | PERSISTENT_1 at 200 MB/s/TiB |
+| Middle East (UAE) | me-central-1 | PERSISTENT_1 at 200 MB/s/TiB |
+| Israel (Tel Aviv) | il-central-1 | PERSISTENT_2, throughput capped at 250 MB/s/TiB |
+| Mexico (Central) | mx-central-1 | PERSISTENT_2, throughput capped at 250 MB/s/TiB |
+
+Any `PerUnitStorageThroughput` value you select is overridden accordingly. Everywhere else, your
+selection is used as-is.
+
+#### Scratch filesystems
+
+`scratch.yaml` uses the SCRATCH_2 deployment type. These Regions do not offer it, so the template
+creates a PERSISTENT_2 filesystem at 125 MB/s/TiB instead. Persistent storage costs more per GiB
+than scratch storage, so check the price for your Region before you deploy.
+
+| Region | Region code |
 |--------|-------------|
-| AWS GovCloud (US-East) | us-gov-east-1 |
-| AWS GovCloud (US-West) | us-gov-west-1 |
-| Africa (Cape Town) | af-south-1 |
-| Asia Pacific (Hyderabad) | ap-south-2 |
-| Asia Pacific (Jakarta) | ap-southeast-3 |
-| Asia Pacific (Melbourne) | ap-southeast-4 |
-| Asia Pacific (Osaka) | ap-northeast-3 |
-| Europe (Milan) | eu-south-1 |
-| Europe (Paris) | eu-west-3 |
-| Europe (Spain) | eu-south-2 |
-| Europe (Zurich) | eu-central-2 |
-| Middle East (Bahrain) | me-south-1 |
-| Middle East (UAE) | me-central-1 |
-| South America (São Paulo) | sa-east-1 |
-
-If you deploy in one of these regions, any `PerUnitStorageThroughput` value you select will be overridden to 200 MB/s/TiB automatically.
+| Asia Pacific (Malaysia) | ap-southeast-5 |
+| Asia Pacific (New Zealand) | ap-southeast-6 |
+| Asia Pacific (Taipei) | ap-east-2 |
+| Asia Pacific (Thailand) | ap-southeast-7 |
+| Canada West (Calgary) | ca-west-1 |
+| Mexico (Central) | mx-central-1 |
 
 ### Use with AWS ParallelCluster
 
