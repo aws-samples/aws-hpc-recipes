@@ -118,7 +118,8 @@ Mappings:
     ca-central-1:
       ZoneId1: cac1-az2
       ZoneId2: cac1-az1
-      ZoneId3: cac1-az3
+      # Canada (Central) has no cac1-az3. Its third zone is cac1-az4.
+      ZoneId3: cac1-az4
     eu-south-1:
       ZoneId1: eus1-az2
       ZoneId2: eus1-az1
@@ -127,6 +128,10 @@ Mappings:
       ZoneId1: ape1-az3
       ZoneId2: ape1-az2
       ZoneId3: ape1-az1
+    ap-east-2:
+      ZoneId1: ape2-az3
+      ZoneId2: ape2-az2
+      ZoneId3: ape2-az1
     ap-northeast-1:
       ZoneId1: apne1-az4
       ZoneId2: apne1-az1
@@ -179,6 +184,18 @@ Mappings:
       ZoneId1: apse4-az3
       ZoneId2: apse4-az2
       ZoneId3: apse4-az1
+    ap-southeast-5:
+      ZoneId1: apse5-az3
+      ZoneId2: apse5-az2
+      ZoneId3: apse5-az1
+    ap-southeast-6:
+      ZoneId1: apse6-az3
+      ZoneId2: apse6-az2
+      ZoneId3: apse6-az1
+    ap-southeast-7:
+      ZoneId1: apse7-az3
+      ZoneId2: apse7-az2
+      ZoneId3: apse7-az1
     ca-west-1:
       ZoneId1: caw1-az3
       ZoneId2: caw1-az2
@@ -195,10 +212,18 @@ Mappings:
       ZoneId1: ilc1-az3
       ZoneId2: ilc1-az2
       ZoneId3: ilc1-az1
+    me-south-1:
+      ZoneId1: mes1-az3
+      ZoneId2: mes1-az2
+      ZoneId3: mes1-az1
     me-central-1:
       ZoneId1: mec1-az3
       ZoneId2: mec1-az2
       ZoneId3: mec1-az1
+    mx-central-1:
+      ZoneId1: mxc1-az3
+      ZoneId2: mxc1-az2
+      ZoneId3: mxc1-az1
 
 Conditions:
      DoProvisionSubnetsC: !Equals [!Ref ProvisionSubnetsC, "True"]

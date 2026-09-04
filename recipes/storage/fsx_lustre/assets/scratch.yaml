@@ -6,6 +6,8 @@ Description: FSx for Lustre SCRATCH_2 Filesystem.
   The filesystem supports Lustre versions 2.12 and 2.15 with LZ4 compression for optimized storage efficiency.
   Use this template as a foundation for deploying high-performance temporary storage solutions.
   Refer to the Outputs tab for the filesystem ID, mount name, and security group ID needed to mount the filesystem.
+  Note - A few regions do not offer the SCRATCH_2 deployment type. In those regions the template creates a
+  PERSISTENT_2 filesystem at 125 MB/s/TiB instead, which costs more than scratch storage.
 
 ### Stack metadata
 Metadata:
@@ -57,6 +59,17 @@ Parameters:
 Conditions:
   CreateSecurityGroup: !Equals ["", !Ref SecurityGroupName]
   UseExistingSecurityGroup: !Not [!Equals ["", !Ref SecurityGroupName]]
+  # Regions that do not offer the SCRATCH_2 deployment type. In these regions the
+  # template creates a PERSISTENT_2 filesystem at 125 MB/s/TiB instead, which costs
+  # more per GiB than scratch and replicates data within its Availability Zone.
+  # Source: https://docs.aws.amazon.com/fsx/latest/LustreGuide/using-fsx-lustre.html#persistent-deployment-regions
+  IsNoScratch2Region: !Or
+    - !Equals [!Ref AWS::Region, 'ap-east-2']       # Asia Pacific (Taipei)
+    - !Equals [!Ref AWS::Region, 'ap-southeast-5']  # Asia Pacific (Malaysia)
+    - !Equals [!Ref AWS::Region, 'ap-southeast-6']  # Asia Pacific (New Zealand)
+    - !Equals [!Ref AWS::Region, 'ap-southeast-7']  # Asia Pacific (Thailand)
+    - !Equals [!Ref AWS::Region, 'ca-west-1']       # Canada West (Calgary)
+    - !Equals [!Ref AWS::Region, 'mx-central-1']    # Mexico (Central)
 
 Resources:
 
@@ -179,7 +192,8 @@ Resources:
         - !Ref SubnetId
       LustreConfiguration:
         DataCompressionType: !Ref Compression
-        DeploymentType: SCRATCH_2
+        DeploymentType: !If [IsNoScratch2Region, 'PERSISTENT_2', 'SCRATCH_2']
+        PerUnitStorageThroughput: !If [IsNoScratch2Region, 125, !Ref 'AWS::NoValue']
       Tags:
         - Key: HPCRecipes
           Value: "true"
