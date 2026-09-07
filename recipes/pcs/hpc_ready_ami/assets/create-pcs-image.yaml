@@ -153,6 +153,7 @@ Resources:
         - ComponentArn: !GetAtt [ImageBuilderComponentsStack, Outputs.PcsAgentInstallerComponent]
         - ComponentArn: !GetAtt [ImageBuilderComponentsStack, Outputs.PcsSlurmInstallerComponent]
         - ComponentArn: !GetAtt [ImageBuilderComponentsStack, Outputs.SpackInstallerComponent]
+        - ComponentArn: !GetAtt [ImageBuilderComponentsStack, Outputs.EessiInstallerComponent]
         # Tests to confirm that yielded image can successfully boot
         - ComponentArn: !Sub 'arn:${AWS::Partition}:imagebuilder:${AWS::Region}:aws:component/reboot-test-linux/x.x.x'
       Description: Install PCS Agent, SLURM, and other components
