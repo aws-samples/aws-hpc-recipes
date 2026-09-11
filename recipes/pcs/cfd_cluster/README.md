@@ -69,7 +69,8 @@ Briefly, to install Spack in the network directory:
 * Log into the instance that is managed by your `login` node group.
 * Become `root`
 * Download [`install.sh`](../spack_for_pcs/assets/install.sh) to the instance.
-* Run this command: `./install.sh --directory /shared --slurm-directory /opt/aws/pcs/scheduler/slurm-25.11 --no-intel-compiler`
+* Run this command, replacing `26.05` with the Slurm version your cluster runs: `./install.sh --directory /shared --slurm-directory /opt/aws/pcs/scheduler/slurm-26.05 --no-intel-compiler`
+    * The PCS sample AMI installs several Slurm versions side by side. Run `ls -d /opt/aws/pcs/scheduler/slurm-*` to see them, then choose the one that matches your cluster.
 * Wait for it to complete. Log out and back into the instance. 
 
 ### Install OpenFOAM
