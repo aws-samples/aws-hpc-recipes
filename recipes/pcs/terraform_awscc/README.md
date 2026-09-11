@@ -20,7 +20,7 @@ This repository demonstrates how to use the `aws` and `awscc` providers to launc
 - **Dynamic Compute**: 0-4x c7i.2xlarge elastic nodes (Slurm weight=100, 5min idle timeout; c6i.2xlarge in eu-south-1)
 
 ### Slurm Configuration
-- **Scheduler**: Slurm 25.05 with AWS PCS managed accounting enabled
+- **Scheduler**: Slurm 26.05 with AWS PCS managed accounting enabled
 - **Normal Queue**: Default queue, 48-hour limit, uses static and dynamic nodes
 - **Long Queue**: Unlimited runtime, static nodes only
 - **Scheduling**: Lower weight = higher priority (static nodes preferred, dynamic for overflow)
@@ -112,7 +112,7 @@ The following variables need to be configured when using this repository:
 | `vpc_cidr`                        | CIDR block for VPC                    | string | 10.0.0.0/16  |
 | `ssh_cidr_block`                  | CIDR block allowed for SSH access     | string | 0.0.0.0/0    |
 | `pcs_cluster_size`                | Size of PCS cluster (SMALL/MEDIUM/LARGE) | string | SMALL     |
-| `pcs_cluster_slurm_version`       | Slurm version                         | string | 25.05        |
+| `pcs_cluster_slurm_version`       | Slurm version                         | string | 26.05        |
 | `pcs_cluster_scaledown_idletime`  | Idle timeout for dynamic nodes (seconds) | number | 300       |
 | `pcs_cng_login_instance_type`     | Instance type for login nodes         | string | auto (c7i.xlarge; c6i.xlarge in eu-south-1)   |
 | `pcs_cng_compute_instance_type`   | Instance type for compute nodes       | string | auto (c7i.2xlarge; c6i.2xlarge in eu-south-1) |
@@ -124,11 +124,18 @@ Note: Find the AMI ID using the following command, subbing `region-code` for the
 export REGION_CODE=us-east-2
 
 aws ec2 describe-images --region ${REGION_CODE} \
---filters 'Name=name,Values=aws-pcs-sample_ami-al2023-x86_64-slurm-25.11*' \
+--filters 'Name=name,Values=aws-pcs-sample_ami-al2023-x86_64-*' \
           'Name=owner-alias,Values=amazon' \
           'Name=state,Values=available' \
---query 'sort_by(Images, &CreationDate)[-1].[Name,ImageId]' --output text
+--query 'sort_by(Images[?!contains(Name, `slurm`)], &CreationDate)[-1].[Name,ImageId]' \
+--output text
 ```
+
+Sample AMI names no longer include a Slurm version, because one AMI holds
+several versions. A name looks like
+`aws-pcs-sample_ami-al2023-x86_64-2026-09-10T03-06-47.199Z`. The
+`?!contains(Name, 'slurm')` filter skips the older AMIs that do name a single
+version. For Graviton nodes, replace `x86_64` with `arm64`.
 
 ## Outputs
 

@@ -58,11 +58,11 @@ The templates in this recipe create:
 
 When deploying the launch template (Step 3), you will need to input as a parameter a **`LoginAmiId`** and a **`ComputeAmiId`**.
 
-- **Recommended: Use AWS PCS Sample AMIs**: AWS provides pre-built sample AMIs based on Amazon Liunx 2023, with Slurm 25.11 and generally required HPC software already installed. These AMIs are regularly updated and tested by AWS. Nevertheless, sample AMIs are for demonstration purposes and are **not recommended for production workloads**.
+- **Recommended: Use AWS PCS Sample AMIs**: AWS provides pre-built sample AMIs based on Amazon Linux 2023, with Slurm and generally required HPC software already installed. One AMI holds several Slurm versions, so its name does not include a version. Names look like `aws-pcs-sample_ami-al2023-x86_64-2026-09-10T03-06-47.199Z`. These AMIs are regularly updated and tested by AWS. Nevertheless, sample AMIs are for demonstration purposes and are **not recommended for production workloads**.
 
    What's pre-installed in AWS PCS sample AMIs:
    - ✅ AWS PCS agent
-   - ✅ Slurm scheduler
+   - ✅ Slurm scheduler (several versions; you select one when you create the cluster)
    - ✅ Elastic Fabric Adapter (EFA) drivers
    - ✅ Lustre client (for FSx for Lustre)
    - ✅ NFS utilities (for Elastic File System and FSx for NetApp ONTAP)
