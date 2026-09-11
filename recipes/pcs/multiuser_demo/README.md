@@ -65,7 +65,7 @@ To create your node group dependencies:
     * Instances - Choose instance types. Smaller, cheaper instances are good for prototyping. 
     * Scaling configuration - Use a static configuration to demonstrate multi-user configuration. Set the minimum and maximum instance count to 1. 
 * Under Additional settings, specify the following:
-    * AMI ID - Choose an AMI based on Amazon Linux 2, such as the PCS sample AMI. 
+    * AMI ID - Choose an AMI based on Amazon Linux 2023, such as the PCS sample AMI. Sample AMI names look like `aws-pcs-sample_ami-al2023-x86_64-2026-09-10T03-06-47.199Z`. 
 
 ### Connect to a node in the PCS compute node group
 
