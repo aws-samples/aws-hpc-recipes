@@ -31,13 +31,14 @@ Parameters:
 
   SlurmVersion:
     Type: String
-    Default: 25.11
-    Description: Version of Slurm to use
+    Default: 26.05
+    Description: >
+      Version of Slurm to use. The current sample AMI includes 25.05, 25.11,
+      and 26.05, so any of the three work with the same AMI.
     AllowedValues:
-         - 24.05
-         - 24.11
          - 25.05
          - 25.11
+         - 26.05
 
   ClientIpCidr:
     Description: IP(s) allowed to directly access the login nodes. We recommend that you restrict it with your own IP/subnet (x.x.x.x/32 for your own ip or x.x.x.x/24 for range. Replace x.x.x.x with your own PUBLIC IP. You can get your public IP using tools such as https://ifconfig.co/)
@@ -676,8 +677,19 @@ Resources:
           logger = logging.getLogger()
           logger.setLevel(logging.INFO)
 
-          # Slurm 25.11 and later sample AMIs are only published for Amazon Linux 2023.
-          # Older versions (24.05, 24.11, 25.05) remain on Amazon Linux 2.
+          # Current sample AMIs carry no Slurm version in their name, because one
+          # AMI holds several Slurm versions. You pick the version when you create
+          # the cluster, not when you pick the AMI. These AMIs are Amazon Linux
+          # 2023 only, and their names look like:
+          #     aws-pcs-sample_ami-al2023-x86_64-2026-09-10T03-06-47.199Z
+          #
+          # Earlier AMIs name one Slurm version, and versions before 25.11 use
+          # Amazon Linux 2 instead of Amazon Linux 2023:
+          #     aws-pcs-sample_ami-amzn2-x86_64-slurm-25.05-2026-09-07T08-03-31.357Z
+          #
+          # The lookup tries the current scheme first and falls back to the
+          # earlier one, so it works in Regions that do not yet have the new AMIs.
+
           def resolve_os_for_slurm(requested_os, slurm_version):
               try:
                   major, minor = [int(p) for p in slurm_version.split('.')[:2]]
@@ -687,19 +699,35 @@ Resources:
                   return 'al2023'
               return requested_os
 
-          def construct_ami_prefix(os_name, architecture, slurm_version):
-              return f'aws-pcs-sample_ami-{os_name}-{architecture}-slurm-{slurm_version}'
-
-          def get_latest_ami(ami_name_prefix):
+          def describe_sample_amis(name_pattern):
               ec2_client = boto3.client('ec2')
               filters = [
-                  {'Name': 'name','Values': [f'{ami_name_prefix}*']},
-                  {'Name': 'owner-alias', 'Values': ['amazon']}
+                  {'Name': 'name', 'Values': [name_pattern]},
+                  {'Name': 'owner-alias', 'Values': ['amazon']},
+                  {'Name': 'state', 'Values': ['available']}
               ]
-              response = ec2_client.describe_images(Filters=filters)
-              ami_list = response['Images']
-              sorted_ami_list = sorted(ami_list, key=lambda x: x['CreationDate'], reverse=True)
-              return sorted_ami_list[0]['ImageId'] if sorted_ami_list else None
+              return ec2_client.describe_images(Filters=filters)['Images']
+
+          def latest_image_id(images):
+              if not images:
+                  return None
+              newest = sorted(images, key=lambda x: x['CreationDate'], reverse=True)[0]
+              return newest['ImageId']
+
+          def get_latest_ami(os_name, architecture, slurm_version):
+              # Current scheme. A shared prefix also matches the earlier
+              # slurm-versioned names, so discard those.
+              prefix = f'aws-pcs-sample_ami-al2023-{architecture}-'
+              images = [i for i in describe_sample_amis(f'{prefix}*')
+                        if '-slurm-' not in i['Name']]
+              ami_id = latest_image_id(images)
+              if ami_id:
+                  return ami_id, prefix
+
+              # Earlier scheme.
+              legacy_os = resolve_os_for_slurm(os_name, slurm_version)
+              prefix = f'aws-pcs-sample_ami-{legacy_os}-{architecture}-slurm-{slurm_version}'
+              return latest_image_id(describe_sample_amis(f'{prefix}*')), prefix
 
           def send_response(event, context, response_status, response_data, physical_resource_id=None):
               response_body = {
@@ -746,12 +774,10 @@ Resources:
                       send_response(event, context, 'SUCCESS', {})
                       return
 
-                  ami_name_prefix = construct_ami_prefix(resolve_os_for_slurm(os_name, slurm_version), architecture, slurm_version)
-                  logger.info(f'Looking up AMI with prefix: {ami_name_prefix}')
-                  
-                  ami_id = get_latest_ami(ami_name_prefix)
+                  ami_id, ami_name_prefix = get_latest_ami(os_name, architecture, slurm_version)
                   if not ami_id:
                       raise ValueError(f'No AMI found matching prefix: {ami_name_prefix}')
+                  logger.info(f'Found AMI {ami_id} with prefix: {ami_name_prefix}')
 
                   response_data = {
                       'AmiId': ami_id,
