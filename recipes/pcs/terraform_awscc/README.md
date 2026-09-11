@@ -20,7 +20,7 @@ This repository demonstrates how to use the `aws` and `awscc` providers to launc
 - **Dynamic Compute**: 0-4x c7i.2xlarge elastic nodes (Slurm weight=100, 5min idle timeout; c6i.2xlarge in eu-south-1)
 
 ### Slurm Configuration
-- **Scheduler**: Slurm 25.11 with AWS PCS managed accounting enabled
+- **Scheduler**: Slurm 26.05 with AWS PCS managed accounting enabled
 - **Normal Queue**: Default queue, 48-hour limit, uses static and dynamic nodes
 - **Long Queue**: Unlimited runtime, static nodes only
 - **Scheduling**: Lower weight = higher priority (static nodes preferred, dynamic for overflow)
@@ -112,7 +112,7 @@ The following variables need to be configured when using this repository:
 | `vpc_cidr`                        | CIDR block for VPC                    | string | 10.0.0.0/16  |
 | `ssh_cidr_block`                  | CIDR block allowed for SSH access     | string | 0.0.0.0/0    |
 | `pcs_cluster_size`                | Size of PCS cluster (SMALL/MEDIUM/LARGE) | string | SMALL     |
-| `pcs_cluster_slurm_version`       | Slurm version                         | string | 25.11        |
+| `pcs_cluster_slurm_version`       | Slurm version                         | string | 26.05        |
 | `pcs_cluster_scaledown_idletime`  | Idle timeout for dynamic nodes (seconds) | number | 300       |
 | `pcs_cng_login_instance_type`     | Instance type for login nodes         | string | auto (c7i.xlarge; c6i.xlarge in eu-south-1)   |
 | `pcs_cng_compute_instance_type`   | Instance type for compute nodes       | string | auto (c7i.2xlarge; c6i.2xlarge in eu-south-1) |

@@ -99,7 +99,7 @@ Parameters:
 
   SlurmVersion:
     Type: String
-    Default: 25.11
+    Default: 26.05
     Description: >
       Version of Slurm to use. The current sample AMI includes 25.05, 25.11,
       and 26.05, so any of the three work with the same AMI.

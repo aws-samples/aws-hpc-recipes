@@ -67,7 +67,7 @@ variable "pcs_cluster_size" {
 variable "pcs_cluster_slurm_version" {
   description = "Version of Slurm to use in the cluster"
   type        = string
-  default     = "25.11"
+  default     = "26.05"
 }
 
 variable "pcs_cng_ami_id" {
