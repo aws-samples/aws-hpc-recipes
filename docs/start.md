@@ -39,7 +39,7 @@ A few things to be aware of:
 
 ## Develop your recipe
 
-Before you write much, read [AGENTS.md](../AGENTS.md). It carries the repository conventions and the invariants CI enforces, and it will save you a round of review. If your recipe lands in a namespace that has its own `AGENTS.md` — `recipes/pcs-scripts/` does — read that as well; it takes precedence for that namespace.
+Read [AGENTS.md](../AGENTS.md) before you start.
 
 Put all downloadable scripts, templates, tarballs, etc. into your recipe's `assets` directory. This will be mirrored out to an Amazon S3 bucket when your contribution is merged with the main HPC Recipes repository. 
 
