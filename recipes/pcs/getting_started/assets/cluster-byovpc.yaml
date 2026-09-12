@@ -624,10 +624,10 @@ Resources:
             # so it applies to the mounted file system, not an empty directory.
             - Name: set-shared-dir-mode
               ScriptSource:
-                # HTTPS (not s3://) so the region-pinned PCS agent can fetch from the
-                # single-Region HPC Recipes bucket (us-east-1) regardless of the cluster's
-                # Region. An s3:// URI to an out-of-Region bucket fails with PermanentRedirect.
-                ScriptLocation: !Sub 'https://${HpcRecipesS3Bucket}.s3.us-east-1.amazonaws.com/${HpcRecipesBranch}/recipes/pcs-scripts/open_shared_dir/assets/set-shared-dir-mode-v1.0.0.sh' # partition-exception: single-Region HPC Recipes bucket (us-east-1), matches this recipe's nested-stack TemplateURLs
+                # Fetched by S3 URI, so the download stays on the AWS network and needs
+                # only s3:GetObject on the object. The HPC Recipes bucket is in us-east-1;
+                # nodes in any Region can read from it.
+                ScriptLocation: !Sub 's3://${HpcRecipesS3Bucket}/${HpcRecipesBranch}/recipes/pcs-scripts/open_shared_dir/assets/set-shared-dir-mode-v1.0.0.sh'
               Arguments:
                 - '--path'
                 - '/shared'
@@ -708,10 +708,10 @@ Resources:
             # so it applies to the mounted file system, not an empty directory.
             - Name: set-shared-dir-mode
               ScriptSource:
-                # HTTPS (not s3://) so the region-pinned PCS agent can fetch from the
-                # single-Region HPC Recipes bucket (us-east-1) regardless of the cluster's
-                # Region. An s3:// URI to an out-of-Region bucket fails with PermanentRedirect.
-                ScriptLocation: !Sub 'https://${HpcRecipesS3Bucket}.s3.us-east-1.amazonaws.com/${HpcRecipesBranch}/recipes/pcs-scripts/open_shared_dir/assets/set-shared-dir-mode-v1.0.0.sh' # partition-exception: single-Region HPC Recipes bucket (us-east-1), matches this recipe's nested-stack TemplateURLs
+                # Fetched by S3 URI, so the download stays on the AWS network and needs
+                # only s3:GetObject on the object. The HPC Recipes bucket is in us-east-1;
+                # nodes in any Region can read from it.
+                ScriptLocation: !Sub 's3://${HpcRecipesS3Bucket}/${HpcRecipesBranch}/recipes/pcs-scripts/open_shared_dir/assets/set-shared-dir-mode-v1.0.0.sh'
               Arguments:
                 - '--path'
                 - '/shared'
