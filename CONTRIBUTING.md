@@ -12,13 +12,11 @@ If you discover a potential security issue in this project we ask that you notif
 
 ## Contributing new recipes
 
-**Start with [AGENTS.md](AGENTS.md).** The guidelines below are the review bar — what a
-maintainer looks for. The mechanics live in `AGENTS.md`: the required recipe layout, the
-partition-safety rules CI enforces, how to run `make validate`, and which files are
-generated and must not be hand-edited. Some namespaces add their own `AGENTS.md` with
-stricter rules that take precedence there; `recipes/pcs-scripts/` is one. A recipe can
-satisfy every item below and still fail validation, so read that first. This applies to
-coding agents and people alike.
+**Read [AGENTS.md](AGENTS.md) first.** It is the development contract: recipe layout,
+conventions, the invariants CI enforces, and how to validate your work. The guidelines
+below cover what a maintainer reviews for, which does not include validation — a recipe
+can satisfy all of them and still fail `make validate`. A namespace may add its own
+`AGENTS.md` that takes precedence there; `recipes/pcs-scripts/` does.
 
 We request that you follow these guidelines:
 

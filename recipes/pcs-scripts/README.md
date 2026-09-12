@@ -6,13 +6,10 @@ A node lifecycle action runs a script at a defined point in a compute node's
 lifecycle. The `nodeBootstrapped` stage is one such point, and it's where you'd
 mount storage, tune the OS, join a directory, or tag the instance.
 
-> **Writing or editing a script here? Read [`AGENTS.md`](AGENTS.md) first.** This
-> README tells you what the namespace is and what the bar is. `AGENTS.md` is the
-> implementation contract: the required script header shape, the log-helper
-> definitions to copy, and the conventions this namespace deliberately does *not*
-> share with the AWS-maintained lifecycle scripts. `make validate` does not check
-> most of it, so a script can pass CI and still be wrong. This applies to coding
-> agents and people alike.
+> **Writing or editing a script here? Read [`AGENTS.md`](AGENTS.md) first.** It has the
+> required header block, the log helpers to copy, and the conventions this namespace
+> does not share with the AWS-maintained lifecycle scripts. `make validate` checks
+> almost none of it.
 
 ## Community scripts vs. AWS-maintained scripts
 
@@ -72,13 +69,8 @@ variables, and logging.
 
 Scripts contributed to this namespace are expected to meet the bar below. The
 `node_lifecycle_demo` scripts are written to it, so they double as reference
-implementations. Most of these are review guidance; the ShellCheck requirement is
-enforced by CI.
-
-**This checklist is the summary, not the specification.** [`AGENTS.md`](AGENTS.md)
-gives the exact header block, log helpers, and rationale, and it records decisions
-this list does not — such as which AWS conventions we deliberately rejected, and
-why. Read it before you write a script, not after review sends you back.
+implementations. This list is a summary; [`AGENTS.md`](AGENTS.md) is the
+specification. Of the items below, only the ShellCheck requirement is enforced by CI.
 
 - **Idempotent and reboot-safe.** A script set to `EVERY_BOOT` has to be safe to run
   repeatedly and produce the same result each time. If it's inherently one-time, say
