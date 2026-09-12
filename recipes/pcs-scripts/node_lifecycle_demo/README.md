@@ -131,16 +131,19 @@ Flags: `--mount-point PATH` (default `/scratch`), `--fstype FS` (default `ext4`)
 
 Every asset in this recipe is published to the public AWS HPC Recipes bucket, and
 you can reach it by S3 URI or HTTPS URL. Replace `<script>` with a versioned
-filename. The bucket lives in `us-east-1`; use these hosts as-is no matter which
+filename. The bucket lives in `us-east-1`; use these locations as-is no matter which
 Region your cluster is in.
 
 ```
-# S3 URI
+# S3 URI (preferred)
 s3://aws-hpc-recipes/main/recipes/pcs-scripts/node_lifecycle_demo/assets/<script>
 
 # HTTPS URL
 https://aws-hpc-recipes.s3.us-east-1.amazonaws.com/main/recipes/pcs-scripts/node_lifecycle_demo/assets/<script>
 ```
+
+The S3 URI is the better default: the download stays on the AWS network and the node
+needs only `s3:GetObject` on the object, not outbound internet access.
 
 ### Verify integrity with a checksum
 
@@ -156,7 +159,7 @@ Add the hash to the script's `scriptSource`:
 
 ```json
 "scriptSource": {
-  "scriptLocation": "https://aws-hpc-recipes.s3.us-east-1.amazonaws.com/main/recipes/pcs-scripts/node_lifecycle_demo/assets/set-cluster-motd-v1.0.0.sh",
+  "scriptLocation": "s3://aws-hpc-recipes/main/recipes/pcs-scripts/node_lifecycle_demo/assets/set-cluster-motd-v1.0.0.sh",
   "checksum": "<64-char-hex>"
 }
 ```
@@ -174,10 +177,10 @@ aws pcs update-compute-node-group \
   --node-lifecycle-actions file://example-node-lifecycle-actions.json
 ```
 
-To reference a script over an **S3 URI** instead of HTTPS, swap the `scriptLocation`:
+To reference a script over **HTTPS** instead of an S3 URI, swap the `scriptLocation`:
 
 ```json
-"scriptLocation": "s3://aws-hpc-recipes/main/recipes/pcs-scripts/node_lifecycle_demo/assets/set-cluster-motd-v1.0.0.sh"
+"scriptLocation": "https://aws-hpc-recipes.s3.us-east-1.amazonaws.com/main/recipes/pcs-scripts/node_lifecycle_demo/assets/set-cluster-motd-v1.0.0.sh"
 ```
 
 Key per-script settings (see

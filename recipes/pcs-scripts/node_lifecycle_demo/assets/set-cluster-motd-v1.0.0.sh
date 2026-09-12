@@ -1,5 +1,13 @@
 #!/usr/bin/env bash
 #
+# Copyright Amazon.com, Inc. or its affiliates. All Rights Reserved.
+# SPDX-License-Identifier: MIT-0
+#
+#DESCRIPTION: Writes a message-of-the-day banner describing the PCS cluster and node
+#VERSION: 1.0.0
+#OS: AL2, AL2023, Ubuntu22, Ubuntu24, Rhel9, Rhel8, Rocky9, Rocky8
+#PACKAGES: coreutils — present on all supported OSes
+#
 # set-cluster-motd-v1.0.0.sh — AWS PCS node lifecycle action (community example)
 #
 # Writes a message-of-the-day banner that greets users with details about the
@@ -22,26 +30,35 @@
 # Suggested execution policy: EVERY_BOOT (idempotent — rewrites its files).
 # Suggested onError: CONTINUE (a cosmetic banner should never fail a node).
 #
-# Usage:
-#   set-cluster-motd-v1.0.0.sh [--message TEXT] [--motd-file PATH]
-#                              [--profile-dropin PATH | --no-profile-dropin]
-#
-# Flags:
-#   --message TEXT       Optional welcome line shown at the top of the banner.
-#   --motd-file PATH     File to write (default: /etc/motd).
-#   --profile-dropin PATH  Login-shell dispatcher to install
-#                          (default: /etc/profile.d/zz-pcs-motd.sh).
-#   --no-profile-dropin  Do not install the login-shell dispatcher.
-#   -h, --help           Show this help and exit.
+# Usage: set-cluster-motd-v1.0.0.sh [--message TEXT] [--motd-file PATH]
+#                                   [--profile-dropin PATH | --no-profile-dropin]
 
 set -o errexit -o pipefail -o nounset
 
-log()  { echo "[set-cluster-motd] $*"; }
-warn() { echo "[set-cluster-motd] WARNING: $*" >&2; }
-die()  { echo "[set-cluster-motd] ERROR: $*" >&2; exit 1; }
+# The PCS agent captures stdout and stderr to the per-script log at
+# /var/log/amazon/pcs/lifecycle/actions/<stage>/<script>.log. The timestamp lets
+# these lines be interleaved with the agent's own executor.log when working out
+# what happened, and in what order, during node bootstrap.
+_ts()  { date +'%Y-%m-%d %H:%M:%S'; }
+log()  { echo "[$(_ts)] [set-cluster-motd] INFO: $*"; }
+warn() { echo "[$(_ts)] [set-cluster-motd] WARNING: $*" >&2; }
+die()  { echo "[$(_ts)] [set-cluster-motd] ERROR: $*" >&2; exit 1; }
 
 usage() {
-    sed -n '3,35p' "$0" | sed 's/^#\{0,1\} \{0,1\}//'
+    cat <<'USAGE'
+Usage: set-cluster-motd-v1.0.0.sh [--message TEXT] [--motd-file PATH]
+                                  [--profile-dropin PATH | --no-profile-dropin]
+
+Write a message-of-the-day banner describing the PCS cluster and node.
+
+Optional flags:
+  --message TEXT         Welcome line shown at the top of the banner
+  --motd-file PATH       File to write (default: /etc/motd)
+  --profile-dropin PATH  Login-shell dispatcher to install
+                         (default: /etc/profile.d/zz-pcs-motd.sh)
+  --no-profile-dropin    Do not install the login-shell dispatcher
+  -h, --help             Show this help and exit
+USAGE
     exit "${1:-0}"
 }
 

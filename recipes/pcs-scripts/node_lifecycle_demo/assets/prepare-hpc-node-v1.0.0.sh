@@ -1,5 +1,13 @@
 #!/usr/bin/env bash
 #
+# Copyright Amazon.com, Inc. or its affiliates. All Rights Reserved.
+# SPDX-License-Identifier: MIT-0
+#
+#DESCRIPTION: Applies common HPC node tuning: resource limits, network sysctls, and optional Transparent Huge Pages control
+#VERSION: 1.0.0
+#OS: AL2, AL2023, Ubuntu22, Ubuntu24, Rhel9, Rhel8, Rocky9, Rocky8
+#PACKAGES: coreutils, procps (sysctl) — present on all supported OSes
+#
 # prepare-hpc-node-v1.0.0.sh — AWS PCS node lifecycle action (community example)
 #
 # Applies common HPC node tuning: raises resource limits (open files, processes,
@@ -16,26 +24,36 @@
 # Suggested execution policy: EVERY_BOOT (limits.d/sysctl.d must be reasserted).
 # Suggested onError: TERMINATE (a node that is not tuned may fail jobs).
 #
-# Usage:
-#   prepare-hpc-node-v1.0.0.sh [--nofile N] [--nproc N] [--memlock VALUE]
-#                              [--disable-thp] [--somaxconn N]
-#
-# Flags:
-#   --nofile N        Max open files (soft and hard). Default: 131072.
-#   --nproc N         Max user processes (soft and hard). Default: 65536.
-#   --memlock VALUE   Max locked-in-memory (KB or 'unlimited'). Default: unlimited.
-#   --disable-thp     Disable Transparent Huge Pages for this boot.
-#   --somaxconn N     net.core.somaxconn sysctl. Default: 65535.
-#   -h, --help        Show this help and exit.
+# Usage: prepare-hpc-node-v1.0.0.sh [--nofile N] [--nproc N] [--memlock VALUE]
+#                                   [--disable-thp] [--somaxconn N]
 
 set -o errexit -o pipefail -o nounset
 
-log()  { echo "[prepare-hpc-node] $*"; }
-warn() { echo "[prepare-hpc-node] WARNING: $*" >&2; }
-die()  { echo "[prepare-hpc-node] ERROR: $*" >&2; exit 1; }
+# The PCS agent captures stdout and stderr to the per-script log at
+# /var/log/amazon/pcs/lifecycle/actions/<stage>/<script>.log. The timestamp lets
+# these lines be interleaved with the agent's own executor.log when working out
+# what happened, and in what order, during node bootstrap.
+_ts()  { date +'%Y-%m-%d %H:%M:%S'; }
+log()  { echo "[$(_ts)] [prepare-hpc-node] INFO: $*"; }
+warn() { echo "[$(_ts)] [prepare-hpc-node] WARNING: $*" >&2; }
+die()  { echo "[$(_ts)] [prepare-hpc-node] ERROR: $*" >&2; exit 1; }
 
 usage() {
-    sed -n '3,32p' "$0" | sed 's/^#\{0,1\} \{0,1\}//'
+    cat <<'USAGE'
+Usage: prepare-hpc-node-v1.0.0.sh [--nofile N] [--nproc N] [--memlock VALUE]
+                                  [--disable-thp] [--somaxconn N]
+
+Apply common HPC node tuning: resource limits, network sysctls, and optional
+Transparent Huge Pages control.
+
+Optional flags:
+  --nofile N       Max open files, soft and hard (default: 131072)
+  --nproc N        Max user processes, soft and hard (default: 65536)
+  --memlock VALUE  Max locked-in-memory in KB, or 'unlimited' (default: unlimited)
+  --somaxconn N    net.core.somaxconn sysctl (default: 65535)
+  --disable-thp    Disable Transparent Huge Pages for this boot
+  -h, --help       Show this help and exit
+USAGE
     exit "${1:-0}"
 }
 
