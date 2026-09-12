@@ -1,5 +1,13 @@
 #!/usr/bin/env bash
 #
+# Copyright Amazon.com, Inc. or its affiliates. All Rights Reserved.
+# SPDX-License-Identifier: MIT-0
+#
+#DESCRIPTION: Prepares an instance-store (local NVMe) device as fast scratch space, without reformatting a device already in use
+#VERSION: 1.0.0
+#OS: AL2, AL2023, Ubuntu22, Ubuntu24, Rhel9, Rhel8, Rocky9, Rocky8
+#PACKAGES: util-linux (lsblk, blkid, findmnt), e2fsprogs or the mkfs for --fstype — present on all supported OSes. nvme-cli is used if present but is not required
+#
 # setup-local-scratch-v1.0.0.sh — AWS PCS node lifecycle action (community example)
 #
 # Prepares instance-store (local NVMe) disks as fast scratch space: it finds the
@@ -28,23 +36,31 @@
 # Suggested execution policy: EVERY_BOOT (re-mount ephemeral storage on reboot).
 # Suggested onError: CONTINUE (nodes without local NVMe should still start).
 #
-# Usage:
-#   setup-local-scratch-v1.0.0.sh [--mount-point PATH] [--fstype FS] [--mode MODE]
-#
-# Flags:
-#   --mount-point PATH  Where to mount scratch (default: /scratch).
-#   --fstype FS         Filesystem to create if none exists (default: ext4).
-#   --mode MODE         chmod mode for the mount point (default: 1777).
-#   -h, --help          Show this help and exit.
+# Usage: setup-local-scratch-v1.0.0.sh [--mount-point PATH] [--fstype FS] [--mode MODE]
 
 set -o errexit -o pipefail -o nounset
 
-log()  { echo "[setup-local-scratch] $*"; }
-warn() { echo "[setup-local-scratch] WARNING: $*" >&2; }
-die()  { echo "[setup-local-scratch] ERROR: $*" >&2; exit 1; }
+# The PCS agent captures stdout and stderr to the per-script log at
+# /var/log/amazon/pcs/lifecycle/actions/<stage>/<script>.log. The timestamp lets
+# these lines be interleaved with the agent's own executor.log when working out
+# what happened, and in what order, during node bootstrap.
+_ts()  { date +'%Y-%m-%d %H:%M:%S'; }
+log()  { echo "[$(_ts)] [setup-local-scratch] INFO: $*"; }
+warn() { echo "[$(_ts)] [setup-local-scratch] WARNING: $*" >&2; }
+die()  { echo "[$(_ts)] [setup-local-scratch] ERROR: $*" >&2; exit 1; }
 
 usage() {
-    sed -n '3,39p' "$0" | sed 's/^#\{0,1\} \{0,1\}//'
+    cat <<'USAGE'
+Usage: setup-local-scratch-v1.0.0.sh [--mount-point PATH] [--fstype FS] [--mode MODE]
+
+Prepare an instance-store (local NVMe) device as fast scratch space.
+
+Optional flags:
+  --mount-point PATH  Where to mount scratch (default: /scratch)
+  --fstype FS         Filesystem to create if none exists (default: ext4)
+  --mode MODE         chmod mode for the mount point (default: 1777)
+  -h, --help          Show this help and exit
+USAGE
     exit "${1:-0}"
 }
 

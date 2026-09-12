@@ -29,10 +29,16 @@ tasks, also check the
 ### `set-shared-dir-mode-v1.0.0.sh`
 
 Applies a `chmod` mode to a mounted shared directory. It is **ordering-safe**: it
-only acts on a real mount point, so if the mount action that provides the directory
-has not run yet (or was skipped), it logs a warning and exits `0` rather than
-chmod'ing a local directory or failing the node. Because it re-applies the mode on
-each run, it is safe on `EVERY_BOOT`.
+only ever acts on a real mount point, so an out-of-order run can't chmod a local
+directory by mistake. Because it re-applies the mode on each run, it is safe on
+`EVERY_BOOT`.
+
+A missing mount point means one of two things, and the script tells them apart by
+waiting. At node boot the preceding mount action may simply not have finished when
+this one fires, so the script polls for up to `--wait-seconds` (default 30) for the
+path to become a mount point. If it never does — no mount action was configured, or
+it failed — the script logs a warning and exits `0` rather than failing the node.
+Pass `--wait-seconds 0` to skip the wait when you know the mount is already in place.
 
 By default it applies mode `1777` — world-writable with the sticky bit, like `/tmp`,
 so users cannot delete each other's files. Pass `--mode 0777` for a plain
@@ -48,6 +54,8 @@ Flags:
 
 - `--path PATH` — absolute path of the mounted shared directory (**required**), e.g. `/fsx`.
 - `--mode MODE` — `chmod` mode to apply (default `1777`).
+- `--wait-seconds N` — how long to wait for `PATH` to become a mount point before
+  giving up and exiting `0` (default `30`; `0` skips the wait).
 - `-h`, `--help` — show help and exit.
 
 ## Prerequisites
@@ -65,11 +73,13 @@ Flags:
 ## Referencing the script
 
 Every asset in this recipe is published to the public AWS HPC Recipes bucket and is
-reachable by S3 URI or HTTPS URL. The bucket lives in `us-east-1`; use these hosts
-as-is regardless of your cluster's Region.
+reachable by S3 URI or HTTPS URL. The bucket lives in `us-east-1`; use these
+locations as-is regardless of your cluster's Region. Prefer the S3 URI: the download
+stays on the AWS network and the node needs only `s3:GetObject` on the object, not
+outbound internet access.
 
 ```
-# S3 URI
+# S3 URI (preferred)
 s3://aws-hpc-recipes/main/recipes/pcs-scripts/open_shared_dir/assets/set-shared-dir-mode-v1.0.0.sh
 
 # HTTPS URL

@@ -6,6 +6,14 @@ A node lifecycle action runs a script at a defined point in a compute node's
 lifecycle. The `nodeBootstrapped` stage is one such point, and it's where you'd
 mount storage, tune the OS, join a directory, or tag the instance.
 
+> **Writing or editing a script here? Read [`AGENTS.md`](AGENTS.md) first.** This
+> README tells you what the namespace is and what the bar is. `AGENTS.md` is the
+> implementation contract: the required script header shape, the log-helper
+> definitions to copy, and the conventions this namespace deliberately does *not*
+> share with the AWS-maintained lifecycle scripts. `make validate` does not check
+> most of it, so a script can pass CI and still be wrong. This applies to coding
+> agents and people alike.
+
 ## Community scripts vs. AWS-maintained scripts
 
 AWS publishes its own set of maintained scripts for common tasks, and holds them to
@@ -27,22 +35,26 @@ Scripts in this repository are published to the public HPC Recipes bucket and wo
 either way:
 
 ```
+# S3 URI (preferred)
+s3://aws-hpc-recipes/main/recipes/pcs-scripts/<recipe>/assets/<script>
+
 # HTTPS
 https://aws-hpc-recipes.s3.us-east-1.amazonaws.com/main/recipes/pcs-scripts/<recipe>/assets/<script>
-
-# S3 URI
-s3://aws-hpc-recipes/main/recipes/pcs-scripts/<recipe>/assets/<script>
 ```
 
-An S3 reference needs `s3:GetObject` on the object in the node's instance role, plus
-a path to Amazon S3. Nodes in a private subnet reach it through an S3 gateway VPC
-endpoint. An HTTPS reference needs outbound internet access instead.
+Prefer the S3 URI. It needs `s3:GetObject` on the object in the node's instance role
+and a path to Amazon S3, which nodes in a private subnet get through an S3 gateway
+VPC endpoint. That keeps the download on the AWS network. An HTTPS reference needs
+outbound internet access instead, and grants no read permission of its own.
+
+The bucket is in `us-east-1`, but your cluster does not have to be. Both forms work
+from any Region.
 
 From the bucket to a running node, a script goes through four steps:
 
 1. **Publish.** The script lands in the bucket under the path above. (For
    contributors, that's any file under a recipe's `assets/` directory.)
-2. **Reference.** You set `scriptLocation` to the S3 URI or HTTPS URL. You can also
+2. **Reference.** You set `scriptLocation` to the S3 URI (or HTTPS URL). You can also
    pin a `checksum` (a 64-character SHA-256 hex string) so the agent verifies the
    download. Compute it with `sha256sum <script>`; every script here ships a
    companion `.sha256` file.
@@ -63,6 +75,11 @@ Scripts contributed to this namespace are expected to meet the bar below. The
 implementations. Most of these are review guidance; the ShellCheck requirement is
 enforced by CI.
 
+**This checklist is the summary, not the specification.** [`AGENTS.md`](AGENTS.md)
+gives the exact header block, log helpers, and rationale, and it records decisions
+this list does not — such as which AWS conventions we deliberately rejected, and
+why. Read it before you write a script, not after review sends you back.
+
 - **Idempotent and reboot-safe.** A script set to `EVERY_BOOT` has to be safe to run
   repeatedly and produce the same result each time. If it's inherently one-time, say
   so and mark it `FIRST_BOOT_ONLY`. The `PCS_IS_FIRST_BOOT` context variable is there
@@ -72,8 +89,26 @@ enforced by CI.
   distribution.
 - **Named-flag arguments.** Take `--flag value` arguments instead of bare positionals,
   and provide `--help`. Document each flag, its default, and whether it's required.
-- **Clean, prefixed logging to stdout/stderr.** The agent captures both for you, so
-  don't open your own log files. Keep messages consistent and greppable.
+- **Clean, timestamped, prefixed logging to stdout/stderr.** The agent captures both
+  for you, so don't open your own log files. Emit
+  `[YYYY-MM-DD HH:MM:SS] [script-name] LEVEL: message`, so lines stay greppable by
+  script and can be interleaved with the agent's own `executor.log` when you're
+  working out what happened, and in what order, during bootstrap.
+- **A license header.** Start with the Amazon copyright line and
+  `SPDX-License-Identifier: MIT-0`, matching this repository's `LICENSE`. People copy
+  these scripts into their own repositories.
+- **The four metadata tags**, immediately after the license header, in this order:
+
+  ```
+  #DESCRIPTION: One line saying what the script does
+  #VERSION: 1.0.0
+  #OS: AL2, AL2023, Ubuntu22, Ubuntu24, Rhel9, Rhel8, Rocky9, Rocky8
+  #PACKAGES: package names the script needs, or the reason none are needed
+  ```
+
+  These match the tags on the AWS-maintained scripts, so one parser reads both sets.
+  `#OS:` states the operating systems you designed and checked the script for — list
+  only those. `#PACKAGES:` names what has to be on the AMI already.
 - **No package installation.** Assume prerequisites are already on the AMI. If one is
   missing, either fail loudly with a clear message or degrade to best-effort and exit
   0, depending on how critical the action is. Note any packages you depend on.
