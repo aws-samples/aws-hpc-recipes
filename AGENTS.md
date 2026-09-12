@@ -30,6 +30,13 @@ rest is ordinary editing.
   and must contain `README.md`, `metadata.yml`, `Makefile`, `assets/`, `docs/`, and
   `tests/`. Scaffold new recipes with `python -m scripts.new_recipe` rather than building
   the directory by hand. See `docs/ARCHITECTURE.md`.
+- **`recipes/pcs-scripts/` has its own agent guide, and it is not optional.** Before you
+  write or edit a PCS node lifecycle action script, read
+  [`recipes/pcs-scripts/AGENTS.md`](recipes/pcs-scripts/AGENTS.md). It defines a required
+  script header shape, a log-helper contract, and several conventions this namespace
+  deliberately does *not* share with the AWS-maintained lifecycle scripts. `make validate`
+  does not check most of it, so skipping it produces a script that passes CI and still
+  fails review.
 - **Validate before you call it done.** Run `make validate`. It runs four checks:
   recipe structure, `metadata.yml` schema, partition safety, and `cfn-lint`. ShellCheck
   runs too, with a two-tier policy: scripts under `recipes/pcs-scripts/` must pass cleanly

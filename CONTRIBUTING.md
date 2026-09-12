@@ -12,6 +12,14 @@ If you discover a potential security issue in this project we ask that you notif
 
 ## Contributing new recipes
 
+**Start with [AGENTS.md](AGENTS.md).** The guidelines below are the review bar — what a
+maintainer looks for. The mechanics live in `AGENTS.md`: the required recipe layout, the
+partition-safety rules CI enforces, how to run `make validate`, and which files are
+generated and must not be hand-edited. Some namespaces add their own `AGENTS.md` with
+stricter rules that take precedence there; `recipes/pcs-scripts/` is one. A recipe can
+satisfy every item below and still fail validation, so read that first. This applies to
+coding agents and people alike.
+
 We request that you follow these guidelines:
 
 1. Populate your recipe `metadata.yml` file as fully and accurately as you can. This information is used to render the recipes index page. 

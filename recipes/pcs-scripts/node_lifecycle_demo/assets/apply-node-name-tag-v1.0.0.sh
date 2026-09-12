@@ -1,5 +1,13 @@
 #!/usr/bin/env bash
 #
+# Copyright Amazon.com, Inc. or its affiliates. All Rights Reserved.
+# SPDX-License-Identifier: MIT-0
+#
+#DESCRIPTION: Tags the EC2 instance with its PCS node ID so instances can be correlated with PCS nodes
+#VERSION: 1.0.0
+#OS: AL2, AL2023, Ubuntu22, Ubuntu24, Rhel9, Rhel8, Rocky9, Rocky8
+#PACKAGES: awscli (and its Python runtime) — NOT present on every AMI; the script degrades to a warning when it is missing
+#
 # apply-node-name-tag-v1.0.0.sh — AWS PCS node lifecycle action (community example)
 #
 # Tags the EC2 instance with Name=<PCS_NODE_ID> (by default) so that instances
@@ -22,23 +30,31 @@
 # Suggested execution policy: FIRST_BOOT_ONLY (the Name tag does not change).
 # Suggested onError: CONTINUE (best-effort).
 #
-# Usage:
-#   apply-node-name-tag-v1.0.0.sh [--tag-key KEY] [--tag-value VALUE] [--region REGION]
-#
-# Flags:
-#   --tag-key KEY      Tag key to set (default: Name).
-#   --tag-value VALUE  Tag value (default: the PCS_NODE_ID context variable).
-#   --region REGION    AWS Region (default: discovered from IMDSv2).
-#   -h, --help         Show this help and exit.
+# Usage: apply-node-name-tag-v1.0.0.sh [--tag-key KEY] [--tag-value VALUE] [--region REGION]
 
 set -o errexit -o pipefail -o nounset
 
-log()  { echo "[apply-node-name-tag] $*"; }
-warn() { echo "[apply-node-name-tag] WARNING: $*" >&2; }
-die()  { echo "[apply-node-name-tag] ERROR: $*" >&2; exit 1; }
+# The PCS agent captures stdout and stderr to the per-script log at
+# /var/log/amazon/pcs/lifecycle/actions/<stage>/<script>.log. The timestamp lets
+# these lines be interleaved with the agent's own executor.log when working out
+# what happened, and in what order, during node bootstrap.
+_ts()  { date +'%Y-%m-%d %H:%M:%S'; }
+log()  { echo "[$(_ts)] [apply-node-name-tag] INFO: $*"; }
+warn() { echo "[$(_ts)] [apply-node-name-tag] WARNING: $*" >&2; }
+die()  { echo "[$(_ts)] [apply-node-name-tag] ERROR: $*" >&2; exit 1; }
 
 usage() {
-    sed -n '3,32p' "$0" | sed 's/^#\{0,1\} \{0,1\}//'
+    cat <<'USAGE'
+Usage: apply-node-name-tag-v1.0.0.sh [--tag-key KEY] [--tag-value VALUE] [--region REGION]
+
+Tag the EC2 instance so it can be correlated with its PCS node.
+
+Optional flags:
+  --tag-key KEY      Tag key to set (default: Name)
+  --tag-value VALUE  Tag value (default: the PCS_NODE_ID context variable)
+  --region REGION    AWS Region (default: discovered from IMDSv2)
+  -h, --help         Show this help and exit
+USAGE
     exit "${1:-0}"
 }
 

@@ -45,11 +45,11 @@ See [CONTRIBUTING](CONTRIBUTING.md#security-issue-notifications) for more inform
 This repository includes files designed to help AI systems and coding agents work effectively with the HPC recipes:
 
 - **[llms.txt](llms.txt)** - A structured overview of the repository following the [llms.txt standard](https://llmstxt.org/), designed to help Large Language Models understand and navigate the HPC recipes collection.
-- **[AGENTS.md](AGENTS.md)** - Development guidelines and context for AI coding agents following the [AGENTS.md format](https://agents.md/), including project structure, best practices, and troubleshooting guidance.
+- **[AGENTS.md](AGENTS.md)** - The development contract for this repository, following the [AGENTS.md format](https://agents.md/): project structure, the invariants CI enforces, and how to validate your work. **Read it before editing or adding a recipe.** Some namespaces add their own `AGENTS.md` with stricter rules that take precedence there — `recipes/pcs-scripts/` is one.
 
 ## Contributing
 
-We encourage your contributions to this collection. Read up on our [contribution process and guidelines](CONTRIBUTING.md). Then, head to **[Get Started](docs/start.md)** to begin. 
+We encourage your contributions to this collection. Read up on our [contribution process and guidelines](CONTRIBUTING.md), then the development contract in [AGENTS.md](AGENTS.md) — it covers repository layout, conventions, and the invariants CI enforces. Then head to **[Get Started](docs/start.md)** to begin. 
 
 ## License
 
