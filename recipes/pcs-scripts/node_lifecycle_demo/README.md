@@ -67,18 +67,24 @@ tag doesn't change.
 Flags: `--tag-key KEY` (default `Name`), `--tag-value VALUE` (default
 `$PCS_NODE_ID`), `--region REGION` (default from IMDSv2).
 
-The node instance role needs a policy along these lines. Scope `Resource` down
-further wherever you can.
+The node instance role needs a policy to allow tagging. The `aws:ARN` condition
+compares the requested instance ARN against `${ec2:SourceInstanceARN}`, the ARN of
+the instance the credentials were issued to, so a node can tag itself only.
 
 ```json
 {
   "Version": "2012-10-17",
   "Statement": [
     {
-      "Sid": "TagOwnInstance",
+      "Sid": "AllowSelfTagging",
       "Effect": "Allow",
-      "Action": "ec2:CreateTags",
-      "Resource": "*"
+      "Action": ["ec2:CreateTags"],
+      "Resource": "arn:aws:ec2:*:*:instance/*",
+      "Condition": {
+        "StringEquals": {
+          "aws:ARN": "${ec2:SourceInstanceARN}"
+        }
+      }
     }
   ]
 }
