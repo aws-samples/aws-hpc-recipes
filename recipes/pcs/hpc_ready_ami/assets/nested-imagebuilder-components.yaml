@@ -104,6 +104,17 @@ Resources:
       TemplateURL: !Sub 'https://${HpcRecipesS3Bucket}.s3.us-east-1.amazonaws.com/${HpcRecipesBranch}/recipes/pcs/hpc_ready_ami/assets/components/install-spack.yaml'
       TimeoutInMinutes: 10
 
+  EessiInstallerStack:
+    Type: AWS::CloudFormation::Stack
+    DeletionPolicy: Delete
+    UpdateReplacePolicy: Delete
+    Properties:
+      Parameters:
+        HpcRecipesS3Bucket: !Ref HpcRecipesS3Bucket
+        HpcRecipesBranch: !Ref HpcRecipesBranch
+      TemplateURL: !Sub 'https://${HpcRecipesS3Bucket}.s3.us-east-1.amazonaws.com/${HpcRecipesBranch}/recipes/pcs/hpc_ready_ami/assets/components/install-eessi.yaml'
+      TimeoutInMinutes: 10
+
   SsmAgentStack:
     Type: AWS::CloudFormation::Stack
     DeletionPolicy: Delete
@@ -184,6 +195,11 @@ Outputs:
     Value: !GetAtt [ SpackInstallerStack, Outputs.ImageBuilderComponent ]
     Export:
       Name: !Sub "${AWS::StackName}-SpackInstallerComponent"
+  EessiInstallerComponent:
+    Description: EessiInstallerComponent
+    Value: !GetAtt [ EessiInstallerStack, Outputs.ImageBuilderComponent ]
+    Export:
+      Name: !Sub "${AWS::StackName}-EessiInstallerComponent"
   SsmAgentComponent:
     Description: SsmAgentComponent
     Value: !GetAtt [ SsmAgentStack, Outputs.ImageBuilderComponent ]
