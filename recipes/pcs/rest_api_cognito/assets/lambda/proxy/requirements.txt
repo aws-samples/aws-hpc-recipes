@@ -9,4 +9,4 @@
 #
 # To adapt this recipe to your own SSO/IdP integration, add your dependencies
 # here; they are installed at deploy with no repo changes.
-PyJWT==2.10.1
+PyJWT==2.13.0
