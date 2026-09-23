@@ -1,0 +1,737 @@
+# Copyright Amazon.com, Inc. or its affiliates. All Rights Reserved.
+# SPDX-License-Identifier: MIT-0
+
+AWSTemplateFormatVersion: "2010-09-09"
+Description: >
+  Cognito-authenticated proxy for the AWS PCS Slurm REST API. Stands up an
+  Amazon Cognito User Pool (with POSIX identity as custom attributes), an
+  Amazon API Gateway REGIONAL REST API gated by a built-in COGNITO_USER_POOLS
+  authorizer and an IP allowlist, and an in-VPC proxy AWS Lambda function that
+  translates a verified Cognito identity into the enriched HS256 JWT that
+  slurmrestd requires, then forwards the request to the private slurmrestd
+  endpoint on port 6820. The proxy Lambda's PyJWT dependency is installed at
+  deploy time by CodeBuild (nothing vendored into the repo). The proxy half of
+  the rest_api_cognito recipe; deploy it via main.yaml, which passes in the
+  cluster.yaml outputs.
+
+# ---------------------------------------------------------------------------
+# Parameters (supplied by main.yaml from cluster.yaml outputs, plus demo config)
+# ---------------------------------------------------------------------------
+Parameters:
+
+  ClusterId:
+    Type: String
+    Description: The Id of the PCS cluster (from cluster.yaml).
+
+  ClusterArn:
+    Type: String
+    Description: The ARN of the PCS cluster (from cluster.yaml). Scopes pcs:GetCluster.
+
+  VpcId:
+    Type: String
+    Description: The VPC hosting the cluster (from cluster.yaml).
+
+  PrivateSubnetId:
+    Type: String
+    Description: >
+      Private subnet for the proxy Lambda. Must route to the internet via a NAT
+      gateway so the Lambda can reach the PCS and Secrets Manager service
+      endpoints (from cluster.yaml).
+
+  ClusterSecurityGroupId:
+    Type: String
+    Description: >
+      The cluster security group (from cluster.yaml). This stack adds an inbound
+      rule allowing TCP 6820 from the proxy Lambda security group.
+
+  AllowedCidr:
+    Type: String
+    AllowedPattern: '^(\d{1,3})\.(\d{1,3})\.(\d{1,3})\.(\d{1,3})/(\d{1,2})$'
+    Description: >
+      CIDR range allowed to invoke the API Gateway endpoint (aws:SourceIp). No
+      default: you must supply an explicit range so the API is never accidentally
+      wide open (e.g. 203.0.113.10/32).
+
+  DemoUserPassword:
+    Type: String
+    NoEcho: true
+    MinLength: 8
+    MaxLength: 127
+    AllowedPattern: '^(?=.*[a-z])(?=.*[A-Z])(?=.*[0-9])(?=.*[^A-Za-z0-9 ])\S.{6,125}\S$'
+    ConstraintDescription: >
+      8-127 characters with at least one uppercase letter, one lowercase letter,
+      one number, and one special character, and no leading/trailing space. Do not
+      include the username in the password.
+    Description: >
+      Permanent password set for the seeded demo users (alice and bob). Required
+      (no default), NoEcho, and never stored in the template. The pattern enforces
+      the Amazon Cognito default password policy. Do not put "alice" or "bob" in
+      the value.
+
+  AliceUid:
+    Type: Number
+    Default: 1002
+    Description: POSIX uid for demo user alice. Must match the seed-demo-users NLA.
+
+  AliceGid:
+    Type: Number
+    Default: 1002
+    Description: POSIX gid for demo user alice. Must match the seed-demo-users NLA.
+
+  BobUid:
+    Type: Number
+    Default: 1003
+    Description: POSIX uid for demo user bob. Must match the seed-demo-users NLA.
+
+  BobGid:
+    Type: Number
+    Default: 1003
+    Description: POSIX gid for demo user bob. Must match the seed-demo-users NLA.
+
+  JwtExpirySeconds:
+    Type: Number
+    Default: 120
+    MinValue: 30
+    MaxValue: 3600
+    Description: >
+      Lifetime (seconds) of each minted slurmrestd JWT. The token is minted fresh
+      per request and never returned to the caller, so a short lifetime is safe
+      and demonstrates the "use shorter token expiration" hardening advice.
+
+  HpcRecipesS3Bucket:
+    Type: String
+    Default: aws-hpc-recipes
+    AllowedValues:
+      - aws-hpc-recipes
+      - aws-hpc-recipes-dev
+    Description: >
+      HPC Recipes for AWS S3 bucket. Source of the proxy Lambda handler and its
+      requirements.txt, which the deploy-time CodeBuild project fetches and packages.
+
+  HpcRecipesBranch:
+    Type: String
+    Default: main
+    AllowedPattern: '^(?!.*/\.git$)(?!.*/\.)(?!.*\\.\.)[a-zA-Z0-9-_\.]+$'
+    Description: HPC Recipes for AWS release branch.
+
+  RecipeName:
+    Type: String
+    Default: rest_api_cognito
+    Description: >
+      Recipe directory name under recipes/pcs/. Used to locate the proxy Lambda
+      source for the deploy-time build.
+
+# ---------------------------------------------------------------------------
+# Resources
+# ---------------------------------------------------------------------------
+Resources:
+
+  # -------------------------------------------------------------------------
+  # A. Amazon Cognito
+  # POSIX identity rides as custom attributes. Custom attrs are declared with
+  # Name: <attr> here and surface in tokens (and admin APIs) as custom:<attr>.
+  # -------------------------------------------------------------------------
+  CognitoUserPool:
+    Type: AWS::Cognito::UserPool
+    Properties:
+      UserPoolName: !Sub "${AWS::StackName}-pcs-rest"
+      AdminCreateUserConfig:
+        AllowAdminCreateUserOnly: true
+      # POSIX identity attributes are Mutable: false on purpose. The demo-user
+      # seeder writes them at admin_create_user time (see below), which is the
+      # only time an immutable attribute can be set. Making them immutable stops
+      # an authenticated user from calling UpdateUserAttributes with their own
+      # access token (USER_PASSWORD_AUTH tokens carry the implicit
+      # aws.cognito.signin.user.admin scope) to raise their own custom:uid to 0
+      # and have the proxy mint a root-equivalent Slurm JWT. The proxy also
+      # floors uid/gid as defense in depth.
+      Schema:
+        - Name: uid
+          AttributeDataType: Number
+          Mutable: false
+        - Name: gid
+          AttributeDataType: Number
+          Mutable: false
+        - Name: gecos
+          AttributeDataType: String
+          Mutable: false
+          StringAttributeConstraints:
+            MaxLength: "256"
+        - Name: home
+          AttributeDataType: String
+          Mutable: false
+          StringAttributeConstraints:
+            MaxLength: "256"
+        - Name: gids
+          AttributeDataType: String
+          Mutable: false
+          StringAttributeConstraints:
+            MaxLength: "256"
+
+  CognitoUserPoolClient:
+    Type: AWS::Cognito::UserPoolClient
+    Properties:
+      ClientName: !Sub "${AWS::StackName}-client"
+      UserPoolId: !Ref CognitoUserPool
+      GenerateSecret: false
+      ExplicitAuthFlows:
+        - ALLOW_ADMIN_USER_PASSWORD_AUTH
+        - ALLOW_USER_PASSWORD_AUTH
+        - ALLOW_REFRESH_TOKEN_AUTH
+
+  # -------------------------------------------------------------------------
+  # B. Demo-user seeding custom resource
+  # AWS::Cognito::UserPoolUser cannot set a password and leaves users in
+  # FORCE_CHANGE_PASSWORD, which breaks the zero-manual-steps demo. This inline
+  # Lambda calls admin_create_user (SUPPRESS invite) + admin_set_user_password
+  # (permanent) for alice and bob, idempotently.
+  # -------------------------------------------------------------------------
+  UserSeederRole:
+    Type: AWS::IAM::Role
+    Properties:
+      AssumeRolePolicyDocument:
+        Version: "2012-10-17"
+        Statement:
+          - Effect: Allow
+            Principal:
+              Service: lambda.amazonaws.com
+            Action: sts:AssumeRole
+      ManagedPolicyArns:
+        - !Sub "arn:${AWS::Partition}:iam::aws:policy/service-role/AWSLambdaBasicExecutionRole"
+      Policies:
+        - PolicyName: SeedCognitoUsers
+          PolicyDocument:
+            Version: "2012-10-17"
+            Statement:
+              - Effect: Allow
+                Action:
+                  - cognito-idp:AdminCreateUser
+                  - cognito-idp:AdminSetUserPassword
+                  - cognito-idp:AdminDeleteUser
+                Resource: !GetAtt CognitoUserPool.Arn
+
+  UserSeederFunction:
+    Type: AWS::Lambda::Function
+    Properties:
+      FunctionName: !Sub "${AWS::StackName}-user-seeder"
+      Runtime: python3.12
+      Handler: index.handler
+      Role: !GetAtt UserSeederRole.Arn
+      Timeout: 60
+      MemorySize: 128
+      Code:
+        ZipFile: |
+          import json
+          import logging
+
+          import boto3
+          import urllib3
+
+          logger = logging.getLogger()
+          logger.setLevel(logging.INFO)
+          http = urllib3.PoolManager()
+
+
+          def send(event, context, status, data=None):
+              body = {
+                  "Status": status,
+                  "Reason": f"See CloudWatch: {context.log_stream_name}",
+                  "PhysicalResourceId": event.get("PhysicalResourceId") or context.log_stream_name,
+                  "StackId": event["StackId"],
+                  "RequestId": event["RequestId"],
+                  "LogicalResourceId": event["LogicalResourceId"],
+                  "NoEcho": False,
+                  "Data": data or {},
+              }
+              http.request(
+                  "PUT",
+                  event["ResponseURL"],
+                  headers={"Content-Type": "application/json"},
+                  body=json.dumps(body).encode("utf-8"),
+              )
+
+
+          def upsert_user(cognito, pool_id, user, password):
+              attrs = [
+                  {"Name": "custom:uid", "Value": str(user["uid"])},
+                  {"Name": "custom:gid", "Value": str(user["gid"])},
+                  {"Name": "custom:gecos", "Value": str(user["gecos"])},
+                  {"Name": "custom:home", "Value": str(user["home"])},
+                  {"Name": "custom:gids", "Value": str(user["gids"])},
+              ]
+              try:
+                  cognito.admin_create_user(
+                      UserPoolId=pool_id,
+                      Username=user["username"],
+                      MessageAction="SUPPRESS",
+                      UserAttributes=attrs,
+                  )
+              except cognito.exceptions.UsernameExistsException:
+                  logger.info("User %s already exists; setting password", user["username"])
+              cognito.admin_set_user_password(
+                  UserPoolId=pool_id,
+                  Username=user["username"],
+                  Password=password,
+                  Permanent=True,
+              )
+
+
+          def handler(event, context):
+              logger.info("RequestType=%s", event.get("RequestType"))
+              try:
+                  props = event["ResourceProperties"]
+                  pool_id = props["UserPoolId"]
+                  users = props["Users"]
+                  password = props["Password"]
+                  cognito = boto3.client("cognito-idp")
+
+                  if event["RequestType"] == "Delete":
+                      for user in users:
+                          try:
+                              cognito.admin_delete_user(
+                                  UserPoolId=pool_id, Username=user["username"]
+                              )
+                          except cognito.exceptions.UserNotFoundException:
+                              pass
+                      send(event, context, "SUCCESS")
+                      return
+
+                  for user in users:
+                      upsert_user(cognito, pool_id, user, password)
+                  send(event, context, "SUCCESS")
+              except Exception as exc:  # noqa: BLE001
+                  logger.exception("User seeding failed")
+                  send(event, context, "FAILED", {"Error": str(exc)})
+
+  SeedDemoUsers:
+    Type: Custom::SeedDemoUsers
+    Properties:
+      ServiceToken: !GetAtt UserSeederFunction.Arn
+      UserPoolId: !Ref CognitoUserPool
+      # Password lives in ResourceProperties so changing it re-triggers seeding.
+      Password: !Ref DemoUserPassword
+      Users:
+        # gecos MUST match the seed-demo-users NLA script's gecos values so the
+        # JWT identity is fully consistent with the on-node account (the recipe's
+        # provable-identity invariant covers gecos too, not just uid/gid).
+        - username: alice
+          uid: !Ref AliceUid
+          gid: !Ref AliceGid
+          gecos: "Alice Smith"
+          home: "/home/alice"
+          gids: !Ref AliceGid
+        - username: bob
+          uid: !Ref BobUid
+          gid: !Ref BobGid
+          gecos: "Bob Jones"
+          home: "/home/bob"
+          gids: !Ref BobGid
+
+  # -------------------------------------------------------------------------
+  # C. API Gateway (REGIONAL REST API + built-in Cognito authorizer)
+  # -------------------------------------------------------------------------
+  RestApi:
+    Type: AWS::ApiGateway::RestApi
+    Properties:
+      Name: !Sub "${AWS::StackName}-pcs-rest"
+      Description: Cognito-authenticated proxy for the PCS Slurm REST API.
+      EndpointConfiguration:
+        Types:
+          - REGIONAL
+      # Resource policy: allow execute-api:Invoke only from the allowlisted CIDR.
+      # Deny-by-default is implicit, so a single Allow with an IpAddress condition
+      # suffices.
+      #
+      # API Gateway reads this policy when the API is deployed to a stage, not when
+      # the policy changes. If you change AllowedCidr on an existing stack, redeploy
+      # the stage or the old CIDR stays in force. See the README's troubleshooting.
+      Policy:
+        Version: "2012-10-17"
+        Statement:
+          - Effect: Allow
+            Principal: "*"
+            Action: execute-api:Invoke
+            Resource: "execute-api:/*"
+            Condition:
+              IpAddress:
+                aws:SourceIp: !Ref AllowedCidr
+
+  CognitoAuthorizer:
+    Type: AWS::ApiGateway::Authorizer
+    Properties:
+      Name: !Sub "${AWS::StackName}-cognito"
+      Type: COGNITO_USER_POOLS
+      IdentitySource: method.request.header.Authorization
+      RestApiId: !Ref RestApi
+      ProviderARNs:
+        - !GetAtt CognitoUserPool.Arn
+
+  # Greedy {proxy+} resource captures every Slurm path (verb + version segment).
+  ProxyResource:
+    Type: AWS::ApiGateway::Resource
+    Properties:
+      RestApiId: !Ref RestApi
+      ParentId: !GetAtt RestApi.RootResourceId
+      PathPart: "{proxy+}"
+
+  ProxyMethod:
+    Type: AWS::ApiGateway::Method
+    Properties:
+      RestApiId: !Ref RestApi
+      ResourceId: !Ref ProxyResource
+      HttpMethod: ANY
+      AuthorizationType: COGNITO_USER_POOLS
+      AuthorizerId: !Ref CognitoAuthorizer
+      RequestParameters:
+        method.request.path.proxy: true
+      Integration:
+        Type: AWS_PROXY
+        IntegrationHttpMethod: POST
+        Uri: !Sub "arn:${AWS::Partition}:apigateway:${AWS::Region}:lambda:path/2015-03-31/functions/${ProxyFunction.Arn}/invocations"
+
+  ApiDeployment:
+    Type: AWS::ApiGateway::Deployment
+    DependsOn: ProxyMethod
+    Properties:
+      RestApiId: !Ref RestApi
+      Description: Deployment for the PCS REST proxy.
+
+  ApiStage:
+    Type: AWS::ApiGateway::Stage
+    Properties:
+      StageName: prod
+      RestApiId: !Ref RestApi
+      DeploymentId: !Ref ApiDeployment
+      TracingEnabled: true
+      MethodSettings:
+        - ResourcePath: "/*"
+          HttpMethod: "*"
+          ThrottlingRateLimit: 10
+          ThrottlingBurstLimit: 20
+
+  ProxyInvokePermission:
+    Type: AWS::Lambda::Permission
+    Properties:
+      Action: lambda:InvokeFunction
+      FunctionName: !GetAtt ProxyFunction.Arn
+      Principal: apigateway.amazonaws.com
+      SourceArn: !Sub "arn:${AWS::Partition}:execute-api:${AWS::Region}:${AWS::AccountId}:${RestApi}/*/*/*"
+
+  # -------------------------------------------------------------------------
+  # D. Build-at-deploy packaging.
+  #
+  #    The proxy Lambda needs PyJWT, which is not in the Lambda runtime. Rather
+  #    than vendor third-party source into this repo or build a zip locally, a
+  #    CodeBuild project runs `pip install -r requirements.txt` IN THE CUSTOMER'S
+  #    ACCOUNT at deploy time, packages the handler with its dependencies, and
+  #    uploads the zip to a stack-owned artifact bucket. To adapt the recipe to
+  #    your own SSO/IdP integration, add dependencies to requirements.txt -- no
+  #    repo changes and nothing to vendor. CodeBuild runs OUTSIDE the VPC (it
+  #    only needs PyPI + S3); the proxy Lambda itself still runs in the VPC.
+  # -------------------------------------------------------------------------
+  ProxyArtifactBucket:
+    Type: AWS::S3::Bucket
+    Properties:
+      BucketEncryption:
+        ServerSideEncryptionConfiguration:
+          - ServerSideEncryptionByDefault:
+              SSEAlgorithm: AES256
+      PublicAccessBlockConfiguration:
+        BlockPublicAcls: true
+        BlockPublicPolicy: true
+        IgnorePublicAcls: true
+        RestrictPublicBuckets: true
+      VersioningConfiguration:
+        Status: Enabled
+
+  ProxyBuildRole:
+    Type: AWS::IAM::Role
+    Properties:
+      AssumeRolePolicyDocument:
+        Version: "2012-10-17"
+        Statement:
+          - Effect: Allow
+            Principal:
+              Service: codebuild.amazonaws.com
+            Action: sts:AssumeRole
+      Policies:
+        - PolicyName: build-proxy-zip
+          PolicyDocument:
+            Version: "2012-10-17"
+            Statement:
+              - Effect: Allow
+                Action:
+                  - logs:CreateLogGroup
+                  - logs:CreateLogStream
+                  - logs:PutLogEvents
+                Resource: !Sub "arn:${AWS::Partition}:logs:${AWS::Region}:${AWS::AccountId}:log-group:/aws/codebuild/${AWS::StackName}-proxy-build:*"
+              # Read the handler source + requirements.txt from the recipe assets.
+              - Effect: Allow
+                Action:
+                  - s3:GetObject
+                Resource: !Sub "arn:${AWS::Partition}:s3:::${HpcRecipesS3Bucket}/${HpcRecipesBranch}/recipes/pcs/${RecipeName}/assets/lambda/proxy/*"
+              # Write the built zip to the stack's artifact bucket.
+              - Effect: Allow
+                Action:
+                  - s3:PutObject
+                Resource: !Sub "${ProxyArtifactBucket.Arn}/*"
+
+  ProxyBuildProject:
+    Type: AWS::CodeBuild::Project
+    Properties:
+      Name: !Sub "${AWS::StackName}-proxy-build"
+      ServiceRole: !GetAtt ProxyBuildRole.Arn
+      Artifacts:
+        Type: NO_ARTIFACTS
+      TimeoutInMinutes: 10
+      Environment:
+        Type: LINUX_CONTAINER
+        ComputeType: BUILD_GENERAL1_SMALL
+        Image: aws/codebuild/amazonlinux2-x86_64-standard:5.0
+        EnvironmentVariables:
+          - Name: SOURCE_BUCKET
+            Value: !Ref HpcRecipesS3Bucket
+          - Name: SOURCE_PREFIX
+            Value: !Sub "${HpcRecipesBranch}/recipes/pcs/${RecipeName}/assets/lambda/proxy"
+          - Name: ARTIFACT_BUCKET
+            Value: !Ref ProxyArtifactBucket
+          - Name: ARTIFACT_KEY
+            Value: proxy-lambda.zip
+      Source:
+        Type: NO_SOURCE
+        BuildSpec: |
+          version: 0.2
+          phases:
+            install:
+              runtime-versions:
+                python: 3.12
+            build:
+              commands:
+                - set -euo pipefail
+                - workdir=$(mktemp -d)
+                - aws s3 cp "s3://$SOURCE_BUCKET/$SOURCE_PREFIX/requirements.txt" "$workdir/requirements.txt"
+                - aws s3 cp "s3://$SOURCE_BUCKET/$SOURCE_PREFIX/index.py" "$workdir/index.py"
+                - python3.12 -m pip install --no-cache-dir -r "$workdir/requirements.txt" -t "$workdir/pkg"
+                - cp "$workdir/index.py" "$workdir/pkg/"
+                - (cd "$workdir/pkg" && zip -qr "$workdir/fn.zip" .)
+                - aws s3 cp "$workdir/fn.zip" "s3://$ARTIFACT_BUCKET/$ARTIFACT_KEY"
+
+  ProxyBuilderRole:
+    Type: AWS::IAM::Role
+    Properties:
+      AssumeRolePolicyDocument:
+        Version: "2012-10-17"
+        Statement:
+          - Effect: Allow
+            Principal:
+              Service: lambda.amazonaws.com
+            Action: sts:AssumeRole
+      ManagedPolicyArns:
+        - !Sub "arn:${AWS::Partition}:iam::aws:policy/service-role/AWSLambdaBasicExecutionRole"
+      Policies:
+        - PolicyName: drive-build
+          PolicyDocument:
+            Version: "2012-10-17"
+            Statement:
+              - Effect: Allow
+                Action:
+                  - codebuild:StartBuild
+                  - codebuild:BatchGetBuilds
+                Resource: !GetAtt ProxyBuildProject.Arn
+              # On stack delete, empty the (versioned) artifact bucket so it can
+              # be removed: list and delete all object versions and delete-markers.
+              - Effect: Allow
+                Action:
+                  - s3:ListBucket
+                  - s3:ListBucketVersions
+                Resource: !GetAtt ProxyArtifactBucket.Arn
+              - Effect: Allow
+                Action:
+                  - s3:DeleteObject
+                  - s3:DeleteObjectVersion
+                Resource: !Sub "${ProxyArtifactBucket.Arn}/*"
+
+  # Inline custom-resource Lambda (boto3 + the CloudFormation-injected
+  # cfnresponse module): starts the CodeBuild run and waits for it to finish
+  # before signaling CloudFormation, so the zip exists in the artifact bucket
+  # before ProxyFunction is created. On Delete it empties the artifact bucket.
+  # Timeout has headroom over the CodeBuild TimeoutInMinutes so the poller can
+  # always observe and report a terminal build status.
+  ProxyBuilderFunction:
+    Type: AWS::Lambda::Function
+    Properties:
+      FunctionName: !Sub "${AWS::StackName}-proxy-builder"
+      Runtime: python3.12
+      Handler: index.handler
+      Role: !GetAtt ProxyBuilderRole.Arn
+      Timeout: 840
+      MemorySize: 256
+      Code:
+        ZipFile: |
+          import time
+
+          import boto3
+          import cfnresponse
+
+
+          def empty_bucket(bucket):
+              # The bucket has versioning enabled, so delete every version and
+              # delete-marker (not just current objects) or DeleteBucket fails.
+              s3 = boto3.client("s3")
+              paginator = s3.get_paginator("list_object_versions")
+              for page in paginator.paginate(Bucket=bucket):
+                  to_delete = [
+                      {"Key": o["Key"], "VersionId": o["VersionId"]}
+                      for o in page.get("Versions", []) + page.get("DeleteMarkers", [])
+                  ]
+                  if to_delete:
+                      s3.delete_objects(Bucket=bucket, Delete={"Objects": to_delete})
+
+
+          def run_build(project):
+              cb = boto3.client("codebuild")
+              build_id = cb.start_build(projectName=project)["build"]["id"]
+              while True:
+                  time.sleep(10)
+                  build = cb.batch_get_builds(ids=[build_id])["builds"][0]
+                  status = build["buildStatus"]
+                  if status != "IN_PROGRESS":
+                      return status
+
+
+          def handler(event, context):
+              props = event["ResourceProperties"]
+              try:
+                  if event["RequestType"] == "Delete":
+                      # Best-effort: empty the artifact bucket so CFN can delete it.
+                      try:
+                          empty_bucket(props["ArtifactBucket"])
+                      except Exception:  # noqa: BLE001
+                          pass
+                      cfnresponse.send(event, context, cfnresponse.SUCCESS, {})
+                      return
+
+                  status = run_build(props["ProjectName"])
+                  if status == "SUCCEEDED":
+                      cfnresponse.send(event, context, cfnresponse.SUCCESS, {})
+                  else:
+                      cfnresponse.send(
+                          event, context, cfnresponse.FAILED, {},
+                          reason=f"CodeBuild status: {status}",
+                      )
+              except Exception as exc:  # noqa: BLE001
+                  cfnresponse.send(event, context, cfnresponse.FAILED, {}, reason=str(exc))
+
+  BuildProxyZip:
+    Type: Custom::LambdaBuild
+    Properties:
+      ServiceToken: !GetAtt ProxyBuilderFunction.Arn
+      ProjectName: !Ref ProxyBuildProject
+      ArtifactBucket: !Ref ProxyArtifactBucket
+      # Change token: the builder does not read this, but changing it (a new
+      # bucket, branch, or recipe) mutates a resource property so CloudFormation
+      # re-invokes the custom resource and rebuilds the zip from the new source.
+      SourceVersion: !Sub "${HpcRecipesS3Bucket}/${HpcRecipesBranch}/${RecipeName}"
+
+  # -------------------------------------------------------------------------
+  # E. Proxy Lambda (in the private subnet)
+  # -------------------------------------------------------------------------
+  ProxyRole:
+    Type: AWS::IAM::Role
+    Properties:
+      AssumeRolePolicyDocument:
+        Version: "2012-10-17"
+        Statement:
+          - Effect: Allow
+            Principal:
+              Service: lambda.amazonaws.com
+            Action: sts:AssumeRole
+      ManagedPolicyArns:
+        - !Sub "arn:${AWS::Partition}:iam::aws:policy/service-role/AWSLambdaBasicExecutionRole"
+        - !Sub "arn:${AWS::Partition}:iam::aws:policy/service-role/AWSLambdaVPCAccessExecutionRole"
+      Policies:
+        - PolicyName: ResolveClusterAndSecret
+          PolicyDocument:
+            Version: "2012-10-17"
+            Statement:
+              - Effect: Allow
+                Action:
+                  - pcs:GetCluster
+                Resource: !Ref ClusterArn
+              # PCS stores the auto-generated JWT signing key in a secret named
+              # pcs!... — scope to that naming prefix.
+              - Effect: Allow
+                Action:
+                  - secretsmanager:GetSecretValue
+                Resource: !Sub "arn:${AWS::Partition}:secretsmanager:${AWS::Region}:${AWS::AccountId}:secret:pcs!*"
+
+  ProxySecurityGroup:
+    Type: AWS::EC2::SecurityGroup
+    Properties:
+      GroupDescription: Proxy Lambda security group (reaches slurmrestd on TCP 6820).
+      VpcId: !Ref VpcId
+      SecurityGroupEgress:
+        - IpProtocol: "-1"
+          CidrIp: 0.0.0.0/0
+          Description: All outbound (slurmrestd + NAT to AWS service endpoints)
+      Tags:
+        - Key: Name
+          Value: !Sub "${AWS::StackName}-proxy-sg"
+
+  ProxyFunction:
+    Type: AWS::Lambda::Function
+    # The build-at-deploy CodeBuild run must publish the zip before the function
+    # is created.
+    DependsOn: BuildProxyZip
+    Properties:
+      FunctionName: !Sub "${AWS::StackName}-proxy"
+      Runtime: python3.12
+      Handler: index.handler
+      Role: !GetAtt ProxyRole.Arn
+      Timeout: 30
+      MemorySize: 256
+      Environment:
+        Variables:
+          CLUSTER_ID: !Ref ClusterId
+          JWT_EXPIRY_SECONDS: !Ref JwtExpirySeconds
+      VpcConfig:
+        SubnetIds:
+          - !Ref PrivateSubnetId
+        SecurityGroupIds:
+          - !Ref ProxySecurityGroup
+      Code:
+        # Built at deploy by the CodeBuild project in section D: PyJWT is
+        # pip-installed in the customer's account and packaged with index.py.
+        # Nothing is vendored into this repo.
+        S3Bucket: !Ref ProxyArtifactBucket
+        S3Key: proxy-lambda.zip
+
+  # -------------------------------------------------------------------------
+  # F. Networking glue: let the proxy Lambda reach slurmrestd on TCP 6820.
+  # -------------------------------------------------------------------------
+  ClusterSlurmrestdIngress:
+    Type: AWS::EC2::SecurityGroupIngress
+    Properties:
+      GroupId: !Ref ClusterSecurityGroupId
+      IpProtocol: tcp
+      FromPort: 6820
+      ToPort: 6820
+      SourceSecurityGroupId: !Ref ProxySecurityGroup
+      Description: slurmrestd access from the Cognito proxy Lambda
+
+# ---------------------------------------------------------------------------
+# Outputs
+# ---------------------------------------------------------------------------
+Outputs:
+
+  ApiGatewayUrl:
+    Description: Base URL for the Cognito-authenticated PCS REST proxy.
+    Value: !Sub "https://${RestApi}.execute-api.${AWS::Region}.${AWS::URLSuffix}/${ApiStage}"
+
+  CognitoUserPoolId:
+    Description: Cognito User Pool ID (for initiate-auth / admin operations).
+    Value: !Ref CognitoUserPool
+
+  CognitoClientId:
+    Description: Cognito app client ID (for initiate-auth).
+    Value: !Ref CognitoUserPoolClient

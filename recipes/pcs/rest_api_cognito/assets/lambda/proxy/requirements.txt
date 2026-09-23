@@ -1,0 +1,12 @@
+# Proxy Lambda runtime dependencies, installed at deploy time by CodeBuild
+# (see the LambdaBuilder resources in proxy-cognito.yaml). Nothing is vendored
+# into this repo; CodeBuild runs `pip install -r requirements.txt` in the
+# customer's account and packages the result.
+#
+# PyJWT (HS256) is pure-Python and needs no compiled extension: HS256 uses the
+# standard library hmac/hashlib, so the optional `cryptography` backend (only
+# required for RS/ES/PS asymmetric algorithms) is intentionally NOT pulled in.
+#
+# To adapt this recipe to your own SSO/IdP integration, add your dependencies
+# here; they are installed at deploy with no repo changes.
+PyJWT==2.10.1

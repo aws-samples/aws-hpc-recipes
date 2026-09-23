@@ -1,0 +1,21 @@
+---
+name: rest_api_cognito
+version: "1.0.0"
+description: Cognito-authenticated proxy for the AWS PCS Slurm REST API. Demonstrates real per-user identity propagation from Cognito custom attributes through API Gateway and Lambda to the enriched slurmrestd JWT.
+readme: README.md
+documentation: https://docs.aws.amazon.com/pcs/latest/userguide/slurm-rest-api.html
+homepage:
+authors:
+  - Matt Vaughn
+tags:
+  - pcs
+  - cognito
+  - lambda
+  - apigateway
+  - rest
+  - iam
+  - community
+  - cloudformation
+build_ignore: []
+type: cloudformation
+default:
