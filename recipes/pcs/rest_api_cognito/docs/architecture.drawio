@@ -1,0 +1,154 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<mxfile host="app.diagrams.net" modified="2024-01-01T00:00:00.000Z" agent="draw.io" version="22.1.0" type="device">
+  <diagram id="pcs-rest-api-cognito-architecture" name="Architecture">
+    <mxGraphModel dx="1422" dy="820" grid="1" gridSize="10" guides="1" tooltips="1" connect="1" arrows="1" fold="1" page="1" pageScale="1" pageWidth="1180" pageHeight="900" math="0" shadow="0">
+      <root>
+        <mxCell id="0" />
+        <mxCell id="1" parent="0" />
+
+        <!-- ===== Containers (drawn first so icon labels paint over any line) ===== -->
+
+        <!-- Customer AWS account -->
+        <mxCell id="customer" value="Your AWS account" style="points=[[0,0],[0.25,0],[0.5,0],[0.75,0],[1,0],[1,0.25],[1,0.5],[1,0.75],[1,1],[0.75,1],[0.5,1],[0.25,1],[0,1],[0,0.75],[0,0.5],[0,0.25]];outlineConnect=0;gradientColor=none;html=1;whiteSpace=wrap;fontSize=12;fontStyle=1;shape=mxgraph.aws4.group;grIcon=mxgraph.aws4.group_aws_cloud;strokeColor=#232F3E;fillColor=none;verticalAlign=top;align=left;spacingLeft=30;fontColor=#232F3E;dashed=0;" vertex="1" parent="1">
+          <mxGeometry x="160" y="40" width="740" height="820" as="geometry" />
+        </mxCell>
+
+        <!-- VPC. Holds only what actually has an address in the VPC: the proxy
+             Lambda's subnet, the PCS cluster ENI, and the cluster nodes. Cognito
+             and Secrets Manager are Regional services and sit outside it. -->
+        <mxCell id="vpc" value="VPC" style="points=[[0,0],[0.25,0],[0.5,0],[0.75,0],[1,0],[1,0.25],[1,0.5],[1,0.75],[1,1],[0.75,1],[0.5,1],[0.25,1],[0,1],[0,0.75],[0,0.5],[0,0.25]];outlineConnect=0;gradientColor=none;html=1;whiteSpace=wrap;fontSize=12;fontStyle=1;shape=mxgraph.aws4.group;grIcon=mxgraph.aws4.group_vpc;strokeColor=#248814;fillColor=none;verticalAlign=top;align=left;spacingLeft=30;fontColor=#248814;dashed=0;" vertex="1" parent="1">
+          <mxGeometry x="330" y="280" width="560" height="410" as="geometry" />
+        </mxCell>
+
+        <!-- Private subnet with the single proxy Lambda -->
+        <mxCell id="private-subnet" value="Private subnet" style="points=[[0,0],[0.25,0],[0.5,0],[0.75,0],[1,0],[1,0.25],[1,0.5],[1,0.75],[1,1],[0.75,1],[0.5,1],[0.25,1],[0,1],[0,0.75],[0,0.5],[0,0.25]];outlineConnect=0;gradientColor=none;html=1;whiteSpace=wrap;fontSize=11;fontStyle=1;shape=mxgraph.aws4.group;grIcon=mxgraph.aws4.group_private_subnet;strokeColor=#147EBA;fillColor=none;verticalAlign=bottom;align=left;spacingLeft=30;spacingBottom=6;fontColor=#147EBA;dashed=0;" vertex="1" parent="1">
+          <mxGeometry x="360" y="310" width="210" height="140" as="geometry" />
+        </mxCell>
+
+        <!-- AWS-managed plane: the Slurm controller + slurmrestd -->
+        <mxCell id="managed" value="AWS-managed account" style="rounded=1;whiteSpace=wrap;html=1;verticalAlign=top;align=left;spacingLeft=12;spacingTop=8;fontStyle=1;fontSize=12;strokeColor=#D45B07;fillColor=#FBF3EC;fontColor=#D45B07;dashed=1;" vertex="1" parent="1">
+          <mxGeometry x="960" y="280" width="180" height="180" as="geometry" />
+        </mxCell>
+
+        <!-- Deploy-time build -->
+        <mxCell id="build" value="Build at deploy&#10;(CodeBuild runs outside the VPC)" style="rounded=1;whiteSpace=wrap;html=1;verticalAlign=top;align=left;spacingLeft=12;spacingTop=8;fontStyle=1;fontSize=11;strokeColor=#7D8998;fillColor=#F7F8FA;fontColor=#5A6C7D;dashed=1;" vertex="1" parent="1">
+          <mxGeometry x="200" y="710" width="360" height="140" as="geometry" />
+        </mxCell>
+
+        <mxCell id="note" value="A seed-demo-users node lifecycle action creates the&#10;matching local Linux users (alice, bob) on every node,&#10;so a job runs under the same uid/gid the proxy&#10;stamped into the JWT." style="rounded=1;whiteSpace=wrap;html=1;align=left;verticalAlign=middle;spacingLeft=8;fontSize=9;fontColor=#5A6C7D;strokeColor=#AAB7B8;fillColor=#F2F4F4;dashed=0;" vertex="1" parent="1">
+          <mxGeometry x="600" y="710" width="260" height="80" as="geometry" />
+        </mxCell>
+
+        <!-- ===== Edges (before the icons, so icon labels stay legible) ===== -->
+
+        <!-- Request path (solid, dark, numbered) -->
+        <mxCell id="e1" value="1. HTTPS + ID token" style="edgeStyle=orthogonalEdgeStyle;rounded=0;strokeColor=#232F3E;strokeWidth=2;fontSize=10;fontColor=#232F3E;labelBackgroundColor=#FFFFFF;endArrow=block;exitX=1;exitY=0.5;exitDx=0;exitDy=0;entryX=0;entryY=0.5;entryDx=0;entryDy=0;" edge="1" source="caller" target="apigw" parent="1">
+          <mxGeometry relative="1" as="geometry">
+            <mxPoint x="0" y="-14" as="offset" />
+          </mxGeometry>
+        </mxCell>
+        <mxCell id="e2" value="2. verified claims" style="edgeStyle=orthogonalEdgeStyle;rounded=0;strokeColor=#232F3E;strokeWidth=2;fontSize=10;fontColor=#232F3E;labelBackgroundColor=#FFFFFF;endArrow=block;exitX=1;exitY=0.5;exitDx=0;exitDy=0;entryX=0;entryY=0.5;entryDx=0;entryDy=0;" edge="1" source="apigw" target="proxy" parent="1">
+          <mxGeometry relative="1" as="geometry">
+            <mxPoint x="-18" y="-14" as="offset" />
+          </mxGeometry>
+        </mxCell>
+        <mxCell id="e4" value="4. enriched JWT, via ENI" style="edgeStyle=orthogonalEdgeStyle;rounded=0;strokeColor=#232F3E;strokeWidth=2;fontSize=10;fontColor=#232F3E;labelBackgroundColor=#FFFFFF;endArrow=block;exitX=1;exitY=0.5;exitDx=0;exitDy=0;entryX=0;entryY=0.5;entryDx=0;entryDy=0;" edge="1" source="proxy" target="eni" parent="1">
+          <mxGeometry relative="1" as="geometry">
+            <mxPoint x="0" y="-14" as="offset" />
+          </mxGeometry>
+        </mxCell>
+        <mxCell id="e5" value="5. slurmrestd :6820" style="edgeStyle=orthogonalEdgeStyle;rounded=0;strokeColor=#232F3E;strokeWidth=2;fontSize=10;fontColor=#232F3E;labelBackgroundColor=#FFFFFF;endArrow=block;startArrow=none;dashed=1;exitX=1;exitY=0.5;exitDx=0;exitDy=0;entryX=0;entryY=0.5;entryDx=0;entryDy=0;" edge="1" source="eni" target="controller" parent="1">
+          <mxGeometry relative="1" as="geometry">
+            <mxPoint x="0" y="-14" as="offset" />
+          </mxGeometry>
+        </mxCell>
+        <mxCell id="e6" value="schedule jobs" style="edgeStyle=orthogonalEdgeStyle;rounded=0;strokeColor=#232F3E;strokeWidth=2;fontSize=10;fontColor=#232F3E;labelBackgroundColor=#FFFFFF;endArrow=block;exitX=0.5;exitY=1;exitDx=0;exitDy=0;entryX=0.5;entryY=0;entryDx=0;entryDy=0;" edge="1" source="eni" target="nodes" parent="1">
+          <mxGeometry relative="1" as="geometry">
+            <mxPoint x="48" y="0" as="offset" />
+          </mxGeometry>
+        </mxCell>
+
+        <!-- Identity source (Cognito custom attributes, pink). The label is pushed
+             left into the open band above the VPC so no icon label sits under it. -->
+        <mxCell id="i1" value="3. read POSIX identity from verified claims" style="edgeStyle=orthogonalEdgeStyle;rounded=0;strokeColor=#E7157B;strokeWidth=2;fontSize=10;fontColor=#E7157B;labelBackgroundColor=#FFFFFF;endArrow=block;exitX=0.25;exitY=0;exitDx=0;exitDy=0;entryX=1;entryY=0.5;entryDx=0;entryDy=0;" edge="1" source="proxy" target="cognito" parent="1">
+          <mxGeometry relative="1" as="geometry">
+            <Array as="points"><mxPoint x="412" y="134" /></Array>
+            <mxPoint x="-130" y="45" as="offset" />
+          </mxGeometry>
+        </mxCell>
+
+        <!-- Signing key fetch -->
+        <mxCell id="e-secrets" value="fetch signing key" style="edgeStyle=orthogonalEdgeStyle;rounded=0;strokeColor=#232F3E;strokeWidth=2;fontSize=10;fontColor=#232F3E;labelBackgroundColor=#FFFFFF;endArrow=block;dashed=1;exitX=0.75;exitY=0;exitDx=0;exitDy=0;entryX=1;entryY=0.5;entryDx=0;entryDy=0;" edge="1" source="proxy" target="secrets" parent="1">
+          <mxGeometry relative="1" as="geometry">
+            <Array as="points"><mxPoint x="436" y="210" /><mxPoint x="700" y="210" /></Array>
+            <mxPoint x="0" y="14" as="offset" />
+          </mxGeometry>
+        </mxCell>
+
+        <!-- First login: authenticate against Cognito (dashed, pink) -->
+        <mxCell id="m1" value="first login: initiate-auth" style="edgeStyle=orthogonalEdgeStyle;rounded=0;strokeColor=#E7157B;fontSize=10;fontColor=#E7157B;labelBackgroundColor=#FFFFFF;dashed=1;endArrow=block;exitX=0.5;exitY=0;exitDx=0;exitDy=0;entryX=0;entryY=0.5;entryDx=0;entryDy=0;" edge="1" source="caller" target="cognito" parent="1">
+          <mxGeometry relative="1" as="geometry">
+            <Array as="points"><mxPoint x="70" y="134" /></Array>
+            <mxPoint x="0" y="-12" as="offset" />
+          </mxGeometry>
+        </mxCell>
+
+        <!-- Deploy-time build edges -->
+        <mxCell id="e-build1" value="pip install + zip" style="edgeStyle=orthogonalEdgeStyle;rounded=0;strokeColor=#5A6C7D;strokeWidth=2;fontSize=9;fontColor=#5A6C7D;labelBackgroundColor=#FFFFFF;endArrow=block;exitX=1;exitY=0.5;exitDx=0;exitDy=0;entryX=0;entryY=0.5;entryDx=0;entryDy=0;" edge="1" source="codebuild" target="artifact" parent="1">
+          <mxGeometry relative="1" as="geometry">
+            <mxPoint x="0" y="-12" as="offset" />
+          </mxGeometry>
+        </mxCell>
+        <mxCell id="e-build2" value="deploys built zip" style="edgeStyle=orthogonalEdgeStyle;rounded=0;strokeColor=#5A6C7D;strokeWidth=2;fontSize=9;fontColor=#5A6C7D;labelBackgroundColor=#FFFFFF;endArrow=block;dashed=1;exitX=0.5;exitY=0;exitDx=0;exitDy=0;entryX=0;entryY=0.75;entryDx=0;entryDy=0;" edge="1" source="artifact" target="proxy" parent="1">
+          <mxGeometry relative="1" as="geometry">
+            <Array as="points"><mxPoint x="454" y="620" /><mxPoint x="330" y="620" /><mxPoint x="330" y="376" /></Array>
+            <mxPoint x="66" y="0" as="offset" />
+          </mxGeometry>
+        </mxCell>
+
+        <!-- ===== Icons (last, so their labels paint over every connector) ===== -->
+
+        <mxCell id="caller" value="API consumer&#10;curl + Cognito ID token" style="shape=mxgraph.aws4.users;labelPosition=center;verticalLabelPosition=bottom;align=center;verticalAlign=top;fillColor=#232F3E;fontColor=#232F3E;strokeColor=none;fontStyle=1;fontSize=11;" vertex="1" parent="1">
+          <mxGeometry x="40" y="334" width="60" height="60" as="geometry" />
+        </mxCell>
+
+        <mxCell id="cognito" value="Cognito User Pool&#10;POSIX identity as&#10;custom attributes" style="shape=mxgraph.aws4.resourceIcon;resIcon=mxgraph.aws4.cognito;labelPosition=center;verticalLabelPosition=bottom;align=center;verticalAlign=top;fillColor=#E7157B;fontColor=#232F3E;strokeColor=none;fontStyle=1;fontSize=10;" vertex="1" parent="1">
+          <mxGeometry x="270" y="110" width="48" height="48" as="geometry" />
+        </mxCell>
+
+        <mxCell id="secrets" value="Secrets Manager&#10;JWT signing key" style="shape=mxgraph.aws4.resourceIcon;resIcon=mxgraph.aws4.secrets_manager;labelPosition=center;verticalLabelPosition=bottom;align=center;verticalAlign=top;fillColor=#DD344C;fontColor=#232F3E;strokeColor=none;fontStyle=0;fontSize=10;" vertex="1" parent="1">
+          <mxGeometry x="600" y="110" width="48" height="48" as="geometry" />
+        </mxCell>
+
+        <mxCell id="apigw" value="API Gateway&#10;Cognito authorizer + IP allowlist" style="shape=mxgraph.aws4.resourceIcon;resIcon=mxgraph.aws4.api_gateway;labelPosition=center;verticalLabelPosition=bottom;align=center;verticalAlign=top;fillColor=#E7157B;fontColor=#232F3E;strokeColor=none;fontStyle=0;fontSize=10;" vertex="1" parent="1">
+          <mxGeometry x="206" y="340" width="48" height="48" as="geometry" />
+        </mxCell>
+
+        <mxCell id="proxy" value="Proxy Lambda&#10;read claims + mint JWT" style="shape=mxgraph.aws4.resourceIcon;resIcon=mxgraph.aws4.lambda;labelPosition=center;verticalLabelPosition=bottom;align=center;verticalAlign=top;fillColor=#ED7100;fontColor=#232F3E;strokeColor=none;fontStyle=0;fontSize=10;" vertex="1" parent="1">
+          <mxGeometry x="400" y="340" width="48" height="48" as="geometry" />
+        </mxCell>
+
+        <mxCell id="eni" value="PCS cluster ENI&#10;(cross-account)" style="shape=mxgraph.aws4.resourceIcon;resIcon=mxgraph.aws4.elastic_network_interface;labelPosition=center;verticalLabelPosition=bottom;align=center;verticalAlign=top;fillColor=#8C4FFF;fontColor=#232F3E;strokeColor=none;fontStyle=0;fontSize=10;" vertex="1" parent="1">
+          <mxGeometry x="700" y="340" width="48" height="48" as="geometry" />
+        </mxCell>
+
+        <mxCell id="nodes" value="Login + compute nodes&#10;local demo users (uid/gid)" style="shape=mxgraph.aws4.resourceIcon;resIcon=mxgraph.aws4.ec2;labelPosition=center;verticalLabelPosition=bottom;align=center;verticalAlign=top;fillColor=#ED7100;fontColor=#232F3E;strokeColor=none;fontStyle=0;fontSize=10;" vertex="1" parent="1">
+          <mxGeometry x="700" y="500" width="48" height="48" as="geometry" />
+        </mxCell>
+
+        <mxCell id="controller" value="Slurm controller&#10;+ slurmrestd :6820" style="shape=mxgraph.aws4.resourceIcon;resIcon=mxgraph.aws4.batch;labelPosition=center;verticalLabelPosition=bottom;align=center;verticalAlign=top;fillColor=#D45B07;fontColor=#232F3E;strokeColor=none;fontStyle=1;fontSize=10;" vertex="1" parent="1">
+          <mxGeometry x="1026" y="340" width="48" height="48" as="geometry" />
+        </mxCell>
+
+        <mxCell id="codebuild" value="CodeBuild&#10;pip install + zip" style="shape=mxgraph.aws4.resourceIcon;resIcon=mxgraph.aws4.codebuild;labelPosition=center;verticalLabelPosition=bottom;align=center;verticalAlign=top;fillColor=#C925D1;fontColor=#232F3E;strokeColor=none;fontStyle=0;fontSize=10;" vertex="1" parent="1">
+          <mxGeometry x="240" y="755" width="48" height="48" as="geometry" />
+        </mxCell>
+
+        <mxCell id="artifact" value="Artifact bucket&#10;proxy-lambda.zip (SSE)" style="shape=mxgraph.aws4.resourceIcon;resIcon=mxgraph.aws4.s3;labelPosition=center;verticalLabelPosition=bottom;align=center;verticalAlign=top;fillColor=#7AA116;fontColor=#232F3E;strokeColor=none;fontStyle=0;fontSize=10;" vertex="1" parent="1">
+          <mxGeometry x="430" y="755" width="48" height="48" as="geometry" />
+        </mxCell>
+
+      </root>
+    </mxGraphModel>
+  </diagram>
+</mxfile>

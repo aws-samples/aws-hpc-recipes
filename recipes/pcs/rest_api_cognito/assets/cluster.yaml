@@ -1,0 +1,598 @@
+# Copyright Amazon.com, Inc. or its affiliates. All Rights Reserved.
+# SPDX-License-Identifier: MIT-0
+
+AWSTemplateFormatVersion: '2010-09-09'
+Transform: AWS::Serverless-2016-10-31
+Description: AWS PCS REST-enabled cluster for the Cognito proxy demo.
+  This template deploys a small HPC cluster with 1 login node and up to 4 compute nodes,
+  with the Slurm REST API and Slurm accounting both enabled (required for the Cognito proxy).
+  It includes an EFS file system for shared home directories.
+  The network (VPC and subnets) is owned by the prereq stack and passed in as parameters; both node groups run in a private subnet.
+  Two demo users (alice, bob) are seeded on every node so their POSIX identity matches the Cognito attributes the proxy stamps into REST API tokens.
+  It can be accessed via the browser using AWS Systems Manager Session Manager.
+  To access the cluster, check the Outputs tab of this stack for relevant links.
+
+### Stack metadata
+Metadata:
+  AWS::CloudFormation::Interface:
+    ParameterGroups:
+      - Label:
+          default: Network configuration
+        Parameters:
+          - VpcId
+          - PrivateSubnetId0
+          - PrivateSubnetId1
+      - Label:
+          default: PCS ComputeNodeGroups configuration
+        Parameters:
+          - NodeArchitecture
+          - KeyName
+          - ClientIpCidr
+      - Label:
+          default: Demo users configuration
+        Parameters:
+          - AliceUid
+          - AliceGid
+          - BobUid
+          - BobGid
+      - Label:
+          default: HPC Recipes configuration
+        Parameters:
+          - ClusterName
+          - HpcRecipesS3Bucket
+          - HpcRecipesBranch
+
+Parameters:
+
+  ClusterName:
+    Type: String
+    Default: rest-api-cognito
+    Description: >
+      Name for the PCS cluster. Must be 1-40 characters, start with a letter, and
+      contain only letters, numbers, and hyphens. Passed from the parent stack so
+      it is short; the nested AWS::StackName is too long for the 40-char PCS limit.
+    MaxLength: 40
+    AllowedPattern: '^[A-Za-z][A-Za-z0-9-]{0,39}$'
+    ConstraintDescription: 1-40 chars, start with a letter, letters/numbers/hyphens only.
+
+  VpcId:
+    Type: AWS::EC2::VPC::Id
+    Description: Id of the VPC that hosts the cluster. From the prereq stack (VpcId output).
+
+  PrivateSubnetId0:
+    Type: AWS::EC2::Subnet::Id
+    Description: >
+      Id of the first private subnet. From the prereq stack (PrivateSubnetId0 output).
+      Both the login and compute node groups run in this subnet.
+
+  PrivateSubnetId1:
+    Type: AWS::EC2::Subnet::Id
+    Description: >
+      Id of the second private subnet. From the prereq stack (PrivateSubnetId1 output).
+      Used for the EFS mount targets so shared storage is reachable in both AZs.
+
+  NodeArchitecture:
+    Type: String
+    Default: x86
+    AllowedValues:
+      - x86
+      - Graviton
+    Description: Processor architecture for the login and compute node instances
+
+  KeyName:
+    Description: SSH keypair to connect to the login node (s)
+    Type: AWS::EC2::KeyPair::KeyName
+    AllowedPattern: ".+"  # Required
+
+  ClientIpCidr:
+    Description: IP(s) allowed to access the login node over SSH. We recommend that you restrict it with your own IP/subnet (x.x.x.x/32 for your own ip or x.x.x.x/24 for range. Replace x.x.x.x with your own PUBLIC IP. You can get your public IP using tools such as https://ifconfig.co/)
+    Default: 127.0.0.1/32
+    Type: String
+    AllowedPattern: (\d{1,3})\.(\d{1,3})\.(\d{1,3})\.(\d{1,3})/(\d{1,2})
+    ConstraintDescription: Value must be a valid IP or network range of the form x.x.x.x/x.
+
+  AliceUid:
+    Type: Number
+    Default: 1002
+    Description: POSIX uid for the demo user 'alice'. Must match the custom:uid Cognito attribute the proxy stamps into REST API tokens.
+
+  AliceGid:
+    Type: Number
+    Default: 1002
+    Description: POSIX gid for the demo user 'alice'. Must match the custom:gid Cognito attribute the proxy stamps into REST API tokens.
+
+  BobUid:
+    Type: Number
+    Default: 1003
+    Description: POSIX uid for the demo user 'bob'. Must match the custom:uid Cognito attribute the proxy stamps into REST API tokens.
+
+  BobGid:
+    Type: Number
+    Default: 1003
+    Description: POSIX gid for the demo user 'bob'. Must match the custom:gid Cognito attribute the proxy stamps into REST API tokens.
+
+  HpcRecipesS3Bucket:
+    Type: String
+    Default: aws-hpc-recipes
+    Description: HPC Recipes for AWS S3 bucket
+    AllowedValues:
+         - aws-hpc-recipes
+         - aws-hpc-recipes-dev
+  HpcRecipesBranch:
+    Type: String
+    Default: main
+    Description: HPC Recipes for AWS release branch
+    AllowedPattern: '^(?!.*/\.git$)(?!.*/\.)(?!.*\\.\.)[a-zA-Z0-9-_\.]+$'
+
+Conditions:
+  GovCloud: !Equals [!Ref AWS::Partition, 'aws-us-gov']
+  China: !Equals [!Ref AWS::Partition, 'aws-cn']
+
+
+Mappings:
+
+  Architecture:
+    AmiArchParameter:
+      Graviton: arm64
+      x86: x86_64
+    # Default instance types per architecture. Used in every region that
+    # offers the family. Regions where the family is not offered are
+    # overridden in InstanceRegionOverrides below.
+    LoginNodeInstances:
+      Graviton: c7g.xlarge
+      x86: c7i.xlarge
+    ComputeNodeInstances:
+      Graviton: c7g.xlarge
+      x86: c7i.xlarge
+
+  # Region-specific fallbacks where the default family is not offered.
+  # Only list regions/architectures that need an override. Everything else
+  # uses the Architecture mapping above via FindInMap DefaultValue.
+  #
+  # Source: scripts/audit_pcs_instance_availability.py, which cross-checks
+  # the EC2 instance families listed on the AWS public documentation page
+  # at docs.aws.amazon.com/ec2/latest/instancetypes/ec2-instance-regions.html.
+  InstanceRegionOverrides:
+    eu-south-1:
+      # c7i not offered in Milan; fall back to Intel gen-6.
+      x86: c6i.xlarge
+    ap-southeast-4:
+      # c7g not offered in Melbourne; fall back to Graviton2.
+      Graviton: c6g.xlarge
+
+Resources:
+
+  # Network is NOT provisioned here. The prereq stack owns the VPC and subnets and
+  # passes them in as parameters. The nested storage and security-group stacks below
+  # consume VpcId + a private subnet.
+
+  EfsStorage:
+    Type: AWS::CloudFormation::Stack
+    Properties:
+      Parameters:
+        SubnetIds: !Join [ ',', [ !Ref PrivateSubnetId0, !Ref PrivateSubnetId1 ] ]
+        SubnetCount: 2
+        VpcId: !Ref VpcId
+      TemplateURL: !Sub 'https://${HpcRecipesS3Bucket}.s3.amazonaws.com/${HpcRecipesBranch}/recipes/storage/efs_simple/assets/main.yaml'
+
+  PCSSecurityGroup:
+    Type: AWS::CloudFormation::Stack
+    Properties:
+      Parameters:
+        ClientIpCidr: !Ref ClientIpCidr
+        VpcId: !Ref VpcId
+      TemplateURL: !Sub 'https://${HpcRecipesS3Bucket}.s3.amazonaws.com/${HpcRecipesBranch}/recipes/pcs/getting_started/assets/pcs-cluster-sg.yaml'
+
+  # Cluster
+  # SlurmRest Mode STANDARD enables the slurmrestd HTTP server on port 6820,
+  # which the Cognito proxy Lambda forwards requests to. Accounting Mode STANDARD
+  # starts managed slurmdbd; some REST functionality requires it. Both are always
+  # on for this recipe.
+  #
+  # The Slurm version is fixed rather than exposed as a parameter. PCS has no
+  # "latest" keyword -- Scheduler.Version takes an explicit version string -- but
+  # this recipe only needs one, so it pins the newest version PCS offers. To use a
+  # different one, edit the literal below. Any version from 25.05 up works; the
+  # REST API needs at least that.
+  PCSCluster:
+    Type: AWS::PCS::Cluster
+    Properties:
+      Name: !Ref ClusterName
+      Size: SMALL
+      Scheduler:
+        Type: SLURM
+        Version: '26.05'
+      Networking:
+        SubnetIds:
+          - !Ref PrivateSubnetId0
+        SecurityGroupIds:
+          - !GetAtt [ PCSSecurityGroup, Outputs.ClusterSecurityGroupId ]
+      SlurmConfiguration:
+        SlurmRest:
+          Mode: STANDARD
+        Accounting:
+          Mode: STANDARD
+          DefaultPurgeTimeInDays: 30
+
+  # Compute Node groups
+  PCSInstanceProfile:
+    Type: AWS::CloudFormation::Stack
+    Properties:
+      Parameters:
+        # Use the stack's unique GUID (last segment of the stack ID) rather than the
+        # stack name. This template is deployed as a nested stack, so ${AWS::StackName}
+        # is long (parent-name + "-Cluster-" + id); combined with the IIP asset's
+        # "AWSPCS-${RoleName}-role" wrapper it can exceed the 64-char IAM role-name limit.
+        # The GUID is globally unique, so it also avoids cross-deploy/cross-region
+        # role-name collisions.
+        RoleName: !Select [2, !Split ['/', !Ref 'AWS::StackId']]
+        # Grant CloudWatch Logs permissions (via CloudWatchAgentServerPolicy) so the
+        # configure-cloudwatch-logs node lifecycle action can forward node logs.
+        EnableCloudwatchAgent: "True"
+        # Nodes read the seed-demo-users lifecycle script with their own credentials,
+        # because it is referenced by an s3:// URI, so the role needs S3 read. Set
+        # here explicitly rather than left to the asset's default, so the dependency
+        # is visible: drop the s3:// reference and this can go too. The asset grants
+        # read on the whole account, which is fine for a demo cluster.
+        EnableS3ReadOnly: "True"
+      TemplateURL: !Sub 'https://${HpcRecipesS3Bucket}.s3.amazonaws.com/${HpcRecipesBranch}/recipes/pcs/getting_started/assets/pcs-iip-minimal.yaml'
+
+  # Launch templates for the login and compute node groups, inlined so this recipe
+  # owns its node configuration. Each template attaches the security groups the nodes
+  # need, an SSH key, and IMDSv2 settings. Mounting EFS and forwarding logs are handled
+  # by the node lifecycle actions below, not by launch template UserData. The login
+  # template also attaches the inbound SSH security group; the compute template does not.
+  LoginLaunchTemplate:
+    Type: AWS::EC2::LaunchTemplate
+    Properties:
+      LaunchTemplateName: !Sub 'login-${AWS::StackName}'
+      LaunchTemplateData:
+        TagSpecifications:
+          - ResourceType: instance
+            Tags:
+              - Key: HPCRecipes
+                Value: "true"
+        MetadataOptions:
+          HttpEndpoint: enabled
+          HttpPutResponseHopLimit: 4
+          HttpTokens: required
+        KeyName: !Ref KeyName
+        SecurityGroupIds:
+          - !GetAtt [ PCSSecurityGroup, Outputs.ClusterSecurityGroupId ]
+          - !GetAtt [ PCSSecurityGroup, Outputs.InboundSshSecurityGroupId ]
+          - !GetAtt [ EfsStorage, Outputs.SecurityGroupId ]
+
+  ComputeLaunchTemplate:
+    Type: AWS::EC2::LaunchTemplate
+    Properties:
+      LaunchTemplateName: !Sub 'compute-${AWS::StackName}'
+      LaunchTemplateData:
+        TagSpecifications:
+          - ResourceType: instance
+            Tags:
+              - Key: HPCRecipes
+                Value: "true"
+        MetadataOptions:
+          HttpEndpoint: enabled
+          HttpPutResponseHopLimit: 4
+          HttpTokens: required
+        KeyName: !Ref KeyName
+        SecurityGroupIds:
+          - !GetAtt [ PCSSecurityGroup, Outputs.ClusterSecurityGroupId ]
+          - !GetAtt [ EfsStorage, Outputs.SecurityGroupId ]
+
+  # Compute Node groups - Login Nodes
+  # Both node groups run in a private subnet (PrivateSubnetId0). Access is over
+  # AWS Systems Manager Session Manager, which works from a private subnet on the
+  # PCS sample AMI; no public login node is needed.
+  PCSNodeGroupLogin:
+    Type: AWS::PCS::ComputeNodeGroup
+    Properties:
+      ClusterId: !GetAtt [PCSCluster, Id]
+      Name: login
+      ScalingConfiguration:
+        MinInstanceCount: 1
+        MaxInstanceCount: 1
+      IamInstanceProfileArn: !GetAtt [ PCSInstanceProfile, Outputs.InstanceProfileArn ]
+      CustomLaunchTemplate:
+        TemplateId: !Ref LoginLaunchTemplate
+        Version: 1
+      SubnetIds:
+        - !Ref PrivateSubnetId0
+      AmiId: !GetAtt [PcsSampleAmi, AmiId]
+      InstanceConfigs:
+        - InstanceType: !FindInMap
+            - InstanceRegionOverrides
+            - !Ref AWS::Region
+            - !Ref NodeArchitecture
+            - DefaultValue: !FindInMap [ Architecture, LoginNodeInstances, !Ref NodeArchitecture ]
+      # Mount EFS home directories, forward node logs, and seed the demo users using
+      # node lifecycle action scripts, run at the nodeBootstrapped stage (before
+      # slurmd starts). All actions use OnError: CONTINUE so a node still starts if an
+      # optional step cannot complete. configure-efs-homes runs before seed-demo-users
+      # so the home directories exist when the seeder creates the per-user folders.
+      NodeLifecycleActions:
+        ScriptCachingPolicy: CACHE_ONCE
+        Stages:
+          NodeBootstrapped:
+            - Name: configure-efs-homes
+              ScriptSource:
+                ScriptLocation: !Sub 's3://aws-pcs-repo-${AWS::Region}/aws-pcs-node-lifecycle-scripts/configure-efs-homes-v1-latest.sh'
+              Arguments:
+                - '--efs-id'
+                - !GetAtt [ EfsStorage, Outputs.EFSFilesystemId ]
+                - '--home-base'
+                - '/home'
+                - '--options'
+                - 'tls'
+              OnError: CONTINUE
+              ExecutionPolicy: EVERY_BOOT
+            - Name: configure-cloudwatch-logs
+              ScriptSource:
+                ScriptLocation: !Sub 's3://aws-pcs-repo-${AWS::Region}/aws-pcs-node-lifecycle-scripts/configure-cloudwatch-logs-v1-latest.sh'
+              # No arguments: --log-group-name defaults to /aws/pcs/${PCS_CLUSTER_ID}/lifecycle,
+              # which the script derives from the PCS_CLUSTER_ID env var PCS sets on every node.
+              OnError: CONTINUE
+              ExecutionPolicy: FIRST_BOOT_ONLY
+            - Name: seed-demo-users
+              ScriptSource:
+                # Fetched by S3 URI, so the download stays on the AWS network and needs
+                # only s3:GetObject on the object. The HPC Recipes bucket is in us-east-1;
+                # nodes in any Region can read from it.
+                ScriptLocation: !Sub 's3://${HpcRecipesS3Bucket}/${HpcRecipesBranch}/recipes/pcs/rest_api_cognito/assets/seed-demo-users-v1.0.0.sh'
+              Arguments:
+                - '--alice-uid'
+                - !Ref AliceUid
+                - '--alice-gid'
+                - !Ref AliceGid
+                - '--bob-uid'
+                - !Ref BobUid
+                - '--bob-gid'
+                - !Ref BobGid
+                - '--home-base'
+                - '/home'
+              OnError: CONTINUE
+              ExecutionPolicy: FIRST_BOOT_ONLY
+
+  # Compute Node groups - Compute Nodes
+  PCSNodeGroupCompute:
+    Type: AWS::PCS::ComputeNodeGroup
+    Properties:
+      ClusterId: !GetAtt [PCSCluster, Id]
+      Name: compute-1
+      ScalingConfiguration:
+        MinInstanceCount: 0
+        MaxInstanceCount: 4
+      IamInstanceProfileArn: !GetAtt [ PCSInstanceProfile, Outputs.InstanceProfileArn ]
+      CustomLaunchTemplate:
+        TemplateId: !Ref ComputeLaunchTemplate
+        Version: 1
+      SubnetIds:
+        - !Ref PrivateSubnetId0
+      AmiId: !GetAtt [PcsSampleAmi, AmiId]
+      InstanceConfigs:
+        - InstanceType: !FindInMap
+            - InstanceRegionOverrides
+            - !Ref AWS::Region
+            - !Ref NodeArchitecture
+            - DefaultValue: !FindInMap [ Architecture, ComputeNodeInstances, !Ref NodeArchitecture ]
+      # Mount EFS home directories, forward node logs, and seed the demo users using
+      # node lifecycle action scripts, run at the nodeBootstrapped stage (before
+      # slurmd starts). All actions use OnError: CONTINUE so a node still starts if an
+      # optional step cannot complete. configure-efs-homes runs before seed-demo-users
+      # so the home directories exist when the seeder creates the per-user folders.
+      NodeLifecycleActions:
+        ScriptCachingPolicy: CACHE_ONCE
+        Stages:
+          NodeBootstrapped:
+            - Name: configure-efs-homes
+              ScriptSource:
+                ScriptLocation: !Sub 's3://aws-pcs-repo-${AWS::Region}/aws-pcs-node-lifecycle-scripts/configure-efs-homes-v1-latest.sh'
+              Arguments:
+                - '--efs-id'
+                - !GetAtt [ EfsStorage, Outputs.EFSFilesystemId ]
+                - '--home-base'
+                - '/home'
+                - '--options'
+                - 'tls'
+              OnError: CONTINUE
+              ExecutionPolicy: EVERY_BOOT
+            - Name: configure-cloudwatch-logs
+              ScriptSource:
+                ScriptLocation: !Sub 's3://aws-pcs-repo-${AWS::Region}/aws-pcs-node-lifecycle-scripts/configure-cloudwatch-logs-v1-latest.sh'
+              # No arguments: --log-group-name defaults to /aws/pcs/${PCS_CLUSTER_ID}/lifecycle,
+              # which the script derives from the PCS_CLUSTER_ID env var PCS sets on every node.
+              OnError: CONTINUE
+              ExecutionPolicy: FIRST_BOOT_ONLY
+            - Name: seed-demo-users
+              ScriptSource:
+                # Fetched by S3 URI, so the download stays on the AWS network and needs
+                # only s3:GetObject on the object. The HPC Recipes bucket is in us-east-1;
+                # nodes in any Region can read from it.
+                ScriptLocation: !Sub 's3://${HpcRecipesS3Bucket}/${HpcRecipesBranch}/recipes/pcs/rest_api_cognito/assets/seed-demo-users-v1.0.0.sh'
+              Arguments:
+                - '--alice-uid'
+                - !Ref AliceUid
+                - '--alice-gid'
+                - !Ref AliceGid
+                - '--bob-uid'
+                - !Ref BobUid
+                - '--bob-gid'
+                - !Ref BobGid
+                - '--home-base'
+                - '/home'
+              OnError: CONTINUE
+              ExecutionPolicy: FIRST_BOOT_ONLY
+
+  PCSQueueCompute:
+    Type: AWS::PCS::Queue
+    Properties:
+      ClusterId: !GetAtt [PCSCluster, Id]
+      Name: demo
+      ComputeNodeGroupConfigurations:
+        - ComputeNodeGroupId: !GetAtt [PCSNodeGroupCompute, Id]
+
+  PcsAMILookupRole:
+    Type: AWS::IAM::Role
+    Properties:
+      AssumeRolePolicyDocument:
+        Version: '2012-10-17'
+        Statement:
+          - Effect: Allow
+            Principal:
+              Service: lambda.amazonaws.com
+            Action: sts:AssumeRole
+      ManagedPolicyArns:
+        - !Sub arn:${AWS::Partition}:iam::aws:policy/service-role/AWSLambdaBasicExecutionRole
+      Policies:
+        - PolicyName: EC2DescribeImages
+          PolicyDocument:
+            Version: '2012-10-17'
+            Statement:
+              - Effect: Allow
+                Action:
+                  - ec2:DescribeImages
+                Resource: '*'
+
+  PcsAMILookupFn:
+    Type: AWS::Lambda::Function
+    Properties:
+      Runtime: python3.12
+      Handler: index.handler
+      Role: !GetAtt PcsAMILookupRole.Arn
+      Code:
+        ZipFile: |
+          import boto3
+          import json
+          import logging
+          import urllib3
+          from botocore.exceptions import ClientError
+
+          logger = logging.getLogger()
+          logger.setLevel(logging.INFO)
+
+          # Current sample AMIs carry no Slurm version in their name, because one
+          # AMI holds several Slurm versions. You pick the version when you create
+          # the cluster, not when you pick the AMI. These AMIs are Amazon Linux
+          # 2023 only, and their names look like:
+          #     aws-pcs-sample_ami-al2023-x86_64-2026-09-10T03-06-47.199Z
+          #
+          # This recipe needs Slurm 26.05, which only the current AMIs carry, so
+          # there is no fallback to the earlier '-slurm-<version>-' names.
+
+          def describe_sample_amis(name_pattern):
+              ec2_client = boto3.client('ec2')
+              filters = [
+                  {'Name': 'name', 'Values': [name_pattern]},
+                  {'Name': 'owner-alias', 'Values': ['amazon']},
+                  {'Name': 'state', 'Values': ['available']}
+              ]
+              return ec2_client.describe_images(Filters=filters)['Images']
+
+          def latest_image_id(images):
+              if not images:
+                  return None
+              newest = sorted(images, key=lambda x: x['CreationDate'], reverse=True)[0]
+              return newest['ImageId']
+
+          def get_latest_ami(os_name, architecture):
+              # The prefix also matches names from two other schemes -- the earlier
+              # '-slurm-<version>-' AMIs and the '-slurm-internal-' builds. Both put
+              # 'slurm' in the name, so discard those.
+              prefix = f'aws-pcs-sample_ami-{os_name}-{architecture}-'
+              images = [i for i in describe_sample_amis(f'{prefix}*')
+                        if '-slurm-' not in i['Name']]
+              return latest_image_id(images), prefix
+
+          def send_response(event, context, response_status, response_data, physical_resource_id=None):
+              response_body = {
+                  'Status': response_status,
+                  'Reason': f'See CloudWatch Log Stream: {context.log_stream_name}',
+                  'PhysicalResourceId': physical_resource_id or context.log_stream_name,
+                  'StackId': event['StackId'],
+                  'RequestId': event['RequestId'],
+                  'LogicalResourceId': event['LogicalResourceId'],
+                  'NoEcho': False,
+                  'Data': response_data
+              }
+
+              logger.info(f'Response body: {json.dumps(response_body)}')
+
+              http = urllib3.PoolManager()
+              try:
+                  response = http.request(
+                      'PUT',
+                      event['ResponseURL'],
+                      headers={'Content-Type': 'application/json'},
+                      body=json.dumps(response_body).encode('utf-8')
+                  )
+                  logger.info(f'Status code: {response.status}')
+              except Exception as e:
+                  logger.error(f'Failed to send response: {str(e)}')
+                  raise
+
+          def handler(event, context):
+              logger.info(f'Received event: {json.dumps(event)}')
+
+              try:
+                  properties = event['ResourceProperties']
+                  os_name = properties.get('OperatingSystem')
+                  architecture = properties.get('Architecture')
+
+                  # Validate required properties
+                  if not all([os_name, architecture]):
+                      raise ValueError('OperatingSystem and Architecture are required in ResourceProperties')
+
+                  # Skip actual work on delete
+                  if event['RequestType'] == 'Delete':
+                      send_response(event, context, 'SUCCESS', {})
+                      return
+
+                  ami_id, ami_name_prefix = get_latest_ami(os_name, architecture)
+                  logger.info(f'Looked up AMI with prefix: {ami_name_prefix}')
+
+                  if not ami_id:
+                      raise ValueError(f'No AMI found matching prefix: {ami_name_prefix}')
+
+                  response_data = {
+                      'AmiId': ami_id,
+                      'AmiPrefix': ami_name_prefix
+                  }
+
+                  send_response(event, context, 'SUCCESS', response_data, ami_id)
+
+              except Exception as e:
+                  logger.error(f'Exception: {str(e)}')
+                  send_response(event, context, 'FAILED', {'Error': str(e)})
+                  raise
+      Timeout: 30
+      MemorySize: 128
+
+  # Example of using the custom resource to look up an AMI
+  PcsSampleAmi:
+    Type: Custom::AMILookup
+    Properties:
+      ServiceToken: !GetAtt PcsAMILookupFn.Arn
+      OperatingSystem: 'al2023'
+      Architecture: !FindInMap [ Architecture, AmiArchParameter, !Ref NodeArchitecture ]
+
+Outputs:
+  ClusterId:
+    Description: The Id of the PCS cluster
+    Value: !GetAtt [ PCSCluster, Id ]
+  ClusterArn:
+    Description: The ARN of the PCS cluster
+    Value: !GetAtt [ PCSCluster, Arn ]
+  ClusterSecurityGroupId:
+    Description: The Id of the cluster security group
+    Value: !GetAtt [ PCSSecurityGroup, Outputs.ClusterSecurityGroupId ]
+  # PCS manages the login node group's EC2 instances; they are not CloudFormation
+  # resources and do not exist at stack-create time, so the login node's public IP
+  # cannot be exposed as a stack output. The PCS console URL is provided instead.
+  PcsConsoleUrl:
+    Description: URL to access the cluster in the PCS console
+    Value: !Sub
+      - https://${ConsoleDomain}/pcs/home?region=${AWS::Region}#/clusters/${ClusterId}
+      - { ConsoleDomain: !If [ GovCloud, 'console.amazonaws-us-gov.com', !If [ China, 'console.amazonaws.cn', !Sub '${AWS::Region}.console.aws.amazon.com']],
+          ClusterId: !GetAtt [ PCSCluster, Id ]
+        }
