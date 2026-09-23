@@ -146,6 +146,11 @@ You can use an HPC Recipe for AWS in several ways:
 * **About**: Setup grafana observability stack on PCS
 * **Usage**: [README.md](pcs/observability_for_pcs/README.md)
 
+#### rest_api_cognito ![tag](https://img.shields.io/badge/-apigateway-%23AAB7B8) ![tag](https://img.shields.io/badge/-cloudformation-%237DCEA0) ![tag](https://img.shields.io/badge/-cognito-%237DCEA0) ![tag](https://img.shields.io/badge/-community-%2317202A) ![tag](https://img.shields.io/badge/-iam-%23AAB7B8) ![tag](https://img.shields.io/badge/-lambda-%237DCEA0) ![tag](https://img.shields.io/badge/-pcs-%23FF9900) ![tag](https://img.shields.io/badge/-rest-%23AAB7B8) 
+
+* **About**: Cognito-authenticated proxy for the AWS PCS Slurm REST API. Demonstrates real per-user identity propagation from Cognito custom attributes through API Gateway and Lambda to the enriched slurmrestd JWT.
+* **Usage**: [README.md](pcs/rest_api_cognito/README.md)
+
 #### spack_for_pcs ![tag](https://img.shields.io/badge/-beta-%23800080) ![tag](https://img.shields.io/badge/-pcs-%23FF9900) ![tag](https://img.shields.io/badge/-spack-%23AAB7B8) 
 
 * **About**: Install Spack on AWS PCS
