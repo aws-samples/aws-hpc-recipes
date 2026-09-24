@@ -1,0 +1,21 @@
+{
+  "scriptCachingPolicy": "CACHE_ONCE",
+  "stages": {
+    "nodeBootstrapped": [
+      {
+        "name": "Register node DNS",
+        "scriptSource": {
+          "scriptLocation": "https://aws-hpc-recipes.s3.us-east-1.amazonaws.com/main/recipes/pcs/cluster_dns/assets/register-node-dns-v1.0.0.sh",
+          "checksum": "e82d0bdcb7215d07824e7ff67bbb757bef175ce6f043409937a9523bca4408f8"
+        },
+        "arguments": [
+          "--zone-id", "REPLACE_WITH_HostedZoneId",
+          "--zone-name", "REPLACE_WITH_ZoneName",
+          "--ttl", "60"
+        ],
+        "onError": "CONTINUE",
+        "executionPolicy": "EVERY_BOOT"
+      }
+    ]
+  }
+}
