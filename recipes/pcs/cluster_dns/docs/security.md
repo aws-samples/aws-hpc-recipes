@@ -40,6 +40,25 @@ The node role holds no `route53:ListResourceRecordSets`. The script never lists 
 removing the grant takes away an easy way to enumerate every node name and address in the
 cluster.
 
+## Reconcile claims the same names the policy grants
+
+The reconcile Lambda decides which records are its business from the record **name**: exactly
+one label under the zone apex. That is deliberately the same set of names this policy lets a
+node write. The two authorities match, so every record a node can create is a record reconcile
+can remove.
+
+Do not be tempted to decide that from the record's *shape* instead, meaning its value count or
+whether it carries an `AliasTarget`. Route 53 gives IAM no condition key for shape, so a node
+picks the shape freely. A shape-based test therefore lets a node write a record the reconciler
+skips on every pass, which then outlives the node that made it and the job that created it. An
+earlier version of this recipe skipped multi-value and alias records for exactly that reason,
+and a node could use either shape to plant a permanent record at any name it was allowed to
+write. Name is the one property both the policy and the reconciler can agree on.
+
+The practical consequence for operators: keep your own records in this zone at a name deeper
+than one label, for example `svc.nfs.<zone>`. Reconcile ignores those, and the node policy
+already refuses to write them.
+
 ## The residual that IAM cannot close
 
 **A principal holding the node role can overwrite another node's A record and redirect that

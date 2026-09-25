@@ -239,7 +239,19 @@ Resources:
 
 
           def judgeable(rr, apex, purge):
-              """Whether reconcile may form an opinion about this record."""
+              """Whether reconcile may form an opinion about this record.
+
+              Ownership is decided by the record NAME, deliberately. Reconcile claims
+              exactly the names the node policy lets a node write: one label under the
+              zone apex. The two authorities then match, so every record a node can
+              create is a record reconcile can remove.
+
+              Do not decide this from the record's shape (its value count, or whether it
+              carries an AliasTarget) instead. Route53 offers IAM no condition key for
+              shape, so a node can choose any shape it likes. A shape-based test lets a
+              node plant a record that reconcile skips on every pass, which survives the
+              node that made it. Name is the one property IAM also enforces.
+              """
               name = rr["Name"].lower()
               if purge:
                   # Empty the zone so it can be deleted. Route53 requires the apex SOA and
@@ -247,14 +259,17 @@ Resources:
                   # type A here would leave a CNAME/TXT/PTR behind and DeleteHostedZone
                   # would then fail with the stack already mid-delete.
                   return not (name == apex and rr["Type"] in ("SOA", "NS"))
-              if rr["Type"] != "A" or name == apex:
+              if rr["Type"] != "A":
                   return False
-              # Records this recipe creates are single-value address records. An ALIAS
-              # record has no ResourceRecords at all, and a multi-value record was not
-              # written by the node script, so neither is ours to delete. Without this the
-              # empty-value case makes "no live IP" vacuously true and silently destroys
-              # operator-created records on every run.
-              return len(rr.get("ResourceRecords", [])) == 1
+              # Exactly one label under the apex. This excludes the apex itself, any
+              # deeper name, and anything outside the zone. Operator records kept at a
+              # deeper name are therefore untouchable by reconcile, and are also
+              # unwritable by a node.
+              suffix = "." + apex
+              if not name.endswith(suffix):
+                  return False
+              label = name[: -len(suffix)]
+              return bool(label) and "." not in label
 
 
           def submit(zone, batch):
@@ -294,13 +309,24 @@ Resources:
                   print("no live instances matched this cluster; skipping reconcile")
                   return 0
 
+              # A record is unbacked when NO value of it belongs to a live cluster
+              # instance. Every value is checked, not just the first: a node chooses how
+              # many values a record carries, so reading only one would let it hide a
+              # dead record behind a live value, or a live record behind a dead one.
+              # A record with no values at all (an ALIAS) is unbacked by this test, which
+              # is right: this recipe never creates one, so at an owned name it came from
+              # a node or from an operator writing where the node policy already forbids.
+              def unbacked(rr, live):
+                  return all(v["Value"] not in live
+                             for v in rr.get("ResourceRecords", []))
+
               candidates = []
               paginator = r53.get_paginator("list_resource_record_sets")
               for page in paginator.paginate(HostedZoneId=zone):
                   for rr in page["ResourceRecordSets"]:
                       if not judgeable(rr, apex, purge):
                           continue
-                      if purge or rr["ResourceRecords"][0]["Value"] not in keep:
+                      if purge or unbacked(rr, keep):
                           candidates.append(rr)
 
               # Re-read liveness and drop anything that came up while we were listing, so
@@ -309,8 +335,7 @@ Resources:
               # stale by the time a deletion is decided.
               if candidates and not purge:
                   keep |= live_ips()
-                  candidates = [rr for rr in candidates
-                                if rr["ResourceRecords"][0]["Value"] not in keep]
+                  candidates = [rr for rr in candidates if unbacked(rr, keep)]
 
               # Batch by VALUE count as well as change count. Route53 bounds a request by
               # ResourceRecord elements and by total value bytes, not by number of changes,

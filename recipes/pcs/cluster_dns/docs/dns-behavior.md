@@ -134,13 +134,12 @@ this pattern.
 The scheduled pass deletes a record only when all of the following hold:
 
 - it is an `A` record,
-- it carries exactly one value,
-- it is not the zone apex,
-- and its address belongs to no instance currently tagged for this cluster.
+- its name is exactly one label under the zone, which is the same set of names the node policy
+  lets a node write,
+- and none of its addresses belongs to an instance currently tagged for this cluster.
 
-Anything else is left alone: ALIAS records, which carry no address values, multi-value
-records, and every record type other than `A`. Records you add to this zone yourself are safe
-from it.
+Anything else is left alone: names deeper than one label, the apex, and every record type other
+than `A`. Keep your own records at a deeper name and reconcile will never touch them.
 
 Two further guards:
 

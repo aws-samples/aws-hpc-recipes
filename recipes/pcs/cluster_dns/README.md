@@ -81,9 +81,9 @@ matter, and covers the NetworkManager and `/etc/resolv.conf` fallbacks.
 A node can't delete its own record. PCS lifecycle actions run only at boot, and the instance is
 terminated out from under any script, so cleanup has to come from outside. An EventBridge rule
 invokes the Lambda every `ReconcileIntervalMinutes`. The Lambda lists the zone, lists this
-cluster's instances by their `aws:pcs:cluster-id` tag, and deletes any single-value `A` record
-whose address no live instance holds. It cleans up however a node went away, including an
-abrupt teardown that would lose an event.
+cluster's instances by their `aws:pcs:cluster-id` tag, and deletes any `A` record one label
+under the zone whose addresses no live instance holds. It cleans up however a node went away,
+including an abrupt teardown that would lose an event.
 
 Be precise about what reconcile is:
 
@@ -92,8 +92,10 @@ Be precise about what reconcile is:
   cluster.
 - **A deleted record returns only at boot.** A node whose record was removed in error stays
   unresolvable until it is rebooted or replaced.
-- **It leaves records it did not create alone.** ALIAS records, multi-value records, other
-  record types and the zone apex are all skipped, so your own records in this zone are safe.
+- **It owns exactly one label under the zone.** That is the same set of names the node policy
+  lets a node write, so every record a node can create is one reconcile can remove. Keep your
+  own records at a deeper name, such as `svc.nfs.<zone>`: reconcile never touches those, and a
+  node cannot write them either.
 
 ## Prerequisites
 
@@ -376,9 +378,9 @@ is what makes `compute-2` resolve to `compute-2.<zone>` without the caller typin
 
 ### reconcile
 
-The scheduled Lambda pass that lists the zone and deletes single-value `A` records whose address
-no running instance tagged for this cluster holds. It is the cleanup path for terminated nodes,
-and the zone-emptying step on stack delete. It only deletes.
+The scheduled Lambda pass that lists the zone and deletes `A` records one label under the zone
+whose addresses no running instance tagged for this cluster holds. It is the cleanup path for
+terminated nodes, and the zone-emptying step on stack delete. It only deletes.
 
 ### UPSERT
 
