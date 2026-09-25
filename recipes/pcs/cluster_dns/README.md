@@ -168,6 +168,11 @@ example the role from the `pcs/getting_started` `pcs-iip-minimal` template).
 > cluster's zone. If the role is shared with another cluster, that cluster's nodes get the
 > same access, and the per-cluster isolation this design relies on is gone. Give each
 > cluster its own instance profile if you run more than one in a VPC.
+>
+> If you create a fresh role for this, name both the role and the instance profile with an
+> `AWSPCS-` prefix. PCS scopes its `PassRole` permission by that prefix and otherwise rejects
+> the node group with "AWS PCS can't access a role associated with the instance profile
+> because the role ARN is invalid", which does not point at the naming requirement.
 
 ```bash
 aws iam attach-role-policy \
