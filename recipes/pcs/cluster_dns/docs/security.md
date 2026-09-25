@@ -87,6 +87,31 @@ in front: the node calls it, the Lambda authenticates the caller's instance iden
 writes the record on the node's behalf. Nodes then hold only `lambda:InvokeFunction` on that
 one function.
 
+### Why this residual persists: nothing binds a name to an instance
+
+"Node" means two different things in this design, and no part of the system connects them:
+
+- A record's **name** is the Slurm node name, from `PCS_NODE_ID`.
+- **Liveness** is a property of an EC2 instance: its private addresses, filtered by the cluster
+  tag.
+
+Reconcile can therefore answer "are the addresses in this record live?" but never "does a live
+node own this *name*?" Two residuals follow from that one gap, and they are usually described
+separately:
+
+- A node that overwrites a peer's record with its **own live address** survives reconcile,
+  because the address really is live. Reconcile has no way to know the name belongs elsewhere.
+- A recycled private address leaves a stale name resolving to an unrelated live host, for the
+  same reason.
+
+The durable fix is to give the system that binding: tag each instance with its Slurm node name,
+then have reconcile delete an owned name when no live instance carries it. This repository
+already ships a lifecycle action that applies such a tag, at
+`recipes/pcs-scripts/node_lifecycle_demo/assets/apply-node-name-tag-v1.0.0.sh`. That change is
+larger than this recipe attempts, and it is not implemented here. It is recorded because it is
+the actual root cause, and because a reader deciding how far to trust this pattern should know
+that the two residuals above are one problem rather than two.
+
 ## Assume every cluster user holds the grant
 
 An unprivileged job user on a node can read the instance role's credentials from the instance

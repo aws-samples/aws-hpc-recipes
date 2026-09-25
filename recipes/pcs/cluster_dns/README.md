@@ -377,6 +377,28 @@ cluster and associates it with the cluster VPC, so records never leave the VPC.
 The DNS suffix a resolver appends to a bare name. Setting `<zone>` as the node's search domain
 is what makes `compute-2` resolve to `compute-2.<zone>` without the caller typing the suffix.
 
+### routing domain
+
+The suffix a resolver uses to decide *which resolver* answers a query, as opposed to which
+suffix it appends. In `systemd-resolved` a `Domains=` entry is both at once, which is why the
+zone has to be configured on a scope that also has a DNS server. Getting this wrong is silent:
+the record exists and the query still fails. See
+[`docs/dns-behavior.md`](docs/dns-behavior.md).
+
+### owned name
+
+A record name exactly one label under the zone, such as `compute-2.<zone>`. This is both the set
+of names the node policy lets a node write and the set reconcile will act on. The two are
+deliberately identical, so every record a node can create is one reconcile can remove. A name any
+deeper belongs to whoever put it there.
+
+### unbacked
+
+A record none of whose addresses belongs to a running instance tagged for this cluster. Reconcile
+deletes an owned name that is unbacked. Note this is a claim about addresses, not about names:
+reconcile cannot tell whether a live node owns a given name, only whether the addresses in the
+record are live.
+
 ### reconcile
 
 The scheduled Lambda pass that lists the zone and deletes `A` records one label under the zone

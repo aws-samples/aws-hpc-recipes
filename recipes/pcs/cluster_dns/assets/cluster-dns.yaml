@@ -112,7 +112,7 @@ Resources:
             Resource: !Sub "arn:${AWS::Partition}:route53:::hostedzone/${HostedZone}"
             Condition:
               # ForAllValues is true when its key is ABSENT from the request, so every
-              # restriction below would pass vacuously on a request shape that omitted
+              # restriction below would pass vacuously on a request that omitted
               # the key. Null "false" requires each key to be present first.
               "Null":
                 "route53:ChangeResourceRecordSetsActions": "false"
@@ -176,7 +176,7 @@ Resources:
     DependsOn: ReconcileLogGroup
     Properties:
       FunctionName: !Sub "${AWS::StackName}-reconcile"
-      Description: !Sub "Removes stale DNS records for terminated nodes in cluster ${ClusterId}"
+      Description: !Sub "Removes DNS records for nodes that no longer exist in cluster ${ClusterId}"
       Runtime: python3.12
       Handler: index.handler
       Timeout: 120
@@ -382,7 +382,7 @@ Resources:
 
               # Scheduled reconcile.
               deleted = reconcile(os.environ["HOSTED_ZONE_ID"], os.environ["ZONE_NAME"])
-              print("reconcile deleted", deleted, "stale record(s)")
+              print("reconcile deleted", deleted, "record(s) with no live owner")
 
   ReconcileSchedule:
     Type: AWS::Events::Rule
