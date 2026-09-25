@@ -39,7 +39,7 @@
           </mxGeometry>
         </mxCell>
 
-        <mxCell id="egrants" value="grants: UPSERT A only" style="edgeStyle=orthogonalEdgeStyle;rounded=0;strokeColor=#DD344C;strokeWidth=2;fontSize=9;fontColor=#DD344C;endArrow=block;dashed=1;labelBackgroundColor=#FFFFFF;exitX=0;exitY=0.5;exitDx=0;exitDy=0;entryX=1;entryY=0.5;entryDx=0;entryDy=0;" edge="1" source="iam" target="nodes" parent="1">
+        <mxCell id="egrants" value="grants: UPSERT A&#10;at one label" style="edgeStyle=orthogonalEdgeStyle;rounded=0;strokeColor=#DD344C;strokeWidth=2;fontSize=9;fontColor=#DD344C;endArrow=block;dashed=1;labelBackgroundColor=#FFFFFF;exitX=0;exitY=0.5;exitDx=0;exitDy=0;entryX=1;entryY=0.5;entryDx=0;entryDy=0;" edge="1" source="iam" target="nodes" parent="1">
           <mxGeometry relative="1" as="geometry">
             <mxPoint x="0" y="-16" as="offset" />
           </mxGeometry>
@@ -77,7 +77,7 @@
           <mxGeometry x="380" y="430" width="48" height="48" as="geometry" />
         </mxCell>
 
-        <mxCell id="iam" value="IAM policy on node role&#10;UPSERT A records only" style="shape=mxgraph.aws4.resourceIcon;resIcon=mxgraph.aws4.identity_and_access_management;labelPosition=center;verticalLabelPosition=bottom;align=center;verticalAlign=top;fillColor=#DD344C;fontColor=#232F3E;strokeColor=none;fontStyle=0;fontSize=10;labelBackgroundColor=#FFFFFF;" vertex="1" parent="1">
+        <mxCell id="iam" value="IAM policy on node role&#10;UPSERT A, name-scoped" style="shape=mxgraph.aws4.resourceIcon;resIcon=mxgraph.aws4.identity_and_access_management;labelPosition=center;verticalLabelPosition=bottom;align=center;verticalAlign=top;fillColor=#DD344C;fontColor=#232F3E;strokeColor=none;fontStyle=0;fontSize=10;labelBackgroundColor=#FFFFFF;" vertex="1" parent="1">
           <mxGeometry x="630" y="430" width="48" height="48" as="geometry" />
         </mxCell>
 
