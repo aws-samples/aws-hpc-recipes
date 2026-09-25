@@ -100,13 +100,46 @@ imds_get() {
 set_search_domain() {
     local zone="$1"
 
-    if systemctl is-active --quiet systemd-resolved 2>/dev/null; then
-        log "systemd-resolved detected; writing resolved.conf.d drop-in"
-        mkdir -p /etc/systemd/resolved.conf.d
-        printf '[Resolve]\nDomains=%s\n' "${zone}" \
-            > /etc/systemd/resolved.conf.d/10-pcs-search.conf
-        systemctl restart systemd-resolved 2>/dev/null \
-            || warn "could not restart systemd-resolved"
+    if systemctl is-active --quiet systemd-resolved 2>/dev/null \
+       && command -v resolvectl >/dev/null 2>&1; then
+        local dev current
+        dev="$(ip route show default 2>/dev/null | awk '{print $5; exit}')"
+        if [[ -z "${dev}" ]]; then
+            warn "systemd-resolved is active but no default-route interface was found"
+            return 1
+        fi
+
+        # The search domain must go on the LINK that carries the DNS server, not in
+        # the global section of resolved.conf. resolved treats a Domains= entry as a
+        # ROUTING domain as well as a search domain, so a global entry routes queries
+        # for the zone to the global scope - which has no DNS server - and they fail
+        # with "No appropriate name servers or networks for name found". Setting it on
+        # the link keeps the VPC resolver as the server for those queries.
+        #
+        # Remove the global drop-in an earlier version of this script wrote, or the
+        # broken routing domain survives alongside the correct link setting.
+        if [[ -f /etc/systemd/resolved.conf.d/10-pcs-search.conf ]]; then
+            log "removing obsolete global resolved.conf.d drop-in"
+            rm -f /etc/systemd/resolved.conf.d/10-pcs-search.conf
+            systemctl try-restart systemd-resolved 2>/dev/null || true
+        fi
+
+        # resolvectl replaces the link's whole domain list, so carry the existing
+        # entries (for example <region>.compute.internal) across.
+        local -a doms=()
+        current="$(resolvectl domain "${dev}" 2>/dev/null | sed 's/^[^:]*:[[:space:]]*//')"
+        read -r -a doms <<< "${current}"
+        local d
+        for d in ${doms[@]+"${doms[@]}"}; do
+            if [[ "${d}" == "${zone}" ]]; then
+                log "systemd-resolved: '${zone}' already a search domain on ${dev}"
+                return 0
+            fi
+        done
+        log "systemd-resolved detected; adding '${zone}' to search domains on ${dev}"
+        resolvectl domain "${dev}" ${doms[@]+"${doms[@]}"} "${zone}" 2>/dev/null \
+            || { warn "resolvectl domain failed on ${dev}"; return 1; }
+        resolvectl flush-caches 2>/dev/null || true
         return 0
     fi
 

@@ -6,7 +6,7 @@
         "name": "Register node DNS",
         "scriptSource": {
           "scriptLocation": "https://aws-hpc-recipes.s3.us-east-1.amazonaws.com/main/recipes/pcs/cluster_dns/assets/register-node-dns-v1.1.0.sh",
-          "checksum": "8d804604637519dd02eb7926a561840bb00e8ed972e1ca46563238c4d6f2a82a"
+          "checksum": "c74134b4e085657db5849abc47228a349603968812f8f0961030f6426ce8c902"
         },
         "arguments": [
           "--zone-id",

@@ -52,9 +52,12 @@ node boots
 The UPSERT makes registration idempotent, so `EVERY_BOOT` execution is safe and re-asserts
 the record after a reboot. Setting the search domain is what lets a bare short name
 (`compute-2`) resolve, not just the fully qualified `compute-2.<zone>`. The script picks
-the durable method for the AMI's resolver: a `systemd-resolved` drop-in on the Ubuntu 24
-PCS-ready DLAMI and the AL2023 x86 sample AMI, `nmcli ipv4.dns-search` on NetworkManager
-systems such as RHEL or Rocky 9, and a plain `/etc/resolv.conf` edit as a last resort.
+the method that matches the AMI's resolver: `resolvectl domain` on the link carrying the VPC
+resolver for `systemd-resolved` systems (the Ubuntu 24 PCS-ready DLAMI and the AL2023 x86
+sample AMI), `nmcli ipv4.dns-search` on NetworkManager systems such as RHEL or Rocky 9, and a
+plain `/etc/resolv.conf` edit as a last resort. The `systemd-resolved` setting is applied per
+link rather than globally, and is re-applied on every boot; see *Troubleshooting* for why the
+global form does not work.
 
 **On a schedule, the reconcile Lambda cleans up.** A node cannot delete its own record:
 PCS lifecycle actions run only at boot, and the instance is terminated out from under any
@@ -260,10 +263,26 @@ read its log on the node at
 use `sudo`). Common causes: the `aws` CLI is missing from the AMI, or the managed policy is
 not attached to the node role, so the `change-resource-record-sets` call is denied.
 
-**A short name does not resolve, but the FQDN does.** The search domain was not set. Check
-the resolver: on `systemd-resolved` AMIs, `resolvectl status` should list the zone under
-DNS Domain, and `/etc/systemd/resolved.conf.d/10-pcs-search.conf` should exist. On
-NetworkManager AMIs, `nmcli -g ipv4.dns-search connection show <con>` should include the
+**Neither the short name nor the FQDN resolves, but `dig @169.254.169.253 <name>` works.**
+The search domain is set on the wrong scope. On `systemd-resolved`, a `Domains=` entry is a
+*routing* domain as well as a search domain, so putting the zone in the global section of
+`resolved.conf` routes those queries to a scope with no DNS server and they fail with "No
+appropriate name servers or networks for name found". The zone must be set on the link that
+carries the VPC resolver. Check with `resolvectl domain` - the zone should appear on the
+`ens5` (or equivalent) line, **not** only on the `Global` line:
+
+```
+Global:
+Link 2 (ens5): us-west-2.compute.internal pcs_abc123.pcs.local
+```
+
+Fix at runtime with `sudo resolvectl domain ens5 <region>.compute.internal <zone>`, then
+`sudo resolvectl flush-caches`. Script versions before 1.1.0 wrote the broken global
+drop-in; 1.1.0 sets the link domain and removes
+`/etc/systemd/resolved.conf.d/10-pcs-search.conf` if it finds it.
+
+**A short name does not resolve, but the FQDN does.** The search domain is missing entirely.
+On NetworkManager AMIs, `nmcli -g ipv4.dns-search connection show <con>` should include the
 zone. The script logs which path it took.
 
 **The reconcile Lambda deleted a record for a running node.** The record does **not** come
