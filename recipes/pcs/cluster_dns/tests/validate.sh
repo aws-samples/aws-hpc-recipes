@@ -117,6 +117,41 @@ for script in "${ASSET_SCRIPTS[@]}"; do
 done
 
 ###############################################################################
+# Check 5b: The digest pinned in the example JSON matches the script it names
+###############################################################################
+# This is the copy that matters at runtime: the PCS agent verifies it before running
+# the script as root, and it is the copy operators paste into their node-group config.
+# `make checksums` maintains both, but a hand-edit can move one and not the other.
+echo "Check 5b: Example JSON checksum pin"
+EXAMPLE_JSON="${ASSETS_DIR}/example-node-lifecycle-actions.json"
+if [[ -f "${EXAMPLE_JSON}" ]]; then
+    while IFS=$'\t' read -r pinned_name pinned_sum; do
+        [[ -n "${pinned_name}" ]] || continue
+        target="${ASSETS_DIR}/${pinned_name}"
+        if [[ ! -f "${target}" ]]; then
+            fail "${pinned_name} — pinned in example JSON but not present in assets/"
+            continue
+        fi
+        actual="$(${HASH_CMD} "${target}" | awk '{print $1}')"
+        if [[ "${pinned_sum}" == "${actual}" ]]; then
+            pass "${pinned_name} — example JSON checksum matches"
+        else
+            fail "${pinned_name} — example JSON checksum stale (run 'make checksums')"
+        fi
+    done < <(python3 -c '
+import json, sys
+d = json.load(open(sys.argv[1]))
+for acts in d.get("stages", {}).values():
+    for a in acts:
+        src = a.get("scriptSource")
+        if src and "checksum" in src:
+            print(src["scriptLocation"].rsplit("/", 1)[-1], src["checksum"], sep="\t")
+' "${EXAMPLE_JSON}")
+else
+    fail "example-node-lifecycle-actions.json — missing"
+fi
+
+###############################################################################
 # Check 6: Example lifecycle-actions JSON is valid
 ###############################################################################
 echo "Check 6: Example JSON validity"

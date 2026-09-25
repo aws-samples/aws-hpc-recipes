@@ -60,20 +60,39 @@ systems such as RHEL or Rocky 9, and a plain `/etc/resolv.conf` edit as a last r
 PCS lifecycle actions run only at boot, and the instance is terminated out from under any
 script. So an EventBridge rule invokes the Lambda every `ReconcileIntervalMinutes`. The
 Lambda lists the zone's A records, lists this cluster's running instances (filtered by the
-`aws:pcs:cluster-id` tag), and deletes any record whose IP is no longer backed by a live
-instance. This is self-healing: it corrects drift no matter how a record was orphaned, and
-it resolves the case where an IP is recycled by a different node.
+`aws:pcs:cluster-id` tag), and deletes any single-value A record whose IP is no longer held
+by a live instance. It cleans up after terminated nodes however they went away, including
+an abrupt teardown that would lose an event.
 
-Two facts are worth keeping in mind:
+Be precise about what reconcile is and is not:
+
+- **It only ever deletes.** It never re-creates or corrects a record's value. If a record
+  points somewhere wrong but that address belongs to a live instance in the cluster,
+  reconcile leaves it alone — it has no notion of the *right* value for a name.
+- **A deleted record comes back only at boot.** PCS lifecycle actions run at boot, so a
+  node whose record was removed in error stays unresolvable until it is rebooted or
+  replaced. The effect is not self-correcting within a running instance's lifetime.
+- **It leaves records it did not create alone.** Anything that is not a single-value A
+  record — an ALIAS, a multi-value record, the zone apex — is skipped, so adding your own
+  records to this zone is safe.
+
+Three more facts worth keeping in mind:
 
 - **`PCS_NODE_ID` is the record name.** It is the Slurm node name (for example `login-1`)
   that peers actually resolve, so the script registers exactly that. The script never reads
   `hostname`, and there is no separate host-name variable to consult.
-- **A short TTL bounds staleness.** Records carry `RecordTTL` (default 60 s), so a stale
-  answer is cached only briefly in the window before the next reconcile.
+- **A short TTL bounds positive staleness only.** Records carry `RecordTTL` (default 60 s).
+  It does **not** bound negative caching: a name queried before its node registers yields
+  `NXDOMAIN`, cached for the zone's negative TTL (about 900 s from Route 53's default SOA)
+  regardless of `RecordTTL`. During a large scale-up a job can therefore fail to resolve a
+  peer for several minutes after that peer is healthy.
+- **Registration is one attempt with no retry.** `ChangeResourceRecordSets` is throttled
+  per account and serialized per hosted zone. A node whose call is throttled logs a warning
+  and gives up until its next boot, so a very large simultaneous scale-up can leave some
+  nodes silently unregistered.
 
-The single write grant a node holds is scoped tightly: the IAM policy allows `UPSERT` of
-`A` records in this one zone and nothing else (see *Security considerations*).
+The single write grant a node holds is scoped to `UPSERT` of `A` records, at exactly one
+label under this one zone, and nothing else (see *Security considerations*).
 
 ## Prerequisites
 
@@ -118,12 +137,17 @@ The operator sets these parameters:
 - **ClusterId** - the PCS cluster ID. The reconcile Lambda uses it to scope cleanup to
   this cluster's nodes.
 - **DomainName** - the zone name. Leave blank to use `<ClusterId>.pcs.local`. Must be
-  unique per cluster within the VPC.
+  unique per cluster within the VPC, **and must be a name nothing else in your organization
+  resolves** - the zone overrides DNS for it across the whole VPC. Lowercase, ending in
+  `.internal` or `.local`.
 - **RecordTTL** - the TTL in seconds for node records. Defaults to `60`.
-- **ReconcileIntervalMinutes** - how often the reconcile Lambda runs. Defaults to `5`;
-  must be greater than 0.
+- **ReconcileIntervalMinutes** - how often the reconcile Lambda runs. Defaults to `5`,
+  minimum `3`. Below that, EventBridge rejects the schedule expression and invocations
+  would overlap the function's timeout.
 - **ClusterTagKey** - the EC2 tag that carries the cluster ID. Defaults to
-  `aws:pcs:cluster-id`; rarely changed.
+  `aws:pcs:cluster-id`. Leave it alone unless you know why you are changing it: the default
+  is in a reserved namespace that cannot be forged, and a value matching no instances makes
+  reconcile skip its pass.
 
 When the stack shows `CREATE_COMPLETE`, open its **Outputs** tab. You use:
 
@@ -135,7 +159,12 @@ When the stack shows `CREATE_COMPLETE`, open its **Outputs** tab. You use:
 
 The nodes need permission to register their own records. Attach the output
 `NodeDnsManagedPolicyArn` to the IAM role your compute node group instances use (for
-example the role from the `pcs/getting_started` `pcs-iip-minimal` template):
+example the role from the `pcs/getting_started` `pcs-iip-minimal` template).
+
+> **Use a role dedicated to this cluster.** The policy grants write access to *this*
+> cluster's zone. If the role is shared with another cluster, that cluster's nodes get the
+> same access, and the per-cluster isolation this design relies on is gone. Give each
+> cluster its own instance profile if you run more than one in a VPC.
 
 ```bash
 aws iam attach-role-policy \
@@ -184,15 +213,37 @@ record disappears within `ReconcileIntervalMinutes`.
 
 ## Security considerations
 
-- **Nodes share one write grant to the zone.** The managed policy lets a node UPSERT A
-  records in the hosted zone. It is scoped to *UPSERT of A records only*, so a compromised
-  node cannot DELETE records or change other record types. But Route 53's IAM model cannot
-  restrict a node to only its *own* record name from a role shared by every node, so a
-  compromised node could overwrite a peer's A record and redirect traffic within the zone.
-  The blast radius is bounded: the zone is private to the VPC, the TTL is short, and the
-  reconcile Lambda re-corrects records. All nodes in an HPC cluster already share one trust
-  domain, so this is acceptable for a cluster-internal workaround. Do not attach the policy
-  to roles outside the cluster.
+- **Nodes share one write grant to the zone.** The managed policy lets a node UPSERT a
+  single-label `A` record under the zone. It denies `DELETE`, other record types, the zone
+  apex, multi-label names, and wildcards. Route 53's IAM model still cannot restrict a node
+  to its *own* record name from a role shared by every node, so **a compromised node can
+  overwrite a peer's A record and redirect that peer's traffic within the zone.** Reconcile
+  does not repair this: if the record points at any live instance in the cluster, reconcile
+  keeps it. The short TTL does not bound it either — the record is wrong, not stale. What
+  does bound it: the zone is private to the VPC, and the affected name is re-asserted the
+  next time the victim node boots. All nodes in an HPC cluster already share one trust
+  domain, so this is acceptable for a cluster-internal workaround. If you need per-node
+  scoping, the durable answer is to mediate registration — nodes call a small Lambda that
+  authenticates the caller's instance identity and writes the record on their behalf, and
+  hold no Route 53 write grant at all.
+- **The grant is reachable by any user on a node, not only by "a compromised node."** An
+  unprivileged job user can read the instance role's credentials from IMDS. Treat every
+  cluster user as holding this permission.
+- **Use a node role dedicated to one cluster.** The policy is per-zone, but a role shared
+  across clusters (reusing `pcs-iip-minimal`, say) gives every cluster's nodes write access
+  to every zone whose policy is attached, which defeats the per-cluster isolation the design
+  rests on. Do not attach the policy to roles outside the cluster.
+- **The zone overrides DNS for the whole VPC, not just the cluster.** A private hosted zone
+  takes precedence over public DNS for its name and every name under it, for *every*
+  instance in the associated VPC. Choose a `DomainName` nothing else in your organization
+  resolves — otherwise you both break resolution for real names under that suffix and hand
+  untrusted HPC nodes authority over a namespace your other instances trust. The parameter
+  is constrained to lowercase names ending in `.internal` or `.local` as a guardrail, not a
+  guarantee.
+- **The zone is in every node's DNS search list.** That is what makes short names resolve,
+  and it also means any principal holding the node role can answer *unqualified* lookups
+  (`proxy`, `license`, a peer's bare name) for every process on every node, including root,
+  by registering a name the zone does not yet contain.
 - **The node runs the NLA script as root from a public bucket.** Integrity rests on TLS and
   the S3 object. The example pins the script's SHA-256 in `scriptSource.checksum`, so the
   PCS agent rejects a tampered download. For anything beyond experimentation, host your own
@@ -215,9 +266,24 @@ DNS Domain, and `/etc/systemd/resolved.conf.d/10-pcs-search.conf` should exist. 
 NetworkManager AMIs, `nmcli -g ipv4.dns-search connection show <con>` should include the
 zone. The script logs which path it took.
 
-**The reconcile Lambda deleted a record for a running node.** A transient
-`DescribeInstances` failure can do this. The node re-registers on its next boot, and the
-record is idempotent, so the effect is temporary. This is why the script runs `EVERY_BOOT`.
+**The reconcile Lambda deleted a record for a running node.** The record does **not** come
+back on its own — lifecycle actions run at boot, so the node stays unresolvable until it is
+rebooted or replaced. Re-register by hand with `aws route53 change-resource-record-sets`, or
+reboot the node. Likely causes, in order: the node registered an address that is not on any
+of its ENIs; the node is not tagged with `ClusterTagKey`, so reconcile does not see it as
+live; or the record was overwritten by another principal holding the node role. A transient
+`DescribeInstances` failure is *not* a cause — the call raises and the pass aborts before
+deleting anything, and an empty instance list is treated as untrustworthy and skipped.
+
+**A short name intermittently fails to resolve during a scale-up.** Negative answers are
+cached for the zone's negative TTL (about 900 s), which `RecordTTL` does not affect. A peer
+queried before it registered stays `NXDOMAIN` in the resolver cache for minutes after it is
+healthy. On `systemd-resolved` nodes, `resolvectl flush-caches` clears it.
+
+**Nodes in a large scale-up have no records.** `ChangeResourceRecordSets` is throttled per
+account and serialized per hosted zone, and the script makes one attempt then gives up until
+the next boot. Check the node's NLA log for a throttling error. Stagger large scale-ups, or
+reboot the affected nodes.
 
 ## FAQ
 
@@ -233,14 +299,18 @@ clusters that share a VPC. Enterprise VPC owners rarely allow it. Setting the se
 per node, locally, avoids touching shared network configuration.
 
 **Why reconcile on a schedule instead of an EventBridge terminate event?** Event delivery
-can be missed, and a missed event leaks a record forever. A scheduled reconcile is
-self-healing: it corrects the zone no matter how a record was orphaned, and it cleans up
-after an abrupt teardown. The same function also purges the zone when the stack is deleted.
+can be missed, and a missed event leaks a record forever. A scheduled pass cleans up
+however a record was orphaned, including after an abrupt teardown. The same function also
+empties the zone when the stack is deleted.
 
-**Why is the node's write permission limited to `UPSERT` of `A` records?** That is exactly
-what the script needs. Forbidding `DELETE` and other record types means a compromised node
-cannot remove a peer's record or tamper with the zone's SOA/NS records. See *Security
-considerations* for the residual that IAM cannot close.
+**Why is the node's write permission limited this way?** `UPSERT` of a single-label `A`
+record is exactly what the script needs. The restrictions rule out concrete problems:
+forbidding other record types keeps the zone's SOA/NS intact; forbidding the apex matters
+because Route 53 refuses to delete a hosted zone that still holds an apex record, so a node
+could otherwise block stack deletion; and forbidding wildcards matters because `*.<zone>`
+would answer every unregistered name in the zone. Note the limit on `DELETE` buys less than
+it appears — see *Security considerations* for the peer-overwrite residual that IAM cannot
+close.
 
 **How does a node know its Slurm name at boot?** The PCS agent sets `PCS_NODE_ID` in the
 script's environment to the Slurm node name (for example `login-1`). The script registers
@@ -253,12 +323,25 @@ Removing the capability is the reverse of deploying, and equally decoupled:
 1. Set each node group's lifecycle actions back to empty (`--node-lifecycle-actions '{}'`).
    This is another `DRAIN`-triggering update.
 2. Detach the managed policy from the node role.
-3. Delete the stack. A delete-time custom resource empties the zone first, so the hosted
-   zone is removed cleanly.
+3. Delete the stack. A delete-time custom resource empties the zone first so the hosted
+   zone can be removed.
 
 ```bash
 aws cloudformation delete-stack --stack-name pcs-cluster-dns
 ```
+
+Do the steps in that order. If nodes are still registering while the stack is deleting, the
+purge races them and `DeleteHostedZone` fails with `HostedZoneNotEmpty`. If the stack does
+land in `DELETE_FAILED`, list what is left and remove it by hand, then delete the stack
+again:
+
+```bash
+aws route53 list-resource-record-sets --hosted-zone-id <HostedZoneId output>
+```
+
+Changing `DomainName` on an existing stack **replaces** the hosted zone. The purge runs
+against the old zone during that update, but the nodes keep their old records and their old
+search domain until they next boot, so plan it like a redeployment rather than an edit.
 
 ## Additional considerations
 
@@ -270,9 +353,17 @@ This is a recipe for teaching and a stopgap. Before relying on a system like it,
   your workload needs `IP -> name`.
 - **Host your own copy of the script.** For anything beyond experimentation, serve the NLA
   script from a bucket you control and keep the pinned checksum current.
-- **Tighten `ec2:CreateTags` on the node role.** The reconcile Lambda trusts the
-  `aws:pcs:cluster-id` tag to decide liveness. If nodes can set that tag freely, a rogue
-  instance could evade cleanup.
+- **Leave `ClusterTagKey` at its default.** The reconcile Lambda trusts that tag to decide
+  liveness. The default `aws:pcs:cluster-id` is in the reserved `aws:` namespace, which EC2
+  will not let a customer principal set, so it cannot be forged — and `ec2:CreateTags` on the
+  node role does not change that. If you override the parameter with a non-reserved key, that
+  protection is gone and you should restrict `ec2:CreateTags` on the node role.
+- **A `.local` zone suffix and multicast DNS.** The default suffix is `<ClusterId>.pcs.local`.
+  RFC 6762 reserves `.local` for multicast DNS, and `systemd-resolved` special-cases it. If
+  mDNS is active on your AMI, a `.local` name could in principle be answered over mDNS by any
+  host on the link rather than from the zone. This recipe has not been verified either way on
+  the recommended AMIs; if it matters to you, check `resolvectl status` on a node and set
+  `DomainName` to a `.internal` suffix instead.
 - **Naming from a directory service at scale.** A large, long-lived environment is better
   served by resolving node identity from a single source rather than self-registration.
 
@@ -299,9 +390,10 @@ domain is what makes `compute-2` resolve to `compute-2.<zone>` without the calle
 suffix.
 
 ### reconcile
-The scheduled Lambda pass that lists the zone and deletes A records whose IP is not backed
-by a running instance tagged for this cluster. It is the cleanup path for terminated nodes
-and the zone-emptying step on stack delete.
+The scheduled Lambda pass that lists the zone and deletes single-value A records whose IP is
+not held by a running instance tagged for this cluster. It is the cleanup path for terminated
+nodes and the zone-emptying step on stack delete. It only ever deletes: it never creates a
+record or corrects one's value.
 
 ### UPSERT
 The Route 53 change action that creates a record or replaces it if it exists. It makes node

@@ -1,6 +1,9 @@
 #!/usr/bin/env bash
 #
-# register-node-dns-v1.0.0.sh — AWS PCS node lifecycle action (community example)
+# Copyright Amazon.com, Inc. or its affiliates. All Rights Reserved.
+# SPDX-License-Identifier: MIT-0
+#
+# register-node-dns-v1.1.0.sh — AWS PCS node lifecycle action (community example)
 #
 # Gives a PCS node a resolvable name. On boot it:
 #   1. Registers <PCS_NODE_ID>.<zone> -> the node's primary IPv4 in a Route53
@@ -28,21 +31,35 @@
 # Suggested onError: CONTINUE (best-effort).
 #
 # Usage:
-#   register-node-dns-v1.0.0.sh --zone-id ZONE_ID --zone-name ZONE [--ttl SECONDS]
-#
-# Flags:
-#   --zone-id ID      Route53 hosted zone ID (required).
-#   --zone-name ZONE  Zone name, e.g. pcs_abc123.pcs.local (required).
-#   --ttl SECONDS     Record TTL (default: 60).
-#   -h, --help        Show this help and exit.
+#   register-node-dns-v1.1.0.sh --zone-id ZONE_ID --zone-name ZONE [--ttl SECONDS]
 
 set -o errexit -o pipefail -o nounset
+
+# The script writes resolver configuration under /etc as root. Pin the umask so those
+# files cannot land group- or world-writable if the caller's umask is permissive.
+umask 022
 
 log()  { echo "[register-node-dns] $*"; }
 warn() { echo "[register-node-dns] WARNING: $*" >&2; }
 
+# Spelled out rather than derived from the comment header with sed: a line-range read
+# of $0 silently breaks whenever a header line is added or removed.
 usage() {
-    sed -n '3,38p' "$0" | sed 's/^#\{0,1\} \{0,1\}//'
+    cat <<'USAGE'
+register-node-dns — register a PCS node's Slurm name in a Route53 private hosted zone.
+
+Usage:
+  register-node-dns-v1.1.0.sh --zone-id ZONE_ID --zone-name ZONE [--ttl SECONDS]
+
+Flags:
+  --zone-id ID      Route53 hosted zone ID (required).
+  --zone-name ZONE  Zone name, e.g. pcs_abc123.pcs.local (required).
+  --ttl SECONDS     Record TTL (default: 60).
+  -h, --help        Show this help and exit.
+
+Reads PCS_NODE_ID from the environment (the PCS agent sets it to the Slurm node name).
+Best-effort: logs a warning and exits 0 on any missing prerequisite or failed call.
+USAGE
     exit "${1:-0}"
 }
 
@@ -113,7 +130,10 @@ set_search_domain() {
     fi
 
     warn "no managed resolver detected; appending 'search ${zone}' to /etc/resolv.conf"
-    if ! grep -qE "^search .*(^| )${zone}( |\$)" /etc/resolv.conf 2>/dev/null; then
+    # Matches the zone as a whole entry on the search line. The earlier form used a
+    # mid-pattern '^' that can never match, so the guard always failed and the zone was
+    # appended again on every boot.
+    if ! grep -qE "^search( .*)? ${zone}( |\$)" /etc/resolv.conf 2>/dev/null; then
         if grep -qE '^search ' /etc/resolv.conf 2>/dev/null; then
             sed -i -E "s/^(search .*)\$/\1 ${zone}/" /etc/resolv.conf
         else
@@ -142,7 +162,12 @@ RECORD="${NODE_ID}.${ZONE_NAME%.}"
 log "Registering ${RECORD} -> ${IP} (TTL ${TTL}) in zone ${ZONE_ID}"
 
 batch="$(mktemp)"
-trap 'rm -f "${batch}"' EXIT
+# Never a fixed path: this runs as root on a host with untrusted local users, and a
+# fixed name in a world-writable directory lets a local user redirect or pre-empt the
+# write (and, if they pre-create it as a directory, make the redirect fail so the
+# registration below never runs at all).
+err="$(mktemp)"
+trap 'rm -f "${batch}" "${err}"' EXIT
 cat > "${batch}" <<JSON
 {
   "Comment": "PCS node ${NODE_ID} self-registration",
@@ -162,12 +187,14 @@ JSON
 
 if aws route53 change-resource-record-sets \
     --hosted-zone-id "${ZONE_ID}" \
-    --change-batch "file://${batch}" >/dev/null 2>/tmp/register-node-dns.err; then
+    --change-batch "file://${batch}" >/dev/null 2>"${err}"; then
     log "Record registered."
 else
     warn "change-resource-record-sets failed (best-effort; the node continues):"
-    warn "$(cat /tmp/register-node-dns.err 2>/dev/null || true)"
-    warn "Confirm the node instance role allows route53:ChangeResourceRecordSets on this zone."
+    warn "$(cat "${err}" 2>/dev/null || true)"
+    warn "Check that the node instance role allows route53:ChangeResourceRecordSets on"
+    warn "this zone, and that the record name is one label under the zone (the policy"
+    warn "denies the zone apex, multi-label names, and wildcards)."
 fi
 
 # --- Set the search domain so short names resolve (best-effort) --------------

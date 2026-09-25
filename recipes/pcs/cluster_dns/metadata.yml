@@ -2,7 +2,7 @@
 # The name of the recipe. This has the same character requirements as namespace.
 name: cluster_dns
 # The version of the recipe. Must be compatible with semantic versioning.
-version: "1.0.0"
+version: "1.1.0"
 # A short summary description of the recipe
 description: Give AWS PCS nodes resolvable DNS names using a per-cluster Route53 private hosted zone with on-boot self-registration.
 # The path to the README for the recipe relative to its root directory.

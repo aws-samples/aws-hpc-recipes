@@ -1,3 +1,5 @@
+# Copyright Amazon.com, Inc. or its affiliates. All Rights Reserved.
+# SPDX-License-Identifier: MIT-0
 AWSTemplateFormatVersion: 2010-09-09
 Description: >-
   Sidecar DNS for an AWS PCS cluster. Creates a per-cluster Route53 private hosted
@@ -40,9 +42,13 @@ Parameters:
   DomainName:
     Type: String
     Default: ""
+    AllowedPattern: '^$|^[a-z0-9][a-z0-9.-]*\.(internal|local)$'
     Description: >-
       DNS zone name for this cluster. Leave blank to use "<ClusterId>.pcs.local".
-      Must be unique per cluster within the VPC.
+      WARNING: a private hosted zone takes precedence over public DNS for this name,
+      and every name under it, for EVERY instance in the VPC - not just cluster nodes.
+      Use a name nothing else in your organization resolves. Lowercase only, and must
+      end in .internal or .local.
 
   RecordTTL:
     Type: Number
@@ -53,8 +59,12 @@ Parameters:
   ReconcileIntervalMinutes:
     Type: Number
     Default: 5
-    MinValue: 1
-    Description: How often the reconcile Lambda removes records for terminated nodes. Must be greater than 0.
+    MinValue: 3
+    MaxValue: 1440
+    Description: >-
+      How often the reconcile Lambda removes records for terminated nodes. Minimum 3:
+      EventBridge rejects "rate(1 minutes)" (it requires the singular unit at 1), and an
+      interval shorter than the function timeout would overlap invocations.
 
   ClusterTagKey:
     Type: String
@@ -84,24 +94,47 @@ Resources:
       PolicyDocument:
         Version: "2012-10-17"
         Statement:
-          # A node only ever UPSERTs its own A record. Restricting the action to
-          # UPSERT and the record type to A means a compromised node cannot DELETE
-          # peers' records (a DoS vector) or tamper with SOA/NS/other types. Route53's
-          # IAM model cannot scope this to the node's *own* name from a role shared by
-          # all nodes, so overwriting a peer's A record remains possible — see the
-          # "Security considerations" note in the README.
+          # A node only ever UPSERTs one A record for itself. Three restrictions apply:
+          # the action must be UPSERT, the type must be A, and the record NAME must be
+          # exactly one label under the zone.
+          #
+          # The name restriction matters more than it looks. Without it a node can write
+          # the zone apex (which blocks DeleteHostedZone, wedging stack deletion) or a
+          # wildcard "*.<zone>" (which answers every name in the zone that has no exact
+          # record, and which reconcile will not remove if it points at a live instance).
+          #
+          # Route53's IAM model still cannot bind a node to its OWN name from a role
+          # shared by every node, so a node can overwrite a PEER's A record. Reconcile
+          # does not repair that. See "Security considerations" in the README.
           - Sid: RegisterOwnRecord
             Effect: Allow
             Action: route53:ChangeResourceRecordSets
             Resource: !Sub "arn:${AWS::Partition}:route53:::hostedzone/${HostedZone}"
             Condition:
+              # ForAllValues is true when its key is ABSENT from the request, so every
+              # restriction below would pass vacuously on a request shape that omitted
+              # the key. Null "false" requires each key to be present first.
+              "Null":
+                "route53:ChangeResourceRecordSetsActions": "false"
+                "route53:ChangeResourceRecordSetsRecordTypes": "false"
+                "route53:ChangeResourceRecordSetsNormalizedRecordNames": "false"
               "ForAllValues:StringEquals":
                 "route53:ChangeResourceRecordSetsActions": ["UPSERT"]
                 "route53:ChangeResourceRecordSetsRecordTypes": ["A"]
-          - Sid: ListRecords
-            Effect: Allow
-            Action: route53:ListResourceRecordSets
-            Resource: !Sub "arn:${AWS::Partition}:route53:::hostedzone/${HostedZone}"
+              # "<label>.<zone>" only.
+              "ForAllValues:StringLike":
+                "route53:ChangeResourceRecordSetsNormalizedRecordNames":
+                  - !Sub
+                    - "*.${Zone}"
+                    - Zone: !If [UseDefaultDomain, !Sub "${ClusterId}.pcs.local", !Ref DomainName]
+              # Excludes the apex (no leading label), anything deeper than one label,
+              # and wildcards - Route53 normalizes "*" to the octal escape \052.
+              "ForAllValues:StringNotLike":
+                "route53:ChangeResourceRecordSetsNormalizedRecordNames":
+                  - '*\052*'
+                  - !Sub
+                    - "*.*.${Zone}"
+                    - Zone: !If [UseDefaultDomain, !Sub "${ClusterId}.pcs.local", !Ref DomainName]
 
   ReconcileFunctionRole:
     Type: AWS::IAM::Role
@@ -136,6 +169,11 @@ Resources:
 
   ReconcileFunction:
     Type: AWS::Lambda::Function
+    # The function must outlive its log group on the way out. Deletion runs in reverse
+    # dependency order, so this makes CloudFormation remove the function first; otherwise
+    # the delete-time purge invocation can write after the group is gone and Lambda
+    # silently recreates it, orphaning a never-expire group after teardown.
+    DependsOn: ReconcileLogGroup
     Properties:
       FunctionName: !Sub "${AWS::StackName}-reconcile"
       Description: !Sub "Removes stale DNS records for terminated nodes in cluster ${ClusterId}"
@@ -158,67 +196,167 @@ Resources:
           r53 = boto3.client("route53")
           ec2 = boto3.client("ec2")
 
+          # A node can rewrite the VALUE of any A record in the zone, so record contents
+          # are attacker-influenced data. Two rules follow, and the code below sticks to
+          # them: never let record content decide how a request is SIZED, and never let a
+          # single unprocessable record stop the whole pass.
+
+
+          def apex_of(zone_name):
+              """The zone's own name in the form ListResourceRecordSets returns.
+
+              Lowercased, because DNS names are case-insensitive and a byte comparison
+              against an operator-supplied parameter would miss on any uppercase letter.
+              """
+              return zone_name.rstrip(".").lower() + "."
+
 
           def live_ips():
-              """Private IPs of instances that are still alive in this cluster."""
+              """Private IPs held by instances still alive in this cluster.
+
+              Every address on every ENI is collected, not just Instances[].PrivateIpAddress,
+              so a node that registered a secondary address is not mistaken for a dead one.
+              """
               ips = set()
               paginator = ec2.get_paginator("describe_instances")
               pages = paginator.paginate(
                   Filters=[
                       {"Name": "tag:" + os.environ["TAG_KEY"], "Values": [os.environ["CLUSTER_ID"]]},
-                      {"Name": "instance-state-name", "Values": ["pending", "running", "stopping", "stopped"]},
+                      {"Name": "instance-state-name",
+                       "Values": ["pending", "running", "shutting-down", "stopping", "stopped"]},
                   ]
               )
               for page in pages:
                   for res in page["Reservations"]:
                       for inst in res["Instances"]:
-                          ip = inst.get("PrivateIpAddress")
-                          if ip:
-                              ips.add(ip)
+                          if inst.get("PrivateIpAddress"):
+                              ips.add(inst["PrivateIpAddress"])
+                          for nic in inst.get("NetworkInterfaces", []):
+                              for addr in nic.get("PrivateIpAddresses", []):
+                                  if addr.get("PrivateIpAddress"):
+                                      ips.add(addr["PrivateIpAddress"])
               return ips
 
 
-          def reconcile(purge=False):
-              """Delete A records whose IP is not backed by a live node. purge=True deletes all."""
-              zone = os.environ["HOSTED_ZONE_ID"]
-              apex = os.environ["ZONE_NAME"].rstrip(".") + "."
-              keep = set() if purge else live_ips()
+          def judgeable(rr, apex, purge):
+              """Whether reconcile may form an opinion about this record."""
+              name = rr["Name"].lower()
+              if purge:
+                  # Empty the zone so it can be deleted. Route53 requires the apex SOA and
+                  # NS to remain; everything else must go, whatever its type. Filtering to
+                  # type A here would leave a CNAME/TXT/PTR behind and DeleteHostedZone
+                  # would then fail with the stack already mid-delete.
+                  return not (name == apex and rr["Type"] in ("SOA", "NS"))
+              if rr["Type"] != "A" or name == apex:
+                  return False
+              # Records this recipe creates are single-value address records. An ALIAS
+              # record has no ResourceRecords at all, and a multi-value record was not
+              # written by the node script, so neither is ours to delete. Without this the
+              # empty-value case makes "no live IP" vacuously true and silently destroys
+              # operator-created records on every run.
+              return len(rr.get("ResourceRecords", [])) == 1
 
-              changes = []
-              paginator = r53.get_paginator("list_resource_record_sets")
-              for page in paginator.paginate(HostedZoneId=zone):
-                  for rr in page["ResourceRecordSets"]:
-                      if rr["Type"] != "A":
-                          continue
-                      if rr["Name"] == apex:
-                          continue
-                      ips = [v["Value"] for v in rr.get("ResourceRecords", [])]
-                      if purge or not any(ip in keep for ip in ips):
-                          changes.append({"Action": "DELETE", "ResourceRecordSet": rr})
 
-              deleted = 0
-              for i in range(0, len(changes), 100):
-                  batch = changes[i:i + 100]
+          def submit(zone, batch):
+              """Submit one change batch, tolerating changes that cannot be applied.
+
+              Route53 applies a batch atomically, so one record that was rewritten while
+              we were listing - or that is otherwise unprocessable - fails all of its
+              companions. On failure the batch is retried one change at a time, so the
+              cost of a poisoned record is that record and nothing else. Without this, a
+              node could stop every deletion in the zone indefinitely by keeping a single
+              record in flux.
+              """
+              if not batch:
+                  return 0
+              try:
                   r53.change_resource_record_sets(
                       HostedZoneId=zone, ChangeBatch={"Changes": batch}
                   )
-                  deleted += len(batch)
+                  return len(batch)
+              except Exception as exc:  # noqa: BLE001
+                  if len(batch) == 1:
+                      print("skipping unprocessable change:",
+                            batch[0]["ResourceRecordSet"].get("Name"), exc)
+                      return 0
+                  print("change batch failed; retrying individually:", exc)
+                  return sum(submit(zone, [change]) for change in batch)
+
+
+          def reconcile(zone, zone_name, purge=False):
+              """Delete records with no live owner. purge=True empties the zone."""
+              apex = apex_of(zone_name)
+              keep = set() if purge else live_ips()
+              if not purge and not keep:
+                  # An empty result is indistinguishable from "the tag filter matched
+                  # nothing", so treat it as untrustworthy rather than as "every node is
+                  # gone". Otherwise a single mistyped ClusterTagKey deletes the zone.
+                  print("no live instances matched this cluster; skipping reconcile")
+                  return 0
+
+              candidates = []
+              paginator = r53.get_paginator("list_resource_record_sets")
+              for page in paginator.paginate(HostedZoneId=zone):
+                  for rr in page["ResourceRecordSets"]:
+                      if not judgeable(rr, apex, purge):
+                          continue
+                      if purge or rr["ResourceRecords"][0]["Value"] not in keep:
+                          candidates.append(rr)
+
+              # Re-read liveness and drop anything that came up while we were listing, so
+              # an instance that registered mid-pass does not lose its fresh record. The
+              # first snapshot is taken before the listing begins, so on its own it is
+              # stale by the time a deletion is decided.
+              if candidates and not purge:
+                  keep |= live_ips()
+                  candidates = [rr for rr in candidates
+                                if rr["ResourceRecords"][0]["Value"] not in keep]
+
+              # Batch by VALUE count as well as change count. Route53 bounds a request by
+              # ResourceRecord elements and by total value bytes, not by number of changes,
+              # so a count-only bound lets record content overflow the request.
+              deleted, batch, elems = 0, [], 0
+              for rr in candidates:
+                  n = max(len(rr.get("ResourceRecords", [])), 1)
+                  if batch and (len(batch) >= 100 or elems + n > 400):
+                      deleted += submit(zone, batch)
+                      batch, elems = [], 0
+                  batch.append({"Action": "DELETE", "ResourceRecordSet": rr})
+                  elems += n
+              deleted += submit(zone, batch)
               return deleted
 
 
           def handler(event, context):
-              # CloudFormation custom resource: purge the zone on stack delete so it can be removed.
+              # CloudFormation custom resource: empty the zone so it can be removed.
               if isinstance(event, dict) and "RequestType" in event:
+                  # A stable physical ID. Without one cfnresponse defaults to the log
+                  # stream name, which differs per invocation, so CloudFormation would
+                  # treat the resource as replaced and send a Delete for the "old" one -
+                  # purging a live cluster's zone during an ordinary stack update.
+                  pid = "cluster-dns-zone-purge"
+                  req = event["RequestType"]
+                  new = event.get("ResourceProperties") or {}
+                  old = event.get("OldResourceProperties") or {}
                   try:
-                      deleted = reconcile(purge=True) if event["RequestType"] == "Delete" else 0
-                      cfnresponse.send(event, context, cfnresponse.SUCCESS, {"Deleted": deleted})
+                      deleted = 0
+                      if req == "Delete":
+                          deleted = reconcile(new["HostedZoneId"], new["ZoneName"], purge=True)
+                      elif req == "Update" and old.get("HostedZoneId") not in (None, new.get("HostedZoneId")):
+                          # DomainName changed, so the zone was replaced. Empty the OLD
+                          # zone, which CloudFormation is about to delete and which no
+                          # longer has a reconciler pointing at it.
+                          deleted = reconcile(old["HostedZoneId"], old["ZoneName"], purge=True)
+                      cfnresponse.send(event, context, cfnresponse.SUCCESS,
+                                       {"Deleted": deleted}, physicalResourceId=pid)
                   except Exception as exc:  # noqa: BLE001
                       print("purge failed:", exc)
-                      cfnresponse.send(event, context, cfnresponse.FAILED, {"Error": str(exc)})
+                      cfnresponse.send(event, context, cfnresponse.FAILED,
+                                       {"Error": str(exc)}, physicalResourceId=pid)
                   return
 
               # Scheduled reconcile.
-              deleted = reconcile(purge=False)
+              deleted = reconcile(os.environ["HOSTED_ZONE_ID"], os.environ["ZONE_NAME"])
               print("reconcile deleted", deleted, "stale record(s)")
 
   ReconcileSchedule:
@@ -240,11 +378,25 @@ Resources:
       SourceArn: !GetAtt ReconcileSchedule.Arn
       SourceAccount: !Ref AWS::AccountId
 
-  # Empties the zone on stack delete so the hosted zone can be removed.
+  # Owned by the stack so retention is bounded and the group is removed on delete.
+  # Lambda would otherwise auto-create it with retention set to never expire, and
+  # leave it behind after teardown.
+  ReconcileLogGroup:
+    Type: AWS::Logs::LogGroup
+    Properties:
+      LogGroupName: !Sub "/aws/lambda/${AWS::StackName}-reconcile"
+      RetentionInDays: 14
+
+  # Empties the zone on stack delete so the hosted zone can be removed. HostedZoneId
+  # and ZoneName are declared as properties so that replacing the zone (which a
+  # DomainName change does) sends an Update carrying the OLD zone, letting the handler
+  # empty it instead of orphaning it inside the VPC with no reconciler.
   ZonePurge:
     Type: AWS::CloudFormation::CustomResource
     Properties:
       ServiceToken: !GetAtt ReconcileFunction.Arn
+      HostedZoneId: !Ref HostedZone
+      ZoneName: !If [UseDefaultDomain, !Sub "${ClusterId}.pcs.local", !Ref DomainName]
 
 Outputs:
   HostedZoneId:
