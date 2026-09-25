@@ -93,9 +93,10 @@ Be precise about what reconcile is:
 - **A deleted record returns only at boot.** A node whose record was removed in error stays
   unresolvable until it is rebooted or replaced.
 - **It owns exactly one label under the zone.** That is the same set of names the node policy
-  lets a node write, so every record a node can create is one reconcile can remove. Keep your
-  own records at a deeper name, such as `svc.nfs.<zone>`: reconcile never touches those, and a
-  node cannot write them either.
+  lets a node write, so every record a node can create is one reconcile can remove. The zone is
+  created for this cluster and emptied when the stack goes, so in practice that is everything in
+  it. If you do add a record of your own, put it a level deeper (`svc.nfs.<zone>`) and reconcile
+  will leave it alone.
 
 ## Prerequisites
 

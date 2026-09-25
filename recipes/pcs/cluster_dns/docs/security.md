@@ -33,8 +33,8 @@ Each of the three name restrictions closes a specific problem:
 
 The policy also uses `Null` conditions to require all three context keys to be present.
 `ForAllValues` evaluates to true when its key is absent from the request, so without the
-`Null` guards a request shape that omitted a key would satisfy the restrictions without
-meeting them.
+`Null` guards a request that omitted a key would satisfy the restrictions without meeting
+them.
 
 The node role holds no `route53:ListResourceRecordSets`. The script never lists records, and
 removing the grant takes away an easy way to enumerate every node name and address in the
@@ -55,9 +55,10 @@ earlier version of this recipe skipped multi-value and alias records for exactly
 and a node could use either shape to plant a permanent record at any name it was allowed to
 write. Name is the one property both the policy and the reconciler can agree on.
 
-The practical consequence for operators: keep your own records in this zone at a name deeper
-than one label, for example `svc.nfs.<zone>`. Reconcile ignores those, and the node policy
-already refuses to write them.
+This costs little in practice. The stack creates the zone for one cluster and empties it at
+teardown, so single-label node records are essentially all it ever holds. A record you add
+yourself at a deeper name, such as `svc.nfs.<zone>`, is outside both authorities: reconcile
+ignores it and the node policy refuses to write it.
 
 ## The residual that IAM cannot close
 
@@ -65,7 +66,7 @@ already refuses to write them.
 node's traffic inside the zone.**
 
 Route 53's IAM model cannot bind a caller to its *own* record name when every node shares one
-role. The name condition limits *which shape* of name a node may write, not *which* name.
+role. The name condition limits the *form* of name a node may write, not *which* name.
 
 Three things people expect to bound this, but which don't:
 

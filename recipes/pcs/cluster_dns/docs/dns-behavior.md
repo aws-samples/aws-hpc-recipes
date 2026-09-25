@@ -139,7 +139,7 @@ The scheduled pass deletes a record only when all of the following hold:
 - and none of its addresses belongs to an instance currently tagged for this cluster.
 
 Anything else is left alone: names deeper than one label, the apex, and every record type other
-than `A`. Keep your own records at a deeper name and reconcile will never touch them.
+than `A`. A record of your own at a deeper name is therefore safe from it.
 
 Two further guards:
 
