@@ -50,10 +50,25 @@ can remove.
 Do not be tempted to decide that from the record's *shape* instead, meaning its value count or
 whether it carries an `AliasTarget`. Route 53 gives IAM no condition key for shape, so a node
 picks the shape freely. A shape-based test therefore lets a node write a record the reconciler
-skips on every pass, which then outlives the node that made it and the job that created it. An
-earlier version of this recipe skipped multi-value and alias records for exactly that reason,
-and a node could use either shape to plant a permanent record at any name it was allowed to
-write. Name is the one property both the policy and the reconciler can agree on.
+skips on every pass, which then outlives the node that made it and the job that created it.
+Name is the one property both the policy and the reconciler can agree on.
+
+That is not a hypothetical. This selector was wrong twice before it was right, in opposite
+directions, and both wrong versions passed every static check and read as correct in review:
+
+| Rule | Failure |
+|---|---|
+| Type `A` and not the apex | Deleted operator-created ALIAS records on every pass, because an ALIAS carries no addresses and so looked unbacked. |
+| Plus exactly one value | Let a node write a multi-value or ALIAS `A` record at a permitted name that reconcile then skipped forever. |
+| Name is one label under the apex | Current. |
+
+The rule worth carrying forward: **decide ownership from a property the authorization system can
+also enforce.** If the reconciler and the policy key on different properties, they will drift, and
+the gap between them is where a node operates.
+
+The alternative that removes the question entirely is mediated registration, described at the end
+of the next section: nodes hold no Route 53 write at all. That is a larger design than this
+sidecar recipe attempts.
 
 This costs little in practice. The stack creates the zone for one cluster and empties it at
 teardown, so single-label node records are essentially all it ever holds. A record you add

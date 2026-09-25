@@ -44,7 +44,23 @@ restart, which is how a two-node group ended up with one node resolving its peer
 not, from identical code.
 
 The drop-in survives a `systemd-resolved` restart, a `systemd-networkd` restart, and leaves
-public DNS resolution untouched.
+public DNS resolution untouched. It was verified on both supported AMIs, which run resolved in
+different `resolv.conf` modes: Ubuntu in stub mode and AL2023 in uplink mode. In uplink mode the
+`DNS=` line also inserts `169.254.169.253` ahead of the VPC's `.2` address in `resolv.conf`. Both
+answer private hosted zone queries, so that is harmless.
+
+Three approaches were tried here, and the two that failed are the two that look right:
+
+| Approach | Persists | Scope has a resolver | Outcome |
+|---|---|---|---|
+| Global `Domains=` alone | Yes | No | Nothing in the zone resolved, on either AMI |
+| `resolvectl domain` on the link | No | Yes | Correct only if the action ran after the mid-boot restart |
+| Drop-in with `Domains=` and `DNS=` | Yes | Yes | Current |
+
+A `systemd-networkd` or netplan drop-in on the link would also satisfy both properties, and is
+arguably the more systemd-native answer. It was rejected as too fragile for sample content: the
+file name depends on netplan's generated unit name and on the interface name, and the mechanism
+differs between the two supported AMIs.
 
 One consequence worth knowing: a global `Domains=` entry sorts ahead of the link's own domain
 in the search list, so `/etc/resolv.conf` ends up as
