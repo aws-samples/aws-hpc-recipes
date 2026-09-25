@@ -3,7 +3,7 @@
 # Copyright Amazon.com, Inc. or its affiliates. All Rights Reserved.
 # SPDX-License-Identifier: MIT-0
 #
-# register-node-dns-v1.0.0.sh — AWS PCS node lifecycle action (community example)
+# register-node-dns-v1.0.0.sh: AWS PCS node lifecycle action (community example)
 #
 # Gives a PCS node a resolvable name. On boot it:
 #   1. Registers <PCS_NODE_ID>.<zone> -> the node's primary IPv4 in a Route53
@@ -13,7 +13,7 @@
 #      resolve it. The method is chosen to match the AMI's resolver, in order:
 #        - systemd-resolved (Ubuntu 24 PCS-ready DLAMI and AL2023 x86 sample AMI):
 #          resolved.conf.d drop-in
-#        - NetworkManager   (e.g. RHEL/Rocky 9, or an AMI without resolved):
+#        - NetworkManager   (any host without systemd-resolved; untested):
 #          nmcli ipv4.dns-search
 #        - anything else: append "search <zone>" to /etc/resolv.conf (best-effort)
 #
@@ -24,6 +24,12 @@
 # warning and exits 0, so a DNS hiccup never terminates a node. Pair with
 # onError: CONTINUE. Cleanup of records for terminated nodes is handled separately
 # by the reconcile Lambda in the cluster_dns recipe (this script never deletes).
+#
+# Resolver support: the search-domain step is tested on systemd-resolved, which is
+# what the AL2023 x86 sample AMI and the Ubuntu 24 PCS-ready DLAMI both use. The
+# NetworkManager and /etc/resolv.conf paths below are untested and deliberately
+# simple. They are a starting point for other distributions, not a supported
+# configuration. Registration of the DNS record itself is portable.
 #
 # Prerequisites: awscli, curl (both on the sample AMI and the PCS-ready DLAMI).
 # Suggested execution policy: EVERY_BOOT (every step is idempotent; re-asserts the
@@ -46,7 +52,7 @@ warn() { echo "[register-node-dns] WARNING: $*" >&2; }
 # of $0 silently breaks whenever a header line is added or removed.
 usage() {
     cat <<'USAGE'
-register-node-dns — register a PCS node's Slurm name in a Route53 private hosted zone.
+register-node-dns: register a PCS node's Slurm name in a Route53 private hosted zone.
 
 Usage:
   register-node-dns-v1.0.0.sh --zone-id ZONE_ID --zone-name ZONE [--ttl SECONDS]
@@ -136,6 +142,15 @@ set_search_domain() {
         return 0
     fi
 
+    # --- Untested paths below ---------------------------------------------------
+    # Everything past this point is a starting point for resolvers this recipe does
+    # not target. See the header note.
+    warn "untested resolver path: this recipe is verified on systemd-resolved only"
+    warn "(AL2023 x86 sample AMI, Ubuntu 24 PCS-ready DLAMI). The record is registered,"
+    warn "but confirm the search domain yourself: getent hosts <peer-short-name>"
+
+    # Untested. NetworkManager does persist this in the connection profile, so the
+    # shape is right, but nothing here has been run on a NetworkManager host.
     if command -v nmcli >/dev/null 2>&1; then
         local dev con
         dev="$(ip route show default 2>/dev/null | awk '{print $5; exit}')"
@@ -155,6 +170,9 @@ set_search_domain() {
         warn "nmcli present but no active connection found for device '${dev:-unknown}'"
     fi
 
+    # Untested, and best-effort by construction: any resolver manager rewrites this
+    # file on the next network event. Shown as a starting point for distributions
+    # this recipe does not target.
     warn "no managed resolver detected; appending 'search ${zone}' to /etc/resolv.conf"
     # Matches the zone as a whole entry on the search line. The earlier form used a
     # mid-pattern '^' that can never match, so the guard always failed and the zone was

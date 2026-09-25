@@ -58,21 +58,27 @@ Unqualified lookups therefore try the cluster zone first. A bare EC2-style name 
 to `compute.internal`. It still resolves, at the cost of an extra round trip and a negative
 cache entry.
 
-### NetworkManager
+### The other two paths are directional
 
-On RHEL, Rocky 9 and similar systems without `systemd-resolved`, the script sets
-`ipv4.dns-search` on the active connection and calls `nmcli device reapply`, which updates DNS
-without taking the link down. It sets the absolute value rather than appending, so repeated
-boots stay idempotent.
+Both AMIs this recipe targets use `systemd-resolved`, so the two paths below never run on a
+supported configuration and neither has been exercised on a live node. They're in the script to
+show the shape of the problem on other resolvers, not to solve it. If you're on something else,
+expect to work out the right method yourself, and note that the script logs a warning saying so.
 
-### /etc/resolv.conf
+Registering the record is portable and works anywhere the `aws` CLI does. It's only the search
+domain that varies.
 
-The last resort, used when neither of the above is present. A resolver manager rewrites that
-file on the next network event, so treat this path as best effort. The script checks for the
-zone before appending, so it doesn't add a duplicate entry on every boot.
+**NetworkManager.** Where `systemd-resolved` isn't running but `nmcli` is present, the script
+sets `ipv4.dns-search` on the active connection and calls `nmcli device reapply`, which updates
+DNS without taking the link down. It sets the absolute value rather than appending, so repeated
+boots stay idempotent. NetworkManager persists this in the connection profile, so the mechanism
+should be durable in the way the drop-in is, but that has not been confirmed.
 
-Neither of the last two paths has been exercised on a live node. The AMIs this recipe
-recommends both take the `systemd-resolved` path.
+**/etc/resolv.conf.** The last resort, when neither of the above is present. This one is
+best-effort by construction: any resolver manager rewrites that file on the next network event,
+which is the same failure mode that took two attempts to get right on the `systemd-resolved`
+path. The script checks for the zone before appending so it doesn't duplicate the entry on
+every boot. Treat it as a hint, not a mechanism.
 
 ## `.local` and multicast DNS
 

@@ -100,6 +100,11 @@ Be precise about what reconcile is:
 - An existing AWS PCS cluster, and its **VpcId** and **ClusterId** (for example
   `pcs_0123456789`). Find them in the PCS console or with
   `aws pcs get-cluster --cluster-identifier <id>`.
+- **A supported node AMI.** Tested on the **AL2023 x86 PCS sample AMI** and the **Ubuntu 24
+  PCS-ready DLAMI**, both of which use `systemd-resolved`. Other AMIs are not in scope. The
+  record registration is portable and will work anywhere the `aws` CLI does; setting the
+  search domain is the part that varies by resolver, and the non-`systemd-resolved` paths are
+  there to show you the shape of the problem rather than to solve it for you.
 - PCS agent **1.5.0 or later** on the node AMI, which node lifecycle actions require. The
   current sample AMI and PCS-ready DLAMI ship a newer agent.
 - The `aws` CLI and `curl` on the node AMI. Both are present on the sample AMI and the
