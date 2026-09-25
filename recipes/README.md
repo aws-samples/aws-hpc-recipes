@@ -106,6 +106,11 @@ You can use an HPC Recipe for AWS in several ways:
 * **About**: Enable CloudWatch Logs on PCS instances
 * **Usage**: [README.md](pcs/cloudwatch/README.md)
 
+#### cluster_dns ![tag](https://img.shields.io/badge/-beta-%23800080) ![tag](https://img.shields.io/badge/-dns-%23AAB7B8) ![tag](https://img.shields.io/badge/-lambda-%237DCEA0) ![tag](https://img.shields.io/badge/-lifecycle-%237DCEA0) ![tag](https://img.shields.io/badge/-networking-%23AAB7B8) ![tag](https://img.shields.io/badge/-pcs-%23FF9900) ![tag](https://img.shields.io/badge/-route53-%23AAB7B8) 
+
+* **About**: Give AWS PCS nodes resolvable DNS names using a per-cluster Route53 private hosted zone with on-boot self-registration.
+* **Usage**: [README.md](pcs/cluster_dns/README.md)
+
 #### dlami_for_pcs_imagebuilder ![tag](https://img.shields.io/badge/-al2023-%23AAB7B8) ![tag](https://img.shields.io/badge/-beta-%23800080) ![tag](https://img.shields.io/badge/-dlami-%23AAB7B8) ![tag](https://img.shields.io/badge/-ec2-%23FF9900) ![tag](https://img.shields.io/badge/-gpu-%23AAB7B8) ![tag](https://img.shields.io/badge/-imagebuilder-%23AAB7B8) ![tag](https://img.shields.io/badge/-pcs-%23FF9900) ![tag](https://img.shields.io/badge/-ubuntu-%2317202A) 
 
 * **About**: EC2 ImageBuilder template to produce PCS-ready AMIs from DLAMI Base GPU images
