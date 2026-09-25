@@ -100,47 +100,39 @@ imds_get() {
 set_search_domain() {
     local zone="$1"
 
-    if systemctl is-active --quiet systemd-resolved 2>/dev/null \
-       && command -v resolvectl >/dev/null 2>&1; then
-        local dev current
-        dev="$(ip route show default 2>/dev/null | awk '{print $5; exit}')"
-        if [[ -z "${dev}" ]]; then
-            warn "systemd-resolved is active but no default-route interface was found"
-            return 1
-        fi
-
-        # The search domain must go on the LINK that carries the DNS server, not in
-        # the global section of resolved.conf. resolved treats a Domains= entry as a
-        # ROUTING domain as well as a search domain, so a global entry routes queries
-        # for the zone to the global scope - which has no DNS server - and they fail
-        # with "No appropriate name servers or networks for name found". Setting it on
-        # the link keeps the VPC resolver as the server for those queries.
+    if systemctl is-active --quiet systemd-resolved 2>/dev/null; then
+        # Two things have to be true at once here, and getting either one wrong
+        # breaks resolution in a way that is tedious to diagnose.
         #
-        # Clear a global drop-in if one is present: a stale global routing domain
-        # would otherwise survive alongside the correct link setting and keep
-        # breaking resolution for the zone.
-        if [[ -f /etc/systemd/resolved.conf.d/10-pcs-search.conf ]]; then
-            log "removing stale global resolved.conf.d drop-in"
-            rm -f /etc/systemd/resolved.conf.d/10-pcs-search.conf
-            systemctl try-restart systemd-resolved 2>/dev/null || true
+        # 1. The setting has to PERSIST. `resolvectl domain` writes runtime state
+        #    only, and systemd-resolved is stopped and restarted during boot on the
+        #    PCS-ready DLAMI, several minutes after this action has already run.
+        #    A runtime-only setting is silently discarded by that restart, so
+        #    whether a node ends up resolvable comes down to boot ordering.
+        #
+        # 2. The scope carrying the domain needs a DNS SERVER. A Domains= entry is
+        #    a routing domain as well as a search domain, so a global Domains= with
+        #    no global DNS= routes the zone's queries into a scope with no resolver
+        #    and they fail with "No appropriate name servers or networks for name
+        #    found", even though the record exists.
+        #
+        # A drop-in carrying both settings satisfies each. 169.254.169.253 is the
+        # VPC resolver in any VPC with DNS support enabled, which a private hosted
+        # zone requires anyway.
+        local dropin="/etc/systemd/resolved.conf.d/10-pcs-search.conf"
+        local desired
+        desired="$(printf '[Resolve]\nDNS=169.254.169.253\nDomains=%s\n' "${zone}")"
+
+        if [[ -f "${dropin}" ]] && [[ "$(cat "${dropin}")" == "${desired}" ]]; then
+            log "systemd-resolved: '${zone}' already configured; leaving it alone"
+            return 0
         fi
 
-        # resolvectl replaces the link's whole domain list, so carry the existing
-        # entries (for example <region>.compute.internal) across.
-        local -a doms=()
-        current="$(resolvectl domain "${dev}" 2>/dev/null | sed 's/^[^:]*:[[:space:]]*//')"
-        read -r -a doms <<< "${current}"
-        local d
-        for d in ${doms[@]+"${doms[@]}"}; do
-            if [[ "${d}" == "${zone}" ]]; then
-                log "systemd-resolved: '${zone}' already a search domain on ${dev}"
-                return 0
-            fi
-        done
-        log "systemd-resolved detected; adding '${zone}' to search domains on ${dev}"
-        resolvectl domain "${dev}" ${doms[@]+"${doms[@]}"} "${zone}" 2>/dev/null \
-            || { warn "resolvectl domain failed on ${dev}"; return 1; }
-        resolvectl flush-caches 2>/dev/null || true
+        log "systemd-resolved detected; writing ${dropin} for '${zone}'"
+        mkdir -p /etc/systemd/resolved.conf.d
+        printf '%s' "${desired}" > "${dropin}"
+        systemctl restart systemd-resolved 2>/dev/null \
+            || { warn "could not restart systemd-resolved"; return 1; }
         return 0
     fi
 
