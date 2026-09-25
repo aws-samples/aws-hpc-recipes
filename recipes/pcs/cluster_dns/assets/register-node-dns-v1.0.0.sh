@@ -3,7 +3,7 @@
 # Copyright Amazon.com, Inc. or its affiliates. All Rights Reserved.
 # SPDX-License-Identifier: MIT-0
 #
-# register-node-dns-v1.1.0.sh — AWS PCS node lifecycle action (community example)
+# register-node-dns-v1.0.0.sh — AWS PCS node lifecycle action (community example)
 #
 # Gives a PCS node a resolvable name. On boot it:
 #   1. Registers <PCS_NODE_ID>.<zone> -> the node's primary IPv4 in a Route53
@@ -31,7 +31,7 @@
 # Suggested onError: CONTINUE (best-effort).
 #
 # Usage:
-#   register-node-dns-v1.1.0.sh --zone-id ZONE_ID --zone-name ZONE [--ttl SECONDS]
+#   register-node-dns-v1.0.0.sh --zone-id ZONE_ID --zone-name ZONE [--ttl SECONDS]
 
 set -o errexit -o pipefail -o nounset
 
@@ -49,7 +49,7 @@ usage() {
 register-node-dns — register a PCS node's Slurm name in a Route53 private hosted zone.
 
 Usage:
-  register-node-dns-v1.1.0.sh --zone-id ZONE_ID --zone-name ZONE [--ttl SECONDS]
+  register-node-dns-v1.0.0.sh --zone-id ZONE_ID --zone-name ZONE [--ttl SECONDS]
 
 Flags:
   --zone-id ID      Route53 hosted zone ID (required).
@@ -116,10 +116,11 @@ set_search_domain() {
         # with "No appropriate name servers or networks for name found". Setting it on
         # the link keeps the VPC resolver as the server for those queries.
         #
-        # Remove the global drop-in an earlier version of this script wrote, or the
-        # broken routing domain survives alongside the correct link setting.
+        # Clear a global drop-in if one is present: a stale global routing domain
+        # would otherwise survive alongside the correct link setting and keep
+        # breaking resolution for the zone.
         if [[ -f /etc/systemd/resolved.conf.d/10-pcs-search.conf ]]; then
-            log "removing obsolete global resolved.conf.d drop-in"
+            log "removing stale global resolved.conf.d drop-in"
             rm -f /etc/systemd/resolved.conf.d/10-pcs-search.conf
             systemctl try-restart systemd-resolved 2>/dev/null || true
         fi
