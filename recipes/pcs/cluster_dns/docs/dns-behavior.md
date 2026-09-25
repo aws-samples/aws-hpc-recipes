@@ -13,33 +13,50 @@ The script picks a method to match the resolver on the AMI, in this order.
 
 ### systemd-resolved
 
-This covers the Ubuntu 24 PCS-ready DLAMI and the AL2023 x86 sample AMI. The script finds the
-interface carrying the default route and adds the zone to that link's search domains:
+This covers the Ubuntu 24 PCS-ready DLAMI and the AL2023 x86 sample AMI. The script writes
+`/etc/systemd/resolved.conf.d/10-pcs-search.conf`:
 
-```bash
-resolvectl domain ens5 us-west-2.compute.internal pcs_abc123.pcs.local
+```ini
+[Resolve]
+DNS=169.254.169.253
+Domains=pcs_abc123.pcs.local
 ```
 
-**The domain has to go on the link, not in the global section of `resolved.conf`.** A
-`Domains=` entry is a *routing* domain as well as a search domain. Put the zone in the global
-section and resolved routes queries for it to the global scope, which has no DNS server
-attached: the VPC resolver belongs to the link. Those queries then fail with
+Two properties matter here, and dropping either one breaks resolution in a way that takes a
+while to work out.
+
+**The scope carrying the domain needs a DNS server.** A `Domains=` entry is a *routing* domain
+as well as a search domain. Set it without a `DNS=` on the same scope and resolved routes the
+zone's queries to a scope with no resolver, and they fail with
 
 ```
 No appropriate name servers or networks for name found
 ```
 
-even though the record exists and the VPC resolver would answer it. You can see the split in
-`resolvectl status`, where `Global` carries a `DNS Domain` but no server while the link carries
-both.
+even though the record exists and the VPC resolver would answer it. `169.254.169.253` is the
+VPC resolver in any VPC with DNS support enabled, which a private hosted zone requires anyway.
 
-`resolvectl` writes runtime state rather than a file, so the setting doesn't survive a restart
-of `systemd-resolved`. The action runs with `executionPolicy: EVERY_BOOT`, which re-applies it
-on each boot.
+**The setting has to persist in a file.** `resolvectl domain` configures the running resolver
+only, and on the PCS-ready DLAMI `systemd-resolved` is stopped and restarted during boot
+several minutes *after* the lifecycle action has run. That restart discards runtime state. A
+node's resolution would then depend on whether its action happened to run before or after the
+restart, which is how a two-node group ended up with one node resolving its peer and the other
+not, from identical code.
 
-The script also deletes `/etc/systemd/resolved.conf.d/10-pcs-search.conf` if it finds one. A
-global drop-in at that path is the broken form described above, and leaving it in place would
-keep a stale routing domain alongside the correct link setting.
+The drop-in survives a `systemd-resolved` restart, a `systemd-networkd` restart, and leaves
+public DNS resolution untouched.
+
+One consequence worth knowing: a global `Domains=` entry sorts ahead of the link's own domain
+in the search list, so `/etc/resolv.conf` ends up as
+
+```
+search pcs_abc123.pcs.local us-west-2.compute.internal
+```
+
+Unqualified lookups therefore try the cluster zone first. A bare EC2-style name such as
+`ip-10-3-15-30` gets one `NXDOMAIN` from the zone, which is then cached, before falling through
+to `compute.internal`. It still resolves, at the cost of an extra round trip and a negative
+cache entry.
 
 ### NetworkManager
 

@@ -71,10 +71,10 @@ re-asserts the record if it ever went missing. The search domain is what lets th
 `compute-2` resolve rather than only `compute-2.<zone>`.
 
 Which method sets the search domain depends on the AMI's resolver. On `systemd-resolved`
-systems the script sets it on the network link, not globally, because a global setting routes
-those queries to a scope with no DNS server and they fail even though the record exists.
-[`docs/dns-behavior.md`](docs/dns-behavior.md) explains that, and covers the NetworkManager and
-`/etc/resolv.conf` fallbacks.
+systems the script writes a drop-in naming both the zone and the VPC resolver, which has to
+persist in a file rather than in runtime state because `systemd-resolved` restarts later in
+boot on some AMIs. [`docs/dns-behavior.md`](docs/dns-behavior.md) explains why both halves
+matter, and covers the NetworkManager and `/etc/resolv.conf` fallbacks.
 
 ### On a schedule, the reconcile Lambda cleans up
 
@@ -240,17 +240,20 @@ use `sudo`). The usual causes are a missing `aws` CLI on the AMI, or the managed
 attached to the node role.
 
 **Neither the short name nor the FQDN resolves, but `dig @169.254.169.253 <name>` works.** The
-search domain is on the wrong scope. Run `resolvectl domain`: the zone should appear on the
-`ens5` line, not only on `Global`.
+record is fine and the node's resolver is the problem. Check that the drop-in exists and names
+both a domain and a server:
 
-```
-Global:
-Link 2 (ens5): us-west-2.compute.internal pcs_abc123.pcs.local
+```bash
+cat /etc/systemd/resolved.conf.d/10-pcs-search.conf
+grep ^search /etc/resolv.conf
 ```
 
-Fix it at runtime with `sudo resolvectl domain ens5 <region>.compute.internal <zone>` followed
-by `sudo resolvectl flush-caches`. [`docs/dns-behavior.md`](docs/dns-behavior.md) explains why
-the global form fails.
+You want `Domains=<zone>` **and** `DNS=169.254.169.253`, and the zone present on the `search`
+line. A domain with no server on the same scope gives "No appropriate name servers or networks
+for name found" even though the record exists. If the file is missing, the action did not run
+or did not reach that step, so read its log. If the file is right but resolution still fails,
+`sudo systemctl restart systemd-resolved`.
+[`docs/dns-behavior.md`](docs/dns-behavior.md) explains both halves.
 
 **A short name fails but the FQDN resolves.** The search domain is missing altogether. On
 NetworkManager AMIs, `nmcli -g ipv4.dns-search connection show <con>` should list the zone. The
