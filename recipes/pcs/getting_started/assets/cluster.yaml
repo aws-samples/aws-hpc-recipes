@@ -262,6 +262,89 @@ Resources:
             - []
         - !Ref AWS::NoValue
 
+  # Cluster log delivery
+  # Send scheduler, job completion, and scaling logs to CloudWatch Logs,
+  # one log group per log type, retained for 30 days. The principal that
+  # deploys this stack needs pcs:AllowVendedLogDeliveryForResource.
+  # The deliveries are chained with DependsOn so CloudWatch Logs creates
+  # them one at a time for the cluster.
+  PCSSchedulerLogGroup:
+    Type: AWS::Logs::LogGroup
+    Properties:
+      LogGroupName: !Sub '/aws/vendedlogs/pcs/cluster/PCS_SCHEDULER_LOGS/${PCSCluster.Id}'
+      RetentionInDays: 30
+
+  PCSSchedulerLogSource:
+    Type: AWS::Logs::DeliverySource
+    Properties:
+      Name: !Sub '${PCSCluster.Id}-scheduler-logs'
+      LogType: PCS_SCHEDULER_LOGS
+      ResourceArn: !GetAtt PCSCluster.Arn
+
+  PCSSchedulerLogDestination:
+    Type: AWS::Logs::DeliveryDestination
+    Properties:
+      Name: !Sub '${PCSCluster.Id}-scheduler-logs'
+      DestinationResourceArn: !GetAtt PCSSchedulerLogGroup.Arn
+
+  PCSSchedulerLogDelivery:
+    Type: AWS::Logs::Delivery
+    Properties:
+      DeliverySourceName: !Ref PCSSchedulerLogSource
+      DeliveryDestinationArn: !GetAtt PCSSchedulerLogDestination.Arn
+
+  PCSJobCompLogGroup:
+    Type: AWS::Logs::LogGroup
+    Properties:
+      LogGroupName: !Sub '/aws/vendedlogs/pcs/cluster/PCS_JOBCOMP_LOGS/${PCSCluster.Id}'
+      RetentionInDays: 30
+
+  PCSJobCompLogSource:
+    Type: AWS::Logs::DeliverySource
+    Properties:
+      Name: !Sub '${PCSCluster.Id}-jobcomp-logs'
+      LogType: PCS_JOBCOMP_LOGS
+      ResourceArn: !GetAtt PCSCluster.Arn
+
+  PCSJobCompLogDestination:
+    Type: AWS::Logs::DeliveryDestination
+    Properties:
+      Name: !Sub '${PCSCluster.Id}-jobcomp-logs'
+      DestinationResourceArn: !GetAtt PCSJobCompLogGroup.Arn
+
+  PCSJobCompLogDelivery:
+    Type: AWS::Logs::Delivery
+    DependsOn: PCSSchedulerLogDelivery
+    Properties:
+      DeliverySourceName: !Ref PCSJobCompLogSource
+      DeliveryDestinationArn: !GetAtt PCSJobCompLogDestination.Arn
+
+  PCSScalingLogGroup:
+    Type: AWS::Logs::LogGroup
+    Properties:
+      LogGroupName: !Sub '/aws/vendedlogs/pcs/cluster/PCS_SCALING_LOGS/${PCSCluster.Id}'
+      RetentionInDays: 30
+
+  PCSScalingLogSource:
+    Type: AWS::Logs::DeliverySource
+    Properties:
+      Name: !Sub '${PCSCluster.Id}-scaling-logs'
+      LogType: PCS_SCALING_LOGS
+      ResourceArn: !GetAtt PCSCluster.Arn
+
+  PCSScalingLogDestination:
+    Type: AWS::Logs::DeliveryDestination
+    Properties:
+      Name: !Sub '${PCSCluster.Id}-scaling-logs'
+      DestinationResourceArn: !GetAtt PCSScalingLogGroup.Arn
+
+  PCSScalingLogDelivery:
+    Type: AWS::Logs::Delivery
+    DependsOn: PCSJobCompLogDelivery
+    Properties:
+      DeliverySourceName: !Ref PCSScalingLogSource
+      DeliveryDestinationArn: !GetAtt PCSScalingLogDestination.Arn
+
   # Compute Node groups
   PCSInstanceProfile:
     Type: AWS::CloudFormation::Stack

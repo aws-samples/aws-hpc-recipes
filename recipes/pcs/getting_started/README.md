@@ -115,6 +115,16 @@ Confirm both are present by running `df -h` on the login node.
 
 The same node lifecycle actions forward instance logs to Amazon CloudWatch Logs under the log group `/aws/pcs/<cluster-id>/lifecycle`, where `<cluster-id>` is the PCS cluster Id from the stack **Outputs**.
 
+The stack also sends three types of cluster logs to CloudWatch Logs. It keeps each type in its own log group for 30 days:
+
+| Log type | Log group | Contents |
+|----------|-----------|----------|
+| [Scheduler logs](https://docs.aws.amazon.com/pcs/latest/userguide/monitoring_scheduler-logs.html) | `/aws/vendedlogs/pcs/cluster/PCS_SCHEDULER_LOGS/<cluster-id>` | Logs from `slurmctld`, `slurmdbd`, and `slurmrestd` |
+| [Job completion logs](https://docs.aws.amazon.com/pcs/latest/userguide/monitoring_job-completion-logs.html) | `/aws/vendedlogs/pcs/cluster/PCS_JOBCOMP_LOGS/<cluster-id>` | One record for each finished Slurm job |
+| [Scaling logs](https://docs.aws.amazon.com/pcs/latest/userguide/monitoring_scaling-logs.html) | `/aws/vendedlogs/pcs/cluster/PCS_SCALING_LOGS/<cluster-id>` | Node launches, registrations, terminations, and launch failures |
+
+To set up these log deliveries, the IAM principal that deploys the stack needs permission for the `pcs:AllowVendedLogDeliveryForResource` action. When you delete the stack, CloudFormation deletes these log groups too.
+
 ### Cleaning Up
 
 When you are done using your PCS cluster, you can delete it and all its associated resources by navigating to the AWS CloudFormation console and deleting the stack you created.
