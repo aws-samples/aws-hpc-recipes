@@ -1,0 +1,13 @@
+# Sample sacctmgr dump. Produce your own with:
+#   sacctmgr dump <cluster-name> file=accounting.dump
+# QOS records must precede the Cluster record, as sacctmgr writes them.
+QOS - 'normal':Description='Normal work':Priority=100:GrpJobs=100:MaxJobsPU=10:MaxTRESPerJob=cpu=64
+QOS - 'preempt':Description='Denied from the batch queue'
+Cluster - 'source-cluster'
+Parent - 'root'
+Account - 'research':Description='Research workloads':Organization='Example':DefaultQOS='normal':Fairshare=100:QOS='normal'
+Parent - 'research'
+User - 'alice':DefaultAccount='research':Coordinator='research':DefaultQOS='normal':Fairshare=10:QOS='normal'
+Account - 'simulation':Description='Simulation group, child of research':Organization='Example':Fairshare=40
+Parent - 'simulation'
+User - 'bob':DefaultAccount='simulation':DefaultQOS='normal':Fairshare=10:MaxJobs=5:QOS='normal'

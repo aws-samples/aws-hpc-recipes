@@ -1,0 +1,14 @@
+# Copy to terraform.tfvars and fill in your values.
+
+region    = "us-east-2"
+vpc_id    = "vpc-0123456789abcdef0"
+subnet_id = "subnet-0123456789abcdef0"
+
+# name              = "pcs-accounting-example"
+# scheduler_version = "26.05"
+# compute_instance_type = "c6i.xlarge"
+# compute_max_instances = 2
+
+tags = {
+  Environment = "dev"
+}
