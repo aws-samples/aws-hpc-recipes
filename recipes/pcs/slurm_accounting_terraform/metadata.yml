@@ -1,0 +1,29 @@
+---
+# The name of the recipe. This has the same character requirements as namespace.
+name: slurm_accounting_terraform
+# The version of the recipe. Must be compatible with semantic versioning.
+version: "1.0.0"
+# A short summary description of the recipe
+description: Declare Slurm accounting (QOS, accounts, users, associations) for a PCS cluster in Terraform, applied through slurmrestd by a Lambda the module deploys
+# The path to the README for the recipe relative to its root directory.
+readme: README.md
+# Optional URL for external documentation
+documentation: https://docs.aws.amazon.com/pcs/latest/userguide/slurm-rest-api.html
+# Optional URL for a homepage
+homepage:
+# A list of recipe content authors
+authors:
+  - Matt Koop
+# A list of tags you want to associate with the collection for indexing/searching. Tags have the same character requirements as namespace.
+tags:
+  - pcs
+  - terraform
+  - lambda
+  - secretsmanager
+  - beta
+# A list of file glob-like patterns used to filter any files or directories that should not be included in the S3 release.
+build_ignore: []
+# Recipe type
+type: terraform
+# Default asset path
+default: main.tf

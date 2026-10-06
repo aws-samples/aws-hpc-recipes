@@ -1,0 +1,21 @@
+# To edit this file start with a cluster line for the new cluster
+# Cluster - 'cluster_name':MaxTRESPerJob=node=50
+# Followed by Accounts you want in this fashion (root is created by default)...
+# Parent - 'root'
+# Account - 'cs':MaxTRESPerJob=node=5:MaxJobs=4:MaxTRESMinsPerJob=cpu=20:FairShare=399:MaxWallDurationPerJob=40:Description='Computer Science':Organization='LC'
+# Any of the options after a ':' can be left out and they can be in any order.
+# If you want to add any sub accounts just list the Parent THAT HAS ALREADY
+# BEEN CREATED before the account line in this fashion...
+# Parent - 'cs'
+# Account - 'test':MaxTRESPerJob=node=1:MaxJobs=1:MaxTRESMinsPerJob=cpu=1:FairShare=1:MaxWallDurationPerJob=1:Description='Test Account':Organization='Test'
+# To add users to a account add a line like this after a Parent - 'line'
+# User - 'lipari':MaxTRESPerJob=node=2:MaxJobs=3:MaxTRESMinsPerJob=cpu=4:FairShare=1:MaxWallDurationPerJob=1
+QOS - 'normal':Description='Structured integration QOS':Flags='NoDecay':GrpJobs=17:GrpTRES=cpu=24:MaxJobsPU=5:MaxTRESPerJob=cpu=4:Priority=101:UsageFactor=1.250000
+QOS - 'preempt':Description='Queue DenyQos integration QOS'
+Cluster - 'pcs-slurm-bootstrap-it':Fairshare=1:QOS='normal'
+Parent - 'root'
+User - 'root':DefaultAccount='root':AdminLevel='Administrator':Fairshare=1:QOS='normal'
+Account - 'engineering':Description='Structured integration account':Organization='ExampleStructured':DefaultQOS='normal':Fairshare=11:GrpTRES=cpu=20:GrpJobs=21:QOS='normal'
+Parent - 'engineering'
+User - 'tfuser':DefaultAccount='engineering':DefaultWCKey='primary':Coordinator='engineering':WCKeys='primary,secondary':DefaultQOS='normal':Fairshare=5:MaxTRESPerJob=cpu=2:MaxJobs=3:Priority=42:QOS='normal'
+Account - 'simulation':Description='Structured nested account':Organization='ExampleStructured':Fairshare=7:QOS='normal'
