@@ -65,7 +65,7 @@ node:
 
 ```shell
 sacctmgr show qos format=Name,Priority,GrpJobs,MaxJobsPU,MaxTRESPerJob
-sacctmgr show assoc tree format=Account,User,Share,DefQOS,QOS,MaxJobs
+sacctmgr show assoc tree format=Account,User,Share,DefaultQOS,QOS,MaxJobs
 scontrol show partition batch | grep -o 'DenyQos=[^ ]*'
 ```
 
