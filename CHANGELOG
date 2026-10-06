@@ -6,6 +6,7 @@ The format is based on [Keep a Changelog](http://keepachangelog.com/)
 ## [Unreleased]
 
 ### Added
+* New recipe - pcs/slurm_accounting_terraform (Terraform module that declares Slurm accounting QOS, accounts, users, and associations for a PCS cluster and applies them through slurmrestd)
 * Added all-in-one CloudFormation launch template to pcs/getting_started
 * New recipe - pcs/hpc_ready_ami (ImageBuilder and Packer resources for PCS AMIs)
 

@@ -156,6 +156,11 @@ You can use an HPC Recipe for AWS in several ways:
 * **About**: Cognito-authenticated proxy for the AWS PCS Slurm REST API. Demonstrates real per-user identity propagation from Cognito custom attributes through API Gateway and Lambda to the enriched slurmrestd JWT.
 * **Usage**: [README.md](pcs/rest_api_cognito/README.md)
 
+#### slurm_accounting_terraform ![tag](https://img.shields.io/badge/-beta-%23800080) ![tag](https://img.shields.io/badge/-lambda-%237DCEA0) ![tag](https://img.shields.io/badge/-pcs-%23FF9900) ![tag](https://img.shields.io/badge/-secretsmanager-%237DCEA0) ![tag](https://img.shields.io/badge/-terraform-%23AAB7B8) 
+
+* **About**: Declare Slurm accounting (QOS, accounts, users, associations) for a PCS cluster in Terraform, applied through slurmrestd by a Lambda the module deploys
+* **Usage**: [README.md](pcs/slurm_accounting_terraform/README.md)
+
 #### spack_for_pcs ![tag](https://img.shields.io/badge/-beta-%23800080) ![tag](https://img.shields.io/badge/-pcs-%23FF9900) ![tag](https://img.shields.io/badge/-spack-%23AAB7B8) 
 
 * **About**: Install Spack on AWS PCS
