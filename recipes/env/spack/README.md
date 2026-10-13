@@ -36,6 +36,7 @@ In either case, Spack will install into the first shared directory it finds. If 
 
 ## References
 
+* To use Spack with AWS PCS, see the [pcs/spack_for_pcs](../../pcs/spack_for_pcs/README.md) recipe.
 * For a deep-dive into Spack on ParallelCluster, consult the [AWS HPC blog](https://aws.amazon.com/blogs/hpc/install-optimized-software-with-spack-configs-for-aws-parallelcluster/).
 * For details of how Spack configs are implemented, consult the [spack/spack-configs GitHub repo](https://github.com/spack/spack-configs/tree/main/AWS/parallelcluster).
 

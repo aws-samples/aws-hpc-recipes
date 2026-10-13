@@ -4,6 +4,8 @@
 
 Creates a multi-user instance of AWS ParallelCluster using AWS Managed AD as the directory service. This recipe supplements the AWS ParallelCluster [documentation](https://docs.aws.amazon.com/parallelcluster/latest/ug/multi-user-v3.html) and [tutorial](https://docs.aws.amazon.com/parallelcluster/latest/ug/tutorials_05_multi-user-ad.html). Please be advised that this stack should never be used outside training or educational demonstrations, as it configures the cluster without TLS encryption.
 
+For a multi-user cluster with AWS PCS, see [pcs/multiuser_demo](../../pcs/multiuser_demo/README.md).
+
 ## Usage
 
 ### (Optional) Configure a multi-AZ networking stack
