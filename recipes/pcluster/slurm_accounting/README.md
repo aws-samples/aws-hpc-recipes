@@ -4,6 +4,8 @@
 
 Creates an instance of AWS ParallelCluster with Slurm accounting enabled, using Amazon RDS as the database management server.
 
+AWS PCS manages the Slurm accounting database for you. See [Slurm accounting in AWS PCS](https://docs.aws.amazon.com/pcs/latest/userguide/slurm-accounting.html) and [pcs/slurm_accounting_terraform](../../pcs/slurm_accounting_terraform/README.md).
+
 ### (Optional) Configure a multi-AZ networking stack
 
 1. Follow the instructions in the [Large-scale HPC Networking Setup](../../net/hpc_large_scale/README.md) recipe. You only need to do this once per Region you want to deploy clusters in. If you named the networking stack something besides **hpc-networking**, make a note of that as you may need it to set up your cluster and other resources.

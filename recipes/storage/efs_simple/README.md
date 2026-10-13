@@ -2,17 +2,41 @@
 
 ## Info
 
-This recipe shows how to use CloudFormation to set up an EFS filesystem, along with mount targets in three Availability Zones. It also shows one way to configure a security group to allow filesystem access from AWS ParallelCluster.
+This recipe shows how to use CloudFormation to set up an EFS filesystem, along with mount targets in three Availability Zones. It also shows one way to configure a security group to allow filesystem access from cluster nodes.
 
 ## Usage
 
 ### Create an EFS filesystem
 
-There is only one template in this recipe, whichj creates a simple EFS filesystem. 
+There is only one template in this recipe, which creates a simple EFS filesystem. 
 
 * Create an [EFS Filesystem](https://console.aws.amazon.com/cloudformation/home?region=us-east-2#/stacks/create/review?stackName=efs-simple&templateURL=https://aws-hpc-recipes.s3.us-east-1.amazonaws.com/main/recipes/storage/efs_simple/assets/main.yaml).
 
 You will be asked to select subnets in which to create EFS mount targets. Choose between 1 and 3 subnets. Then, choose the corresponding number of subnets in **SubnetCount**. It must match or the template may fail to launch. 
+
+### Use with AWS PCS
+
+To mount this filesystem on the nodes in an AWS PCS compute node group:
+
+1. Make sure the node group launches in the same VPC as your EFS filesystem.
+2. Add the `SecurityGroupId` stack output to the security groups in the node group's launch template.
+3. Add the AWS-maintained [`mount-efs` node lifecycle action](https://docs.aws.amazon.com/pcs/latest/userguide/cng-node-lifecycle-actions-vetted-scripts.html) to the node group. Pass the `EFSFilesystemId` stack output as `--file-system-id`.
+
+```yaml
+# Example entry under NodeLifecycleActions.Stages.NodeBootstrapped in an AWS::PCS::ComputeNodeGroup
+- Name: mount-efs
+  ScriptSource:
+    ScriptLocation: !Sub 's3://aws-pcs-repo-${AWS::Region}/aws-pcs-node-lifecycle-scripts/mount-efs-v1-latest.sh'
+  Arguments:
+    - '--file-system-id'
+    - fs-0123456789abcdef0
+    - '--mount-point'
+    - /shared/efs
+  OnError: CONTINUE
+  ExecutionPolicy: EVERY_BOOT
+```
+
+The [pcs/getting_started](../../pcs/getting_started/README.md) recipe shows a complete cluster that mounts EFS this way.
 
 ### Use with AWS ParallelCluster
 

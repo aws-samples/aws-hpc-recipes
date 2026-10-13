@@ -64,6 +64,32 @@ If you want to use this template:
 
 Both templates are optional and can be used independently or together based on your storage management needs.
 
+### Use with AWS PCS
+
+To mount this filesystem on the nodes in an AWS PCS compute node group:
+
+1. Add the `FSxLustreSecurityGroupId` stack output to the security groups in the node group's launch template.
+2. Get the filesystem's DNS name and mount name with `aws fsx describe-file-systems --file-system-ids FILESYSTEM_ID`.
+3. Add the AWS-maintained [`mount-fsx-lustre` node lifecycle action](https://docs.aws.amazon.com/pcs/latest/userguide/cng-node-lifecycle-actions-vetted-scripts.html) to the node group.
+
+```yaml
+# Example entry under NodeLifecycleActions.Stages.NodeBootstrapped in an AWS::PCS::ComputeNodeGroup
+- Name: mount-fsx-lustre
+  ScriptSource:
+    ScriptLocation: !Sub 's3://aws-pcs-repo-${AWS::Region}/aws-pcs-node-lifecycle-scripts/mount-fsx-lustre-v1-latest.sh'
+  Arguments:
+    - '--fsx-dns-name'
+    - fs-0123456789abcdef0.fsx.us-east-2.amazonaws.com
+    - '--mount-name'
+    - abcdefgh
+    - '--mount-point'
+    - /shared/fsx
+  OnError: CONTINUE
+  ExecutionPolicy: EVERY_BOOT
+```
+
+The [pcs/getting_started](../../pcs/getting_started/README.md) recipe shows a complete cluster that mounts FSx for Lustre this way.
+
 ### Use with AWS ParallelCluster
 
 Add the new FSx for Lustre filesystem to your ParallelCluster deployment with an entry in the `SharedStorage` configuration section. 

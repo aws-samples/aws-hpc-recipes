@@ -4,6 +4,8 @@
 
 This recipe creates a ParallelCluster system where you can try out Amazon EC2 [Hpc6a instances](https://aws.amazon.com/ec2/instance-types/hpc6a/). 
 
+To try AMD-powered HPC instances with AWS PCS, see [pcs/try_amd](../../pcs/try_amd/README.md).
+
 The cluster design includes the following features:
 
 * Memory-aware Slurm scheduling is enabled.

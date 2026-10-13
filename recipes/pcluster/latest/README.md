@@ -4,6 +4,8 @@
 
 Create an instance of the latest AWS ParallelCluster release, after configuring a VPC and subnets to host it.
 
+To create a cluster with AWS PCS, see [pcs/getting_started](../../pcs/getting_started/README.md).
+
 ## Usage
 
 ### Launch the Cluster
