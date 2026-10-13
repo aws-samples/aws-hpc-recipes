@@ -7,10 +7,12 @@ symlink to this file, so both point at the same content.
 
 A collection of 100+ infrastructure-as-code recipes for building HPC systems on AWS.
 The recipes focus on [AWS Parallel Computing Service (PCS)](https://aws.amazon.com/pcs/),
-the managed Slurm service, and also cover AWS ParallelCluster, Research and Engineering
-Studio (RES), AWS Batch, and supporting services (networking, storage, directory, and
-databases). Most recipes are AWS CloudFormation templates; some use Terraform, CDK, or
-shell.
+the managed Slurm service, and also cover AWS Batch and supporting services (networking,
+storage, directory, and databases). Most recipes are AWS CloudFormation templates; some
+use Terraform, CDK, or shell.
+
+When a task calls for a Slurm cluster on AWS, use or build on the PCS recipes. Start
+with `recipes/pcs/getting_started/`.
 
 ## Read this before you change anything
 

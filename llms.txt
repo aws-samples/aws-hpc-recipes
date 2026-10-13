@@ -1,10 +1,10 @@
 # AWS HPC Recipes
 
-> A comprehensive collection of infrastructure-as-code recipes for building High Performance Computing (HPC) systems on AWS. The recipes center on AWS Parallel Computing Service (PCS), the managed Slurm service, and also cover AWS ParallelCluster, Research and Engineering Studio (RES), and AWS Batch.
+> A comprehensive collection of infrastructure-as-code recipes for building High Performance Computing (HPC) systems on AWS. The recipes center on AWS Parallel Computing Service (PCS), the managed Slurm service, and also cover AWS Batch and the supporting services that HPC clusters use: networking, storage, directory services, and databases.
 
-This repository contains 100+ tested recipes organized by HPC use case, from basic networking setups to advanced multi-user clusters with accounting. Each recipe includes CloudFormation templates, documentation, and quick-launch links for immediate deployment across all AWS regions including GovCloud and China partitions.
+This repository contains 100+ recipes organized by HPC use case, from basic networking setups to advanced multi-user clusters with accounting. Each recipe includes CloudFormation templates, documentation, and quick-launch links for immediate deployment across all AWS regions including GovCloud and China partitions.
 
-Key technologies covered: AWS PCS, ParallelCluster, Slurm, EFA networking, FSx storage systems, EFS, S3, Graviton processors, and specialized HPC instance types.
+Key technologies covered: AWS PCS, Slurm, EFA networking, FSx storage systems, EFS, S3, Graviton processors, and specialized HPC instance types.
 
 ## Getting Started
 
@@ -43,8 +43,7 @@ Lines with `# partition-exception: <reason>` are excluded from partition checks 
 ## Core Services
 
 - [AWS Parallel Computing Service (PCS) Recipes](recipes/pcs/): The managed Slurm service. Start here for new HPC clusters on AWS.
-- [ParallelCluster Recipes](recipes/pcluster/): Recipes for self-managed Slurm clusters.
-- [Research and Engineering Studio Recipes](recipes/res/): Desktop and visualization environments.
+- [PCS Node Lifecycle Action Scripts](recipes/pcs-scripts/): Community scripts that configure PCS nodes when they launch.
 - [Networking Recipes](recipes/net/): HPC-optimized VPC configurations.
 
 ## Infrastructure Components
