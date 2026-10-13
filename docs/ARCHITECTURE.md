@@ -20,22 +20,22 @@ Recipes are organized into namespaces defined in `config/metadata/values.yml`:
 
 | Namespace | Description |
 |-----------|-------------|
-| `aws` | General AWS (default) |
-| `batch` | AWS Batch |
+| `pcs` | AWS Parallel Computing Service (default) |
+| `pcs-scripts` | PCS node lifecycle action scripts (community) |
+| `net` | Networking |
+| `storage` | Storage |
 | `db` | Database management |
 | `dir` | Directory services |
-| `env` | User environment |
 | `iam` | Identity and Access Management |
+| `security` | Security configuration |
+| `env` | User environment |
 | `ide` | IDEs and GUIs |
-| `net` | Networking |
-| `pcs` | AWS Parallel Computing Service |
-| `pcs-scripts` | PCS node lifecycle action scripts (community) |
+| `scheduler` | HPC scheduler |
+| `aws` | General AWS |
+| `training` | Teaching and training recipes |
+| `batch` | AWS Batch |
 | `pcluster` | AWS ParallelCluster |
 | `res` | Research and Engineering Studio on AWS |
-| `security` | Security configuration |
-| `scheduler` | HPC scheduler |
-| `storage` | Storage |
-| `training` | Teaching and training recipes |
 
 ## Metadata Schema
 
@@ -67,7 +67,7 @@ Recipe assets under `assets/` are synced to S3 on merge to main. They are access
 Recipes should be composable. Complex recipes can reference simpler ones via CloudFormation nested stacks or imports. The general dependency direction is:
 
 ```
-net/ → storage/ → db/dir/ → pcs/pcluster/res/batch/ → training/
+net/ → storage/ → db/dir/ → pcs/batch/pcluster/res/ → training/
 ```
 
 Networking and storage recipes are foundational. Service-specific recipes build on top of them.

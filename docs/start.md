@@ -12,17 +12,17 @@ Download a copy of the HPC Recipes source code and prepare a Python environment:
 
 ## Create a new recipe
 
-Activate your Python environment and intiialize a recipe:
+Activate your Python environment and initialize a recipe:
  1. Change into the `aws-hpc-recipes` directory
- 2. Activate your Python virtual enviroment `source .env/bin/activate`
- 5. Run the interactive new recipe script `python -m scripts.new_recipe`
+ 2. Activate your Python virtual environment `source .env/bin/activate`
+ 3. Run the interactive new recipe script `python -m scripts.new_recipe`
 
 Here's an example of this script in action:
 
 ```shell
 python -m scripts.new_recipe
-Namespaces: aws,batch,db,dir,env,iam,ide,net,pcs,pcs-scripts,pcluster,res,security,scheduler,storage,training
-Namespace [aws]: env
+Namespaces: pcs,pcs-scripts,net,storage,db,dir,iam,security,env,ide,scheduler,aws,training,batch,pcluster,res
+Namespace [pcs]: env
 Recipe name [a-z_]+: install_figlet
 Short description: Install the figlet ASCII art generator so you can create awesome login banners.
 Author (comma-separated values for multiple) [Terry Whitlock <thwhit@example.org>]:
