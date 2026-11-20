@@ -86,6 +86,10 @@ tmpfs                                               774M     0  774M   0% /run/u
 
 Once you have connected to the login instance, follow along with the **Getting Started with AWS PCS** tutorial starting at [_Explore the cluster environment in AWS PCS_](https://docs.aws.amazon.com/pcs/latest/userguide/getting-started_explore.html). 
 
+### See what each job costs
+
+This cluster runs Slurm 26.05 by default, so AWS PCS can report the cost of each job in AWS billing, as [split cost allocation data](https://docs.aws.amazon.com/pcs/latest/userguide/monitoring-cost-allocation.html). To turn on reporting and find the data, see [See what each job costs](../getting_started/README.md#see-what-each-job-costs) in the getting started recipe.
+
 ## Cleaning Up
 
 When you are done using your PCS cluster, you can delete it and all its associated resources by navigating to the AWS CloudFormation console and deleting the stack you created.

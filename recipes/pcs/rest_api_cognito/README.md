@@ -490,6 +490,10 @@ sign-up API. The proxy refuses to mint a system or privileged identity: it rejec
 to root. And the proxy accepts only a Cognito ID token: it checks the `token_use`
 claim rather than trusting that the authorizer forwards nothing else.
 
+## See what each job costs
+
+The cluster runs Slurm 26.05, so AWS PCS can report the cost of each job in AWS billing, as [split cost allocation data](https://docs.aws.amazon.com/pcs/latest/userguide/monitoring-cost-allocation.html). The jobs that `alice` and `bob` submit through the API appear under their own usernames in the `aws:pcs:username` cost allocation tag. To turn on reporting and find the data, see [See what each job costs](../getting_started/README.md#see-what-each-job-costs) in the getting started recipe.
+
 ## Cleaning up
 
 Delete the `main.yaml` stack from the AWS CloudFormation console. The cluster and

@@ -103,6 +103,8 @@ Parameters:
     Description: >
       Version of Slurm to use. The current sample AMI includes 25.05, 25.11,
       and 26.05, so any of the three work with the same AMI.
+      Split cost allocation data for AWS PCS (job-level costs in AWS billing)
+      needs Slurm 25.11 or later.
     AllowedValues:
          - 25.05
          - 25.11

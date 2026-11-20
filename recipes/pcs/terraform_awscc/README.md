@@ -25,6 +25,7 @@ This repository demonstrates how to use the `aws` and `awscc` providers to launc
 - **Long Queue**: Unlimited runtime, static nodes only
 - **Scheduling**: Lower weight = higher priority (static nodes preferred, dynamic for overflow)
 - **Accounting**: Standard mode with 7-day purge policy, enforces associations, limits, and QoS
+- **Job costs**: Slurm 26.05 supports [split cost allocation data for AWS PCS](https://docs.aws.amazon.com/pcs/latest/userguide/monitoring-cost-allocation.html), which reports the cost of each job in AWS billing. To turn it on, see [See what each job costs](../getting_started/README.md#see-what-each-job-costs). If you set `pcs_cluster_slurm_version` to a version earlier than 25.11, the cluster doesn't produce this data.
 
 ## Prerequisites
 
