@@ -142,6 +142,32 @@ With this configuration, compute nodes use Instance Metadata Service Version 2 (
 
 If you update a stack that you created from an earlier version of this template, AWS PCS replaces the nodes in both compute node groups. It waits for running jobs to finish first. The launch templates that the earlier version created are deleted with their nested stack.
 
+### See what each job costs
+
+AWS PCS can split the cost of each Amazon EC2 instance in your cluster across the Slurm jobs that ran on it. This is [split cost allocation data for AWS PCS](https://docs.aws.amazon.com/pcs/latest/userguide/monitoring-cost-allocation.html). It shows the cost of the CPU, memory, and GPU resources that each job requested, and you can total the cost by job, user, Slurm account, queue, compute node group, node, or cluster.
+
+The cluster doesn't need any extra configuration. AWS PCS produces the data for clusters that run Slurm 25.11 or later, so leave **SlurmVersion** at its default (26.05) or choose 25.11. A cluster that runs Slurm 25.05 doesn't produce it.
+
+To see the data:
+
+1. Opt in. Only the management account of an AWS organization, or a standalone account, can opt in, and its choice applies to every member account. Open the [AWS Billing and Cost Management console](https://console.aws.amazon.com/costmanagement/). Choose **Cost Management preferences**. Under **Split cost allocation data**, select **AWS Parallel Computing Service (PCS)**.
+2. Create a Cost and Usage Report that includes split cost allocation data, or add it to a report that you already have. You can use a legacy Cost and Usage Report or Cost and Usage Report 2.0 (CUR 2.0) with [AWS Data Exports](https://docs.aws.amazon.com/cur/latest/userguide/what-is-data-exports.html). Split cost allocation data isn't available in AWS Cost Explorer.
+3. Run jobs, then look for the split line items in the report.
+
+When you opt in, AWS PCS activates these cost allocation tags. Use them to group the cost data:
+
+| Tag | Value |
+|-----|-------|
+| `aws:pcs:cluster-name` | The ID of the AWS PCS cluster |
+| `aws:pcs:slurm-account` | The Slurm account that the job ran under |
+| `aws:pcs:slurm-job-id` | The Slurm job ID |
+| `aws:pcs:username` | The user who submitted the job |
+| `aws:pcs:queue` | The queue that the job ran in |
+| `aws:pcs:compute-node-group` | The compute node group that provided the node |
+| `aws:pcs:node-name` | The Slurm node name that ran the job |
+
+To group costs by Slurm account, set **ManagedAccounting** to `enabled` and run jobs under the Slurm accounts that you create. For the Regions where the feature is available and the cases that it doesn't cover, see [View costs by job in AWS billing with split cost allocation data](https://docs.aws.amazon.com/pcs/latest/userguide/monitoring-cost-allocation.html).
+
 ### Cleaning Up
 
 When you are done using your PCS cluster, you can delete it and all its associated resources by navigating to the AWS CloudFormation console and deleting the stack you created.
