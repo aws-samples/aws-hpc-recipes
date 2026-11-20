@@ -136,7 +136,10 @@ This template composes two nested stacks:
 
 - `cluster.yaml` builds the REST-enabled PCS cluster. It takes the VPC and subnets
   from Step 0 and adds EFS storage and the two demo users.
-  Both node groups run in a private subnet.
+  Both node groups run in a private subnet. They set the AMI, security groups, and
+  SSH key pair as compute node group
+  [instance settings](https://docs.aws.amazon.com/pcs/latest/userguide/working-with_cng_instance-settings.html),
+  so the recipe creates no EC2 launch templates.
 - `proxy-cognito.yaml` builds the Cognito User Pool, API Gateway, and the proxy
   Lambda.
 
