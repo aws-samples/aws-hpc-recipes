@@ -58,6 +58,11 @@ You can connect to your PCS cluster login node right in the browser.
 
 There are two Slurm partitions on the system `small` and `large`. The `small` partition sends jobs to nodes managed by the `c8a-xlarge` node group. These will be [`c8a.xlarge`](https://aws.amazon.com/ec2/instance-types/c8a/) compute instances without Elastic Fabric Adapter (EFA) networking. The `large` partition sends work to the `hpc8a-96xlarge` node group, which features [`hpc8a.96xlarge`](https://aws.amazon.com/ec2/instance-types/hpc8a/) instances that have EFA built in. 
 
+The node groups show the two ways to configure how AWS PCS launches instances:
+
+* The `login` and `c8a-xlarge` node groups set the AMI, security groups, and (for `login`) the SSH key pair directly on the compute node group, as [instance settings](https://docs.aws.amazon.com/pcs/latest/userguide/working-with_cng_instance-settings.html). They don't use EC2 launch templates.
+* The `hpc8a-96xlarge` node group uses a custom EC2 launch template. EFA network interfaces and placement groups are only available in a launch template. Its security groups are set on each network interface in the template.
+
 Find the queues by running `sinfo` and inspect the nodes with `scontrol show nodes`. 
 
 The `/home` and `/fsx` directories are network file systems. The `home` directory is provided by [Amazon Elastic Filesystem](https://aws.amazon.com/efs/), while the `fsx` directory is powered by [Amazon FSx for Lustre](https://aws.amazon.com/fsx/lustre/). You can install software on the `/home` or `/fsx` directory. We recommend you run jobs out of the `/fsx` directory. Any user can write to it.
@@ -80,6 +85,10 @@ tmpfs                                               774M     0  774M   0% /run/u
 ### Run some jobs
 
 Once you have connected to the login instance, follow along with the **Getting Started with AWS PCS** tutorial starting at [_Explore the cluster environment in AWS PCS_](https://docs.aws.amazon.com/pcs/latest/userguide/getting-started_explore.html). 
+
+### See what each job costs
+
+This cluster runs Slurm 26.05 by default, so AWS PCS can report the cost of each job in AWS billing, as [split cost allocation data](https://docs.aws.amazon.com/pcs/latest/userguide/monitoring-cost-allocation.html). To turn on reporting and find the data, see [See what each job costs](../getting_started/README.md#see-what-each-job-costs) in the getting started recipe.
 
 ## Cleaning Up
 

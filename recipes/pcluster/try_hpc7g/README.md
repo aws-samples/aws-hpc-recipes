@@ -4,6 +4,8 @@
 
 This recipe creates a ParallelCluster system where you can try out Amazon EC2 [Hpc7g instances](https://aws.amazon.com/ec2/instance-types/hpc7g/). 
 
+To try Graviton-powered instances with AWS PCS, see [pcs/try_graviton](../../pcs/try_graviton/README.md).
+
 The cluster design includes the following features:
 
 * Memory-aware Slurm scheduling is enabled.

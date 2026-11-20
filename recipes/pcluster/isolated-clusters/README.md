@@ -1,5 +1,7 @@
 # Securing HPC on AWS - Isolated Clusters
 
+For an isolated cluster with AWS PCS, see [pcs/isolated_pcs](../../pcs/isolated_pcs/README.md).
+
 
 ### Isolated HPC Deployment Guide
 

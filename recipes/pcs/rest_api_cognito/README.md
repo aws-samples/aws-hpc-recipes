@@ -136,7 +136,10 @@ This template composes two nested stacks:
 
 - `cluster.yaml` builds the REST-enabled PCS cluster. It takes the VPC and subnets
   from Step 0 and adds EFS storage and the two demo users.
-  Both node groups run in a private subnet.
+  Both node groups run in a private subnet. They set the AMI, security groups, and
+  SSH key pair as compute node group
+  [instance settings](https://docs.aws.amazon.com/pcs/latest/userguide/working-with_cng_instance-settings.html),
+  so the recipe creates no EC2 launch templates.
 - `proxy-cognito.yaml` builds the Cognito User Pool, API Gateway, and the proxy
   Lambda.
 
@@ -486,6 +489,10 @@ sign-up API. The proxy refuses to mint a system or privileged identity: it rejec
 `uid` or `gid` below 1000, even if a claim asserts one, so a token can never map a job
 to root. And the proxy accepts only a Cognito ID token: it checks the `token_use`
 claim rather than trusting that the authorizer forwards nothing else.
+
+## See what each job costs
+
+The cluster runs Slurm 26.05, so AWS PCS can report the cost of each job in AWS billing, as [split cost allocation data](https://docs.aws.amazon.com/pcs/latest/userguide/monitoring-cost-allocation.html). The jobs that `alice` and `bob` submit through the API appear under their own usernames in the `aws:pcs:username` cost allocation tag. To turn on reporting and find the data, see [See what each job costs](../getting_started/README.md#see-what-each-job-costs) in the getting started recipe.
 
 ## Cleaning up
 

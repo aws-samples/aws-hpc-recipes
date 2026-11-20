@@ -260,30 +260,6 @@ Resources:
       ServiceToken: !GetAtt FSxLustreLookupLambda.Arn
       FilesystemId: !GetAtt [ FSxLStorage, Outputs.FSxLustreFilesystemId ]
 
-  # Launch template for access node(s)
-  LoginLaunchTemplate:
-    Type: AWS::EC2::LaunchTemplate
-    Properties:
-      LaunchTemplateName: !Sub 'login-${AWS::StackName}'
-      LaunchTemplateData:
-        TagSpecifications:
-          - ResourceType: instance
-            Tags:
-              - Key: HPCRecipes
-                Value: "true"
-        MetadataOptions:
-          HttpEndpoint: enabled
-          HttpPutResponseHopLimit: 2
-          HttpTokens: required
-        KeyName: !Ref CreatedKeyPair
-        SecurityGroupIds:
-          - !GetAtt [ PCSSecurityGroup, Outputs.ClusterSecurityGroupId ]
-          - !GetAtt [ PCSSecurityGroup, Outputs.InboundSshSecurityGroupId ]
-          - !GetAtt [ EfsStorage, Outputs.SecurityGroupId ]
-          - !GetAtt [ FSxLStorage, Outputs.FSxLustreSecurityGroupId ]
-        # Filesystem mounting and log forwarding are handled by node lifecycle
-        # actions on the compute node groups, not by launch template UserData.
-
   # Launch template for compute node(s)
   HpcComputeLaunchTemplate:
     Type: AWS::EC2::LaunchTemplate
@@ -321,29 +297,6 @@ Resources:
             Groups:
               - !Ref EfaSecurityGroup
         # KeyName: !Ref SshKeyName
-        # Filesystem mounting and log forwarding are handled by node lifecycle
-        # actions on the compute node groups, not by launch template UserData.
-
-  # Launch template for compute node(s)
-  ComputeLaunchTemplate:
-    Type: AWS::EC2::LaunchTemplate
-    Properties:
-      LaunchTemplateName: !Sub 'compute-${AWS::StackName}'
-      LaunchTemplateData:
-        TagSpecifications:
-          - ResourceType: instance
-            Tags:
-              - Key: HPCRecipes
-                Value: "true"
-        MetadataOptions:
-          HttpEndpoint: enabled
-          HttpPutResponseHopLimit: 2
-          HttpTokens: required
-        SecurityGroupIds:
-          - !GetAtt [ PCSSecurityGroup, Outputs.ClusterSecurityGroupId ]
-          - !GetAtt [ PCSSecurityGroup, Outputs.InboundSshSecurityGroupId ]
-          - !GetAtt [ EfsStorage, Outputs.SecurityGroupId ]
-          - !GetAtt [ FSxLStorage, Outputs.FSxLustreSecurityGroupId ]
         # Filesystem mounting and log forwarding are handled by node lifecycle
         # actions on the compute node groups, not by launch template UserData.
 
@@ -419,9 +372,16 @@ Resources:
         MinInstanceCount: 1
         MaxInstanceCount: 1
       IamInstanceProfileArn: !GetAtt [ PCSInstanceProfile, Outputs.InstanceProfileArn ]
-      CustomLaunchTemplate:
-        TemplateId: !Ref LoginLaunchTemplate
-        Version: !GetAtt [ LoginLaunchTemplate, LatestVersionNumber ]
+      # Instance settings: AWS PCS launches these nodes with the AMI, security groups,
+      # and SSH key pair set here, so this node group needs no custom EC2 launch
+      # template (LaunchTemplateMode: MANAGED). Nodes use IMDSv2.
+      LaunchTemplateMode: MANAGED
+      SecurityGroupIds:
+        - !GetAtt [ PCSSecurityGroup, Outputs.ClusterSecurityGroupId ]
+        - !GetAtt [ PCSSecurityGroup, Outputs.InboundSshSecurityGroupId ]
+        - !GetAtt [ EfsStorage, Outputs.SecurityGroupId ]
+        - !GetAtt [ FSxLStorage, Outputs.FSxLustreSecurityGroupId ]
+      SshKeyName: !Ref CreatedKeyPair
       SubnetIds:
         - !GetAtt [ Networking, Outputs.AccessSubnetId ]
       AmiId: !GetAtt [PcsSampleAmi, AmiId]
@@ -490,6 +450,11 @@ Resources:
         MinInstanceCount: 0
         MaxInstanceCount: 4
       IamInstanceProfileArn: !GetAtt [ PCSInstanceProfile, Outputs.InstanceProfileArn ]
+      # This node group keeps a custom EC2 launch template (LaunchTemplateMode: CUSTOM)
+      # because it needs EFA network interfaces and a placement group, which instance
+      # settings don't cover. Security groups are set on each network interface in the
+      # launch template, so this node group can't also set SecurityGroupIds.
+      LaunchTemplateMode: CUSTOM
       CustomLaunchTemplate:
         TemplateId: !Ref HpcComputeLaunchTemplate
         Version: !GetAtt [ HpcComputeLaunchTemplate, LatestVersionNumber ]
@@ -561,9 +526,15 @@ Resources:
         MinInstanceCount: 0
         MaxInstanceCount: 3
       IamInstanceProfileArn: !GetAtt [ PCSInstanceProfile, Outputs.InstanceProfileArn ]
-      CustomLaunchTemplate:
-        TemplateId: !Ref ComputeLaunchTemplate
-        Version: !GetAtt [ ComputeLaunchTemplate, LatestVersionNumber ]
+      # Instance settings: AWS PCS launches these nodes with the AMI and security groups
+      # set here, so this node group needs no custom EC2 launch
+      # template (LaunchTemplateMode: MANAGED). Nodes use IMDSv2.
+      LaunchTemplateMode: MANAGED
+      SecurityGroupIds:
+        - !GetAtt [ PCSSecurityGroup, Outputs.ClusterSecurityGroupId ]
+        - !GetAtt [ PCSSecurityGroup, Outputs.InboundSshSecurityGroupId ]
+        - !GetAtt [ EfsStorage, Outputs.SecurityGroupId ]
+        - !GetAtt [ FSxLStorage, Outputs.FSxLustreSecurityGroupId ]
       SubnetIds:
         - !GetAtt [ Networking, Outputs.ComputeSubnetId ]
       AmiId: !GetAtt [PcsSampleAmi, AmiId]

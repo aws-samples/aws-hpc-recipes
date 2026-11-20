@@ -1,22 +1,24 @@
 ---
 # List of namespaces
+# Order sets the order of sections in recipes/README.md: PCS first, then shared
+# infrastructure, then the other services.
 namespace:
-  aws: General AWS (default)
-  batch: AWS Batch
-  db: Database management
-  dir: Directory services
-  env: User environment
-  iam: Identity Access and Management
-  ide: IDEs and GUIs
-  net: Networking
   pcs: AWS Parallel Computing Service
   pcs-scripts: PCS node lifecycle action scripts (community)
+  net: Networking
+  storage: Storage
+  db: Database management
+  dir: Directory services
+  iam: Identity Access and Management
+  security: Security configuration
+  env: User environment
+  ide: IDEs and GUIs
+  scheduler: HPC scheduler
+  aws: General AWS
+  training: Teaching and training recipes
+  batch: AWS Batch
   pcluster: AWS ParallelCluster
   res: Research and Engineering Studio on AWS
-  security: Security configuration
-  scheduler: HPC scheduler
-  storage: Storage
-  training: Teaching and training recipes
 # List of default tags and their colors
 tags:
   batch: orange
@@ -30,7 +32,7 @@ tags:
   rhel: black
   rockylinux: black
   ubuntu: black
-  parallelcluster: orange
+  parallelcluster: green
   fsx: green
   cloudformation: green
   cloudwatch: green

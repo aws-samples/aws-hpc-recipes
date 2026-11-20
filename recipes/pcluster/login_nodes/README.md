@@ -4,6 +4,8 @@
 
 This recipe demonstrates the new Login Nodes feature in ParallelCluster 3.7.2.
 
+For login nodes with AWS PCS, see [Login nodes in AWS PCS](https://docs.aws.amazon.com/pcs/latest/userguide/working-with_login-nodes.html) and [pcs/byo_login](../../pcs/byo_login/README.md).
+
 ## Usage
 
 ### Launch the Cluster
