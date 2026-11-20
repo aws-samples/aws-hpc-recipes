@@ -237,50 +237,6 @@ Resources:
         EnableS3ReadOnly: "True"
       TemplateURL: !Sub 'https://${HpcRecipesS3Bucket}.s3.amazonaws.com/${HpcRecipesBranch}/recipes/pcs/getting_started/assets/pcs-iip-minimal.yaml'
 
-  # Launch templates for the login and compute node groups, inlined so this recipe
-  # owns its node configuration. Each template attaches the security groups the nodes
-  # need, an SSH key, and IMDSv2 settings. Mounting EFS and forwarding logs are handled
-  # by the node lifecycle actions below, not by launch template UserData. The login
-  # template also attaches the inbound SSH security group; the compute template does not.
-  LoginLaunchTemplate:
-    Type: AWS::EC2::LaunchTemplate
-    Properties:
-      LaunchTemplateName: !Sub 'login-${AWS::StackName}'
-      LaunchTemplateData:
-        TagSpecifications:
-          - ResourceType: instance
-            Tags:
-              - Key: HPCRecipes
-                Value: "true"
-        MetadataOptions:
-          HttpEndpoint: enabled
-          HttpPutResponseHopLimit: 4
-          HttpTokens: required
-        KeyName: !Ref KeyName
-        SecurityGroupIds:
-          - !GetAtt [ PCSSecurityGroup, Outputs.ClusterSecurityGroupId ]
-          - !GetAtt [ PCSSecurityGroup, Outputs.InboundSshSecurityGroupId ]
-          - !GetAtt [ EfsStorage, Outputs.SecurityGroupId ]
-
-  ComputeLaunchTemplate:
-    Type: AWS::EC2::LaunchTemplate
-    Properties:
-      LaunchTemplateName: !Sub 'compute-${AWS::StackName}'
-      LaunchTemplateData:
-        TagSpecifications:
-          - ResourceType: instance
-            Tags:
-              - Key: HPCRecipes
-                Value: "true"
-        MetadataOptions:
-          HttpEndpoint: enabled
-          HttpPutResponseHopLimit: 4
-          HttpTokens: required
-        KeyName: !Ref KeyName
-        SecurityGroupIds:
-          - !GetAtt [ PCSSecurityGroup, Outputs.ClusterSecurityGroupId ]
-          - !GetAtt [ EfsStorage, Outputs.SecurityGroupId ]
-
   # Compute Node groups - Login Nodes
   # Both node groups run in a private subnet (PrivateSubnetId0). Access is over
   # AWS Systems Manager Session Manager, which works from a private subnet on the
@@ -294,9 +250,16 @@ Resources:
         MinInstanceCount: 1
         MaxInstanceCount: 1
       IamInstanceProfileArn: !GetAtt [ PCSInstanceProfile, Outputs.InstanceProfileArn ]
-      CustomLaunchTemplate:
-        TemplateId: !Ref LoginLaunchTemplate
-        Version: 1
+      # Instance settings: AWS PCS launches these nodes with the AMI, security groups,
+      # and SSH key pair set here, so this node group needs no custom EC2 launch
+      # template (LaunchTemplateMode: MANAGED). Nodes use IMDSv2.
+      # Login nodes also get the inbound SSH security group.
+      LaunchTemplateMode: MANAGED
+      SecurityGroupIds:
+        - !GetAtt [ PCSSecurityGroup, Outputs.ClusterSecurityGroupId ]
+        - !GetAtt [ PCSSecurityGroup, Outputs.InboundSshSecurityGroupId ]
+        - !GetAtt [ EfsStorage, Outputs.SecurityGroupId ]
+      SshKeyName: !Ref KeyName
       SubnetIds:
         - !Ref PrivateSubnetId0
       AmiId: !GetAtt [PcsSampleAmi, AmiId]
@@ -364,9 +327,14 @@ Resources:
         MinInstanceCount: 0
         MaxInstanceCount: 4
       IamInstanceProfileArn: !GetAtt [ PCSInstanceProfile, Outputs.InstanceProfileArn ]
-      CustomLaunchTemplate:
-        TemplateId: !Ref ComputeLaunchTemplate
-        Version: 1
+      # Instance settings: AWS PCS launches these nodes with the AMI, security groups,
+      # and SSH key pair set here, so this node group needs no custom EC2 launch
+      # template (LaunchTemplateMode: MANAGED). Nodes use IMDSv2.
+      LaunchTemplateMode: MANAGED
+      SecurityGroupIds:
+        - !GetAtt [ PCSSecurityGroup, Outputs.ClusterSecurityGroupId ]
+        - !GetAtt [ EfsStorage, Outputs.SecurityGroupId ]
+      SshKeyName: !Ref KeyName
       SubnetIds:
         - !Ref PrivateSubnetId0
       AmiId: !GetAtt [PcsSampleAmi, AmiId]

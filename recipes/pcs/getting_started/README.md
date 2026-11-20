@@ -11,9 +11,12 @@ This section of the AWS PCS user guide contains references to several CloudForma
 Follow these links to inspect their source code:
 * [`pcs-cluster-sg.yaml`](assets/pcs-cluster-sg.yaml) - Creates a cluster-wide security group for your PCS controller and attached nodes.
 * [`pcs-iip-minimal.yaml`](assets/pcs-iip-minimal.yaml) - Creates a minimal IAM instance profile for your PCS compute node groups.
-* [`pcs-lt-simple.yaml`](assets/pcs-lt-simple.yaml) - Creats a minimal launch template for PCS compute node groups.
+* [`pcs-lt-simple.yaml`](assets/pcs-lt-simple.yaml) - Creates a minimal launch template for PCS compute node groups.
 * [`pcs-lt-efs-fsxl.yaml`](assets/pcs-lt-efs-fsxl.yaml) - Creates launch templates for compute node groups that use a shared home (EFS) and a high-speed shared filesystem (FSx for Lustre). The file systems are mounted by node lifecycle actions, not by the launch template.
+* [`cluster.yaml`](assets/cluster.yaml) - Complete cluster template that creates its own VPC and networking.
 * [`cluster-byovpc.yaml`](assets/cluster-byovpc.yaml) - Complete cluster template that uses an existing VPC instead of creating new networking resources.
+
+You don't have to use a launch template to set the security groups and SSH key pair for a compute node group. You can set the AMI, security groups, and SSH key pair on the compute node group itself, as [instance settings](https://docs.aws.amazon.com/pcs/latest/userguide/working-with_cng_instance-settings.html). The complete cluster templates do this. Use a launch template when you need other Amazon EC2 settings, such as Elastic Fabric Adapter (EFA) network interfaces or capacity reservations.
 
 Feel free to use or adapt these basic templates for your own clusters.
 
@@ -124,6 +127,20 @@ The stack also sends three types of cluster logs to CloudWatch Logs. It keeps ea
 | [Scaling logs](https://docs.aws.amazon.com/pcs/latest/userguide/monitoring_scaling-logs.html) | `/aws/vendedlogs/pcs/cluster/PCS_SCALING_LOGS/<cluster-id>` | Node launches, registrations, terminations, and launch failures |
 
 To set up these log deliveries, the IAM principal that deploys the stack needs permission for the `pcs:AllowVendedLogDeliveryForResource` action. When you delete the stack, CloudFormation deletes these log groups too.
+
+### How the compute node groups are configured
+
+The `login` and `compute-1` compute node groups don't use custom EC2 launch templates. Each one sets [instance settings](https://docs.aws.amazon.com/pcs/latest/userguide/working-with_cng_instance-settings.html) instead, with `LaunchTemplateMode: MANAGED`:
+
+| Instance setting | `login` | `compute-1` |
+|------------------|---------|-------------|
+| AMI (`AmiId`) | The PCS sample AMI for the Slurm version and architecture you chose | Same as `login` |
+| Security groups (`SecurityGroupIds`) | VPC default, cluster, inbound SSH, EFS, and FSx for Lustre | VPC default, cluster, EFS, and FSx for Lustre |
+| SSH key pair (`SshKeyName`) | The key pair you chose for **KeyName** | Same as `login` |
+
+With this configuration, compute nodes use Instance Metadata Service Version 2 (IMDSv2). Because the stack sets an SSH key pair, the IAM principal that deploys the stack also needs permission for the `ec2:DescribeKeyPairs` action.
+
+If you update a stack that you created from an earlier version of this template, AWS PCS replaces the nodes in both compute node groups. It waits for running jobs to finish first. The launch templates that the earlier version created are deleted with their nested stack.
 
 ### Cleaning Up
 
